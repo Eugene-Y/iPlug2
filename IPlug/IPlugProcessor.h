@@ -1,10 +1,10 @@
 /*
  ==============================================================================
- 
- This file is part of the iPlug 2 library. Copyright (C) the iPlug 2 developers. 
- 
+
+ This file is part of the iPlug 2 library. Copyright (C) the iPlug 2 developers.
+
  See LICENSE.txt for  more info.
- 
+
  ==============================================================================
 */
 
@@ -12,6 +12,7 @@
 
 #include <cstring>
 #include <cstdint>
+#include <memory>
 
 #include "ptrlist.h"
 
@@ -179,7 +180,7 @@ public:
 
   /** @return \c true if the plug-in was configured as an instrument at compile time */
   bool IsInstrument() const { return mPlugType == EIPlugPluginType::kInstrument; }
-  
+
   /**  */
   int GetAUPluginType() const
   {
@@ -207,7 +208,7 @@ public:
 
   /** @return \c true if the plug-in was configured to receive midi at compile time */
   bool DoesMIDIOut() const { return mDoesMIDIOut; }
-  
+
   /** @return \c true if the plug-in was configured to support midi polyphonic expression at compile time */
   bool DoesMPE() const { return mDoesMPE; }
 
