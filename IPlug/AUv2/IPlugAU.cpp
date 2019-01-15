@@ -178,7 +178,7 @@ OSStatus IPlugAU::IPlugAUEntry(ComponentParameters *params, void* pPlug)
   if (select == kComponentOpenSelect)
   {
     IPlugAU* _this = MakePlug();
-    _this->HostSpecificInit();
+    
     _this->PruneUninitializedPresets();
     _this->mCI = GET_COMP_PARAM(ComponentInstance, 0, 1);
     SetComponentInstanceStorage(_this->mCI, (Handle) _this);
@@ -1246,14 +1246,15 @@ OSStatus IPlugAU::SetProperty(AudioUnitPropertyID propID, AudioUnitScope scope, 
     NO_OP(kAudioUnitProperty_DependentParameters);       // 45,
     case kAudioUnitProperty_AUHostIdentifier:            // 46,
     {
-      AUHostIdentifier* pHostID = (AUHostIdentifier*) pData;
-      CStrLocal hostStr(pHostID->hostName);
-      int hostVer = (pHostID->hostVersion.majorRev << 16)
+      if (GetHost() == kHostUninit)
+      {
+        AUHostIdentifier* pHostID = (AUHostIdentifier*) pData;
+        CStrLocal hostStr(pHostID->hostName);
+        int version = (pHostID->hostVersion.majorRev << 16)
                     + ((pHostID->hostVersion.minorAndBugRev & 0xF0) << 4)
                     + ((pHostID->hostVersion.minorAndBugRev & 0x0F));
-
-      SetHost(hostStr.mCStr, hostVer);
-      OnHostIdentified();
+        SetHost(hostStr.mCStr, version);
+      }
       return noErr;
     }
     NO_OP(kAudioUnitProperty_MIDIOutputCallbackInfo);   // 47,
@@ -1911,40 +1912,6 @@ void IPlugAU::PreProcess()
   }
 }
 
-EHost IPlugAU::GetHost()
-{
-  EHost host = IPlugAPIBase::GetHost();
-  if (host == kHostUninit)
-  {
-    CFBundleRef mainBundle = CFBundleGetMainBundle();
-    
-    if (mainBundle)
-    {
-      CFStringRef id = CFBundleGetIdentifier(mainBundle);
-      if (id)
-      {
-        CStrLocal str(id);
-        //CFStringRef versStr = (CFStringRef) CFBundleGetValueForInfoDictionaryKey(mainBundle, kCFBundleVersionKey);
-        SetHost(str.mCStr, 0);
-        host = IPlugAPIBase::GetHost();
-      }
-    }
-    
-    if (host == kHostUninit)
-    {
-      SetHost("", 0);
-      host = IPlugAPIBase::GetHost();
-    }
-  }
-  return host;
-}
-
-void IPlugAU::HostSpecificInit()
-{
-  GetHost();
-  OnHostIdentified(); // might get called again
-}
-
 void IPlugAU::ResizeScratchBuffers()
 {
   TRACE;
@@ -2223,10 +2190,33 @@ OSStatus IPlugAU::AUMethodSysEx(void* pSelf, const UInt8* inData, UInt32 inLengt
 //static
 OSStatus IPlugAU::DoInitialize(IPlugAU* _this)
 {
+  if (_this->GetHost() == kHostUninit)
+  {
+    CFBundleRef mainBundle = CFBundleGetMainBundle();
+    CFStringRef id = nullptr;
+    int version = 0;
+      
+    if (mainBundle)
+    {
+      id = CFBundleGetIdentifier(mainBundle);
+      CStrLocal versionStr((CFStringRef) CFBundleGetValueForInfoDictionaryKey(mainBundle, kCFBundleVersionKey));
+      
+      char *pStr;
+      long ver = strtol(versionStr.mCStr, &pStr, 10);
+      long verRevMaj = *pStr ? strtol(pStr + 1, &pStr, 10) : 0;
+      long verRevMin = *pStr ? strtol(pStr + 1, &pStr, 10) : 0;
+
+      version = ((ver & 0xFFFF) << 16) | ((verRevMaj &  0xFF) << 8) | (verRevMin & 0xFF);
+    }
+
+    _this->SetHost(id ? CStrLocal(id).mCStr : "", version);
+  }
+    
   if (!(_this->CheckLegalIO()))
   {
     return badComponentSelector;
   }
+
   _this->mActive = true;
   _this->OnParamReset(kReset);
   _this->OnActivate(true);
