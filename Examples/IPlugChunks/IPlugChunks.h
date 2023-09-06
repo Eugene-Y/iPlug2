@@ -2,7 +2,7 @@
 
 #include "IPlug_include_in_plug_hdr.h"
 
-const int kNumPresets = 1;
+const int kNumPresets = 2;
 constexpr int kNumSteps = 16;
 constexpr int kBeatDiv = 4;
 

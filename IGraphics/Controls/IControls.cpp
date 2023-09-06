@@ -132,7 +132,7 @@ void IVSwitchControl::SetDirty(bool push, int valIdx)
 
 void IVSwitchControl::OnResize()
 {
-  SetTargetRECT(MakeRects(mRECT, true));
+  SetTargetRECT(MakeRects(mRECT, 0));
   SetDirty(false);
 }
 
