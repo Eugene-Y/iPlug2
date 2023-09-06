@@ -23,15 +23,44 @@
 
 #include "../ptrlist.h"
 
+struct SWELL_ListView_Rec
+{
+  char *txt;
+  int image_idx;
+};
+
 class SWELL_ListView_Row
 {
 public:
-  SWELL_ListView_Row() : m_param(0), m_imageidx(0), m_tmp(0) { }
-  ~SWELL_ListView_Row() { m_vals.Empty(true,free); }
-  WDL_PtrList<char> m_vals;
+  SWELL_ListView_Row() : m_param(0), m_tmp(0) { }
+  ~SWELL_ListView_Row()
+  {
+    for (int x = 0; x < m_cols.GetSize(); x ++)
+    {
+      free(m_cols.Get()[x].txt);
+    }
+    m_cols.Resize(0);
+  }
+  int get_num_cols() const { return m_cols.GetSize(); }
+  char *get_col_txt(int x) const { return x >= 0 && x < m_cols.GetSize() ? m_cols.Get()[x].txt : NULL; }
+  void add_col(const char *p) { SWELL_ListView_Rec r = { p ? strdup(p) : NULL }; m_cols.Add(r); }
+  void set_col_txt(int x, const char *p)
+  {
+    if (WDL_NORMALLY(x >= 0 && x < m_cols.GetSize()))
+    {
+      free(m_cols.Get()[x].txt);
+      m_cols.Get()[x].txt = p ? strdup(p) : NULL;
+    }
+  }
+  int get_img_idx(int x) const { return x >= 0 && x < m_cols.GetSize() ? m_cols.Get()[x].image_idx : 0; }
+  void set_img_idx(int x, int index)
+  {
+    if (WDL_NORMALLY(x >= 0 && x < m_cols.GetSize()))
+      m_cols.Get()[x].image_idx = index;
+  }
+  WDL_TypedBuf<SWELL_ListView_Rec> m_cols;
 
   LPARAM m_param;
-  int m_imageidx;
   int m_tmp; // Cocoa uses this temporarily, generic uses it as a mask (1= selected)
 };
 
@@ -145,6 +174,7 @@ typedef struct WindowPropRec
   bool m_last_dark_mode;
   bool m_ctlcolor_set;
   bool m_disable_menu;
+  LONG_PTR m_userdata;
 }
 - (id) init;
 - (void)setNeedsDisplay:(BOOL)flag;
@@ -153,6 +183,8 @@ typedef struct WindowPropRec
 - (void)initColors:(int)darkmode; // -1 to not update darkmode but trigger update of colors
 - (void)swellDisableContextMenu:(bool)dis;
 - (NSMenu *)textView:(NSTextView *)view menu:(NSMenu *)menu forEvent:(NSEvent *)event atIndex:(NSUInteger)charIndex;
+-(LONG_PTR)getSwellUserData;
+-(void)setSwellUserData:(LONG_PTR)val;
 @end
 
 @interface SWELL_TabView : NSTabView
@@ -178,8 +210,9 @@ typedef struct WindowPropRec
 @interface SWELL_StatusCell : SWELL_ListViewCell
 {
   NSImage *status;
+  bool m_always_indent;
 }
--(id)initNewCell;
+-(id)initNewCell:(bool)always_indent;
 -(void)setStatusImage:(NSImage *)img;
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView;
 @end
@@ -259,6 +292,7 @@ typedef struct WindowPropRec
   // these are for the new yosemite mouse handling code
   int m_last_plainly_clicked_item, m_last_shift_clicked_item;
 
+  bool m_subitem_images;
 }
 -(LONG)getSwellStyle;
 -(void)setSwellStyle:(LONG)st;
@@ -295,7 +329,7 @@ typedef struct WindowPropRec
 {
   void *m_swellGDIimage;
   LONG_PTR m_userdata;
-  int m_radioflags;
+  int m_radioflags; // =4096 if not a checkbox/radiobox. &2=new group, &1=radio
 }
 -(int)swellGetRadioFlags;
 -(void)swellSetRadioFlags:(int)f;
@@ -478,6 +512,7 @@ typedef struct WindowPropRec
   BOOL m_enabled;
   int m_wantraiseamt;
   bool  m_wantInitialKeyWindowOnShow;
+  bool m_lastZoom;
 }
 - (id)initModeless:(SWELL_DialogResourceIndex *)resstate Parent:(HWND)parent dlgProc:(DLGPROC)dlgproc Param:(LPARAM)par outputHwnd:(HWND *)hwndOut forceStyles:(unsigned int)smask;
 - (id)initModelessForChild:(HWND)child owner:(HWND)owner styleMask:(unsigned int)smask;
@@ -503,6 +538,7 @@ typedef struct WindowPropRec
   int m_rv;
   bool m_hasrv;
   BOOL m_enabled;
+  bool m_lastZoom;
 }
 - (id)initDialogBox:(SWELL_DialogResourceIndex *)resstate Parent:(HWND)parent dlgProc:(DLGPROC)dlgproc Param:(LPARAM)par;
 - (void)swellDestroyAllOwnedWindows;
@@ -733,7 +769,9 @@ SWELL_IMPLEMENT_GETOSXVERSION int SWELL_GetOSXVersion()
   {
     if (NSAppKitVersionNumber >= 1266.0)
     {
-      if (NSAppKitVersionNumber >= 2100.0)
+      if (NSAppKitVersionNumber >= 2299.0)
+        v = 0x1300;
+      else if (NSAppKitVersionNumber >= 2100.0)
         v = 0x1200;
       else if (NSAppKitVersionNumber >= 2022.0)
         v = 0x1100;
@@ -850,6 +888,7 @@ struct HWND__
 
   bool m_israised;
   bool m_has_had_position;
+  bool m_is_maximized; // only valid if m_oswindow is set
   int m_oswindow_fullscreen; // may contain preserved style flags
 
   int m_refcnt; 
@@ -932,6 +971,7 @@ struct HDC__ {
 
 HWND DialogBoxIsActive(void);
 bool DestroyPopupMenus(void);
+bool PopupMenuIsActive(void);
 HWND ChildWindowFromPoint(HWND h, POINT p);
 HWND GetFocusIncludeMenus();
 
@@ -952,6 +992,7 @@ void swell_oswindow_postresize(HWND hwnd, RECT f);
 void swell_oswindow_invalidate(HWND hwnd, const RECT *r);
 void swell_oswindow_destroy(HWND hwnd);
 void swell_oswindow_manage(HWND hwnd, bool wantfocus);
+void swell_oswindow_maximize(HWND, bool wantmax); // false=restore
 void swell_oswindow_updatetoscreen(HWND hwnd, RECT *rect);
 HWND swell_window_wants_all_input(); // window with an active drag of menubar will have this set, to route all mouse events to nonclient area of window
 int swell_delegate_menu_message(HWND src, LPARAM lParam, int msg, bool screencoords); // menubar/menus delegate to submenus during drag.
@@ -1256,7 +1297,9 @@ static void __listview_mergesort_internal(void *base, size_t nmemb, size_t size,
   f(listview_bg, RGB(255,255,255)) \
   f(listview_bg_sel, RGB(128,128, 255)) \
   f(listview_text, RGB(0,0,0)) \
-  fd(listview_text_sel, RGB(0,0,0), listview_text) \
+  fd(listview_text_sel, RGB(255,255,255), listview_text) \
+  fd(listview_bg_sel_inactive, RGB(200,200,200), listview_bg_sel) \
+  fd(listview_text_sel_inactive, RGB(0,0,0), listview_text_sel) \
   fd(listview_grid, RGB(224,224,224), _3dhilight) \
   f(listview_hdr_arrow,RGB(96,96,96)) \
   fd(listview_shadow, RGB(96,96,96), _3dshadow) \
@@ -1268,7 +1311,9 @@ static void __listview_mergesort_internal(void *base, size_t nmemb, size_t size,
   f(treeview_text,RGB( 0,0,0)) \
   f(treeview_bg, RGB(255,255,255)) \
   f(treeview_bg_sel, RGB(128,128,255)) \
-  f(treeview_text_sel, RGB(0,0,0)) \
+  f(treeview_text_sel, RGB(255,255,255)) \
+  fd(treeview_bg_sel_inactive, RGB(200,200,200), treeview_bg_sel) \
+  fd(treeview_text_sel_inactive, RGB(0,0,0), treeview_text_sel) \
   f(treeview_arrow, RGB(96,96,96)) \
   fd(treeview_shadow, RGB(96,96,96), _3dshadow) \
   fd(treeview_hilight, RGB(224,224,224), _3dhilight) \

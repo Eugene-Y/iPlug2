@@ -37,13 +37,18 @@ static constexpr int MAX_IMG_SCALE = 3;
 static constexpr int DEFAULT_TEXT_ENTRY_LEN = 7;
 static constexpr double DEFAULT_GEARING = 4.0;
 
+static constexpr double DEFAULT_MIN_DRAW_SCALE = 0.5;
+static constexpr double DEFAULT_MAX_DRAW_SCALE = 4.0;
+
 //what is this stuff
 #define TOOLWIN_BORDER_W 6
 #define TOOLWIN_BORDER_H 23
 #define MAX_CLASSNAME_LEN 128
 //
 
+#ifndef GRAYED_ALPHA
 static constexpr float GRAYED_ALPHA = 0.25f;
+#endif
 
 #ifndef DEFAULT_PATH
 static const char* DEFAULT_PATH = "~/Desktop";

@@ -14,6 +14,7 @@
 
 #import <QuartzCore/QuartzCore.h>
 #import <Metal/Metal.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #import "IGraphicsIOS_view.h"
 
@@ -68,6 +69,19 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   [self.view addSubview:self.tableView];
 }
 
+- (void) viewDidAppear:(BOOL)animated
+{
+  auto selectedItemIdx = mMenu->GetChosenItemIdx();
+
+  if (selectedItemIdx > -1)
+  {
+    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:selectedItemIdx inSection:0];
+    [self.tableView scrollToRowAtIndexPath:indexPath
+                           atScrollPosition:UITableViewScrollPositionMiddle
+                             animated:NO];
+  }
+}
+
 - (id) initWithIPopupMenuAndIGraphics:(IPopupMenu*) pMenu :(IGraphicsIOS*) pGraphics
 {
   self = [super init];
@@ -104,12 +118,12 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   
   IPopupMenu::Item* pItem = mMenu->GetItem(cellIndex);
   
-  if(pItem->GetChecked())
+  if (pItem->GetChecked())
     cell.accessoryType = UITableViewCellAccessoryCheckmark;
   else
     cell.accessoryType = pItem->GetSubmenu() ? UITableViewCellAccessoryDisclosureIndicator : UITableViewCellAccessoryNone;
 
-  if(!pItem->GetEnabled())
+  if (!pItem->GetEnabled())
   {
     cell.userInteractionEnabled = NO;
     cell.textLabel.enabled = NO;
@@ -124,8 +138,20 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
 
   IPopupMenu::Item* pItem = mMenu->GetItem(cellIndex);
 
-  if(pItem->GetIsSeparator())
-    return 0.5f;
+  if (pItem->GetIsSeparator())
+    return 0.5;
+  else
+    return self.tableView.rowHeight;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView estimatedHeightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+  int cellIndex = static_cast<int>(indexPath.row);
+
+  IPopupMenu::Item* pItem = mMenu->GetItem(cellIndex);
+
+  if (pItem->GetIsSeparator())
+    return 0.5;
   else
     return self.tableView.rowHeight;
 }
@@ -137,7 +163,7 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   IPopupMenu::Item* pItem = mMenu->GetItem(cellIndex);
   IPopupMenu* pSubMenu = pItem->GetSubmenu();
   
-  if(pSubMenu)
+  if (pSubMenu)
   {
     IGRAPHICS_UITABLEVC* newViewController = [[IGRAPHICS_UITABLEVC alloc] initWithIPopupMenuAndIGraphics: pSubMenu : mGraphics];
     [newViewController setTitle:[NSString stringWithUTF8String:CStringHasContents(pSubMenu->GetRootTitle()) ? pSubMenu->GetRootTitle() : pItem->GetText()]];
@@ -146,16 +172,16 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
     return;
   }
 
-  if(pItem->GetIsChoosable())
+  if (pItem->GetIsChoosable())
   {
+    [self dismissViewControllerAnimated:YES completion:nil];
+
     mMenu->SetChosenItemIdx(cellIndex);
     
-    if(mMenu->GetFunction())
+    if (mMenu->GetFunction())
       mMenu->ExecFunction();
     
     mGraphics->SetControlValueAfterPopupMenu(mMenu);
-    
-    [self dismissViewControllerAnimated:YES completion:nil];
   }
 }
 
@@ -188,12 +214,7 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   mGraphics = pGraphics;
   CGRect r = CGRectMake(0.f, 0.f, (float) pGraphics->WindowWidth(), (float) pGraphics->WindowHeight());
   self = [super initWithFrame:r];
-  
-  //scrollview
-  [self setContentSize:r.size];
-  self.delegate = self;
-  self.scrollEnabled = NO;
-  
+    
 #ifdef IGRAPHICS_METAL
   mMTLLayer = [[CAMetalLayer alloc] init];
   mMTLLayer.device = MTLCreateSystemDefaultDevice();
@@ -207,8 +228,6 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
 
   self.multipleTouchEnabled = NO;
   
-  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
-  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillBeHidden:) name:UIKeyboardWillHideNotification object:nil];
   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackgroundNotification:) name:UIApplicationDidEnterBackgroundNotification object:nil];
   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillEnterForegroundNotification:) name:UIApplicationWillEnterForegroundNotification object:nil];
   mColorPickerHandlerFunc = nullptr;
@@ -387,20 +406,9 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   mMTLLayer = nil;
 }
 
-- (void) textFieldDidEndEditing:(UITextField*) textField reason:(UITextFieldDidEndEditingReason) reason
-{
-  if(textField == mTextField)
-  {
-    mGraphics->SetControlValueAfterTextEdit([[mTextField text] UTF8String]);
-    mGraphics->SetAllControlsDirty();
-    
-    [self endUserInput];
-  }
-}
-
 - (BOOL) textFieldShouldReturn:(UITextField*) textField
 {
-  if(textField == mTextField)
+  if (textField == mTextField)
   {
     mGraphics->SetControlValueAfterTextEdit([[mTextField text] UTF8String]);
     mGraphics->SetAllControlsDirty();
@@ -408,11 +416,6 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
     [self endUserInput];
   }
   return YES;
-}
-
-- (void) textFieldDidEndEditing:(UITextField*) textField
-{
-  [self endUserInput];
 }
 
 - (BOOL) textField:(UITextField*) textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString*) string
@@ -490,66 +493,57 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
 {
   if (mTextField)
     return;
+  
+  mAlertController = [UIAlertController alertControllerWithTitle:@"Input a value:" message:@"" preferredStyle:UIAlertControllerStyleAlert];
 
-  mTextField = [[UITextField alloc] initWithFrame:areaRect];
-  mTextFieldLength = length;
-  
-  CoreTextFontDescriptor* CTFontDescriptor = CoreTextHelpers::GetCTFontDescriptor(text, sFontDescriptorCache);
-  UIFontDescriptor* fontDescriptor = (__bridge UIFontDescriptor*) CTFontDescriptor->GetDescriptor();
-  UIFont* font = [UIFont fontWithDescriptor: fontDescriptor size: text.mSize * 0.75];
-  [mTextField setFont: font];
-  
-  [mTextField setText:[NSString stringWithUTF8String:str]];
-  [mTextField setTextColor:ToUIColor(text.mTextEntryFGColor)];
-  [mTextField setBackgroundColor:ToUIColor(text.mTextEntryBGColor)];
-  [mTextField setAutocorrectionType:UITextAutocorrectionTypeNo];
-  [mTextField setDelegate:self];
-  
-  switch (text.mVAlign)
+  __weak IGRAPHICS_VIEW* weakSelf = self;
+
+  void (^cancelHandler)(UIAlertAction*) = ^(UIAlertAction *action)
   {
-    case EVAlign::Top:
-      [mTextField setContentVerticalAlignment:UIControlContentVerticalAlignmentTop];
-      break;
-    case EVAlign::Middle:
-      [mTextField setContentVerticalAlignment:UIControlContentVerticalAlignmentCenter];
-      break;
-    case EVAlign::Bottom:
-      [mTextField setContentVerticalAlignment:UIControlContentVerticalAlignmentBottom];
-      break;
-    default:
-      break;
-  }
-  
-  switch (text.mAlign)
+    __strong IGRAPHICS_VIEW* strongSelf = weakSelf;
+    strongSelf->mGraphics->SetAllControlsDirty();
+    [strongSelf endUserInput];
+  };
+    
+  UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:cancelHandler];
+  [mAlertController addAction:cancelAction];
+
+  void (^okHandler)(UIAlertAction*) = ^(UIAlertAction *action)
   {
-    case EAlign::Near:
-      [mTextField setTextAlignment: NSTextAlignmentLeft];
-      break;
-    case EAlign::Center:
-      [mTextField setTextAlignment: NSTextAlignmentCenter];
-      break;
-    case EAlign::Far:
-      [mTextField setTextAlignment: NSTextAlignmentRight];
-      break;
-    default:
-      break;
-  }
-  
-  [self addSubview: mTextField];
-  [mTextField becomeFirstResponder];
+    __strong IGRAPHICS_VIEW* strongSelf = weakSelf;
+    strongSelf->mGraphics->SetControlValueAfterTextEdit([[strongSelf->mTextField text] UTF8String]);
+    strongSelf->mGraphics->SetAllControlsDirty();
+    [strongSelf endUserInput];
+  };
+    
+  UIAlertAction* okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:okHandler];
+  [mAlertController addAction:okAction];
+  [mAlertController setPreferredAction:okAction];
+    
+  [mAlertController addTextFieldWithConfigurationHandler:^(UITextField* aTextField) {
+    __strong IGRAPHICS_VIEW* strongSelf = weakSelf;
+    strongSelf->mTextField = aTextField;
+    strongSelf->mTextFieldLength = length;
+    aTextField.delegate = strongSelf;
+    [aTextField setText:[NSString stringWithUTF8String:str]];
+  }];
+  [self.window.rootViewController presentViewController:mAlertController animated:YES completion:nil];
 }
 
 - (void) endUserInput
 {
   [self becomeFirstResponder];
+  [self.window.rootViewController dismissViewControllerAnimated:NO completion:nil];
   [mTextField setDelegate: nil];
-  [mTextField removeFromSuperview];
+  mAlertController = nullptr;
   mTextField = nullptr;
   mGraphics->ClearInTextEntryControl();
 }
 
-- (void) showMessageBox: (const char*) str : (const char*) caption : (EMsgBoxType) type : (IMsgBoxCompletionHanderFunc) completionHandler
+- (void) showMessageBox: (const char*) str : (const char*) caption : (EMsgBoxType) type : (IMsgBoxCompletionHandlerFunc) completionHandler
 {
+  [self endUserInput];
+
   NSString* titleNString = [NSString stringWithUTF8String:str];
   NSString* captionNString = [NSString stringWithUTF8String:caption];
   
@@ -608,9 +602,55 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   [self.window.rootViewController presentViewController:alertController animated:YES completion:nil];
 }
 
+- (void) promptForFile: (NSString*) fileName : (NSString*) path : (EFileAction) action : (NSArray*) contentTypes : (IFileDialogCompletionHandlerFunc) completionHandler
+{
+  [self endUserInput];
+
+  mFileDialogFunc = completionHandler;
+
+  UIDocumentPickerViewController* vc = NULL;
+  NSURL* url = [[NSURL alloc] initFileURLWithPath:path];
+
+  if (action == EFileAction::Open)
+  {
+    vc = [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:contentTypes asCopy:YES];
+    [vc setDirectoryURL:url];
+  }
+  else
+  {
+    vc = [[UIDocumentPickerViewController alloc] initForExportingURLs:@[url]];
+  }
+  
+  [vc setDelegate:self];
+  
+  [self.window.rootViewController presentViewController:vc animated:YES completion:nil];
+}
+
+- (void) promptForDirectory: (NSString*) path : (IFileDialogCompletionHandlerFunc) completionHandler
+{
+  [self endUserInput];
+
+  mFileDialogFunc = completionHandler;
+
+  UIDocumentPickerViewController* vc = NULL;
+  NSURL* url = [[NSURL alloc] initFileURLWithPath:path];
+
+  NSMutableArray* pFileTypes = [[NSMutableArray alloc] init];
+  UTType* directoryType = [UTType typeWithIdentifier:@"public.folder"];
+  [pFileTypes addObject:directoryType];
+  
+  vc = [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:pFileTypes];
+  [vc setDirectoryURL:url];
+
+  [vc setDelegate:self];
+  
+  [self.window.rootViewController presentViewController:vc animated:YES completion:nil];
+}
+
 - (BOOL) promptForColor: (IColor&) color : (const char*) str : (IColorPickerHandlerFunc) func
 {
-#ifdef __IPHONE_14_0
+  [self endUserInput];
+
   UIColorPickerViewController* colorSelectionController = [[UIColorPickerViewController alloc] init];
   
   UIUserInterfaceIdiom idiom = [[UIDevice currentDevice] userInterfaceIdiom];
@@ -634,7 +674,6 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   mColorPickerHandlerFunc = func;
   
   [self.window.rootViewController presentViewController:colorSelectionController animated:YES completion:nil];
-#endif
 
   return false;
 }
@@ -803,36 +842,17 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
 {
   CGPoint pos = [touch locationInView:touch.view];
   
-  auto ds = mGraphics->GetDrawScale();
-
-  if(mGraphics->RespondsToGesture(pos.x / ds, pos.y / ds))
-    return TRUE;
-  else
-    return FALSE;
-}
-
-- (void) keyboardWillShow:(NSNotification*) notification
-{
-  NSDictionary* info = [notification userInfo];
-  CGSize kbSize = [[info objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue].size;
-  
-  UIEdgeInsets contentInsets = UIEdgeInsetsMake(0.0, 0.0, kbSize.height, 0.0);
-  self.contentInset = contentInsets;
-  self.scrollIndicatorInsets = contentInsets;
-  
-  CGRect r = self.frame;
-  r.size.height -= kbSize.height;
-  
-  if (!CGRectContainsPoint(r, CGPointMake(mTextField.frame.origin.x + mTextField.frame.size.width, mTextField.frame.origin.y + mTextField.frame.size.height)) ) {
-    [self scrollRectToVisible:mTextField.frame animated:YES];
+  if (mGraphics)
+  {
+    auto ds = mGraphics->GetDrawScale();
+    
+    if (mGraphics->RespondsToGesture(pos.x / ds, pos.y / ds))
+    {
+      return TRUE;
+    }
   }
-}
-
-- (void) keyboardWillBeHidden:(NSNotification*) notification
-{
-  UIEdgeInsets contentInsets = UIEdgeInsetsZero;
-  self.contentInset = contentInsets;
-  self.scrollIndicatorInsets = contentInsets;
+  
+  return FALSE;
 }
 
 - (void) applicationDidEnterBackgroundNotification:(NSNotification*) notification
@@ -850,21 +870,51 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   return NO;
 }
 
-- (void) scrollViewDidScroll:(UIScrollView*) scrollView
-{
-  mGraphics->SetTranslation(0, -self.contentOffset.y);
-  mGraphics->SetAllControlsDirty();
-}
-
 - (void) presentationControllerDidDismiss: (UIPresentationController*) presentationController
 {
   mGraphics->SetControlValueAfterPopupMenu(nullptr);
 }
 
-#ifdef __IPHONE_14_0
+- (void) documentPicker:(UIDocumentPickerViewController*) controller didPickDocumentsAtURLs:(NSArray <NSURL*>*) urls
+{
+  WDL_String fileName, path;
+  
+  if (urls.count == 1)
+  {
+    NSURL* pSource = urls[0];
+    NSString* pFullPath = [pSource path];
+    fileName.Set([pFullPath UTF8String]);
+    
+    NSString* pTruncatedPath = [pFullPath stringByDeletingLastPathComponent];
+
+    if (pTruncatedPath)
+    {
+      path.Set([pTruncatedPath UTF8String]);
+      path.Append("/");
+    }
+
+    if (mFileDialogFunc)
+      mFileDialogFunc(fileName, path);
+  }
+  else
+  {
+    // call with empty values
+    if (mFileDialogFunc)
+      mFileDialogFunc(fileName, path);
+  }
+}
+
+- (void) documentPickerWasCancelled:(UIDocumentPickerViewController*) controller
+{
+  WDL_String fileName, path;
+  
+  if (mFileDialogFunc)
+    mFileDialogFunc(fileName, path);
+}
+
 - (void) colorPickerViewControllerDidSelectColor:(UIColorPickerViewController*) viewController;
 {
-  if(mColorPickerHandlerFunc)
+  if (mColorPickerHandlerFunc)
   {
     IColor c = FromUIColor([viewController selectedColor]);
     mColorPickerHandlerFunc(c);
@@ -875,7 +925,6 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
 {
   mColorPickerHandlerFunc = nullptr;
 }
-#endif
 
 - (void) traitCollectionDidChange: (UITraitCollection*) previousTraitCollection
 {

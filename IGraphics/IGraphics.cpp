@@ -48,8 +48,8 @@ IGraphics::IGraphics(IGEditorDelegate& dlg, int w, int h, int fps, float scale)
 , mHeight(h)
 , mFPS(fps)
 , mDrawScale(scale)
-, mMinScale(scale / 2)
-, mMaxScale(scale * 2)
+, mMinScale(DEFAULT_MIN_DRAW_SCALE)
+, mMaxScale(DEFAULT_MAX_DRAW_SCALE)
 , mDelegate(&dlg)
 {
   StaticStorage<APIBitmap>::Accessor bitmapStorage(sBitmapCache);
@@ -77,7 +77,9 @@ void IGraphics::SetScreenScale(float scale)
   mScreenScale = scale;
   int windowWidth = WindowWidth() * GetPlatformWindowScale();
   int windowHeight = WindowHeight() * GetPlatformWindowScale();
-    
+  
+  assert(windowWidth > 0 && windowHeight > 0 && "Window dimensions invalid");
+
   PlatformResize(GetDelegate()->EditorResizeFromUI(windowWidth, windowHeight, true));
   ForAllControls(&IControl::OnRescale);
   SetAllControlsDirty();
@@ -117,6 +119,12 @@ void IGraphics::Resize(int w, int h, float scale, bool needsPlatformResize)
 void IGraphics::SetLayoutOnResize(bool layoutOnResize)
 {
   mLayoutOnResize = layoutOnResize;
+}
+
+void IGraphics::SetScaleConstraints(float lo, float hi)
+{
+  mMinScale = std::min(lo, hi);
+  mMaxScale = std::max(lo, hi);
 }
 
 void IGraphics::RemoveControlWithTag(int ctrlTag)
@@ -201,25 +209,22 @@ void IGraphics::RemoveAllControls()
   mControls.Empty(true);
 }
 
-void IGraphics::SetControlPosition(int idx, float x, float y)
+void IGraphics::SetControlPosition(IControl* pControl, float x, float y)
 {
-  IControl* pControl = GetControl(idx);
   pControl->SetPosition(x, y);
   if (!pControl->IsHidden())
     SetAllControlsDirty();
 }
 
-void IGraphics::SetControlSize(int idx, float w, float h)
+void IGraphics::SetControlSize(IControl* pControl, float w, float h)
 {
-  IControl* pControl = GetControl(idx);
   pControl->SetSize(w, h);
   if (!pControl->IsHidden())
     SetAllControlsDirty();
 }
 
-void IGraphics::SetControlBounds(int idx, const IRECT& r)
+void IGraphics::SetControlBounds(IControl* pControl, const IRECT& r)
 {
-  IControl* pControl = GetControl(idx);
   pControl->SetTargetAndDrawRECTs(r);
   if (!pControl->IsHidden())
     SetAllControlsDirty();
@@ -451,6 +456,21 @@ IControl* IGraphics::GetControlWithTag(int ctrlTag) const
     assert("There is no control attached with this tag");
     return nullptr;
   }
+}
+
+IControl* IGraphics::GetControlWithParamIdx(int paramIdx)
+{
+  for (auto c = 0; c < NControls(); c++)
+  {
+    IControl* pControl = GetControl(c);
+
+    if (pControl->LinkedToParam(paramIdx) > kNoValIdx)
+    {
+      return pControl;
+    }
+  }
+  
+  return nullptr;
 }
 
 void IGraphics::HideControl(int paramIdx, bool hide)
@@ -737,6 +757,14 @@ void IGraphics::DrawBitmapedText(const IBitmap& bitmap, const IRECT& bounds, ITe
   }
 }
 
+void IGraphics::DrawLineAcross(const IColor& color, const IRECT& bounds, EDirection dir, float pos, const IBlend* pBlend, float thickness)
+{
+  if (dir == EDirection::Horizontal)
+    DrawHorizontalLine(color, bounds, pos, pBlend, thickness);
+  else
+    DrawVerticalLine(color, bounds, pos, pBlend, thickness);
+}
+
 void IGraphics::DrawVerticalLine(const IColor& color, const IRECT& bounds, float x, const IBlend* pBlend, float thickness)
 {
   x = Clip(x, 0.0f, 1.0f);
@@ -788,7 +816,14 @@ bool IGraphics::IsDirty(IRECTList& rects)
     if (pControl->IsDirty())
     {
       // N.B padding outlines for single line outlines
-      rects.Add(pControl->GetRECT().GetPadded(0.75));
+      auto rectToAdd = pControl->GetRECT().GetPadded(0.75);
+      
+      if (pControl->GetParent())
+      {
+        rectToAdd.Clank(pControl->GetParent()->GetRECT().GetPadded(0.75));
+      }
+      
+      rects.Add(rectToAdd);
       dirty = true;
     }
   };
@@ -832,6 +867,20 @@ void IGraphics::DrawControl(IControl* pControl, const IRECT& bounds, float scale
 
     if (clipBounds.W() <= 0.0 || clipBounds.H() <= 0)
       return;
+    
+    IControl* pParent = pControl->GetParent();
+    
+    while (pParent)
+    {
+      IRECT parentBounds = pParent->GetRECT().GetPadded(0.75).GetPixelAligned(scale);
+
+      if(!clipBounds.Intersects(parentBounds))
+        return;
+
+      clipBounds.Clank(parentBounds);
+      
+      pParent = pParent->GetParent();
+    }
     
     PrepareRegion(clipBounds);
     pControl->Draw(*this);
@@ -1233,7 +1282,7 @@ int IGraphics::GetMouseControlIdx(float x, float y, bool mouseOver)
         }
 #ifndef NDEBUG
       }
-      else if (pControl->GetRECT().Contains(x, y))
+      else if (pControl->GetRECT().Contains(x, y) && pControl->GetParent() == nullptr)
       {
         return c;
       }
@@ -1265,6 +1314,7 @@ IControl* IGraphics::GetMouseControl(float x, float y, bool capture, bool mouseO
   
   if (!pControl && mTextEntryControl && mTextEntryControl->EditInProgress())
     pControl = mTextEntryControl.get();
+  
   
 #if !defined(NDEBUG)
   if (!pControl && mLiveEdit)
@@ -1762,20 +1812,17 @@ IBitmap IGraphics::ScaleBitmap(const IBitmap& inBitmap, const char* name, int sc
   return outBitmap;
 }
 
-inline void IGraphics::SearchNextScale(int& sourceScale, int targetScale)
-{
-  // Search downwards from MAX_IMG_SCALE, skipping targetScale before trying again
+auto SearchNextScale = [](int& sourceScale, int targetScale) {
   if (sourceScale == targetScale && (targetScale != MAX_IMG_SCALE))
     sourceScale = MAX_IMG_SCALE;
   else if (sourceScale == targetScale + 1)
     sourceScale = targetScale - 1;
   else
     sourceScale--;
-}
+};
 
 EResourceLocation IGraphics::SearchImageResource(const char* name, const char* type, WDL_String& result, int targetScale, int& sourceScale)
 {
-  // Search target scale, then descending
   for (sourceScale = targetScale ; sourceScale > 0; SearchNextScale(sourceScale, targetScale))
   {
     WDL_String fullName(name);
@@ -1800,7 +1847,6 @@ APIBitmap* IGraphics::SearchBitmapInCache(const char* name, int targetScale, int
 {
   StaticStorage<APIBitmap>::Accessor storage(sBitmapCache);
     
-  // Search target scale, then descending
   for (sourceScale = targetScale; sourceScale > 0; SearchNextScale(sourceScale, targetScale))
   {
     APIBitmap* pBitmap = storage.Find(name, sourceScale);
@@ -1845,7 +1891,7 @@ void IGraphics::DoCreatePopupMenu(IControl& control, IPopupMenu& menu, const IRE
   mPopupMenuValIdx = valIdx;
   mIsContextMenu = isContext;
   
-  if(mPopupControl) // if we are not using platform pop-up menus
+  if (mPopupControl) // if we are not using platform pop-up menus
   {
     mPopupControl->CreatePopupMenu(menu, bounds);
   }
@@ -1854,7 +1900,7 @@ void IGraphics::DoCreatePopupMenu(IControl& control, IPopupMenu& menu, const IRE
     bool isAsync = false;
     IPopupMenu* pReturnMenu = CreatePlatformPopupMenu(menu, bounds, isAsync);
     
-    if(!isAsync)
+    if (!isAsync)
       SetControlValueAfterPopupMenu(pReturnMenu);
   }
 }
@@ -2349,8 +2395,11 @@ void IGraphics::DrawGrid(const IColor& color, const IRECT& bounds, float gridSiz
   PathStroke(color, thickness, IStrokeOptions(), pBlend);
 }
 
-void IGraphics::DrawData(const IColor& color, const IRECT& bounds, float* normYPoints, int nPoints, float* normXPoints, const IBlend* pBlend, float thickness)
+void IGraphics::DrawData(const IColor& color, const IRECT& bounds, float* normYPoints, int nPoints, float* normXPoints, const IBlend* pBlend, float thickness, const IColor* pFillColor)
 {
+  if (nPoints == 0)
+    return;
+  
   PathClear();
   
   float xPos = bounds.L;
@@ -2359,7 +2408,7 @@ void IGraphics::DrawData(const IColor& color, const IRECT& bounds, float* normYP
 
   for (auto i = 1; i < nPoints; i++)
   {
-    if(normXPoints)
+    if (normXPoints)
       xPos = bounds.L + (bounds.W() * normXPoints[i]);
     else
       xPos = bounds.L + ((bounds.W() / (float) (nPoints - 1) * i));
@@ -2367,6 +2416,11 @@ void IGraphics::DrawData(const IColor& color, const IRECT& bounds, float* normYP
     PathLineTo(xPos, bounds.B - (bounds.H() * normYPoints[i]));
   }
   
+  if (pFillColor)
+  {
+    PathFill(*pFillColor, IFillOptions(true), pBlend);
+  }
+    
   PathStroke(color, thickness, IStrokeOptions(), pBlend);
 }
 

@@ -45,7 +45,8 @@ using IActionFunction = std::function<void(IControl*)>;
 using IAnimationFunction = std::function<void(IControl*)>;
 using ILambdaDrawFunction = std::function<void(ILambdaControl*, IGraphics&, IRECT&)>;
 using IKeyHandlerFunc = std::function<bool(const IKeyPress& key, bool isUp)>;
-using IMsgBoxCompletionHanderFunc = std::function<void(EMsgBoxResult result)>;
+using IMsgBoxCompletionHandlerFunc = std::function<void(EMsgBoxResult result)>;
+using IFileDialogCompletionHandlerFunc = std::function<void(const WDL_String& fileName, const WDL_String& path)>;
 using IColorPickerHandlerFunc = std::function<void(const IColor& result)>;
 using IGestureFunc = std::function<void(IControl*, const IGestureInfo&)>;
 using IPopupFunction = std::function<void(IPopupMenu* pMenu)>;
@@ -171,19 +172,15 @@ struct ISVG
   /** The width of the SVG */
   float W() const
   {
-    if (mSVGDom)
-      return mSVGDom->containerSize().width();
-    else
-      return 0;
+    assert(mSVGDom);
+    return mSVGDom->containerSize().width();
   }
   
   /** The height of the SVG */
   float H() const
   {
-    if (mSVGDom)
-      return mSVGDom->containerSize().height();
-    else
-      return 0;
+    assert(mSVGDom);
+    return mSVGDom->containerSize().height();
   }
   
   /** @return \true if the SVG has valid data */
@@ -202,19 +199,15 @@ struct ISVG
   /** @return The width of the SVG */
   float W() const
   {
-    if (mImage)
-      return mImage->width;
-    else
-      return 0;
+    assert(mImage);
+    return mImage->width;
   }
 
   /** @return The height of the SVG */
   float H() const
   {
-    if (mImage)
-      return mImage->height;
-    else
-      return 0;
+    assert(mImage);
+    return mImage->height;
   }
   
   /** @return \true if the SVG has valid data */
@@ -419,7 +412,7 @@ struct IColor
   {
     WDL_String str(hexStr);
     
-    if(str.GetLength() == 7 && str.Get()[0] == '#')
+    if ((str.GetLength() == 7 || str.GetLength() == 9) && str.Get()[0] == '#')
     {
       str.DeleteSub(0, 1);
 
@@ -439,9 +432,12 @@ struct IColor
   }
   
   /** Convert the IColor to a hex string e.g. "#ffffffff" */
-  void ToColorCodeStr(WDL_String& str) const
+  void ToColorCodeStr(WDL_String& str, bool withAlpha = true) const
   {
-    str.SetFormatted(32, "#%02x%02x%02x%02x", R, G, B, A);
+    if (withAlpha)
+      str.SetFormatted(32, "#%02x%02x%02x%02x", R, G, B, A);
+    else
+      str.SetFormatted(32, "#%02x%02x%02x", R, G, B);
   }
   
   /** Create an IColor from Hue Saturation and Luminance values
@@ -574,7 +570,7 @@ const IBlend BLEND_01 = IBlend(EBlend::Default, 0.01f);
 const IBlend BLEND_DST_IN = IBlend(EBlend::DstIn, 1.f);
 const IBlend BLEND_DST_OVER = IBlend(EBlend::DstOver, 1.f);
 
-/** Used to manage fill behaviour for path based drawing back ends */
+/** Used to manage fill behaviour */
 struct IFillOptions
 {
   EFillRule mFillRule { EFillRule::Winding };
@@ -1411,8 +1407,8 @@ struct IRECT
       return IRECT(L, T, R, T + h);
   }
   
-  /** \todo 
-   * @param rhs \todo */
+  /** Clank will limit this IRECT's bounds based on the boundaries of the IRECT passed in as an argument
+   * @param rhs The rectangle to limit with  */
   void Clank(const IRECT& rhs)
   {
     if (L < rhs.L)
@@ -1718,8 +1714,8 @@ struct IMouseMod
 /** Used to group mouse coordinates with mouse modifier information */
 struct IMouseInfo
 {
-  float x, y;
-  float dX, dY;
+  float x = 0.0, y = 0.0;
+  float dX = 0.0, dY = 0.0;
   IMouseMod ms;
 };
 
@@ -2177,8 +2173,8 @@ struct IPattern
     IPattern pattern(EPatternType::Linear);
     
     // Calculate the affine transform from one line segment to another!
-    const double xd = x2 - x1;
-    const double yd = y2 - y1;
+    const double xd = double(x2 - x1);
+    const double yd = double(y2 - y1);
     const double d = sqrt(xd * xd + yd * yd);
     const double a = atan2(xd, yd);
     const double s = std::sin(a) / d;
