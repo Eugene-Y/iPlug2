@@ -102,8 +102,10 @@ public:
   /** Draw an SVG image to the graphics context
    * @param svg The SVG image to the graphics context
    * @param bounds The rectangular region to draw the image in
-   * @param pBlend Optional blend method */
-  virtual void DrawSVG(const ISVG& svg, const IRECT& bounds, const IBlend* pBlend = 0);
+   * @param pBlend Optional blend method
+   * @param pStrokeColor Optional color to override all SVG stroke commands
+   * @param pFillColor Optional color to override all SVG fill commands */
+  virtual void DrawSVG(const ISVG& svg, const IRECT& bounds, const IBlend* pBlend = 0, const IColor* pStrokeColor = nullptr, const IColor* pFillColor = nullptr);
 
   /** Draw an SVG image to the graphics context with rotation
    * @param svg The SVG image to draw to the graphics context
@@ -761,7 +763,7 @@ public:
 private:
   IPattern GetSVGPattern(const NSVGpaint& paint, float opacity);
 
-  void DoDrawSVG(const ISVG& svg, const IBlend* pBlend = nullptr);
+  void DoDrawSVG(const ISVG& svg, const IBlend* pBlend = nullptr, const IColor* pStrokeColor = nullptr, const IColor* pFillColor = nullptr);
   
   /** Prepare a particular area of the display for drawing, normally resulting in clipping of the region.
    * @param bounds The rectangular region to prepare  */
@@ -843,6 +845,11 @@ public:
    * @param str A CString that will be used to set the current text in the clipboard
    * @return /c true on success */
   virtual bool SetTextInClipboard(const char* str) = 0;
+
+  /** Set a file path in the clipboard. Returns false on unsupported platforms
+   * @param str A CString that contains a path to a file on disk
+   * @return /c true on success */
+  virtual bool SetFilePathInClipboard(const char* path) { return false; }
 
   /** Call this if you modify control tool tips at runtime. \todo explain */
   virtual void UpdateTooltips() = 0;
@@ -1226,7 +1233,7 @@ private:
 public:
   /** For all controls, including the "special controls" call a method
    * @param func A std::function to perform on each control */
-  void ForAllControlsFunc(std::function<void(IControl* pControl)> func);
+  void ForAllControlsFunc(IControlFunction func);
   
   /** For all controls, including the "special controls" call a method
    * @param method The method to call
@@ -1236,7 +1243,7 @@ public:
   
   /** For all standard controls in the main control stack perform a function
    * @param func A std::function to perform on each control */
-  void ForStandardControlsFunc(std::function<void(IControl* pControl)> func);
+  void ForStandardControlsFunc(IControlFunction func);
   
   /** For all standard controls in the main control stack that are linked to a specific parameter, call a method
    * @param method The method to call
@@ -1248,12 +1255,17 @@ public:
   /** For all standard controls in the main control stack that are linked to a specific parameter, execute a function
    * @param paramIdx The parameter index to match
    * @param func A std::function to perform on each control */
-  void ForControlWithParam(int paramIdx, std::function<void(IControl* pControl)> func);
+  void ForControlWithParam(int paramIdx, IControlFunction func);
   
-  /** For all standard controls in the main control stack that are linked to a group, execute a function
-   * @param group CString specificying the goupd name
+  /** For all standard controls in the main control stack that are linked to one of several parameters, execute a function
+   * @param params The parameter indexes to match
    * @param func A std::function to perform on each control */
-  void ForControlInGroup(const char* group, std::function<void(IControl* pControl)> func);
+  void ForControlWithParam(const std::initializer_list<int>& params, IControlFunction func);
+
+  /** For all standard controls in the main control stack that are linked to a group, execute a function
+   * @param group CString specifying the group name
+   * @param func A std::function to perform on each control */
+  void ForControlInGroup(const char* group, IControlFunction func);
   
   /** Attach an IBitmapControl as the lowest IControl in the control stack to be the background for the graphics context
    * @param fileName CString fileName resource id for the bitmap image */
@@ -1520,6 +1532,11 @@ public:
    * @param x The X coordinate where the drag and drop occurred
    * @param y The Y coordinate where the drag and drop occurred */
   void OnDrop(const char* str, float x, float y);
+
+  /** @param paths A vector with the absolute paths of the dropped items
+   * @param x The X coordinate where the drag and drop occurred
+   * @param y The Y coordinate where the drag and drop occurred */
+  void OnDropMultiple(const std::vector<const char*>& paths, float x, float y);
 
   /** This is an idle timer tick call on the GUI thread, only active if USE_IDLE_CALLS is defined */
   void OnGUIIdle();

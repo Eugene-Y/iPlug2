@@ -143,6 +143,9 @@ public:
   /** Implement to do something when something was drag 'n dropped onto this control */
   virtual void OnDrop(const char* str) {};
 
+  /** Implement to handle multiple items drag 'n dropped onto this control */
+  virtual void OnDropMultiple(const std::vector<const char*>& paths) { OnDrop(paths[0]); }
+
   /** Implement to do something when graphics is scaled globally (e.g. moves to different DPI screen) */
   virtual void OnRescale() {}
 
@@ -773,6 +776,9 @@ public:
     mControl = pControl;
     mLabelStr.Set(label);
   }
+  
+  /** Implement if extra changes are required in response to style changing */
+  virtual void OnStyleChanged() { /* NO-OP */ }
 
   /** Set one of the IVColors that style the IVControl
    * @param colorIdx The index of the color to set
@@ -796,21 +802,22 @@ public:
     return mStyle.colorSpec.GetColor(color);
   }
   
-  void SetLabelStr(const char* label) { mLabelStr.Set(label); mControl->SetDirty(false); }
-  void SetValueStr(const char* value) { mValueStr.Set(value); mControl->SetDirty(false); }
-  void SetWidgetFrac(float frac) { mStyle.widgetFrac = Clip(frac, 0.f, 1.f);  mControl->OnResize(); mControl->SetDirty(false); }
-  void SetAngle(float angle) { mStyle.angle = Clip(angle, 0.f, 360.f);  mControl->SetDirty(false); }
-  void SetShowLabel(bool show) { mStyle.showLabel = show;  mControl->OnResize(); mControl->SetDirty(false); }
-  void SetShowValue(bool show) { mStyle.showValue = show;  mControl->OnResize(); mControl->SetDirty(false); }
-  void SetRoundness(float roundness) { mStyle.roundness = Clip(roundness, 0.f, 1.f); mControl->SetDirty(false); }
-  void SetDrawFrame(bool draw) { mStyle.drawFrame = draw; mControl->SetDirty(false); }
-  void SetDrawShadows(bool draw) { mStyle.drawShadows = draw; mControl->SetDirty(false); }
-  void SetEmboss(bool draw) { mStyle.emboss = draw; mControl->SetDirty(false); }
-  void SetShadowOffset(float offset) { mStyle.shadowOffset = offset; mControl->SetDirty(false); }
-  void SetFrameThickness(float thickness) { mStyle.frameThickness = thickness; mControl->SetDirty(false); }
-  void SetSplashRadius(float radius) { mSplashRadius = radius * mMaxSplashRadius; }
-  void SetSplashPoint(float x, float y) { mSplashPoint.x = x; mSplashPoint.y = y; }
-  void SetShape(EVShape shape) { mShape = shape; mControl->SetDirty(false); }
+  void SetLabelStr(const char* label) { mLabelStr.Set(label); mControl->SetDirty(false); OnStyleChanged(); }
+  const char* GetLabelStr() const { return mLabelStr.Get(); }
+  void SetValueStr(const char* value) { mValueStr.Set(value); mControl->SetDirty(false); OnStyleChanged(); }
+  void SetWidgetFrac(float frac) { mStyle.widgetFrac = Clip(frac, 0.f, 1.f);  mControl->OnResize(); mControl->SetDirty(false); OnStyleChanged(); }
+  void SetAngle(float angle) { mStyle.angle = Clip(angle, 0.f, 360.f);  mControl->SetDirty(false); OnStyleChanged(); }
+  void SetShowLabel(bool show) { mStyle.showLabel = show;  mControl->OnResize(); mControl->SetDirty(false); OnStyleChanged(); }
+  void SetShowValue(bool show) { mStyle.showValue = show;  mControl->OnResize(); mControl->SetDirty(false); OnStyleChanged(); }
+  void SetRoundness(float roundness) { mStyle.roundness = Clip(roundness, 0.f, 1.f); mControl->SetDirty(false); OnStyleChanged(); }
+  void SetDrawFrame(bool draw) { mStyle.drawFrame = draw; mControl->SetDirty(false); OnStyleChanged(); }
+  void SetDrawShadows(bool draw) { mStyle.drawShadows = draw; mControl->SetDirty(false); OnStyleChanged(); }
+  void SetEmboss(bool draw) { mStyle.emboss = draw; mControl->SetDirty(false); OnStyleChanged(); }
+  void SetShadowOffset(float offset) { mStyle.shadowOffset = offset; mControl->SetDirty(false); OnStyleChanged(); }
+  void SetFrameThickness(float thickness) { mStyle.frameThickness = thickness; mControl->SetDirty(false); OnStyleChanged(); }
+  void SetSplashRadius(float radius) { mSplashRadius = radius * mMaxSplashRadius; OnStyleChanged(); }
+  void SetSplashPoint(float x, float y) { mSplashPoint.x = x; mSplashPoint.y = y; OnStyleChanged(); }
+  void SetShape(EVShape shape) { mShape = shape; mControl->SetDirty(false); OnStyleChanged(); }
 
   /** Set the Style of this IVControl
    * @param style */
@@ -818,6 +825,7 @@ public:
   {
     mStyle = style;
     SetColors(style.colorSpec);
+    OnStyleChanged();
   }
 
   /** Get the style of this IVControl
@@ -829,7 +837,7 @@ public:
    * @return IRECT The adjusted bounds */
   IRECT GetAdjustedHandleBounds(IRECT handleBounds) const
   {
-    if(mStyle.drawFrame)
+    if (mStyle.drawFrame)
       handleBounds.Pad(- 0.5f * mStyle.frameThickness);
     
     if (mStyle.drawShadows)
@@ -843,7 +851,7 @@ public:
    * @return float The radius */ 
   float GetRoundedCornerRadius(const IRECT& bounds) const
   {
-    if(bounds.W() < bounds.H())
+    if (bounds.W() < bounds.H())
       return mStyle.roundness * (bounds.W() / 2.f);
     else
       return mStyle.roundness * (bounds.H() / 2.f);
@@ -994,10 +1002,10 @@ public:
       }
     }
     
-    if(pressed && mControl->GetAnimationFunction())
+    if (pressed && mControl->GetAnimationFunction())
       DrawSplash(g, handleBounds);
     
-    if(mStyle.drawFrame)
+    if (mStyle.drawFrame)
       g.DrawEllipse(GetColor(kFR), handleBounds, &blend, mStyle.frameThickness);
   }
   
@@ -1047,7 +1055,7 @@ public:
     }
     else
     {
-      //outer shadow
+      // outer shadow
       if (mStyle.drawShadows)
         g.FillRoundRect(GetColor(kSH), shadowBounds, tlr, trr, blr, brr, &blend);
 
@@ -1077,10 +1085,10 @@ public:
       }
     }
     
-    if(pressed && mControl->GetAnimationFunction())
+    if (pressed && mControl->GetAnimationFunction())
       DrawSplash(g, handleBounds);
     
-    if(mStyle.drawFrame)
+    if (mStyle.drawFrame)
       g.DrawRoundRect(GetColor(kFR), handleBounds, tlr, trr, blr, brr, &blend, mStyle.frameThickness);
     
     return handleBounds;
@@ -1157,13 +1165,43 @@ public:
         IRECT textRect;
         mControl->GetUI()->MeasureText(mStyle.labelText, mLabelStr.Get(), textRect);
 
-        mLabelBounds = parent.GetFromTop(textRect.H()).GetCentredInside(textRect.W(), textRect.H());
+        switch (mStyle.labelOrientation)
+        {
+          case EOrientation::North:
+            mLabelBounds = parent.GetFromTop(textRect.H()).GetCentredInside(textRect.W(), textRect.H());
+            break;
+          case EOrientation::East:
+            mLabelBounds = parent.GetFromRight(textRect.W()).GetCentredInside(textRect.W(), textRect.H());
+            break;
+          case EOrientation::South:
+            mLabelBounds = parent.GetFromBottom(textRect.H()).GetCentredInside(textRect.W(), textRect.H());
+            break;
+          case EOrientation::West:
+            mLabelBounds = parent.GetFromLeft(textRect.W()).GetCentredInside(textRect.W(), textRect.H());
+            break;
+        }
       }
       else
         mLabelBounds = IRECT();
       
-      if(mLabelBounds.H())
-        clickableArea = parent.GetReducedFromTop(mLabelBounds.H());
+      if (!mLabelBounds.Empty())
+      {
+        switch (mStyle.labelOrientation)
+        {
+          case EOrientation::North:
+            clickableArea = parent.GetReducedFromTop(mLabelBounds.H());
+            break;
+          case EOrientation::East:
+            clickableArea = parent.GetReducedFromRight(mLabelBounds.W());
+            break;
+          case EOrientation::South:
+            clickableArea = parent.GetReducedFromBottom(mLabelBounds.H());
+            break;
+          case EOrientation::West:
+            clickableArea = parent.GetReducedFromLeft(mLabelBounds.W());
+            break;
+        }
+      }
     }
     
     if (mStyle.showValue && !mValueInWidget)
@@ -1877,7 +1915,7 @@ public:
 
   virtual ~IDirBrowseControlBase();
 
-  int NItems();
+  int NItems() const;
 
   /** Used to add a path to scan for files.
    * @param path CString with the full path to the folder to scan
@@ -1896,7 +1934,7 @@ public:
   /** Get the full path to the file if something has been selected in the menu */
   void GetSelectedFile(WDL_String& path) const;
   
-  /** Check the currently selected menu item. Does nothing if mSelectedIndex == -1 */
+  /** Check the currently selected menu item. Does nothing if mSelectedItemIndex == -1 */
   void CheckSelectedItem();
 
 private:
@@ -1907,7 +1945,7 @@ protected:
   const bool mScanRecursively;
   const bool mShowFileExtensions;
   const bool mShowEmptySubmenus;
-  int mSelectedIndex = -1;
+  int mSelectedItemIndex = -1; // index into mItems
   IPopupMenu mMainMenu;
   WDL_PtrList<WDL_String> mPaths;
   WDL_PtrList<WDL_String> mPathLabels;

@@ -69,19 +69,6 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   [self.view addSubview:self.tableView];
 }
 
-- (void) viewDidAppear:(BOOL)animated
-{
-  auto selectedItemIdx = mMenu->GetChosenItemIdx();
-
-  if (selectedItemIdx > -1)
-  {
-    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:selectedItemIdx inSection:0];
-    [self.tableView scrollToRowAtIndexPath:indexPath
-                           atScrollPosition:UITableViewScrollPositionMiddle
-                             animated:NO];
-  }
-}
-
 - (id) initWithIPopupMenuAndIGraphics:(IPopupMenu*) pMenu :(IGraphicsIOS*) pGraphics
 {
   self = [super init];
@@ -123,11 +110,7 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
   else
     cell.accessoryType = pItem->GetSubmenu() ? UITableViewCellAccessoryDisclosureIndicator : UITableViewCellAccessoryNone;
 
-  if (!pItem->GetEnabled())
-  {
-    cell.userInteractionEnabled = NO;
-    cell.textLabel.enabled = NO;
-  }
+  cell.textLabel.enabled = cell.userInteractionEnabled = pItem->GetEnabled();
   
   return cell;
 }
@@ -189,10 +172,7 @@ extern StaticStorage<CoreTextFontDescriptor> sFontDescriptorCache;
 {
   if (self.presentingViewController && self.tableView != nil)
   {
-    CGSize tempSize = self.presentingViewController.view.bounds.size;
-    tempSize.width = 300;
-    CGSize size = [self.tableView sizeThatFits:tempSize];
-    return size;
+    return [self.tableView sizeThatFits:self.presentingViewController.view.bounds.size];
   } else {
     return [super preferredContentSize];
   }

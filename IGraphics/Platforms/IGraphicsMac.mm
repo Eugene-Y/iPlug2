@@ -449,8 +449,7 @@ void IGraphicsMac::PromptForFile(WDL_String& fileName, WDL_String& path, EFileAc
     if (completionHandler)
       completionHandler(fileName, path);
   };
-
-
+  
   NSPanel* pPanel = nullptr;
   
   if (action == EFileAction::Save)
@@ -646,6 +645,15 @@ bool IGraphicsMac::SetTextInClipboard(const char* str)
   NSString* pTextForClipboard = [NSString stringWithUTF8String:str];
   [[NSPasteboard generalPasteboard] clearContents];
   return [[NSPasteboard generalPasteboard] setString:pTextForClipboard forType:NSStringPboardType];
+}
+
+bool IGraphicsMac::SetFilePathInClipboard(const char* path)
+{
+  NSPasteboard* pPasteboard = [NSPasteboard generalPasteboard];
+  [pPasteboard clearContents]; // clear pasteboard to take ownership
+  NSURL* pFileURL = [NSURL fileURLWithPath: [NSString stringWithUTF8String: path]];
+  BOOL success = [pPasteboard writeObjects: [NSArray arrayWithObject:pFileURL]];
+  return (bool)success;
 }
 
 EUIAppearance IGraphicsMac::GetUIAppearance() const

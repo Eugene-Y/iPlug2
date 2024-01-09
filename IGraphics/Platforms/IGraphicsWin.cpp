@@ -697,14 +697,28 @@ LRESULT CALLBACK IGraphicsWin::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARA
     case WM_DROPFILES:
     {
       HDROP hdrop = (HDROP)wParam;
-      
-      char pathToFile[1025];
-      DragQueryFile(hdrop, 0, pathToFile, 1024);
-      
-      POINT point;
-      DragQueryPoint(hdrop, &point);
-      
-      pGraphics->OnDrop(pathToFile, point.x, point.y);
+
+      int numDroppedFiles = DragQueryFile(hdrop, -1, nullptr, 0);
+
+      std::vector<std::vector<char>> pathBuffers(numDroppedFiles, std::vector<char>(1025, 0));
+      std::vector<const char*> pathPtrs(numDroppedFiles);
+      for (int i = 0; i < numDroppedFiles; i++) 
+      {
+        DragQueryFile(hdrop, i, &pathBuffers[i][0], 1024);
+        pathPtrs[i] = &pathBuffers[i][0];
+      }
+      POINT p;
+      DragQueryPoint(hdrop, &p);
+
+      const float scale = pGraphics->GetTotalScale();
+
+      if (numDroppedFiles==1) 
+      {
+        pGraphics->OnDrop(&pathPtrs[0][0], p.x / scale, p.y / scale);
+      } else 
+      {
+        pGraphics->OnDropMultiple(pathPtrs, p.x / scale, p.y / scale);
+      }
       
       return 0;
     }
@@ -1911,6 +1925,48 @@ bool IGraphicsWin::SetTextInClipboard(const char* str)
   CloseClipboard();
 
   return len > 0;
+}
+
+bool IGraphicsWin::SetFilePathInClipboard(const char* path)
+{
+  if (!OpenClipboard(mMainWnd))
+  {
+    return false;
+  }
+
+  EmptyClipboard();
+
+  const size_t pathLength = strlen(path);
+  HGLOBAL hGlobal = GlobalAlloc(GHND, sizeof(DROPFILES) + pathLength + 2);
+
+  if (!hGlobal)
+    return false;
+
+  DROPFILES* pDropFiles = (DROPFILES*)GlobalLock(hGlobal);
+
+  if (!pDropFiles) 
+  {
+    GlobalFree(hGlobal);
+    return false;
+  }
+
+  pDropFiles->pFiles = sizeof(DROPFILES);
+  pDropFiles->fNC = true;
+  pDropFiles->fWide = false;
+
+  memcpy(&pDropFiles[1], path, pathLength);
+
+  GlobalUnlock(hGlobal);
+
+  if (!SetClipboardData(CF_HDROP, hGlobal)) 
+  {
+    GlobalFree(hGlobal);
+    return false;
+  }
+
+  GlobalFree(hGlobal);
+  CloseClipboard();
+  return true;
 }
 
 static HFONT GetHFont(const char* fontName, int weight, bool italic, bool underline, DWORD quality = DEFAULT_QUALITY, bool enumerate = false)
