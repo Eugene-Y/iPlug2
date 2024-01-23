@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <cstring>
+#include <string>
 #include <functional>
 #include <memory>
 
@@ -160,6 +161,7 @@ public:
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
   void InitEnum(const char* name, int defaultValue, const std::initializer_list<const char*>& listItems, int flags = 0, const char* group = "");
+  void InitEnum(const char* name, int defaultValue, const std::vector<std::string>&           listItems, int flags = 0, const char* group = "");
 
   /** Initialize the parameter as integer
    * @param name The parameter's name

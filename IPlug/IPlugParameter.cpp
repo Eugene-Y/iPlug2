@@ -130,6 +130,19 @@ void IParam::InitEnum(const char* name, int defaultVal, const std::initializer_l
   }
 }
 
+void IParam::InitEnum(const char* name, int defaultVal, const std::vector<std::string>& listItems, int flags, const char* group)
+{
+  if (mType == kTypeNone) mType = kTypeEnum;
+
+  InitInt(name, defaultVal, 0, static_cast<int>(listItems.size()) - 1, "", flags | kFlagStepped, group);
+
+  int idx = 0;
+  for (const auto& item : listItems)
+  {
+    SetDisplayText(idx++, item.c_str());
+  }
+}
+
 void IParam::InitInt(const char* name, int defaultVal, int minVal, int maxVal, const char* label, int flags, const char* group)
 {
   if (mType == kTypeNone) mType = kTypeInt;
