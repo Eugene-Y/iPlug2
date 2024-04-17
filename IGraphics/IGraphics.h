@@ -337,14 +337,16 @@ public:
   /** Draw some text to the graphics context in a specific rectangle
    * @param text An IText struct containing font and text properties and layout info
    * @param str The text string to draw
-   * @param bounds The rectangular region in the graphics where you would like to draw the text */
+   * @param bounds The rectangular region in the graphics where you would like to draw the text
+   * @param pBlend Optional blend method */
   void DrawText(const IText& text, const char* str, const IRECT& bounds, const IBlend* pBlend = 0);
 
   /** Draw some text to the graphics context at a point
    * @param text An IText struct containing font and text properties and layout info
    * @param str The text string to draw
    * @param x The x position in the graphics where you would like to draw the text
-   * @param y The y position in the graphics where you would like to draw the text */
+   * @param y The y position in the graphics where you would like to draw the text
+   * @param pBlend Optional blend method */
   void DrawText(const IText& text, const char* str, float x, float y, const IBlend* pBlend = 0);
   
   /** Measure the rectangular region that some text will occupy
@@ -352,6 +354,13 @@ public:
    * @param str The text string to draw
    * @param bounds after calling the method this IRECT will be updated with the rectangular region the text will occupy */
   virtual float MeasureText(const IText& text, const char* str, IRECT& bounds) const;
+  
+  /** Draw some  multi-line text to the graphics context in a specific rectangle (NanoVG only)
+   * @param text An IText struct containing font and text properties and layout info
+   * @param str The text string to draw
+   * @param bounds The rectangular region in the graphics where you would like to draw the text
+   * @param pBlend Optional blend method */
+  virtual void DrawMultiLineText(const IText& text, const char* str, IRECT& bounds, const IBlend* pBlend = 0) { DrawText(text, "Unsupported", bounds, pBlend); }
 
   /** Get the color at an X, Y location in the graphics context
    * @param x The X coordinate of the pixel
@@ -792,6 +801,11 @@ public:
   /** Remove a previously attached platform view from the IGraphics view
    * @param pView the platform view to remove, which would be a HWND on Windows, NSView* on macOS or UIView* on iOS */
   virtual void RemovePlatformView(void* pView) {};
+  
+  /** Hide a previously attached platform view from the IGraphics view
+   * @param pView the platform view to remove, which would be a HWND on Windows, NSView* on macOS or UIView* on iOS
+   * @param hide should it be hidden or not */
+  virtual void HidePlatformView(void* pView, bool hide) {};
 
   /** Get the x, y position of the mouse cursor
    * @param x Where the X position will be stored
@@ -851,16 +865,22 @@ public:
    * @return /c true on success */
   virtual bool SetFilePathInClipboard(const char* path) { return false; }
 
+  /** Initiate an drag-n-drop operation of an existing file, to be dropped outside of the current window
+   * @param path A CString that contains a path to a file on disk
+   * @param iconBounds The area where the icon should appear
+   * @return /c true on success */
+  virtual bool InitiateExternalFileDragDrop(const char* path, const IRECT& iconBounds) { return false; };
+
   /** Call this if you modify control tool tips at runtime. \todo explain */
   virtual void UpdateTooltips() = 0;
 
   /** Pop up a modal platform message box dialog.
-   * @param str The text message to display in the dialogue
-   * @param caption The title of the message box window
+   * @param str The text message to display in the dialog
+   * @param title The title of the message box window
    * @param type EMsgBoxType describing the button options available \see EMsgBoxType
    * @param completionHanlder an IMsgBoxCompletionHandlerFunc that will be called when a button is pressed
    * @return EMsgBoxResult signifying which button was pressed */
-  virtual EMsgBoxResult ShowMessageBox(const char* str, const char* caption, EMsgBoxType type, IMsgBoxCompletionHandlerFunc completionHandler = nullptr) = 0;
+  virtual EMsgBoxResult ShowMessageBox(const char* str, const char* title, EMsgBoxType type, IMsgBoxCompletionHandlerFunc completionHandler = nullptr) = 0;
 
   /** Create a platform file prompt dialog to choose a path for opening/saving a single file. NOTE: this method will block the main thread on macOS, unless you speficy the completionHander, which will be called asynchronously when the dialog button is pressed. On iOS, you must supply a completionHander.
    * @param fileName Non const WDL_String reference specifying the file name. Set this prior to calling the method for save dialogs, to provide a default file name. For file-open dialogs, on successful selection of a file this will get set to the file’s name.
@@ -945,7 +965,10 @@ public:
   virtual void CachePlatformFont(const char* fontID, const PlatformFontPtr& font) = 0;
 
   /** Get the bundle ID on macOS and iOS, returns emtpy string on other OSs */
-  virtual const char* GetBundleID() { return ""; }
+  virtual const char* GetBundleID() const { return ""; }
+
+  /** Get the app group ID on macOS and iOS, returns emtpy string on other OSs */
+  virtual const char* GetAppGroupID() const { return ""; }
 
 protected:
   /* Implemented on Windows to store previously active GLContext and HDC for restoring, calls GetDC */

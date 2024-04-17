@@ -35,7 +35,7 @@ public:
   static void DefaultResizeFunc(IContainerBase* pTab, const IRECT& r) {
     if (pTab->NChildren() == 1)
     {
-      auto innerBounds = r.GetPadded(- pTab->As<IVTabPage>()->GetPadding());
+      auto innerBounds = r.GetPadded(float(- pTab->As<IVTabPage>()->GetPadding()));
       pTab->GetChild(0)->SetTargetAndDrawRECTs(innerBounds);
     }
   }
@@ -85,7 +85,7 @@ using PageMap = std::map<const char*, IVTabPage*>;
 /** A control to manage tabbed pages of sub controls
  * Basic usage example:
  * \code{.cpp}
- * pGraphics->AttachControl(new IVTabbedPagesControl(nextCell(),
+ * pGraphics->AttachControl(new IVTabbedPagesControl(bounds,
  * {
  *   {"1", new IVTabPage([](IVTabPage* pPage, const IRECT& r) {
  *     pPage->AddChildControl(new IPanelControl(IRECT(), COLOR_RED));
