@@ -44,6 +44,13 @@ public:
     
     AttachIControl(this, label);
   }
+    
+    
+    void setSmallIncrement (double v) { mSmallIncrement = v; }
+    void setLargeIncrement (double v) { mLargeIncrement = v; }
+    
+    
+  void SetFormatString (const char* s) { mFmtStr.Set (s); }
    
   void OnInit() override
   {

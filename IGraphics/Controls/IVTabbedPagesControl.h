@@ -226,6 +226,14 @@ public:
   }
   
   int NPages() const { return mPages.GetSize(); }
+    
+    void SelectPage(int index)
+    {
+      GetTabSwitchControl()->SetValue(static_cast<double>(index));
+      ShowSelectedPage();
+    }
+      
+      //void GetSelectedPageId() { return GetTabSwitchControl()->Value(); }
 
 private:
   void AddPage(const char* pageName, IVTabPage* pPage)
@@ -246,12 +254,6 @@ private:
   IVTabSwitchControl* GetTabSwitchControl() { return GetChild(0)->As<IVTabSwitchControl>(); }
   
   IVTabPage* GetPage(int pageIdx) { return mPages.Get(pageIdx); }
-
-  void SelectPage(int index)
-  {
-    GetTabSwitchControl()->SetValue(static_cast<double>(index));
-    ShowSelectedPage();
-  }
   
 private:
   void ShowSelectedPage()
