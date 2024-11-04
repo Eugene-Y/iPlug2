@@ -23,26 +23,8 @@
 
 #define API_EXT2
 #ifdef VST2_API
-#ifdef REAPER_PLUGIN
-  #define LICE_PROVIDED_BY_APP
-//  #define SWELL_PROVIDED_BY_APP
-  #include "IPlugReaperVST2.h"
-  #define PLUGIN_API_BASE IPlugReaperVST2
-
-  #ifdef FillRect
-  #undef FillRect
-  #endif
-  #ifdef DrawText
-  #undef DrawText
-  #endif
-  #ifdef Polygon
-  #undef Polygon
-  #endif
-
-#else
   #include "IPlugVST2.h"
   #define PLUGIN_API_BASE IPlugVST2
-#endif
   #define API_EXT "vst"
 #elif defined AU_API
   #include "IPlugAU.h"
@@ -86,6 +68,10 @@
   #include "IPlugVST3_Processor.h"
   #define PLUGIN_API_BASE IPlugVST3Processor
   #define API_EXT "vst3"
+#elif defined CLAP_API
+  #include "IPlugCLAP.h"
+  #define PLUGIN_API_BASE IPlugCLAP
+  #define API_EXT "clap"
 #else
   #error "No API defined!"
 #endif

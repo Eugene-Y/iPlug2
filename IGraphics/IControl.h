@@ -175,6 +175,11 @@ public:
    * @param valIdx An index that indicates which of the control's vals the menu relates to */
   virtual void OnPopupMenuSelection(IPopupMenu* pSelectedMenu, int valIdx);
 
+  /** Implement this method to handle popup menu deletion interactions (on IOS) after IGraphics::CreatePopupMenu/IControl::PromptUserInput
+     * @param pMenu The menu in which an item was deleted
+     * @param itemIdx An index that indicates which of the items was deleted */
+  virtual void OnDeleteFromPopupMenu(IPopupMenu* pMenu, int itemIdx) {}
+    
   /** Implement this method to handle text input after IGraphics::CreateTextEntry/IControl::PromptUserInput
    * @param str A CString with the inputted text
    * @param valIdx An index that indicates which of the control's values the text completion relates to */
@@ -2276,7 +2281,7 @@ protected:
   bool mShowParamLabel;
   IColor mTriangleColor = COLOR_BLACK;
   IColor mTriangleMouseOverColor = COLOR_WHITE;
-  IRECT mTri;
+  IRECT mTriangleRect;
 };
 
 /** A control to use as a placeholder during development */
