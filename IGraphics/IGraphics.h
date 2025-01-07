@@ -360,7 +360,7 @@ public:
    * @param str The text string to draw
    * @param bounds The rectangular region in the graphics where you would like to draw the text
    * @param pBlend Optional blend method */
-  virtual void DrawMultiLineText(const IText& text, const char* str, IRECT& bounds, const IBlend* pBlend = 0) { DrawText(text, "Unsupported", bounds, pBlend); }
+  virtual void DrawMultiLineText(const IText& text, const char* str, const IRECT& bounds, const IBlend* pBlend = 0) { DrawText(text, "Unsupported", bounds, pBlend); }
 
   /** Get the color at an X, Y location in the graphics context
    * @param x The X coordinate of the pixel
@@ -979,7 +979,7 @@ protected:
 
   /** Creates a platform native text entry field.
   * @param paramIdx The index of the parameter associated with the text entry field.
-  * @param text The text to be displayed in the text entry field.
+  * @param text The IText style for the text entry field text.
   * @param bounds The rectangle that defines the size and position of the text entry field.
   * @param length The maximum allowed length of the text in the text entry field.
   * @param str The initial string to be displayed in the text entry field. */
@@ -991,7 +991,7 @@ protected:
    * @param isAsync This gets set true on platforms where popupmenu creation is asyncronous
    * @return A ptr to the chosen IPopupMenu or nullptr in the case of async or dismissed menu */
   virtual IPopupMenu* CreatePlatformPopupMenu(IPopupMenu& menu, const IRECT bounds, bool& isAsync) = 0;
-
+  
 #pragma mark - Base implementation
 public:
   IGraphics(IGEditorDelegate& dlg, int w, int h, int fps = DEFAULT_FPS, float scale = 1.);
