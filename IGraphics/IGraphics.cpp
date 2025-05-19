@@ -440,7 +440,12 @@ void IGraphics::ShowFPSDisplay(bool enable)
   {
     if (!mPerfDisplay)
     {
-      mPerfDisplay = std::make_unique<IFPSDisplayControl>(GetBounds().GetPadded(-10).GetFromTLHC(200, 50));
+      if (mPerfDisplayBounds.Empty())
+      {
+        mPerfDisplayBounds = GetBounds().GetPadded(-10).GetFromTLHC(200, 50);
+      }
+      
+      mPerfDisplay = std::make_unique<IFPSDisplayControl>(mPerfDisplayBounds);
       mPerfDisplay->SetDelegate(*GetDelegate());
     }
   }
@@ -1983,6 +1988,8 @@ void IGraphics::EndDragResize()
     ForAllControls(&IControl::OnRescale);
     SetAllControlsDirty();
   }
+  else if (mCornerResizer)
+    mCornerResizer->SetDirty(false);
 }
 
 void IGraphics::StartLayer(IControl* pControl, const IRECT& r, bool cacheable)
