@@ -2,6 +2,7 @@
 #include <IControls.h>
 #include "IPlugEffect.hpp"
 #include "utils/host_info_UI_tags.hpp"
+#include "utils/midi_cc/control_decorator.hpp"
 
 
 static_assert (PLUG_HEIGHT_NO_HEADER + PLUG_INFO_HEADER_HEIGHT == PLUG_HEIGHT,
@@ -30,9 +31,9 @@ const IText smallTxtBlack = IText (16, COLOR_BLACK,      ROBOTO_MONO_FN, EAlign:
 const IText smallTxtLight = IText (16, COLOR_LIGHT_GRAY, ROBOTO_MONO_FN, EAlign::Near, EVAlign::Bottom);
 
 
-const size_t v_major = (PLUG_VERSION_HEX & 0xFFFF0000) >> 16;
-const size_t v_minor = (PLUG_VERSION_HEX & 0x0000FF00) >> 8;
-const size_t v_patch =  PLUG_VERSION_HEX & 0x000000FF;
+const size_t v_major = IPlugEffect::vMajor (PLUG_VERSION_HEX);
+const size_t v_minor = IPlugEffect::vMinor (PLUG_VERSION_HEX);
+const size_t v_patch = IPlugEffect::vPatch (PLUG_VERSION_HEX);
 
 
 auto getVersionColor = [](){
@@ -142,13 +143,22 @@ void IPlugEffect::initializeLayout() {
             const IRECT b = getUIBounds (pG, 0);
             IControl* pC;
 
+            IRECT r;
+
             pC = new ITextControl (b.GetCentredInside (b.W(), b.H()/3).GetVShifted (-b.H()/4), "Hello IPlugEffect!", IText (50, COLOR_LIGHT_GRAY, ROBOTO_MONO_FN));
             pG->AttachControl (pC);
 
             using namespace hvoya;
-            
-            pC = new IVKnobControl (b.GetCentredInside (b.H()/2).GetVShifted (b.H()/6), par_gain, "gain", knobStyle);
+
+            r = b.GetCentredInside (b.H(), b.H()/2).GetVShifted (b.H()/6);
+
+            pC = _midiCCMediator.createLearnable <IVKnobControl> (r.SubRectHorizontal (2, 0), par_gain_L, "gain L", knobStyle);
             pG->AttachControl (pC);
+            
+            pC = _midiCCMediator.createLearnable <IVKnobControl> (r.SubRectHorizontal (2, 1), par_gain_R, "gain R", knobStyle);
+            pG->AttachControl (pC);
+
+            _midiCCMediator.UpdateMidiControllableUI();
         };
 
     #endif

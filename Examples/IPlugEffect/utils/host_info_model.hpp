@@ -131,7 +131,7 @@ namespace hvoya {
                 
                 _lastSamplePos = samplePos;
                 _hostTime = buildTimeInfo();
-                HIM_DLOG << "host pos: " << buildTimeString (_hostTime);
+                //HIM_DLOG << "host pos: " << buildTimeString (_hostTime);
                 _updHostPos = true;
             }
             

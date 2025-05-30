@@ -9,6 +9,7 @@
 #include "utils/host_info_model.hpp"
 #include "utils/host_info_view.hpp"
 #include "utils/soft_limiter.hpp"
+#include "utils/midi_cc/mediator.hpp"
 
 
 namespace hvoya {
@@ -16,8 +17,9 @@ namespace hvoya {
     const int kNumPresets = 1;
 
     enum EParams {
-      par_gain = 0,
-      kNumParams
+        par_gain_L = 0,
+        par_gain_R,
+        kNumParams
     };
 
 }
@@ -29,6 +31,7 @@ using namespace igraphics;
 
 class IPlugEffect final : public Plugin {
     public:
+  
         IPlugEffect (const InstanceInfo&);
         
         void OnIdle() override;
@@ -36,13 +39,23 @@ class IPlugEffect final : public Plugin {
         void OnActivate (bool enable) override;
 
         #if IPLUG_DSP // http://bit.ly/2S64BDd
-          void ProcessBlock (sample** ins, sample** outs, int nFrames) override;
+            void ProcessBlock (sample** ins, sample** outs, int nFrames) override;
         #endif
         
-        virtual void OnParamChange (int paramIdx, EParamSource, int sampleOffset = -1) override;
-        virtual void ProcessMidiMsg (const IMidiMsg&) override;
+        bool OnMessage (int msgTag, int ctrlTag, int dataSize, const void* pData) override;
         
+        void OnParamChange (int paramIdx, EParamSource, int sampleOffset = -1) override;
+        void ProcessMidiMsg (const IMidiMsg&) override;
+        
+        bool SerializeState(IByteChunk&) const override;
+        int UnserializeState(const IByteChunk&, int startPos) override;
+
+        static size_t vMajor (version_hex_t v) { return (v & 0xFFFF0000) >> 16; }
+        static size_t vMinor (version_hex_t v) { return (v & 0x0000FF00) >> 8; }
+        static size_t vPatch (version_hex_t v) { return (v & 0x000000FF); }
+
     private:
+
         inline static std::atomic <size_t> _sNumInstances { 0 };
         const size_t _instanceId;
         std::atomic <size_t> _bufId { 0 };
@@ -57,5 +70,9 @@ class IPlugEffect final : public Plugin {
 
         hvoya::SoftLimiter _softLimiter;
         
-        sample _gain { 0 };
+        sample _gainL { 0 };
+        sample _gainR { 0 };
+        
+        hvoya::midi_cc::CCMediator <IPlugEffect> _midiCCMediator;
+
 };

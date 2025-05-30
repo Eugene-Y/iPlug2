@@ -13,6 +13,7 @@
 
 namespace hvoya {
 
+    // TODO add indent control
     class StatefulLogger {
         public:
             StatefulLogger (fIdProvider bufIdp = [](){ return 0; },
