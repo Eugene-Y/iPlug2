@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <array>
 
 #include "IPlug_include_in_plug_hdr.h"
 #include "plug_build_info.hpp"
@@ -19,7 +20,7 @@ namespace hvoya {
     enum EParams {
         par_gain_L = 0,
         par_gain_R,
-        kNumParams
+        num_params
     };
 
 }
@@ -61,10 +62,22 @@ class IPlugEffect final : public Plugin {
         std::atomic <size_t> _bufId { 0 };
         hvoya::StatefulLogger _logger;
 
+        
+        std::array <double, hvoya::EParams::num_params> _prevParamVals;
+        void resetPrevParamVals() { _prevParamVals.fill (std::numeric_limits <double>::max()); }
+        bool isSettingNewVal (hvoya::PId_t pid, double v) {
+            assert (pid < (hvoya::num_params));
+            if (_prevParamVals [pid] != v) {
+                _prevParamVals [pid] = v;
+                return true;
+            }
+            return false;
+        }
+
         void initializeParams();
         void initializeLayout();
         
-        hvoya::HostInfoModel <Plugin> _hostInfoModel;
+        hvoya::HostInfoModel <Plugin> _hostInfoModel; // TODO doesnt update chans
         hvoya::HostInfoView <Plugin> _hostInfoView;
         void updateHostInfoView();
 

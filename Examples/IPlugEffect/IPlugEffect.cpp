@@ -16,7 +16,7 @@ void logBuildInfo() {
 
 
 IPlugEffect::IPlugEffect (const InstanceInfo& info)
-      : iplug::Plugin (info, MakeConfig (kNumParams, kNumPresets)),
+      : iplug::Plugin (info, MakeConfig (num_params, kNumPresets)),
         _instanceId (_sNumInstances),
         _logger ([this]() { return _instanceId; },
                 [this]() { return _bufId.load(); }),
@@ -25,6 +25,8 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
         _midiCCMediator (this) {
     ++_sNumInstances;
     logBuildInfo();
+
+    resetPrevParamVals();
     initializeParams();
 
     #if IPLUG_EDITOR // http://bit.ly/2S64BDd
@@ -93,6 +95,7 @@ void IPlugEffect::OnActivate (bool enable) {
 
 
 void IPlugEffect::OnReset() {
+    resetPrevParamVals();
     _hostInfoModel.reset();
     //_midiCCMapper.reset();
 }
@@ -124,7 +127,10 @@ void IPlugEffect::ProcessMidiMsg (const IMidiMsg& msg) {
   
   
 void IPlugEffect::OnParamChange (int pid, EParamSource s, int sampleOffset) {
-    const float v = GetParam (pid)->Value();
+    const double v = GetParam (pid)->Value();
+    if (!isSettingNewVal (pid, v))
+        return;
+        
     LOGD << "OnParamChange: p " << pid << " v " << v;
     switch (pid) {
         case par_gain_L: _gainL = v / 100.;                  break;
@@ -141,7 +147,7 @@ bool IPlugEffect::SerializeState (IByteChunk &chunk) const {
     LOGD << "version " << vMajor (vHex) << "." << vMinor (vHex) << "." << vPatch (vHex);
 
     _midiCCMediator.serialize (chunk);
-    return SerializeParams(chunk);
+    return SerializeParams (chunk);
 }
 
 
@@ -152,5 +158,5 @@ int IPlugEffect::UnserializeState (const IByteChunk &chunk, int startPos) {
     LOGD << "version " << vMajor (vHex) << "." << vMinor (vHex) << "." << vPatch (vHex);
 
     startPos = _midiCCMediator.unserialize (chunk, startPos);
-    return UnserializeParams(chunk, startPos);
+    return UnserializeParams (chunk, startPos);
 }
