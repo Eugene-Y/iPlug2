@@ -77,7 +77,7 @@ namespace hvoya::midi_cc {
             
     
     std::vector <Mapper::ResolvedParam> Mapper::processMidiCC (CC_t cc, double normVal) {
-        MCCM_LOGD << "process midi cc " << cc;
+        //MCCM_LOGD << "process midi cc " << cc;
         if (_isLearning) {
             addMapping (cc, _listeningPId);
             _isLearning = false;

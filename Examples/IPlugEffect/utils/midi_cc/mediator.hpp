@@ -77,7 +77,7 @@ namespace hvoya::midi_cc {
                 assert (msg.StatusMsg() == IMidiMsg::kControlChange);
                 const auto cc = msg.ControlChangeIdx();
                 const double normValue = msg.ControlChange (cc);
-                LOGD << "ProcessMidiCC " << cc << " val " << normValue;
+                //LOGD << "ProcessMidiCC " << cc << " val " << normValue;
                 const auto mappedParams = _mapper.processMidiCC (cc, normValue);
                 for (auto& p : mappedParams) {
                     IParam* param = _plugin->GetParam (p.id);

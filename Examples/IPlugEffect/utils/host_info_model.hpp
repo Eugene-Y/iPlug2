@@ -109,11 +109,22 @@ namespace hvoya {
                 _lastBufSize = newSz;
                 _updBufSz = true;
             }
+            
+            
+            int numConnectedChans (iplug::ERoute dir) const {
+                const auto maxChans = _pHost->MaxNChannels (dir);
+                int chans = 0;
+                for (int i = 0; i < maxChans; ++i) {
+                    chans += _pHost->IsChannelConnected (dir, i);
+                }
+                return chans;
+            }
 
 
             void updateChans (){
-                const auto in = _pHost->NInChansConnected();
-                const auto out = _pHost->NOutChansConnected();
+                int in = numConnectedChans (iplug::ERoute::kInput);
+                int out = numConnectedChans (iplug::ERoute::kOutput);
+                
                 if (in == _lastChanIn && out == _lastChanOut)
                     return;
                 
