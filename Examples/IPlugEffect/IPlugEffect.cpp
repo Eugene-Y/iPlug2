@@ -44,22 +44,23 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
 
 #if IPLUG_DSP
 
-    void IPlugEffect::ProcessBlock (sample** inputs, sample** outputs, int numFrames) {
+    void IPlugEffect::ProcessBlock (sample** ins, sample** outs, int numFrames) {
         ++_bufId;
         
+		_hostInfoModel.updateChans();
         if (auto pG = GetUI()) {
-            _hostInfoModel.update (numFrames);
+            _hostInfoModel.updateAll (numFrames);
             updateHostInfoView();
         }
 
-        size_t chans = _hostInfoModel.getMinChans();
-        for (int c = 0; c < chans; c++) {
-            auto g = c == 0 ? _gainL : _gainR;
-            for (int s = 0; s < numFrames; s++)
-                outputs[c][s] = inputs[c][s] * g;
-        }
+		const auto numChans = _hostInfoModel.getMinChans();
+		AudioBuffer input (ins, numChans, numFrames);
+		for (int c = 0; c < input.numChans(); c++) {
+			input.getChan (c) *= (c == 0 ? _gainL : _gainR);
+		}
 
-        _softLimiter.processBuffer (outputs, numFrames, chans);
+        _softLimiter.processBuffer (input);
+		input.copyTo (outs, numChans, numFrames);
         
         //LOGD << " num frames: " << numFrames << " in chans: " << inChans << " out chans: " << outChans;
     }

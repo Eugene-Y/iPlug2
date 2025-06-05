@@ -7,34 +7,34 @@
 
 using namespace hvoya;
 
-inline float normalizedToDBFS (float n) {
-    assert (n >= 0.f);
-    return (n < 1e-15) ? -300.f : 20.f * log10f (n);
+inline float normalizedToDBFS (sample_t n) {
+    assert (n >= 0);
+    return (n < 1e-15) ? -300 : 20 * log10 (n);
 }
 
-inline float dBFSToNormalized (float db) { // TODO LUT
-    return pow (10.f, (db / 20.f));
+inline sample_t dBFSToNormalized (sample_t db) { // TODO LUT
+    return pow (10, (db / 20));
 }
 
-inline void computeParabolaParams (float thresh, float soft,
-                                   float& a, float& b, float& l) {
+inline void computeParabolaParams (sample_t thresh, sample_t soft,
+                                   sample_t& a, sample_t& b, sample_t& l) {
     // https://www.desmos.com/calculator/phkdzum9a8
-    l = (1.f - soft) * thresh;
+    l = (1 - soft) * thresh;
     
-    if (soft == 0.f) {
-        a = 0.f;
-        b = 0.f;
+    if (soft == 0) {
+        a = 0;
+        b = 0;
         return;
     }
     
-    a = -0.25f / (soft * thresh);
-    b = l - 0.5f / a;
+    a = -0.25 / (soft * thresh);
+    b = l - 0.5 / a;
 }
 
-inline float limitInput (float in, float thresh,
-                         float a, float b, float l) {
-    float sign = in < 0.f ? -1.f : 1.f;
-    float absIn = in * sign;
+inline sample_t limitInput (sample_t in, sample_t thresh,
+                            sample_t a, sample_t b, sample_t l) {
+    sample_t sign = in < 0 ? -1 : 1;
+    sample_t absIn = in * sign;
     
     if (absIn <= l)
         return in;
@@ -47,36 +47,39 @@ inline float limitInput (float in, float thresh,
     return in;
 }
 
-SoftLimiter::SoftLimiter (float threshold,
-                          float softness) {
-    _threshold = 0.f;
+SoftLimiter::SoftLimiter (sample_t threshold,
+                          sample_t softness) {
+    _threshold = 0;
     setThreshold (threshold);
     setSoftness (softness);
 }
 
-bool SoftLimiter::processBuffer (double** outs, size_t numFrames, size_t numChans) {
-    for (size_t c = 0; c < numChans; ++c) {
-        for (size_t i = 0; i < numFrames; ++i) {
+void SoftLimiter::processBuffer (sample_t** outs, n_chan_t chans, n_frames_t frames) {
+    for (n_chan_t c = 0; c < chans; ++c)
+        for (n_frames_t i = 0; i < frames; ++i)
             outs [c][i] = limitInput (outs [c][i], _threshold, _a, _b, _l);
-        }
-    }
-    return true;
 }
 
-void SoftLimiter::setThreshold (float db) {
+
+void SoftLimiter::processBuffer (AudioBuffer in) {
+		processBuffer (in.data(), in.numChans(), in.numFrames());
+}
+
+
+void SoftLimiter::setThreshold (sample_t db) {
     _threshold = dBFSToNormalized(db);
     computeParabolaParams (_threshold, _softness, _a, _b, _l);
 }
 
-float SoftLimiter::getThreshold() const {
+sample_t SoftLimiter::getThreshold() const {
     return normalizedToDBFS (_threshold);
 }
 
-void SoftLimiter::setSoftness (float db) {
-    _softness = 1.0 - dBFSToNormalized(-db);
+void SoftLimiter::setSoftness (sample_t db) {
+    _softness = 1.0 - dBFSToNormalized (-db);
     computeParabolaParams(_threshold, _softness, _a, _b, _l);
 }
 
-float SoftLimiter::getSoftness() const {
+sample_t SoftLimiter::getSoftness() const {
     return normalizedToDBFS (1.0 - _softness);
 }

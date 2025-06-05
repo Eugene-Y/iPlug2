@@ -4,6 +4,10 @@
 
 namespace hvoya {
     
+    typedef double sample_t;
+    typedef size_t n_chan_t;
+    typedef size_t n_frames_t;
+    
     typedef int CC_t;
     typedef int PId_t;
     

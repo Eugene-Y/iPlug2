@@ -20,18 +20,73 @@ namespace hvoya {
     
     template <typename Host>
     class HostInfoModel {
+
+		#ifndef HIM_DLOG
+			#define HIM_DLOG LOGD << "HostInfo "
+		#else
+			#error change HostInfo log macro
+		#endif
+
         public:
             explicit HostInfoModel (Host* p) : _pHost (p) { assert (p); }
             HostInfoModel() = delete;
             
             
-            void update (size_t bufSize) {
+            void updateAll (size_t bufSize) {
                 updateBufSize (bufSize);
                 updateChans();
                 updateHostPosition();
                 updateSampleRate();
             }
-            
+
+
+			void updateChans (){
+				int in = numConnectedChans (iplug::ERoute::kInput);
+				int out = numConnectedChans (iplug::ERoute::kOutput);
+
+				if (in == _lastChanIn && out == _lastChanOut)
+						return;
+
+				HIM_DLOG << "chans: " << in << "-" << out;
+				_lastChanIn = in;
+				_lastChanOut = out;
+				_updChans = true;
+			}
+
+
+
+			void updateSampleRate() {
+				size_t newSR = _pHost->GetSampleRate();
+				if (newSR == _lastSampleRate)
+						return;
+
+				HIM_DLOG << "sr: " << newSR;
+				_lastSampleRate = newSR;
+				_updSR = true;
+			}
+
+
+			void updateBufSize (size_t newSz) {
+				if (newSz == _lastBufSize)
+					return;
+
+				HIM_DLOG << "buf size: " << newSz;
+				_lastBufSize = newSz;
+				_updBufSz = true;
+			}
+
+
+			void updateHostPosition() {
+				float samplePos = _pHost->GetSamplePos();
+				if (_lastSamplePos == samplePos)
+						return;
+
+				_lastSamplePos = samplePos;
+				_hostTime = buildTimeInfo();
+				//HIM_DLOG << "host pos: " << buildTimeString (_hostTime);
+				_updHostPos = true;
+			}
+
             
             void reset() {
                 updateHostPosition();
@@ -82,34 +137,7 @@ namespace hvoya {
             bool _updSR      = true;
             bool _updBufSz   = true;
             bool _updChans   = true;
-            
-            #ifndef HIM_DLOG
-                #define HIM_DLOG LOGD << "HostInfo "
-            #else
-                #error change log macro
-            #endif
-            
-            
-            void updateSampleRate() {
-                size_t newSR = _pHost->GetSampleRate();
-                if (newSR == _lastSampleRate)
-                    return;
-                
-                HIM_DLOG << "sr: " << newSR;
-                _lastSampleRate = newSR;
-                _updSR = true;
-            }
 
-
-            void updateBufSize (size_t newSz) {
-                if (newSz == _lastBufSize)
-                    return;
-                
-                HIM_DLOG << "buf size: " << newSz;
-                _lastBufSize = newSz;
-                _updBufSz = true;
-            }
-            
             
             int numConnectedChans (iplug::ERoute dir) const {
                 const auto maxChans = _pHost->MaxNChannels (dir);
@@ -118,32 +146,6 @@ namespace hvoya {
                     chans += _pHost->IsChannelConnected (dir, i);
                 }
                 return chans;
-            }
-
-
-            void updateChans (){
-                int in = numConnectedChans (iplug::ERoute::kInput);
-                int out = numConnectedChans (iplug::ERoute::kOutput);
-                
-                if (in == _lastChanIn && out == _lastChanOut)
-                    return;
-                
-                HIM_DLOG << "chans: " << in << "-" << out;
-                _lastChanIn = in;
-                _lastChanOut = out;
-                _updChans = true;
-            }
-
-
-            void updateHostPosition() {
-                float samplePos = _pHost->GetSamplePos();
-                if (_lastSamplePos == samplePos)
-                    return;
-                
-                _lastSamplePos = samplePos;
-                _hostTime = buildTimeInfo();
-                //HIM_DLOG << "host pos: " << buildTimeString (_hostTime);
-                _updHostPos = true;
             }
             
             

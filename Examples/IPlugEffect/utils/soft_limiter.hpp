@@ -1,31 +1,33 @@
 #pragma once
 
 #include <cstddef>
+#include "audio_buffer.hpp"
 
 
 namespace hvoya {
 
     class SoftLimiter {
     public:
-        SoftLimiter (float threshold = 0.f,
-                     float softness = 1.f);
+        SoftLimiter (sample_t threshold = 0,
+                     sample_t softness = 1);
 
-        bool processBuffer (double**, size_t numFrames, size_t numChans);
+		void processBuffer (sample_t**, n_chan_t, n_frames_t);
+		void processBuffer (AudioBuffer);
 
         // [0, ...]
-        void setThreshold (float db);
-        float getThreshold() const;
+        void setThreshold (sample_t db);
+        sample_t getThreshold() const;
 
         // [0, 1]
-        void setSoftness (float db);
-        float getSoftness() const;
+        void setSoftness (sample_t db);
+        sample_t getSoftness() const;
 
     protected:
-        float _threshold;
-        float _softness;
-        float _a;
-        float _b;
-        float _l;
+        sample_t _threshold;
+        sample_t _softness;
+        sample_t _a;
+        sample_t _b;
+        sample_t _l;
     };
 
 }
