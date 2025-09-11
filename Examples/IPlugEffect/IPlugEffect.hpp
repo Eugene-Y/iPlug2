@@ -5,12 +5,12 @@
 
 #include "IPlug_include_in_plug_hdr.h"
 #include "plug_build_info.hpp"
-#include "utils/log/logger.hpp"
-#include "utils/host_time_info.hpp"
-#include "utils/host_info_model.hpp"
-#include "utils/host_info_view.hpp"
-#include "utils/soft_limiter.hpp"
-#include "utils/midi_cc/mediator.hpp"
+#include <hvoya/utils/log/logger.hpp>
+#include <hvoya/utils/host_time_info.hpp>
+#include <hvoya/utils/host_info_model.hpp>
+#include <hvoya/utils/host_info_view.hpp>
+#include <hvoya/utils/soft_limiter.hpp>
+#include <hvoya/utils/midi_cc/mediator.hpp>
 
 
 namespace hvoya {

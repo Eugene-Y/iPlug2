@@ -1,8 +1,8 @@
 #include <sstream>
 #include <IControls.h>
 #include "IPlugEffect.hpp"
-#include "utils/host_info_UI_tags.hpp"
-#include "utils/midi_cc/control_decorator.hpp"
+#include <hvoya/utils/host_info_UI_tags.hpp>
+#include <hvoya/utils/midi_cc/control_decorator.hpp>
 
 
 static_assert (PLUG_HEIGHT_NO_HEADER + PLUG_INFO_HEADER_HEIGHT == PLUG_HEIGHT,

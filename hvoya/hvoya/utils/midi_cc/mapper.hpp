@@ -6,8 +6,8 @@
 #include <vector>
 #include <algorithm>
 
-#include "utils/log/logger.hpp"
-#include "utils/types.hpp"
+#include <hvoya/utils/log/logger.hpp>
+#include <hvoya/utils/types.hpp>
 #include "controllable.hpp"
 
 

@@ -1,5 +1,5 @@
 #include "mapper.hpp"
-#include "utils/log/logger.hpp"
+#include <hvoya/utils/log/logger.hpp>
 
 
 namespace hvoya::midi_cc {

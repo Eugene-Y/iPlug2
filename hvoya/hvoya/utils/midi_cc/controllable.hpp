@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utils/types.hpp"
+#include <hvoya/utils/types.hpp>
 
 namespace hvoya::midi_cc {
 
