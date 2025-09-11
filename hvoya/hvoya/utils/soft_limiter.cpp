@@ -61,7 +61,7 @@ void SoftLimiter::processBuffer (sample_t** outs, n_chan_t chans, n_frames_t fra
 }
 
 
-void SoftLimiter::processBuffer (AudioBuffer in) {
+void SoftLimiter::processBuffer (AudioBuffer& in) {
 		processBuffer (in.data(), in.numChans(), in.numFrames());
 }
 
@@ -77,7 +77,7 @@ sample_t SoftLimiter::getThreshold() const {
 
 void SoftLimiter::setSoftness (sample_t db) {
     _softness = 1.0 - dBFSToNormalized (-db);
-    computeParabolaParams(_threshold, _softness, _a, _b, _l);
+    computeParabolaParams (_threshold, _softness, _a, _b, _l);
 }
 
 sample_t SoftLimiter::getSoftness() const {
