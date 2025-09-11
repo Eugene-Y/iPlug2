@@ -22,7 +22,8 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
                 [this]() { return _bufId.load(); }),
         _hostInfoModel (this),
         _hostInfoView (this),
-        _midiCCMediator (this) {
+        _midiCCMediator (this),
+        _master_mix (1.) {
     ++_sNumInstances;
     logBuildInfo();
 
@@ -54,14 +55,24 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
         }
 
 		const auto numChans = _hostInfoModel.getMinChans();
+
 		AudioBuffer input (ins, numChans, numFrames);
+		assert (input.isWrapper());
+
+		AudioBuffer cleanCopy (input);
+		assert (!cleanCopy.isWrapper());
+		
 		for (int c = 0; c < input.numChans(); c++) {
-			input.getChan (c) *= (c == 0 ? _gainL : _gainR);
+            //...
 		}
 
         _softLimiter.processBuffer (input);
+        input *= _master_mix;
+        cleanCopy *= (1. - _master_mix);
+        input += cleanCopy;
+
 		input.copyTo (outs, numChans, numFrames);
-        
+
         //LOGD << " num frames: " << numFrames << " in chans: " << inChans << " out chans: " << outChans;
     }
 
@@ -75,9 +86,10 @@ bool IPlugEffect::OnMessage (int msgTag, int ctrlTag, int dataSize, const void* 
 }
 
 
-void IPlugEffect::initializeParams() {
-    GetParam (par_gain_L)->InitDouble ("Gain", 100., 0., 800.0, 0.01, "%");
-    GetParam (par_gain_R)->InitDouble ("Gain", 100., 0., 800.0, 0.01, "%");
+void IPlugEffect::initializeParams() {    
+    GetParam (par_lim_thresh)   ->InitDouble ("Threshold",   0., -60., 24., 0.1);
+    GetParam (par_lim_softness) ->InitDouble ("Softness",    0., 0., 24., 0.1);
+    GetParam (par_master_mix)   ->InitDouble ("Master Mix",  1., 0., 1., 0.001);
 }
 
 
@@ -134,9 +146,10 @@ void IPlugEffect::OnParamChange (int pid, EParamSource s, int sampleOffset) {
         
     LOGD << "OnParamChange: p " << pid << " v " << v;
     switch (pid) {
-        case par_gain_L: _gainL = v / 100.;                  break;
-        case par_gain_R: _gainR = v / 100.;                  break;
-        default:       LOGD << "unknown param idx: " << pid; break;
+		case par_lim_thresh:    _softLimiter.setThreshold (v);    break;
+		case par_lim_softness:  _softLimiter.setSoftness (v);     break;
+        case par_master_mix:    _master_mix = v;                  break;
+        default: LOGD << "unknown param idx: " << pid; break;
     }
 }
 

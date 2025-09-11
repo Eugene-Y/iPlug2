@@ -20,6 +20,9 @@ namespace hvoya {
     enum EParams {
         par_gain_L = 0,
         par_gain_R,
+        par_lim_thresh,
+        par_lim_softness,
+        par_master_mix,
         num_params
     };
 
@@ -82,7 +85,8 @@ class IPlugEffect final : public Plugin {
         void updateHostInfoView();
 
         hvoya::SoftLimiter _softLimiter;
-        
+        hvoya::sample_t _master_mix;
+
         sample _gainL { 0 };
         sample _gainR { 0 };
         

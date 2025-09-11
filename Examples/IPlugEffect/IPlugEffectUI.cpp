@@ -150,12 +150,15 @@ void IPlugEffect::initializeLayout() {
 
             using namespace hvoya;
 
-            r = b.GetCentredInside (b.H(), b.H()/2).GetVShifted (b.H()/6);
+            r = b.GetCentredInside (.75 * b.W(), b.H()/2).GetVShifted (b.H()/6);
 
-            pC = _midiCCMediator.createLearnable <IVKnobControl> (r.SubRectHorizontal (2, 0), par_gain_L, "gain L", knobStyle);
+            pC = _midiCCMediator.createLearnable <IVKnobControl> (r.SubRectHorizontal (3, 0), par_lim_thresh, "lim thresh", knobStyle);
             pG->AttachControl (pC);
             
-            pC = _midiCCMediator.createLearnable <IVKnobControl> (r.SubRectHorizontal (2, 1), par_gain_R, "gain R", knobStyle);
+            pC = _midiCCMediator.createLearnable <IVKnobControl> (r.SubRectHorizontal (3, 1), par_lim_softness, "lim softness", knobStyle);
+            pG->AttachControl (pC);
+            
+            pC = _midiCCMediator.createLearnable <IVKnobControl> (r.SubRectHorizontal (3, 2), par_master_mix, "master mix", knobStyle);
             pG->AttachControl (pC);
 
             _midiCCMediator.UpdateMidiControllableUI();
