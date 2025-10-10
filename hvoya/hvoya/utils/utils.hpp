@@ -2,12 +2,16 @@
 
 #include <cmath>
 #include <cassert>
+#include <numeric>
+#include <span>
 
 #include "audio_buffer.hpp"
 
 
 namespace hvoya::utils {
-
+    
+    template <typename T>
+    inline T sign (T v) { return v < T(0) ? T(-1) : T(1); }
 
     float fastLog2f (float);
     float fastLog10f (float);
@@ -18,15 +22,9 @@ namespace hvoya::utils {
     float dbToLinear (float);
     float dbToLinearFast (float);
 
-
-
-
     float msToSamplesFloat (float ms, float sampleRate);
     size_t msToSamples (float ms, float sampleRate);
     float samplesToMs (size_t samp, float sampleRate);
-    
-
-
 
     float centsFactorFast (float c);
     
@@ -55,15 +53,15 @@ namespace hvoya::utils {
 
 
     template <typename T>
-    void smoothAndSetIfNotEqual (T& valSmooth, T val, T a, T eps = 1e-7,
+    void smoothAndSetIfNotEqual (T& valSmooth, T valTarget, T a, T eps = 1e-7,
                                  std::function <void()> setter = [](){}) {
-        if (valSmooth == val)
+        if (valSmooth == valTarget)
             return;
         
         auto old = valSmooth;
-        valSmooth = (1. - a) * valSmooth + a * (val + 1e-25);
-        if (valSmooth == old || std::abs (valSmooth - val) <= eps)
-            valSmooth = val;
+        valSmooth = (1. - a) * valSmooth + a * (valTarget + 1e-25);
+        if (valSmooth == old || std::abs (valSmooth - valTarget) <= eps)
+            valSmooth = valTarget;
         setter();
     }
 	
@@ -80,7 +78,43 @@ namespace hvoya::utils {
         while (first != last && first != --last) {
             std::swap <T> (*(first++), *last);
         }
-    };
+    }
+	
+
+
+
+    template <typename T>
+    inline void derivative (std::span<const T> in, std::span<T> out, T* pPrevVal) {
+		assert (!in.empty());
+        assert ((in.data() == out.data() ||
+                out.data() + out.size() <= in.data() ||
+                in.data() + in.size() <= out.data()) && 
+			   "adjacent_difference takes either spans with same start or not overlaping");
+
+		T lastOriginal = in.back();
+        std::adjacent_difference (in.begin(), in.end(), out.begin());
+        out.front() = in.front() - *pPrevVal;
+		*pPrevVal = lastOriginal;
+    }
+
+
+    template <typename T>
+    inline void derivativeInplace (std::span<T> data, T* pPrevVal) {
+		assert (!data.empty());
+		T lastOriginal = data.back();
+        std::adjacent_difference (data.begin(), data.end(), data.begin());
+        data.front() -= *pPrevVal;
+		*pPrevVal = lastOriginal;
+    }
+
+
+    template <typename T>
+    inline void derivativeNthInplace (std::span<T> data, size_t order, std::span<T> prevVals) {
+		assert (prevVals.size() >= order);
+        for (size_t n = 0; n < order; ++n)
+            derivativeInplace (data, &(prevVals [n]));
+    }
+
 
     void interleave   (const AudioBuffer& src, AudioBuffer& dest);
     void deinterleave (const AudioBuffer& src, AudioBuffer& dest);
