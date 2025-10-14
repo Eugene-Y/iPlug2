@@ -51,7 +51,7 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
 		_hostInfoModel.updateChans();
         if (auto pG = GetUI()) {
             _hostInfoModel.updateAll (numFrames);
-            updateHostInfoView();
+            //updateHostInfoView(); // TODO dont do from this thread
         }
 
 		const auto numChans = _hostInfoModel.getMinChans();

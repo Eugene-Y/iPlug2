@@ -5,8 +5,8 @@ typedef decltype (PLUG_VERSION_HEX) version_hex_t;
 #define PLUG_VERSION_STR "0.1.0"
 #define PLUG_UNIQUE_ID 'Ipef'
 #define PLUG_MFR_ID 'HvyA'
-#define PLUG_URL_STR "HvoyaAudio"
-#define PLUG_EMAIL_STR "eugene.yakshin@gmail.com"
+#define PLUG_URL_STR "https://hvoya.audio"
+#define PLUG_EMAIL_STR "gene@hvoya.audio"
 #define PLUG_COPYRIGHT_STR "Copyright 2025 Hvoya Audio"
 #define PLUG_CLASS_NAME IPlugEffect
 

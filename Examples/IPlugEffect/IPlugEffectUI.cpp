@@ -1,4 +1,3 @@
-#include <sstream>
 #include <IControls.h>
 #include "IPlugEffect.hpp"
 #include <hvoya/utils/host_info_UI_tags.hpp>
@@ -75,9 +74,6 @@ void IPlugEffect::initializeLayout() {
             return pG->GetBounds().GetReducedFromTop (headerH).GetPadded (-pad);
         };
 
-        static std::stringstream sstream;
-        sstream.precision (3);
-
         #pragma mark header layout
 
         const auto createHeaderLayout = [&](IGraphics* pG) {
@@ -96,21 +92,18 @@ void IPlugEffect::initializeLayout() {
 
             auto plugNameTxt = largeTxtLight;
             plugNameTxt.mVAlign = EVAlign::Middle;
-            sstream.str (std::string());
-            sstream << PLUG_NAME << "  v" << PLUG_VERSION_STR << "  " << (isDebug() ? "DEBUG" : "RELEASE");
-            pG->AttachControl (new ITextControl (stringRect (0, 0).GetVPadded (5),
-                                                 sstream.str().c_str(), plugNameTxt));
+			std::string str = std::format ("{} v{} {}", PLUG_NAME, PLUG_VERSION_STR,
+										   (isDebug() ? "DEBUG" : "RELEASE"));
+			pG->AttachControl (new ITextControl (stringRect (0, 0).GetVPadded (5),
+												 str.c_str(), plugNameTxt));
 
-            sstream.str (std::string());
-            sstream << PLUG_PRODUCT << " " << PLUG_ARCHS;
-            pG->AttachControl (new ITextControl (stringRect (2, 0), sstream.str().c_str(), smallTxtLight));
+			str = std::format ("{} {}", PLUG_PRODUCT, PLUG_ARCHS);
+			pG->AttachControl (new ITextControl (stringRect (2, 0),  str.c_str(), smallTxtLight));
 
-            pG->AttachControl (new ITextControl (stringRect (3, 0), PLUG_GIT_BRANCH_NAME, smallTxtLight));
-            pG->AttachControl (new ITextControl (stringRect (4, 0), PLUG_GIT_COMMIT_SHA, smallTxtLight));
+			pG->AttachControl (new ITextControl (stringRect (3, 0), PLUG_GIT_BRANCH_NAME, smallTxtLight));
+			pG->AttachControl (new ITextControl (stringRect (4, 0), PLUG_GIT_COMMIT_SHA, smallTxtLight));
 
-            sstream.str (std::string());
-            sstream << PLUG_BUILD_DATE;
-            pG->AttachControl (new ITextControl (stringRect (5, 0), sstream.str().c_str(), smallTxtLight));
+			pG->AttachControl (new ITextControl (stringRect (5, 0), PLUG_BUILD_DATE, smallTxtLight));
 
             using namespace hvoya;
             pG->AttachControl (new ITextControl (stringRect (2, 1), "sr:         ---",
@@ -121,6 +114,16 @@ void IPlugEffect::initializeLayout() {
                                                  smallTxtLight), tag_Chans);
             pG->AttachControl (new ITextControl (stringRect (5, 1),  "host time: ---",
                                                  smallTxtLight), tag_HostPos);
+
+			auto style = getDefaultKnobStyle();
+			style.colorSpec.mColors [kFR] = COLOR_TRANSPARENT;
+			auto br = headerR.GetFromTRHC (25, 18);
+			pG->AttachControl (new IVButtonControl(br,
+				[](IControl* pC) {
+					auto pG = pC->GetUI();
+					bool show = pG->ShowControlBoundsEnabled();
+					pG->ShowControlBounds (!show);
+				},"[ ]", style));
         };
 
 
@@ -134,7 +137,6 @@ void IPlugEffect::initializeLayout() {
             pG->AttachPanelBackground (colDarkGray);
             pG->EnableMouseOver (true);
             pG->EnableTooltips (true);
-            //pG->ShowControlBounds (true);
 
             createHeaderLayout (pG);
             
@@ -142,8 +144,11 @@ void IPlugEffect::initializeLayout() {
 
             const IRECT b = getUIBounds (pG, 0);
             IControl* pC;
-
             IRECT r;
+			IVStyle s;
+
+			auto btnNoRectStyle = knobStyle;
+			btnNoRectStyle.colorSpec.mColors [kFR] = COLOR_TRANSPARENT;
 
             pC = new ITextControl (b.GetCentredInside (b.W(), b.H()/3).GetVShifted (-b.H()/4), "Hello IPlugEffect!", IText (50, COLOR_LIGHT_GRAY, ROBOTO_MONO_FN));
             pG->AttachControl (pC);
@@ -160,6 +165,45 @@ void IPlugEffect::initializeLayout() {
             
             pC = _midiCCMediator.createLearnable <IVKnobControl> (r.SubRectHorizontal (3, 2), par_master_mix, "master mix", knobStyle);
             pG->AttachControl (pC);
+
+		#pragma mark about box
+
+			const int cTagAbout = 7;
+
+			auto textStyle = smallTxtLight;
+			textStyle.mVAlign = EVAlign::Middle;
+			textStyle.mAlign = EAlign::Center;
+
+
+			pC = new IVButtonControl (b.GetFromTRHC (20, 18), SplashClickActionFunc, "i", btnNoRectStyle);
+			pC->SetAnimationEndActionFunction ([pG] (IControl* pC) {
+				pG->GetControlWithTag (cTagAbout)->As<IAboutBoxControl>()->Show();
+			});
+			pG->AttachControl(pC);
+
+			auto aboutAttachFunc = [textStyle] (IContainerBase* pP, const IRECT& r) {
+				pP->AddChildControl (new IURLControl (IRECT(), "hvoya.audio", PLUG_URL_STR, textStyle));
+				std::string str = std::format ("{} v{}", PLUG_NAME, PLUG_VERSION_STR);
+				pP->AddChildControl (new ITextControl (IRECT(), str.c_str(), textStyle));
+				str = std::format ("{} {} {}", PLUG_PRODUCT, PLUG_ARCHS, (isDebug() ? "debug" : "release"));
+				pP->AddChildControl (new ITextControl (IRECT(), str.c_str(), textStyle));
+				str = std::format ("{} {}", PLUG_GIT_BRANCH_NAME, PLUG_GIT_COMMIT_SHA);
+				pP->AddChildControl (new ITextControl (IRECT(), str.c_str(), textStyle));
+				pP->AddChildControl (new ITextControl (IRECT(), PLUG_BUILD_DATE, textStyle));
+				pP->Hide (true);
+			};
+
+			auto aboutResizeFunc = [textStyle](IContainerBase* pP, const IRECT& rect) {
+				const auto nc = pP->NChildren();
+				auto r = rect.GetMidVPadded (1.2 * nc / 2 * textStyle.mSize);
+				pP->ForAllChildrenFunc ([nc, r](int i, IControl* pC) {
+					pC->SetTargetAndDrawRECTs (r.SubRectVertical (nc, i));
+				});
+			};
+
+			pC = new IAboutBoxControl (b, colDarkGray, aboutAttachFunc, aboutResizeFunc);
+			pC->Hide (true);
+			pG->AttachControl (pC, cTagAbout);
 
             _midiCCMediator.UpdateMidiControllableUI();
         };
