@@ -264,6 +264,28 @@ AudioBuffer& AudioBuffer::operator*= (const AudioBuffer &other) noexcept {
 }
 
 
+AudioBuffer& AudioBuffer::operator/= (sample_t scale) noexcept {
+	assert (scale != 0.);
+	for (n_chan_t c = 0; c < _numChans; ++c)
+		std::transform (_channels [c], _channels [c] + _numFrames, _channels [c],
+						[scale] (sample_t s) { return s / scale; });
+	return *this;
+}
+
+
+AudioBuffer& AudioBuffer::operator/= (const AudioBuffer &other) noexcept {
+	const auto [chansToProcess, framesToProcess] = validateAndClamp (
+		_numChans, _numFrames, other._numChans, other._numFrames, "operator/=");
+
+	for (n_chan_t c = 0; c < chansToProcess; ++c)
+		std::transform (_channels [c], _channels [c] + framesToProcess,
+						other._channels [c],
+						_channels [c], std::divides<sample_t>());
+
+	return *this;
+}
+
+
 void AudioBuffer::swap (AudioBuffer& other) noexcept {
     std::swap (_isWrapper, other._isWrapper);
     std::swap (_data,      other._data);

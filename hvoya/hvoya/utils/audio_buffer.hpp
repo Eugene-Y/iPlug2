@@ -108,7 +108,10 @@ namespace hvoya {
             
             AudioBuffer& operator*= (const AudioBuffer&) noexcept;
             AudioBuffer& operator*= (sample_t)           noexcept;
-            
+
+			AudioBuffer& operator/= (const AudioBuffer&) noexcept;
+			AudioBuffer& operator/= (sample_t)           noexcept;
+
             friend AudioBuffer operator- (AudioBuffer, const AudioBuffer&);
             friend AudioBuffer operator+ (AudioBuffer, const AudioBuffer&);
             friend AudioBuffer operator* (AudioBuffer, const AudioBuffer&);
