@@ -99,7 +99,18 @@ namespace hvoya {
             
             ChannelRange      channels()       noexcept { return ChannelRange      (_channels.data(), _numChans); }
             ConstChannelRange channels() const noexcept { return ConstChannelRange (_channels.data(), _numChans);}
-        
+
+			sample_t& front (n_chan_t c = 0) noexcept {
+				assert (c < _numChans);
+				return _channels [c][0];
+			}
+
+			sample_t& back (n_chan_t c = 0) noexcept {
+				assert (c < _numChans);
+				assert (_numFrames > 0);
+				return _channels [c][_numFrames - 1];
+			}
+
 			AudioBuffer& operator=  (const AudioBuffer&) noexcept;
             AudioBuffer& operator=  (AudioBuffer&&)      noexcept;
             
