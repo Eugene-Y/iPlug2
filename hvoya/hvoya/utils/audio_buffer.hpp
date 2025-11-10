@@ -94,7 +94,20 @@ namespace hvoya {
             
             inline n_frames_t numFrames() const noexcept { return _numFrames; }
             inline n_chan_t   numChans()  const noexcept { return _numChans; }
-            
+
+			inline void fillWithRamp (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
+				sample_t d = (b - a) / _numFrames;
+				for (n_frames_t i = 0; i < _numFrames; ++i)
+					_channels [c][i] = a + d * (i + 1);
+				
+				auto& check = _channels [c][_numFrames - 1];
+				sample_t eps = 0.001;
+				auto k = b + eps;
+				auto j = b - eps;
+				assert (check < std::max (k, j));
+				assert (check > std::min (k, j));
+			}
+
             AudioBuffer getChan (n_chan_t);
             
             ChannelRange      channels()       noexcept { return ChannelRange      (_channels.data(), _numChans); }
