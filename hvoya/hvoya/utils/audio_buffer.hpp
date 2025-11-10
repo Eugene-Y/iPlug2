@@ -8,7 +8,24 @@
 
 
 namespace hvoya {
-    
+
+
+	inline bool epsilonCheckVal (sample_t v, sample_t target, sample_t eps = 0.0001) {
+		assert (eps > 0);
+		auto min = target - eps;
+		auto max = target + eps;
+		return v > min && v < max;
+	}
+
+
+	inline bool epsilonCheckInRange (sample_t v, sample_t a, sample_t b, sample_t eps = 0.0001) {
+		assert (eps > 0);
+		if (a > b) std::swap (a, b);
+		auto min = a - eps;
+		auto max = b + eps;
+		return v > min && v < max;
+	}
+
 
     template<bool IsConst>
     class ChannelIteratorT {
@@ -95,18 +112,36 @@ namespace hvoya {
             inline n_frames_t numFrames() const noexcept { return _numFrames; }
             inline n_chan_t   numChans()  const noexcept { return _numChans; }
 
+
 			inline void fillWithRamp (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
+				assert (c < _numChans);
 				sample_t d = (b - a) / _numFrames;
 				for (n_frames_t i = 0; i < _numFrames; ++i)
 					_channels [c][i] = a + d * (i + 1);
 				
-				auto& check = _channels [c][_numFrames - 1];
-				sample_t eps = 0.001;
-				auto k = b + eps;
-				auto j = b - eps;
-				assert (check < std::max (k, j));
-				assert (check > std::min (k, j));
+				assert (epsilonCheckInRange (back (c), a, b, std::min (std::abs (d), 0.0001)));
 			}
+
+
+			inline void fillWithSigmoid (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
+				assert(c < _numChans);
+				for (n_frames_t i = 0; i < _numFrames; ++i) {
+					sample_t t = static_cast <sample_t>(i) / (_numFrames - 1);
+					sample_t curve = t * t * (3 - 2 * t);
+					_channels [c][i] = a + (b - a) * curve;
+				}
+				assert (epsilonCheckInRange (back (c), a, b));
+				assert (epsilonCheckInRange (front (c), a, b));
+			}
+
+
+			template <typename Func>
+			inline void transform (Func&& func, n_chan_t c = 0) noexcept {
+				assert(c < _numChans);
+				for (n_frames_t i = 0; i < _numFrames; ++i)
+					_channels [c][i] = func (_channels [c][i]);
+			}
+
 
             AudioBuffer getChan (n_chan_t);
             
