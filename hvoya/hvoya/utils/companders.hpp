@@ -9,6 +9,18 @@ namespace hvoya::utils {
 
     // https://www.desmos.com/calculator/tmftezgivx
 
+	static constexpr double ALawParamMinAbs { 0.1 };
+
+	template<typename T = double>
+	constexpr T normalizedParamToALawParam (T n, T maxAbs = 40000) {
+		assert (n >= 0. && n <= 1.);
+		n = ALawParamMinAbs + (1 - ALawParamMinAbs) * n;
+		auto m = pow (n, log10 (maxAbs)) * maxAbs;
+		assert (m > 0);
+		assert (m <= maxAbs);
+		return m;
+	}
+
     
     template<typename T = double>
     constexpr void alawCompress (T* p, T alpha, size_t len) noexcept {
