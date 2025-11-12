@@ -123,15 +123,51 @@ namespace hvoya {
 			}
 
 
-			inline void fillWithSigmoid (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
+			inline void fillWithSmoothStep (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
 				assert(c < _numChans);
 				for (n_frames_t i = 0; i < _numFrames; ++i) {
-					sample_t t = static_cast <sample_t>(i) / (_numFrames - 1);
+					sample_t t = sample_t (i) / (_numFrames - 1);
 					sample_t curve = t * t * (3 - 2 * t);
 					_channels [c][i] = a + (b - a) * curve;
 				}
 				assert (epsilonCheckInRange (back (c), a, b));
 				assert (epsilonCheckInRange (front (c), a, b));
+			}
+
+
+			inline void fillWithCosineStep (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
+				assert (c < _numChans);
+				const sample_t d = b - a;
+				for (n_frames_t i = 0; i < _numFrames; ++i) {
+					sample_t t = sample_t (i) / (_numFrames - 1);
+					t = t * t * t * (t * (t * 6 - 15) + 10);
+					_channels [c][i] = a + d * t;
+				}
+				assert (epsilonCheckInRange (back (c), a, b));
+				assert (epsilonCheckInRange (front (c), a, b));
+			}
+
+
+			void remapRangeFrom (const AudioBuffer& src,
+								 sample_t oldMin, sample_t oldMax,
+								 sample_t newMin, sample_t newMax, n_chan_t c = 0) noexcept {
+				assert (src.numFrames() == _numFrames);
+				assert (c < numChans());
+				assert (c < src.numChans());
+				assert (oldMax != oldMin && "oldMin and oldMax must be different");
+
+				const sample_t oldRange = oldMax - oldMin;
+				const sample_t newRange = newMax - newMin;
+				const sample_t scale = newRange / oldRange;
+
+				for (n_frames_t i = 0; i < _numFrames; ++i)
+					_channels [c][i] = (src [c][i] - oldMin) * scale + newMin;
+			}
+
+
+			void remapRange (sample_t oldMin, sample_t oldMax,
+							 sample_t newMin, sample_t newMax, n_chan_t c = 0) noexcept {
+				remapRangeFrom (*this, oldMin, oldMax, newMin, newMax, c);
 			}
 
 
