@@ -111,7 +111,9 @@ namespace hvoya::midi_cc {
                 s = "Set Max";
                 if (mapped) s += " (" + _maxDisplay + ")";
                 subMenu->AddItem (s.c_str())->SetEnabled (mapped);
-                
+
+				contextMenu.AddItem (getParam()->GetName(), -1, IPopupMenu::Item::Flags::kTitle);
+				contextMenu.AddSeparator();
                 contextMenu.AddItem ("MIDI CC", subMenu);
                 
                 C::CreateContextMenu (contextMenu);
