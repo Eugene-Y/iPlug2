@@ -113,6 +113,19 @@ namespace hvoya {
             inline n_chan_t   numChans()  const noexcept { return _numChans; }
 
 
+			inline void fillWith (sample_t v = 0, n_chan_t c = 0) noexcept {
+				assert (c < _numChans);
+				for (n_frames_t i = 0; i < _numFrames; ++i)
+					_channels [c][i] = v;
+			}
+
+
+			inline void clear() noexcept {
+				for (n_chan_t c = 0; c < _numChans; ++c)
+					fillWith (0, c);
+			}
+
+
 			inline void fillWithRamp (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
 				assert (c < _numChans);
 				sample_t d = (b - a) / _numFrames;
@@ -211,31 +224,41 @@ namespace hvoya {
             friend AudioBuffer operator+ (AudioBuffer, const AudioBuffer&);
             friend AudioBuffer operator* (AudioBuffer, const AudioBuffer&);
         
-            sample_t* operator[] (n_chan_t c) noexcept { 
+            inline sample_t* operator[] (n_chan_t c) noexcept {
                 assert (c < _numChans);
                 return _channels [c]; 
             }
-            const sample_t* operator[] (n_chan_t c) const noexcept { 
+			inline const sample_t* operator[] (n_chan_t c) const noexcept {
                 assert (c < _numChans);
                 return _channels [c]; 
             }
-        
-            bool isValid (sample_t thresh = 1) const noexcept {
-                for (n_chan_t c = 0; c < _numChans; ++c)
-                    for (n_frames_t i = 0; i < _numFrames; ++i) {
-                        const auto& s = _channels [c][i];
-                        if (!(s > -thresh && s < thresh)) {
-                            LOGW << "audio buffer overdrive! [" << c << "][" << i << "] " << s;
-                            return false;
-                        }
-                    }
-                return true;
-            }
-            
-            n_chan_t maxNumChans() const noexcept { return MAX_CHANNELS; }
 
-				  sample_t*      * data()       noexcept { return _channels.data(); }
-			const sample_t* const* data() const noexcept { return _channels.data(); }
+			inline  	 sample_t*      * data()       noexcept { return _channels.data(); }
+			inline const sample_t* const* data() const noexcept { return _channels.data(); }
+
+			inline sample_t* chanData (n_chan_t c = 0) noexcept {
+				assert (c < _numChans);
+				return _channels [c];
+			}
+
+			inline const sample_t* chanData (n_chan_t c = 0) const noexcept {
+				assert (c < _numChans);
+				return _channels [c];
+			}
+
+			n_chan_t maxNumChans() const noexcept { return MAX_CHANNELS; }
+
+			bool isValid (sample_t thresh = 1) const noexcept {
+				for (n_chan_t c = 0; c < _numChans; ++c)
+					for (n_frames_t i = 0; i < _numFrames; ++i) {
+						const auto& s = _channels [c][i];
+						if (!(s > -thresh && s < thresh)) {
+							LOGW << "audio buffer overdrive! [" << c << "][" << i << "] " << s;
+							return false;
+						}
+					}
+				return true;
+			}
 
         private:
         
