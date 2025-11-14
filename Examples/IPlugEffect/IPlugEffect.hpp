@@ -80,6 +80,7 @@ class IPlugEffect final : public Plugin {
 
         void initializeParams();
         void initializeLayout();
+		void setTooltips (IGraphics*);
 
 		hvoya::Watchdog <IPlugEffect> _uiUpdateWatchdog;
 		bool tryUpdateLayout();

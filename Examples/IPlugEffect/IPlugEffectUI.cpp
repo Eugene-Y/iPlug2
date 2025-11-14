@@ -137,6 +137,8 @@ void IPlugEffect::initializeLayout() {
             pG->AttachPanelBackground (colDarkGray);
             pG->EnableMouseOver (true);
             pG->EnableTooltips (true);
+			pG->SetStrictDrawing (true); // hidden controls RECTs sometimes affect
+										 // the visible controls redrawing
 
             createHeaderLayout (pG);
             
@@ -205,10 +207,24 @@ void IPlugEffect::initializeLayout() {
 			pC->Hide (true);
 			pG->AttachControl (pC, cTagAbout);
 
+			setTooltips (pG);
+
             _midiCCMediator.UpdateMidiControllableUI();
         };
 
     #endif
+}
+
+
+void IPlugEffect::setTooltips (IGraphics* pG) {
+	assert (pG);
+	auto set = [&](auto i, auto text) {
+		if (auto pC = pG->GetControlWithParamIdx (i))
+			pC->SetTooltip (text);
+	};
+	using enum hvoya::EParams;
+	set (par_lim_thresh, "you should always use a limiter while experimenting!");
+	set (num_params, "this one does nothing");
 }
 
 
