@@ -9,22 +9,22 @@
 
 namespace hvoya {
     
-    template <typename Host>
+    template <typename Plug>
     class HostInfoView {
         public:
         
-            HostInfoView (Host* p) : _pHost (p) { assert (p); }
+            HostInfoView (Plug* p) : _pPlug (p) { assert (p); }
             
 
             bool updateSampleRateView (size_t newSR) {
 				_lastSampleRate = newSR;
-                auto pG = _pHost->GetUI();
+                auto pG = _pPlug->GetUI();
                 if (!pG)
                     return false;
                 auto pC = pG->GetControlWithTag (hvoya::tag_SampleRate);
                 if (!pC)
-                    return false;
-                
+                    return true;
+
                 _sampleRateStr = "sr:        " + std::to_string (_lastSampleRate);
                 auto pTC = pC-> template As <iplug::igraphics::ITextControl>();
                 pTC->SetStr (_sampleRateStr.c_str());
@@ -35,14 +35,14 @@ namespace hvoya {
 
             bool updateBufSizeView (size_t newSz) {
 				_lastBufSize = newSz;
-                auto pG = _pHost->GetUI();
+                auto pG = _pPlug->GetUI();
                 if (!pG)
                     return false;
                 
                 auto pC = pG->GetControlWithTag (hvoya::tag_BufSize);
                 if (!pC)
-                    return false;
-                
+                    return true;
+
                 auto pTC = pC-> template As <iplug::igraphics::ITextControl>();
                 _bufSizeStr = "buf size:  " + std::to_string (_lastBufSize);
                 pTC->SetStr (_bufSizeStr.c_str());
@@ -54,32 +54,33 @@ namespace hvoya {
 			bool updateSRBufSizeAboutInfo (size_t newSR, size_t newSz) {
 				_lastSampleRate = newSR;
 				_lastBufSize = newSz;
-				auto pG = _pHost->GetUI();
+				auto pG = _pPlug->GetUI();
 				if (!pG)
 					return false;
 
 				auto pC = pG->GetControlWithTag (hvoya::tag_SRateBufSzInfo);
 				if (!pC)
-					return false;
+					return true;
 
 				auto pTC = pC-> template As <iplug::igraphics::ITextControl>();
 				std::string str = std::format ("sr {} buf size {}", _lastSampleRate, _lastBufSize);
 				pTC->SetStr (str.c_str());
 				pTC->SetDirty();
+				return true;
 			}
 
 
             bool updateChansView (size_t in, size_t out) {
 				_lastInChans = in;
 				_lastOutChans = out;
-                auto pG = _pHost->GetUI();
+                auto pG = _pPlug->GetUI();
                 if (!pG)
                     return false;
                 
                 auto pC = pG->GetControlWithTag (hvoya::tag_Chans);
                 if (!pC)
-                    return false;
-                
+                    return true;
+
                 _chanStr = "I/O:       " + std::to_string (_lastInChans)
 										 + "-" + std::to_string (_lastOutChans);
                 auto pTC = pC-> template As <iplug::igraphics::ITextControl>();
@@ -91,13 +92,13 @@ namespace hvoya {
 
             bool updateHostPositionView (const TimeInfo& i) {
 				_lastTimeInfo = i;
-                auto pG = _pHost->GetUI();
+                auto pG = _pPlug->GetUI();
                 if (!pG)
                     return false;
                 
                 auto pC = pG->GetControlWithTag (hvoya::tag_HostPos);
                 if (!pC)
-                    return false;
+                    return true;
 
                 _hostPositionStr = "host time: " + buildTimeString (_lastTimeInfo);
                 auto pTC = pC-> template As <iplug::igraphics::ITextControl>();
@@ -108,7 +109,7 @@ namespace hvoya {
         
         private:
         
-            Host* _pHost;
+            Plug* _pPlug;
 
 			size_t _lastBufSize		{ 0 };
 			size_t _lastSampleRate 	{ 0 };

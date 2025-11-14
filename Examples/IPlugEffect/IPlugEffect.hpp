@@ -10,6 +10,7 @@
 #include <hvoya/utils/host_info_model.hpp>
 #include <hvoya/utils/host_info_view.hpp>
 #include <hvoya/utils/soft_limiter.hpp>
+#include <hvoya/utils/watchdog.hpp>
 #include <hvoya/utils/midi_cc/mediator.hpp>
 
 
@@ -79,10 +80,14 @@ class IPlugEffect final : public Plugin {
 
         void initializeParams();
         void initializeLayout();
-        
-        hvoya::HostInfoModel <Plugin> _hostInfoModel; // TODO doesnt update chans
-        hvoya::HostInfoView <Plugin> _hostInfoView;
-        void updateHostInfoView();
+
+		hvoya::Watchdog <IPlugEffect> _uiUpdateWatchdog;
+		bool tryUpdateLayout();
+		void triggerUIUpdate() { _uiUpdateWatchdog.notify(); }
+
+        hvoya::HostInfoModel <IPlugEffect> _hostInfoModel; // TODO doesnt update chans
+        hvoya::HostInfoView <IPlugEffect> _hostInfoView;
+        bool updateHostInfoView();
 
         hvoya::SoftLimiter _softLimiter;
         hvoya::sample_t _master_mix;

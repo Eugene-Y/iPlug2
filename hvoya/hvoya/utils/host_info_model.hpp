@@ -18,7 +18,7 @@ namespace hvoya {
     };
     
     
-    template <typename Host>
+    template <typename Plug>
     class HostInfoModel {
 
 		#ifndef HIM_DLOG
@@ -28,7 +28,13 @@ namespace hvoya {
 		#endif
 
         public:
-            explicit HostInfoModel (Host* p) : _pHost (p) { assert (p); }
+            explicit HostInfoModel (Plug* p, void (Plug::*triggerUIUpdate)()) :
+				_pPlug (p),
+				_triggerUIUpdate (triggerUIUpdate) {
+				assert (p);
+				if (_triggerUIUpdate) HIM_DLOG << "UI update trigger not set!";
+			}
+
             HostInfoModel() = delete;
             
             
@@ -37,6 +43,8 @@ namespace hvoya {
                 updateChans();
                 updateHostPosition();
                 updateSampleRate();
+				if (_triggerUIUpdate && anyFlagIsSet())
+					(_pPlug->*_triggerUIUpdate)();
             }
 
 
@@ -45,7 +53,7 @@ namespace hvoya {
 				int out = numConnectedChans (iplug::ERoute::kOutput);
 
 				if (in == _lastChanIn && out == _lastChanOut)
-						return;
+					return;
 
 				HIM_DLOG << "chans: " << in << "-" << out;
 				_lastChanIn = in;
@@ -56,9 +64,9 @@ namespace hvoya {
 
 
 			void updateSampleRate() {
-				size_t newSR = _pHost->GetSampleRate();
+				size_t newSR = _pPlug->GetSampleRate();
 				if (newSR == _lastSampleRate)
-						return;
+					return;
 
 				HIM_DLOG << "sr: " << newSR;
 				_lastSampleRate = newSR;
@@ -77,9 +85,9 @@ namespace hvoya {
 
 
 			void updateHostPosition() {
-				float samplePos = _pHost->GetSamplePos();
+				float samplePos = _pPlug->GetSamplePos();
 				if (_lastSamplePos == samplePos)
-						return;
+					return;
 
 				_lastSamplePos = samplePos;
 				_hostTime = buildTimeInfo();
@@ -97,22 +105,27 @@ namespace hvoya {
             }
             
             
-            void clearUpdateFlags() {
+            void clearUpdateFlags() noexcept {
                 _updHostPos = false;
                 _updSR      = false;
                 _updBufSz   = false;
                 _updChans   = false;
             }
+
+
+			bool anyFlagIsSet() const noexcept {
+				return _updHostPos || _updSR || _updBufSz || _updChans;
+			}
+
             
-            
-            bool getUpdateHostPosition() const { return _updHostPos; }
-            bool getUpdateSampleRate()   const { return _updSR; }
-            bool getUpdateBufSize()      const { return _updBufSz; }
-            bool getUpdateChans()        const { return _updChans; }
-            
-            size_t getMinChans() const { return std::min (_lastChanIn, _lastChanOut); }
-            
-            HostInfo getInfo() const {
+            bool getUpdateHostPosition() const noexcept { return _updHostPos; }
+            bool getUpdateSampleRate()   const noexcept { return _updSR; }
+            bool getUpdateBufSize()      const noexcept { return _updBufSz; }
+            bool getUpdateChans()        const noexcept { return _updChans; }
+
+            size_t getMinChans() const noexcept { return std::min (_lastChanIn, _lastChanOut); }
+
+            HostInfo getInfo() const noexcept {
                 return {
                     _lastSampleRate,
                     _lastBufSize,
@@ -124,8 +137,9 @@ namespace hvoya {
             
         private:
         
-            Host* _pHost;
-            
+            Plug* _pPlug;
+			void (Plug::*_triggerUIUpdate)();
+
             float _lastSamplePos   = 0;
             TimeInfo _hostTime;
             size_t _lastSampleRate = 0;
@@ -140,10 +154,10 @@ namespace hvoya {
 
             
             int numConnectedChans (iplug::ERoute dir) const {
-                const auto maxChans = _pHost->MaxNChannels (dir);
+                const auto maxChans = _pPlug->MaxNChannels (dir);
                 int chans = 0;
                 for (int i = 0; i < maxChans; ++i) {
-                    chans += _pHost->IsChannelConnected (dir, i);
+                    chans += _pPlug->IsChannelConnected (dir, i);
                 }
                 return chans;
             }
@@ -153,26 +167,26 @@ namespace hvoya {
                 // https://www.libertyparkmusic.com/musical-time-signatures/
                 
                 TimeInfo i;
-                float samplePos = _pHost->GetSamplePos();
+                float samplePos = _pPlug->GetSamplePos();
                 i.samplePos = std::max <float> (0, samplePos);
                 
                 int num = 1;
                 int den = 1;
-                _pHost->GetTimeSig (num, den);
+                _pPlug->GetTimeSig (num, den);
                 
                 i.num = num;
                 i.den = den;
                 
                 using std::floor;
 
-                float m = _pHost->GetPPQPos() * 60. / _pHost->GetTempo() * (den / 8.) * (4. / num) + 1;
+                float m = _pPlug->GetPPQPos() * 60. / _pPlug->GetTempo() * (den / 8.) * (4. / num) + 1;
                 float b = size_t (num * (m - 1)) % den + 1;
                 uint f = 100 * (b - uint (b));
                 
                 i.beat = floor (b);
                 i.fraction = f;
                 
-                float sec = samplePos > 0 ? samplePos / _pHost->GetSampleRate() : 0;
+                float sec = samplePos > 0 ? samplePos / _pPlug->GetSampleRate() : 0;
                 float hours = sec / 3600.;
                 float minutes = (hours - int (hours)) * 60.;
                 float seconds = (minutes - int (minutes)) * 60.;

@@ -212,7 +212,19 @@ void IPlugEffect::initializeLayout() {
 }
 
 
-void IPlugEffect::updateHostInfoView() {
+bool IPlugEffect::tryUpdateLayout() {
+	bool ok = true;
+	ok &= updateHostInfoView();
+	//LOGD << "tryUpdateLayout " << (ok ? "OK" : "failed");
+	return ok;
+}
+
+
+bool IPlugEffect::updateHostInfoView() {
+	auto pG = GetUI();
+	if (!pG)
+		return false;
+
     const auto& m = _hostInfoModel;
     const auto i = m.getInfo();
     auto& v = _hostInfoView;
@@ -231,4 +243,5 @@ void IPlugEffect::updateHostInfoView() {
         
     if (updOk)
         _hostInfoModel.clearUpdateFlags();
+	return updOk;
 }
