@@ -28,7 +28,7 @@ namespace hvoya {
 		#endif
 
         public:
-            explicit HostInfoModel (Plug* p, void (Plug::*triggerUIUpdate)()) :
+            explicit HostInfoModel (Plug* p, void (Plug::*triggerUIUpdate)() = nullptr) :
 				_pPlug (p),
 				_triggerUIUpdate (triggerUIUpdate) {
 				assert (p);
