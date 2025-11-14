@@ -48,13 +48,8 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
 #if IPLUG_DSP
 
     void IPlugEffect::ProcessBlock (sample** ins, sample** outs, int numFrames) {
-        ++_bufId;
-        
-		_hostInfoModel.updateChans();
-        if (auto pG = GetUI()) {
-            _hostInfoModel.updateAll (numFrames);
-            //updateHostInfoView(); // TODO dont do from this thread
-        }
+		++_bufId;
+		_hostInfoModel.updateAll (numFrames);
 
 		const auto numChans = _hostInfoModel.getMinChans();
 
