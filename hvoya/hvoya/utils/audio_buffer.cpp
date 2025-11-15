@@ -101,6 +101,7 @@ void AudioBuffer::resize() {
     for (n_chan_t c = 0; c != _numChans; ++c)
         _channels [c] = _data.data() + _numFrames * c;
     clearUnusedChanPtrs();
+	updateDebugDataView();
 }
 
 
@@ -112,6 +113,7 @@ void AudioBuffer::wrap (iplug::sample** in, n_chan_t numChans, n_frames_t frames
     for (n_chan_t c = 0; c != _numChans; ++c)
         _channels [c] = in [c];
     clearUnusedChanPtrs();
+	updateDebugDataView();
 }
 
 
@@ -129,6 +131,7 @@ void AudioBuffer::unwrap() {
         _channels [c] = dest;
     }
     _isWrapper = false;
+	updateDebugDataView();
 }
 
 

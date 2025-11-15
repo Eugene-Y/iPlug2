@@ -2,6 +2,7 @@
 
 #include <array>
 #include <vector>
+#include <span>
 #include <IPlugConstants.h>
 #include "types.hpp"
 #include <hvoya/utils/log/logger.hpp>
@@ -265,7 +266,19 @@ namespace hvoya {
             bool _isWrapper;
         
             std::vector <sample_t> _data;
-            
+
+			#ifndef NDEBUG
+				mutable std::array <std::span <const sample_t>, MAX_CHANNELS> _dataView;
+				void updateDebugDataView() const noexcept {
+					for (n_chan_t c = 0; c < _numChans; ++c)
+						_dataView[c] = std::span <const sample_t> (_channels[c], _numFrames);
+					for (n_chan_t c = _numChans; c < MAX_CHANNELS; ++c)
+						_dataView[c] = std::span <const sample_t> ();
+				}
+			#else
+				void updateDebugDataView() const noexcept {}
+			#endif
+
             typedef std::array <sample_t*, MAX_CHANNELS> chan_ptr_t;
             chan_ptr_t _channels;
             
