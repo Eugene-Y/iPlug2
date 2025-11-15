@@ -143,11 +143,11 @@ void IParam::InitEnum(const char* name, int defaultVal, const std::vector<std::s
   }
 }
 
-void IParam::InitInt(const char* name, int defaultVal, int minVal, int maxVal, const char* label, int flags, const char* group)
+void IParam::InitInt(const char* name, int defaultVal, int minVal, int maxVal, const char* label, int flags, const char* group, const Shape& shape)
 {
   if (mType == kTypeNone) mType = kTypeInt;
   
-  InitDouble(name, (double) defaultVal, (double) minVal, (double) maxVal, 1.0, label, flags | kFlagStepped, group);
+  InitDouble(name, (double) defaultVal, (double) minVal, (double) maxVal, 1.0, label, flags | kFlagStepped, group, shape);
 }
 
 void IParam::InitDouble(const char* name, double defaultVal, double minVal, double maxVal, double step, const char* label, int flags, const char* group, const Shape& shape, EParamUnit unit, DisplayFunc displayFunc)
