@@ -16,6 +16,8 @@
 
 namespace hvoya {
 
+	typedef decltype (PLUG_VERSION_HEX) version_hex_t;
+
     const int kNumPresets = 1;
 
     enum EParams {
@@ -55,9 +57,9 @@ class IPlugEffect final : public Plugin {
         bool SerializeState(IByteChunk&) const override;
         int UnserializeState(const IByteChunk&, int startPos) override;
 
-        static size_t vMajor (version_hex_t v) { return (v & 0xFFFF0000) >> 16; }
-        static size_t vMinor (version_hex_t v) { return (v & 0x0000FF00) >> 8; }
-        static size_t vPatch (version_hex_t v) { return (v & 0x000000FF); }
+		static size_t vMajor (hvoya::version_hex_t v) { return (v & 0xFFFF0000) >> 16; }
+        static size_t vMinor (hvoya::version_hex_t v) { return (v & 0x0000FF00) >> 8; }
+        static size_t vPatch (hvoya::version_hex_t v) { return (v & 0x000000FF); }
 
     private:
 

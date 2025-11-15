@@ -53,10 +53,10 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
 
 		const auto numChans = _hostInfoModel.getMinChans();
 
-		AudioBuffer input (ins, numChans, numFrames);
+		hvoya::AudioBuffer input (ins, numChans, numFrames);
 		assert (input.isWrapper());
 
-		AudioBuffer cleanCopy (input);
+		hvoya::AudioBuffer cleanCopy (input);
 		assert (!cleanCopy.isWrapper());
 		
 		for (int c = 0; c < input.numChans(); c++) {

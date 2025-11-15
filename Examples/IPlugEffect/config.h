@@ -1,7 +1,6 @@
 #define PLUG_NAME "IPlugEffect"
 #define PLUG_MFR "HvoyaAudio"
 #define PLUG_VERSION_HEX 0x00000100
-typedef decltype (PLUG_VERSION_HEX) version_hex_t;
 #define PLUG_VERSION_STR "0.1.0"
 #define PLUG_UNIQUE_ID 'Ipef'
 #define PLUG_MFR_ID 'HvyA'
