@@ -883,9 +883,9 @@ void IVSliderControl::OnResize()
   SetTargetRECT(MakeRects(mRECT));
   
   if(mDirection == EDirection::Vertical)
-    mTrackBounds = mWidgetBounds.GetPadded(-mHandleSize).GetMidHPadded(mTrackSize);
+    mTrackBounds = mWidgetBounds.GetPadded(-mHandleSize).GetMidHPadded(mTrackSize).GetReducedFromBottom (mLoMargin).GetReducedFromTop(mHiMargin);
   else
-    mTrackBounds = mWidgetBounds.GetPadded(-mHandleSize).GetMidVPadded(mTrackSize);
+    mTrackBounds = mWidgetBounds.GetPadded(-mHandleSize).GetMidVPadded(mTrackSize).GetReducedFromLeft(mLoMargin).GetReducedFromRight(mHiMargin);
 
   SetDirty(false);
 }
