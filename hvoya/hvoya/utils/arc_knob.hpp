@@ -52,7 +52,7 @@ namespace hvoya {
 				if (debug) g.DrawRect (COLOR_YELLOW, mWidgetBounds);
 
 				auto wb = mWidgetBounds;
-				const float widgetRadius = std::min (wb.H(), wb.W()) / 2;
+				const float widgetRadius = std::min (wb.H(), wb.W()) / 2.f;
 
 				if (_centerOfMassAdjustment) {
 					const float a1 = DegToRad (std::abs (mAngle1));
@@ -60,13 +60,13 @@ namespace hvoya {
 
 					const bool zeroCross = (mAngle1 * mAngle2 < 0.f); // different sign
 					const float fromTopNorm = zeroCross ?
-						  0
+						  0.f
 						: 1.f - std::cos (std::min (a1, a2));
 
-					const bool onlyUpperHalf = a1 <= 90.f && a2 <= 90.f;
+					const bool onlyUpperHalf = (a1 <= DegToRad (90.f) && a2 <= DegToRad (90.f));
 					const float fromBottomNorm = onlyUpperHalf ?
 						  1.f + std::cos (std::max (a1, a2))
-						: 1.f + std::cos (std::max (a1, a2));
+						: 1.f + std::cos (std::max (a1, a2)); // TODO fix only lower half case
 
 					float freeSpace = widgetRadius * (fromTopNorm + fromBottomNorm);
 
@@ -91,17 +91,17 @@ namespace hvoya {
 											  : mAnchorAngle;
 
 				const float distFromAnchorNorm = handleAngle == mAnchorAngle ?
-					  0
+					  0.f
 					: handleAngle > mAnchorAngle ?
-					(mAngle2 != mAnchorAngle) ? (handleAngle - mAnchorAngle) / (mAngle2 - mAnchorAngle) : 1
-				  : (mAnchorAngle != mAngle1) ? (mAnchorAngle - handleAngle) / (mAnchorAngle - mAngle1) : 1;
+					(mAngle2 != mAnchorAngle) ? (handleAngle - mAnchorAngle) / (mAngle2 - mAnchorAngle) : 1.f
+				  : (mAnchorAngle != mAngle1) ? (mAnchorAngle - handleAngle) / (mAnchorAngle - mAngle1) : 1.f;
 
-				const float nearThick = std::min <float> (_thicknessNearAnchor, widgetRadius - 0.5);
-				const float farThick = std::min <float> (_thicknessFarFromAnchor, widgetRadius - 0.5);
+				const float nearThick = std::min <float> (_thicknessNearAnchor, widgetRadius - 0.5f);
+				const float farThick = std::min <float> (_thicknessFarFromAnchor, widgetRadius - 0.5f);
 				// -0.5 is a workaround for strange arc center drawing with widgetRadius thickness
 				const float t = (1.f - distFromAnchorNorm) *  nearThick + distFromAnchorNorm * farThick;
 
-				const float radius = widgetRadius - t / 2;
+				const float radius = widgetRadius - t / 2.f;
 
 				if (_drawRestOfTheArc)
 					g.DrawArc (GetColor (kSH), cx, cy, radius, mAngle1, mAngle2, &mBlend, t);
@@ -125,17 +125,17 @@ namespace hvoya {
 
 
 			void setThicknessFarFromAnchor (float t) {
-				assert (t >= 0.);
+				assert (t >= 0.f);
 				_thicknessFarFromAnchor = t;
 			}
 
 			void setThicknessNearAnchor (float t) {
-				assert (t >= 0.);
+				assert (t >= 0.f);
 				_thicknessNearAnchor = t;
 			}
 
 			void setMinArcLenPx (float len) {
-				assert (len >- 0.);
+				assert (len >- 0.f);
 				_minArcLenPx = len;
 			}
 
@@ -145,7 +145,7 @@ namespace hvoya {
 
 		protected:
 
-			bool _drawRestOfTheArc { true };
+			bool _drawRestOfTheArc;
 			float _minArcLenPx; // NB: default arc drawing backend is not perfect,
 								// with min <= 1 there might be a noticeable gap
 			float _thicknessFarFromAnchor;
