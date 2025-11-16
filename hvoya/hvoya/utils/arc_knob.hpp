@@ -48,7 +48,7 @@ namespace hvoya {
 
 
             void DrawWidget (IGraphics& g) override {
-				const bool debug = 1;
+				const bool debug = 0;
 				if (debug) g.DrawRect (COLOR_YELLOW, mWidgetBounds);
 
 				auto wb = mWidgetBounds;
