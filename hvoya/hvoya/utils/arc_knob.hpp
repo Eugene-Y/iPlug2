@@ -9,12 +9,12 @@ namespace hvoya {
             ArcKnob (const IRECT& bounds, int paramIdx,
                      const char* label = "",
                      const IVStyle& style = DEFAULT_STYLE,
-					 float thicknessFarFromAnchor = 2.f, float thicknessNearAnchor = 25.f,
+					 float thicknessNearAnchor = 25.f, float thicknessFarFromAnchor = 2.f, 
 					 float minArcLen = 2.f,
+                     float angleMin = -135, float angleMax = 135, float aAnchor = -135,
 					 bool drawRestOfTheArc = true,
 					 float centerOfMassAdjustment = 1.f,
 					 bool valueInWidget = false,
-                     float angleMin = -135, float angleMax = 135, float aAnchor = -135,
                      double gearing = DEFAULT_GEARING) :
 
                      IVKnobControl (bounds, paramIdx, label, style, true, valueInWidget,
@@ -48,7 +48,7 @@ namespace hvoya {
 
 
             void DrawWidget (IGraphics& g) override {
-				const bool debug = 0;
+				const bool debug = 1;
 				if (debug) g.DrawRect (COLOR_YELLOW, mWidgetBounds);
 
 				auto wb = mWidgetBounds;
@@ -96,9 +96,10 @@ namespace hvoya {
 					(mAngle2 != mAnchorAngle) ? (handleAngle - mAnchorAngle) / (mAngle2 - mAnchorAngle) : 1
 				  : (mAnchorAngle != mAngle1) ? (mAnchorAngle - handleAngle) / (mAnchorAngle - mAngle1) : 1;
 
-				const float maxThick = std::min <float> (_thicknessNearAnchor, widgetRadius - 0.5);
+				const float nearThick = std::min <float> (_thicknessNearAnchor, widgetRadius - 0.5);
+				const float farThick = std::min <float> (_thicknessFarFromAnchor, widgetRadius - 0.5);
 				// -0.5 is a workaround for strange arc center drawing with widgetRadius thickness
-				const float t = (1.f - distFromAnchorNorm) *  maxThick + distFromAnchorNorm * _thicknessFarFromAnchor;
+				const float t = (1.f - distFromAnchorNorm) *  nearThick + distFromAnchorNorm * farThick;
 
 				const float radius = widgetRadius - t / 2;
 
