@@ -812,7 +812,8 @@ void IVSliderControl::DrawTrack(IGraphics& g, const IRECT& filledArea)
 void IVSliderControl::DrawWidget(IGraphics& g)
 {
   IRECT filledTrack = mTrackBounds.FracRect(mDirection, (float) GetValue());
-
+  //g.DrawRect(COLOR_ORANGE, mTrackBounds);
+  //g.DrawRect(COLOR_YELLOW, mValueBounds);
   if(mTrackSize > 0.f)
     DrawTrack(g, filledTrack);
   
@@ -846,7 +847,12 @@ void IVSliderControl::OnMouseDown(float x, float y, const IMouseMod& mod)
 {
   if(mStyle.showValue && mValueBounds.Contains(x, y))
   {
-    PromptUserInput(mValueBounds);
+	float minW = mValueStr.GetLength() * mStyle.valueText.mSize * 0.7f;
+	float minH = mStyle.valueText.mSize; // TODO depends on text angle
+	auto vb = mValueBounds;
+	if (vb.W() < minW)
+	  vb = vb.GetHPadded((minW - vb.W())/2.f);
+    PromptUserInput(vb);
   }
   else
   { 
