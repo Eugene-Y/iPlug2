@@ -9,15 +9,16 @@ namespace hvoya {
             ArcKnob (const IRECT& bounds, int paramIdx,
                      const char* label = "",
                      const IVStyle& style = DEFAULT_STYLE,
-					 float thicknessNearAnchor = 25.f, float thicknessFarFromAnchor = 2.f, 
+					 float thicknessNearAnchor = 25.f, float thicknessFarFromAnchor = 2.f,
 					 float minArcLen = 2.f,
                      float angleMin = -135, float angleMax = 135, float aAnchor = -135,
 					 bool drawRestOfTheArc = true,
 					 float centerOfMassAdjustment = 1.f,
+					 bool valueIsEditable = true,
 					 bool valueInWidget = false,
                      double gearing = DEFAULT_GEARING) :
 
-                     IVKnobControl (bounds, paramIdx, label, style, true, valueInWidget,
+                     IVKnobControl (bounds, paramIdx, label, style, valueIsEditable, valueInWidget,
 									angleMin, angleMax, aAnchor, EDirection::Vertical, gearing),
 
 					 _thicknessFarFromAnchor (thicknessFarFromAnchor),
@@ -25,20 +26,13 @@ namespace hvoya {
 					 _minArcLenPx (minArcLen),
 					 _drawRestOfTheArc (drawRestOfTheArc),
 					 _centerOfMassAdjustment (centerOfMassAdjustment),
-					 _needAdjustWidget (true) {
+					 _needAdjustWidget (true),
+					 _backendArcFix (true) {
 						 assert (angleMin < angleMax);
 						 assert (angleMin <= aAnchor);
 						 assert (aAnchor <= angleMax);
 					 }
 
-
-			void setValueIsEditable (bool e) {
-				DisablePrompt (!e);
-			}
-        
-			void setValueInWidget (bool v) { // TODO fix value rect
-				mValueInWidget = v;
-			}
 
 			void Draw (IGraphics& g) override {
 				IVKnobControl::DrawBackground (g, mRECT);
@@ -84,22 +78,39 @@ namespace hvoya {
 
 				const float radius = widgetRadius - t / 2.f;
 
-				if (_drawRestOfTheArc)
-					g.DrawArc (GetColor (kSH), cx, cy, radius, mAngle1, mAngle2, &mBlend, t);
+				if (_drawRestOfTheArc) {
+					const auto& col = GetColor (kSH);
+					g.DrawArc (col, cx, cy, radius, mAngle1, mAngle2, &mBlend, t);
+					if (_backendArcFix) {
+						g.DrawRadialLine (col,
+										  cx, cy, mAngle1,
+										  widgetRadius - t, widgetRadius,
+										  &mBlend, 2.f);
+						g.DrawRadialLine (col,
+										  cx, cy, mAngle2,
+										  widgetRadius - t, widgetRadius,
+										  &mBlend, 2.f);
+					}
+				}
 
                 if (a1 != a2)
 					g.DrawArc (GetColor (kX1), cx, cy, radius, a1, a2, &mBlend, t);
 
 				// draw thin radial line to imitate the shortest arc with near-anchor thickness.
 				// this keeps angle computation above clearer, and resulting image more accurate.
-				if (_minArcLenPx > 0.f)
-					g.DrawRadialLine (
-						debug ? COLOR_RED : GetColor (kFR),
-						cx, cy,
-						handleAngle,
-						widgetRadius - t,
-						widgetRadius,
-						&mBlend, _minArcLenPx);
+				if (_minArcLenPx > 0.f) {
+					const auto& col = GetColor (kFR);
+					if (_backendArcFix)
+						g.DrawRadialLine (col,
+										  cx, cy, mAnchorAngle,
+										  widgetRadius - t, widgetRadius,
+										  &mBlend, 2.f);
+
+					g.DrawRadialLine (debug ? COLOR_RED : col,
+									  cx, cy, handleAngle,
+									  widgetRadius - t, widgetRadius,
+									  &mBlend, _minArcLenPx);
+				}
 
 				if (debug) g.DrawCircle (COLOR_ORANGE, cx, cy, radius);
             }
@@ -124,6 +135,18 @@ namespace hvoya {
 				_drawRestOfTheArc = d;
 			}
 
+			void setBackendArcFix (bool f) {
+				_backendArcFix = f;
+			}
+
+			void setValueIsEditable (bool e) {
+				DisablePrompt (!e);
+			}
+
+			void setValueInWidget (bool v) { // TODO fix value rect
+				mValueInWidget = v;
+			}
+
 			void OnResize() override {
 				IVKnobControl::OnResize();
 				_needAdjustWidget = true;
@@ -132,6 +155,7 @@ namespace hvoya {
 		protected:
 
 			bool _drawRestOfTheArc;
+			bool _backendArcFix; // NanoVG (default on mac) has bugs in arc drawing
 			float _minArcLenPx; // NB: default arc drawing backend is not perfect,
 								// with min <= 1 there might be a noticeable gap
 			float _thicknessFarFromAnchor;
