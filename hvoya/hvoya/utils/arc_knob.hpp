@@ -24,7 +24,8 @@ namespace hvoya {
 					 _thicknessNearAnchor (thicknessNearAnchor),
 					 _minArcLenPx (minArcLen),
 					 _drawRestOfTheArc (drawRestOfTheArc),
-					 _centerOfMassAdjustment (centerOfMassAdjustment) {
+					 _centerOfMassAdjustment (centerOfMassAdjustment),
+					 _needAdjustWidget (true) {
 						 assert (angleMin < angleMax);
 						 assert (angleMin <= aAnchor);
 						 assert (aAnchor <= angleMax);
@@ -49,34 +50,17 @@ namespace hvoya {
 
             void DrawWidget (IGraphics& g) override {
 				const bool debug = 0;
-				if (debug) g.DrawRect (COLOR_YELLOW, mWidgetBounds);
 
-				auto wb = mWidgetBounds;
-				const float widgetRadius = std::min (wb.H(), wb.W()) / 2.f;
-
-				if (_centerOfMassAdjustment) { // TODO move to OnResize()
-					const float a1 = DegToRad (std::abs (mAngle1));
-					const float a2 = DegToRad (std::abs (mAngle2));
-
-					// TODO count max thickness in?
-					const bool zeroCross = (mAngle1 * mAngle2 < 0.f); // different sign
-					const float fromTopNorm = zeroCross ?
-						  0.f
-						: 1.f - std::cos (std::min (a1, a2));
-
-					const float fromBottomNorm = 1.f + std::cos (std::max (a1, a2));
-					const float vShift = widgetRadius * (-fromTopNorm + fromBottomNorm) / 2.f;
-
-					if (debug) {
-						auto t = wb.T + fromTopNorm * widgetRadius;
-						auto b = wb.B - fromBottomNorm * widgetRadius;
-						g.DrawLine (COLOR_RED, wb.L + 10, t, wb.R, t, 0, 2);
-						g.DrawLine (COLOR_ORANGE, wb.L, b, wb.R - 10, b, 0, 2);
-					}
-
-					wb = mWidgetBounds.GetVShifted (vShift);
-					if (debug) g.DrawRect (COLOR_ORANGE, wb);
+				if (_needAdjustWidget) {
+					adjustWidgetRect();
+					_needAdjustWidget = false;
 				}
+				const auto& wb = _adjustedWidgetRect;
+				if (debug) {
+					g.DrawRect (COLOR_ORANGE, mWidgetBounds);
+					g.DrawRect (COLOR_YELLOW, wb);
+				}
+				const float widgetRadius = std::min (wb.H(), wb.W()) / 2.f;
 
 				const float cx = wb.MW();
 				const float cy = wb.MH();
@@ -140,6 +124,11 @@ namespace hvoya {
 				_drawRestOfTheArc = d;
 			}
 
+			void OnResize() override {
+				IVKnobControl::OnResize();
+				_needAdjustWidget = true;
+			}
+
 		protected:
 
 			bool _drawRestOfTheArc;
@@ -147,10 +136,32 @@ namespace hvoya {
 								// with min <= 1 there might be a noticeable gap
 			float _thicknessFarFromAnchor;
 			float _thicknessNearAnchor;
-			// TODO add horizontal adjustment
 			float _centerOfMassAdjustment; // normalized to widget radius.
 										   // 0 = no adjustment
+			IRECT _adjustedWidgetRect;
+			bool _needAdjustWidget;
 
-    };
-    
-}
+			void adjustWidgetRect() {
+				_adjustedWidgetRect = mWidgetBounds;
+				if (_centerOfMassAdjustment == 0.f)
+					return;
+
+				// TODO add horizontal adjustment
+				// TODO count max thickness in
+				const float a1 = DegToRad (std::abs (mAngle1));
+				const float a2 = DegToRad (std::abs (mAngle2));
+
+				auto& wb = _adjustedWidgetRect;
+				const bool zeroCross = (mAngle1 * mAngle2 < 0.f); // different sign
+				const float fromTopNorm = zeroCross ?
+					0.f
+				  : 1.f - std::cos (std::min (a1, a2));
+				const float fromBottomNorm = 1.f + std::cos (std::max (a1, a2));
+				const float widgetRadius = std::min (wb.H(), wb.W()) / 2.f;
+				const float vShift = widgetRadius * (-fromTopNorm + fromBottomNorm) / 2.f;
+				wb = mWidgetBounds.GetVShifted (vShift);
+			}
+
+    }; // class ArcKnob
+
+} // ns hvoya
