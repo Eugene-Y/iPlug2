@@ -159,6 +159,11 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "VST2" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -175,6 +180,11 @@
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)\Resources\img;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "VST2" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -193,6 +203,11 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "VST2" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -211,6 +226,11 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "VST2" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracer|Win32'">
     <ClCompile>
@@ -228,6 +248,11 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "VST2" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracer|x64'">
     <ClCompile>
@@ -245,6 +270,11 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "VST2" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="../config.h" />

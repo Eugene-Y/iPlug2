@@ -1,9 +1,8 @@
 commit=$(git rev-parse --verify HEAD | cut -c 1-7)
 branch_name=$(git rev-parse --abbrev-ref HEAD)
 
-datestr=$(date '+%Y.%m.%d %H:%M:%S')
-curdate=$(date +"%d.%m.%y")
-curtime=$(date +"%T")
+datestr=$(date '+%Y.%m.%d')
+timestr=$(date '+%H:%M:%S')
 
 # ARCHS expected to be the last argument 
 # some Xcode ARCHS build setting uses \n as separator.
@@ -24,7 +23,7 @@ done
 filesource="//
 //  plug_build_info.hpp
 //
-//  Created automatically by Xcode on $curdate at $curtime.
+//  Created automatically by Xcode on $datestr at $timestr.
 //
 
 #ifndef plug_build_info_hpp
@@ -33,6 +32,7 @@ filesource="//
 #define PLUG_GIT_BRANCH_NAME \"$branch_name\"
 #define PLUG_GIT_COMMIT_SHA  \"$commit\"
 #define PLUG_BUILD_DATE      \"$datestr\"
+#define PLUG_BUILD_TIME      \"$timestr\"
 #define PLUG_PRODUCT         \"$2\"
 #define PLUG_ARCHS           \"$archs\"
 
