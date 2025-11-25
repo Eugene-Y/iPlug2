@@ -12,9 +12,9 @@ namespace hvoya::midi_cc {
     #endif
     
             
-    auto findMappingIteratorForPId (std::vector <ParamССMapping>& params, PId_t i) {
+    auto findMappingIteratorForPId (std::vector <ParamCCMapping>& params, PId_t i) {
         return std::find_if (params.begin(), params.end(), 
-                [i](const ParamССMapping& m) { return m.paramId == i; });
+                [i](const ParamCCMapping& m) { return m.paramId == i; });
     }
             
     
@@ -105,12 +105,12 @@ namespace hvoya::midi_cc {
         auto& params = _ccToParamMap [cc];
         auto it = findMappingIteratorForPId (params, i);
         if (it == params.end()) {
-            params.emplace_back (ParamССMapping (i, cc));
+            params.emplace_back (ParamCCMapping (i, cc));
         }
     }
             
             
-    ParamССMapping* Mapper::findMappingForPId (PId_t i) {
+    ParamCCMapping* Mapper::findMappingForPId (PId_t i) {
         for (auto& [cc, params] : _ccToParamMap) {
             auto it = findMappingIteratorForPId (params, i);
             if (it != params.end()) {

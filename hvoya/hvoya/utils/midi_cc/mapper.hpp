@@ -15,13 +15,13 @@
 
 namespace hvoya::midi_cc {
     
-    struct ParamССMapping {
+    struct ParamCCMapping {
         PId_t paramId;
         CC_t cc;
         double minVal { 0.0 };
         double maxVal { 1.0 };
         
-        ParamССMapping (PId_t id = pid_not_set, CC_t cc = cc_not_set)
+        ParamCCMapping (PId_t id = pid_not_set, CC_t cc = cc_not_set)
           : paramId (id), cc (cc) {}
 
         double mapVal (double normalized) const {
@@ -33,8 +33,8 @@ namespace hvoya::midi_cc {
     };
     
     
-    typedef std::vector <ParamССMapping> ParamССMappings_t;
-    typedef std::map <CC_t, ParamССMappings_t> CCtoParamMap_t;
+    typedef std::vector <ParamCCMapping> ParamCCMappings_t;
+    typedef std::map <CC_t, ParamCCMappings_t> CCtoParamMap_t;
     
 
     class Mapper {
@@ -70,7 +70,7 @@ namespace hvoya::midi_cc {
             CCtoParamMap_t _ccToParamMap;
         
             void addMapping (CC_t, PId_t);
-            ParamССMapping* findMappingForPId (PId_t);
+            ParamCCMapping* findMappingForPId (PId_t);
             
         };
 
