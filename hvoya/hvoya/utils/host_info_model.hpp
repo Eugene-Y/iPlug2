@@ -181,7 +181,7 @@ namespace hvoya {
 
                 float m = _pPlug->GetPPQPos() * 60. / _pPlug->GetTempo() * (den / 8.) * (4. / num) + 1;
                 float b = size_t (num * (m - 1)) % den + 1;
-                uint f = 100 * (b - uint (b));
+                uint64_t f = 100 * (b - uint64_t (b));
                 
                 i.beat = floor (b);
                 i.fraction = f;
