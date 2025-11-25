@@ -20,8 +20,9 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
         _instanceId (_sNumInstances),
         _logger ([this]() { return _instanceId; },
                 [this]() { return _bufId.load(); }),
-        _hostInfoModel (this),
+        _hostInfoModel (this, &IPlugEffect::triggerUIUpdate),
         _hostInfoView (this),
+		_uiUpdateWatchdog (this, &IPlugEffect::tryUpdateLayout),
         _midiCCMediator (this),
         _master_mix (1.) {
     ++_sNumInstances;
@@ -34,8 +35,9 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
         mMakeGraphicsFunc = [&]() {
             return MakeGraphics (*this, PLUG_WIDTH, PLUG_HEIGHT, PLUG_FPS, GetScaleForScreen (PLUG_WIDTH, PLUG_HEIGHT));
         };
+		initializeLayout();
+		_uiUpdateWatchdog.start();
     #endif
-    initializeLayout();
     
     _softLimiter.setThreshold (12);
     _softLimiter.setSoftness (3);
@@ -46,20 +48,15 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
 #if IPLUG_DSP
 
     void IPlugEffect::ProcessBlock (sample** ins, sample** outs, int numFrames) {
-        ++_bufId;
-        
-		_hostInfoModel.updateChans();
-        if (auto pG = GetUI()) {
-            _hostInfoModel.updateAll (numFrames);
-            //updateHostInfoView(); // TODO dont do from this thread
-        }
+		++_bufId;
+		_hostInfoModel.updateAll (numFrames);
 
 		const auto numChans = _hostInfoModel.getMinChans();
 
-		AudioBuffer input (ins, numChans, numFrames);
+		hvoya::AudioBuffer input (ins, numChans, numFrames);
 		assert (input.isWrapper());
 
-		AudioBuffer cleanCopy (input);
+		hvoya::AudioBuffer cleanCopy (input);
 		assert (!cleanCopy.isWrapper());
 		
 		for (int c = 0; c < input.numChans(); c++) {
@@ -94,15 +91,12 @@ void IPlugEffect::initializeParams() {
 
 
 void IPlugEffect::OnIdle() {
-    auto pG = GetUI();
-    if (!pG)
-        return;
-    
-    updateHostInfoView();
+
 }
 
 
 void IPlugEffect::OnActivate (bool enable) {
+	//LOGD << "OnActivate " << enable;
     OnIdle();
 }
 
@@ -110,7 +104,7 @@ void IPlugEffect::OnActivate (bool enable) {
 void IPlugEffect::OnReset() {
     resetPrevParamVals();
     _hostInfoModel.reset();
-    //_midiCCMapper.reset();
+	_uiUpdateWatchdog.notify();
 }
 
 

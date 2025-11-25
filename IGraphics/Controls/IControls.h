@@ -316,40 +316,46 @@ class IVSliderControl : public ISliderControlBase
                       , public IVectorBase
 {
 public:
-  IVSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = false, float handleXOffset = 0.f, float handleYOffset = 0.f);
-  
-  IVSliderControl(const IRECT& bounds, IActionFunction aF, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = false, float handleXOffset = 0.f, float handleYOffset = 0.f);
+	IVSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = false, float handleXOffset = 0.f, float handleYOffset = 0.f);
 
-  virtual ~IVSliderControl() {}
-  void Draw(IGraphics& g) override;
-  virtual void DrawWidget(IGraphics& g) override;
-  virtual void DrawTrack(IGraphics& g, const IRECT& filledArea);
-  virtual void DrawHandle(IGraphics& g, const IRECT& bounds);
+	IVSliderControl(const IRECT& bounds, IActionFunction aF, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = false, float handleXOffset = 0.f, float handleYOffset = 0.f);
 
-  void OnMouseDown(float x, float y, const IMouseMod& mod) override;
-  void OnMouseDblClick(float x, float y, const IMouseMod& mod) override;
-  void OnMouseUp(float x, float y, const IMouseMod& mod) override;
-  void OnMouseOver(float x, float y, const IMouseMod& mod) override;
-  void OnMouseOut() override { mValueMouseOver = false; ISliderControlBase::OnMouseOut(); }
-  bool IsHit(float x, float y) const override;
-  void OnResize() override;
-  void SetDirty(bool push, int valIdx = kNoValIdx) override;
-  void OnInit() override;
-  
-  IRECT GetTrackBounds() const
-  {
-    auto offset = -mHandleSize + (mStyle.frameThickness / 2.0f);
-    return mWidgetBounds.GetPadded(mDirection == EDirection::Horizontal ? offset : 0,
-                                   mDirection == EDirection::Vertical ? offset : 0,
-                                   mDirection == EDirection::Horizontal ? offset : 0,
-                                   mDirection == EDirection::Vertical ? offset : 0);
-  }
+	virtual ~IVSliderControl() {}
+	void Draw(IGraphics& g) override;
+	virtual void DrawWidget(IGraphics& g) override;
+	virtual void DrawTrack(IGraphics& g, const IRECT& filledArea);
+	virtual void DrawHandle(IGraphics& g, const IRECT& bounds);
+
+	void OnMouseDown(float x, float y, const IMouseMod& mod) override;
+	void OnMouseDblClick(float x, float y, const IMouseMod& mod) override;
+	void OnMouseUp(float x, float y, const IMouseMod& mod) override;
+	void OnMouseOver(float x, float y, const IMouseMod& mod) override;
+	void OnMouseOut() override { mValueMouseOver = false; ISliderControlBase::OnMouseOut(); }
+	bool IsHit(float x, float y) const override;
+	void OnResize() override;
+	void SetDirty(bool push, int valIdx = kNoValIdx) override;
+	void OnInit() override;
+	void SetTrackMargins (float lo, float hi) {
+		mLoMargin = lo;
+		mHiMargin = hi;
+	}
+
+	IRECT GetTrackBounds() const
+	{
+		auto offset = -mHandleSize + (mStyle.frameThickness / 2.0f);
+		return mWidgetBounds.GetPadded(mDirection == EDirection::Horizontal ? offset : 0,
+									   mDirection == EDirection::Vertical ? offset : 0,
+									   mDirection == EDirection::Horizontal ? offset : 0,
+									   mDirection == EDirection::Vertical ? offset : 0);
+	}
 
 protected:
-  bool mHandleInsideTrack = false;
-  bool mValueMouseOver = false;
-  float mHandleXOffset = 0.f;
-  float mHandleYOffset = 0.f;
+	bool mHandleInsideTrack = false;
+	bool mValueMouseOver = false;
+	float mHandleXOffset = 0.f;
+	float mHandleYOffset = 0.f;
+	float mLoMargin = 0.f;
+    float mHiMargin = 0.f;
 };
 
 /** A vector range slider control, with two handles */

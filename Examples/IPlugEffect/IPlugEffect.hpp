@@ -10,10 +10,13 @@
 #include <hvoya/utils/host_info_model.hpp>
 #include <hvoya/utils/host_info_view.hpp>
 #include <hvoya/utils/soft_limiter.hpp>
+#include <hvoya/utils/watchdog.hpp>
 #include <hvoya/utils/midi_cc/mediator.hpp>
 
 
 namespace hvoya {
+
+	typedef decltype (PLUG_VERSION_HEX) version_hex_t;
 
     const int kNumPresets = 1;
 
@@ -54,9 +57,9 @@ class IPlugEffect final : public Plugin {
         bool SerializeState(IByteChunk&) const override;
         int UnserializeState(const IByteChunk&, int startPos) override;
 
-        static size_t vMajor (version_hex_t v) { return (v & 0xFFFF0000) >> 16; }
-        static size_t vMinor (version_hex_t v) { return (v & 0x0000FF00) >> 8; }
-        static size_t vPatch (version_hex_t v) { return (v & 0x000000FF); }
+		static size_t vMajor (hvoya::version_hex_t v) { return (v & 0xFFFF0000) >> 16; }
+        static size_t vMinor (hvoya::version_hex_t v) { return (v & 0x0000FF00) >> 8; }
+        static size_t vPatch (hvoya::version_hex_t v) { return (v & 0x000000FF); }
 
     private:
 
@@ -79,10 +82,15 @@ class IPlugEffect final : public Plugin {
 
         void initializeParams();
         void initializeLayout();
-        
-        hvoya::HostInfoModel <Plugin> _hostInfoModel; // TODO doesnt update chans
-        hvoya::HostInfoView <Plugin> _hostInfoView;
-        void updateHostInfoView();
+		void setTooltips (IGraphics*);
+
+		hvoya::Watchdog <IPlugEffect> _uiUpdateWatchdog;
+		bool tryUpdateLayout();
+		void triggerUIUpdate() { _uiUpdateWatchdog.notify(); }
+
+        hvoya::HostInfoModel <IPlugEffect> _hostInfoModel; // TODO doesnt update chans
+        hvoya::HostInfoView <IPlugEffect> _hostInfoView;
+        bool updateHostInfoView();
 
         hvoya::SoftLimiter _softLimiter;
         hvoya::sample_t _master_mix;

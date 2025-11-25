@@ -180,8 +180,8 @@ public:
    * @param label The parameter's unit suffix (eg. dB, %)
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitInt(const char* name, int defaultValue, int minVal, int maxVal, const char* label = "", int flags = 0, const char* group = "");
-  
+  void InitInt(const char* name, int defaultValue, int minVal, int maxVal, const char* label = "", int flags = 0, const char* group = "", const Shape& shape = ShapeLinear());
+
   /** Initialize the parameter as double
    * @param name The parameter's name
    * @param defaultVal The default value of the parameter

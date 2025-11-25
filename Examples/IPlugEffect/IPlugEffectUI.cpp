@@ -137,6 +137,8 @@ void IPlugEffect::initializeLayout() {
             pG->AttachPanelBackground (colDarkGray);
             pG->EnableMouseOver (true);
             pG->EnableTooltips (true);
+			pG->SetStrictDrawing (true); // hidden controls RECTs sometimes affect
+										 // the visible controls redrawing
 
             createHeaderLayout (pG);
             
@@ -205,6 +207,8 @@ void IPlugEffect::initializeLayout() {
 			pC->Hide (true);
 			pG->AttachControl (pC, cTagAbout);
 
+			setTooltips (pG);
+
             _midiCCMediator.UpdateMidiControllableUI();
         };
 
@@ -212,7 +216,31 @@ void IPlugEffect::initializeLayout() {
 }
 
 
-void IPlugEffect::updateHostInfoView() {
+void IPlugEffect::setTooltips (IGraphics* pG) {
+	assert (pG);
+	auto set = [&](auto i, auto text) {
+		if (auto pC = pG->GetControlWithParamIdx (i))
+			pC->SetTooltip (text);
+	};
+	using enum hvoya::EParams;
+	set (par_lim_thresh, "you should always use a limiter while experimenting!");
+	set (num_params, "this one does nothing");
+}
+
+
+bool IPlugEffect::tryUpdateLayout() {
+	bool ok = true;
+	ok &= updateHostInfoView();
+	//LOGD << "tryUpdateLayout " << (ok ? "OK" : "failed");
+	return ok;
+}
+
+
+bool IPlugEffect::updateHostInfoView() {
+	auto pG = GetUI();
+	if (!pG)
+		return false;
+
     const auto& m = _hostInfoModel;
     const auto i = m.getInfo();
     auto& v = _hostInfoView;
@@ -231,4 +259,5 @@ void IPlugEffect::updateHostInfoView() {
         
     if (updOk)
         _hostInfoModel.clearUpdateFlags();
+	return updOk;
 }
