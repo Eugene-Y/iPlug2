@@ -58,9 +58,28 @@ namespace hvoya {
 
 			bool interruptibleSleep (std::chrono::milliseconds duration) {
 				std::unique_lock <std::mutex> lock(_mutex);
-				return _cv.wait_for (lock, duration, [this] {
-					return _shouldStop.load (std::memory_order_acquire);
-				});
+
+				auto start = std::chrono::steady_clock::now();
+				auto end = start + duration;
+
+				while (std::chrono::steady_clock::now() < end) {
+					if (_shouldStop.load (std::memory_order_acquire))
+						return true;
+
+					auto remaining = std::chrono::duration_cast <std::chrono::milliseconds>(
+						end - std::chrono::steady_clock::now()
+					);
+
+					auto t = std::min (remaining, std::chrono::milliseconds (250));
+
+					if (_cv.wait_for (lock, t, [this] {
+						return _shouldStop.load (std::memory_order_acquire);
+					})) {
+						return true;
+					}
+				}
+
+				return false;
 			}
 
         public:
