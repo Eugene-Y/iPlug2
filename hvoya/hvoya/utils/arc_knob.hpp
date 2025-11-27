@@ -27,7 +27,8 @@ namespace hvoya {
 					 _drawRestOfTheArc (drawRestOfTheArc),
 					 _centerOfMassAdjustment (centerOfMassAdjustment),
 					 _needAdjustWidget (true),
-					 _backendArcFix (true) {
+					 _backendArcFix (true),
+					 _arcFixLineThickness (2.5f) {
 						 assert (angleMin < angleMax);
 						 assert (angleMin <= aAnchor);
 						 assert (aAnchor <= angleMax);
@@ -85,11 +86,11 @@ namespace hvoya {
 						g.DrawRadialLine (col,
 										  cx, cy, mAngle1,
 										  widgetRadius - t, widgetRadius,
-										  &mBlend, 2.f);
+										  &mBlend, _arcFixLineThickness);
 						g.DrawRadialLine (col,
 										  cx, cy, mAngle2,
 										  widgetRadius - t, widgetRadius,
-										  &mBlend, 2.f);
+										  &mBlend, _arcFixLineThickness);
 					}
 				}
 
@@ -104,12 +105,14 @@ namespace hvoya {
 						g.DrawRadialLine (col,
 										  cx, cy, mAnchorAngle,
 										  widgetRadius - t, widgetRadius,
-										  &mBlend, 2.f);
-
+										  &mBlend, _arcFixLineThickness);
+					const float lw = _backendArcFix ?
+						std::max (_minArcLenPx, _arcFixLineThickness)
+					  :_minArcLenPx;
 					g.DrawRadialLine (debug ? COLOR_RED : col,
 									  cx, cy, handleAngle,
 									  widgetRadius - t, widgetRadius,
-									  &mBlend, _minArcLenPx);
+									  &mBlend, lw);
 				}
 
 				if (debug) g.DrawCircle (COLOR_ORANGE, cx, cy, radius);
@@ -135,8 +138,9 @@ namespace hvoya {
 				_drawRestOfTheArc = d;
 			}
 
-			void setBackendArcFix (bool f) {
+			void setBackendArcFix (bool f, float lineThickness = 2.5f) {
 				_backendArcFix = f;
+				_arcFixLineThickness = lineThickness;
 			}
 
 			void setValueIsEditable (bool e) {
@@ -155,7 +159,6 @@ namespace hvoya {
 		protected:
 
 			bool _drawRestOfTheArc;
-			bool _backendArcFix; // NanoVG (default on mac) has bugs in arc drawing
 			float _minArcLenPx; // NB: default arc drawing backend is not perfect,
 								// with min <= 1 there might be a noticeable gap
 			float _thicknessFarFromAnchor;
@@ -164,6 +167,9 @@ namespace hvoya {
 										   // 0 = no adjustment
 			IRECT _adjustedWidgetRect;
 			bool _needAdjustWidget;
+
+			bool _backendArcFix; // NanoVG (default on mac) has bugs in arc drawing
+			float _arcFixLineThickness;
 
 			void adjustWidgetRect() {
 				_adjustedWidgetRect = mWidgetBounds;
