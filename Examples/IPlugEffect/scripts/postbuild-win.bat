@@ -1,16 +1,18 @@
 @echo off
+setlocal enabledelayedexpansion
 
 REM - CALL "$(SolutionDir)scripts\postbuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(COPY_VST2)" "$(TargetPath)" "$(VST2_32_PATH)" "$(VST2_64_PATH)" "$(VST3_32_PATH)" "$(VST3_64_PATH)" "$(AAX_32_PATH)" "$(AAX_64_PATH)" "$(CLAP_PATH)" "$(BUILD_DIR)" "$(VST_ICON)" "$(AAX_ICON)" "$(CREATE_BUNDLE_SCRIPT)" "$(ICUDAT_PATH)"
 
-set FORMAT=%1
-set NAME=%2
-set PLATFORM=%3
-set COPY_VST2=%4
-set BUILT_BINARY=%5
-set VST2_32_PATH=%6
-set VST2_64_PATH=%7 
-set VST3_32_PATH=%8
-set VST3_64_PATH=%9
+REM Parse arguments
+set FORMAT=%~1
+set NAME=%~2
+set PLATFORM=%~3
+set COPY_VST2=%~4
+set BUILT_BINARY=%~5
+set VST2_32_PATH=%~6
+set VST2_64_PATH=%~7 
+set VST3_32_PATH=%~8
+set VST3_64_PATH=%~9
 shift
 shift 
 shift
@@ -18,173 +20,233 @@ shift
 shift 
 shift
 shift
-set AAX_32_PATH=%3
-set AAX_64_PATH=%4
-set CLAP_PATH=%5
-set BUILD_DIR=%6
-set VST_ICON=%7
-set AAX_ICON=%8
-set CREATE_BUNDLE_SCRIPT=%9
+set AAX_32_PATH=%~3
+set AAX_64_PATH=%~4
+set CLAP_PATH=%~5
+set BUILD_DIR=%~6
+set VST_ICON=%~7
+set AAX_ICON=%~8
+set CREATE_BUNDLE_SCRIPT=%~9
 shift
-set ICUDAT_PATH=%9
+set ICUDAT_PATH=%~9
 
-echo POSTBUILD SCRIPT VARIABLES -----------------------------------------------------
-echo FORMAT %FORMAT% 
-echo NAME %NAME% 
-echo PLATFORM %PLATFORM% 
-echo COPY_VST2 %COPY_VST2% 
-echo BUILT_BINARY %BUILT_BINARY% 
-echo VST2_32_PATH %VST2_32_PATH% 
-echo VST2_64_PATH %VST2_64_PATH% 
-echo VST3_32_PATH %VST3_32_PATH% 
-echo VST3_64_PATH %VST3_64_PATH% 
-echo CLAP_PATH %CLAP_PATH% 
-echo BUILD_DIR %BUILD_DIR%
-echo VST_ICON %VST_ICON% 
-echo AAX_ICON %AAX_ICON% 
-echo CREATE_BUNDLE_SCRIPT %CREATE_BUNDLE_SCRIPT%
-echo ICUDAT_PATH %ICUDAT_PATH%
-echo END POSTBUILD SCRIPT VARIABLES -----------------------------------------------------
+echo ============================================================
+echo POSTBUILD: %NAME% [%PLATFORM% %FORMAT%]
+echo ============================================================
 
-if %PLATFORM% == "Win32" (
-  if exist "%ICUDAT_PATH%" (
-    echo copying icudtl.dat file next to built binary: %BUILT_BINARY%
-    for %%F in (%BUILT_BINARY%) do (
-      copy /y %ICUDAT_PATH% "%%~dpF"
-    )
-  ) else (
-    echo icudtl.dat not found at %ICUDAT_PATH%, skipping...
-  )
+REM Jump to main logic
+goto :main
 
-  if %FORMAT% == ".exe" (
-    echo copying exe to build dir: %BUILD_DIR%\%NAME%_%PLATFORM%.exe
-    copy /y %BUILT_BINARY% %BUILD_DIR%\%NAME%_%PLATFORM%.exe
-    if exist "%ICUDAT_PATH%" (
-      echo copying dat file to build dir: %BUILD_DIR%
-      copy /y %ICUDAT_PATH% %BUILD_DIR%
-    )
-  )
+REM ============================================================
+REM Helper: Ensure directory exists, create if needed
+REM ============================================================
+:EnsureDir
+setlocal
+set "DIR=%~1"
+if exist "%DIR%\*" (
+  endlocal
+  exit /b 0
+)
+mkdir "%DIR%" >nul 2>&1
+if exist "%DIR%\*" (
+  endlocal
+  exit /b 0
+) else (
+  echo [ERROR] Failed to create directory: %DIR%
+  endlocal
+  exit /b 1
+)
 
-  if %FORMAT% == ".dll" (
-    copy /y %BUILT_BINARY% %BUILD_DIR%\%NAME%_%PLATFORM%.dll
-    if exist "%ICUDAT_PATH%" (
-      copy /y %ICUDAT_PATH% %BUILD_DIR%
-    )
-  )
-  
-  if %FORMAT% == ".dll" (
-    if %COPY_VST2% == "1" (
-      echo copying 32bit binary to 32bit VST2 Plugins folder ... 
-      copy /y %BUILT_BINARY% %VST2_32_PATH%
-      if exist "%ICUDAT_PATH%" (
-        copy /y %ICUDAT_PATH% %VST2_32_PATH%
-      )
-    ) else (
-      echo not copying 32bit VST2 binary
-    )
-  )
-  
-  if %FORMAT% == ".vst3" (
-    echo copying 32bit binary to VST3 BUNDLE ..
-    call %CREATE_BUNDLE_SCRIPT% %BUILD_DIR%\%NAME%.vst3 %VST_ICON% %FORMAT%
-    copy /y %BUILT_BINARY% %BUILD_DIR%\%NAME%.vst3\Contents\x86-win
-    if exist "%ICUDAT_PATH%" (
-      copy /y %ICUDAT_PATH% %BUILD_DIR%\%NAME%.vst3\Contents\x86-win
-    )
-    if exist %VST3_32_PATH% ( 
-      echo copying VST3 bundle to 32bit VST3 Plugins folder ...
-      call %CREATE_BUNDLE_SCRIPT% %VST3_32_PATH%\%NAME%.vst3 %VST_ICON% %FORMAT%
-      xcopy /E /H /Y %BUILD_DIR%\%NAME%.vst3\Contents\*  %VST3_32_PATH%\%NAME%.vst3\Contents\
-    )
-  )
-  
-  if %FORMAT% == ".aaxplugin" (
-    echo copying 32bit binary to AAX BUNDLE ..
-    call %CREATE_BUNDLE_SCRIPT% %BUILD_DIR%\%NAME%.aaxplugin %AAX_ICON% %FORMAT%
-    copy /y %BUILT_BINARY% %BUILD_DIR%\%NAME%.aaxplugin\Contents\Win32
-    if exist "%ICUDAT_PATH%" (
-      copy /y %ICUDAT_PATH% %BUILD_DIR%\%NAME%.aaxplugin\Contents\Win32
-    )
-    echo copying 32bit bundle to 32bit AAX Plugins folder ... 
-    call %CREATE_BUNDLE_SCRIPT% %BUILD_DIR%\%NAME%.aaxplugin %AAX_ICON% %FORMAT%
-    xcopy /E /H /Y %BUILD_DIR%\%NAME%.aaxplugin\Contents\* %AAX_32_PATH%\%NAME%.aaxplugin\Contents\
+REM ============================================================
+REM Helper: Copy file with size verification
+REM ============================================================
+:CopyFile
+setlocal
+set "SRC=%~1"
+set "DST=%~2"
+
+if not exist "%SRC%" (
+  echo [SKIP] Source not found: %SRC%
+  endlocal
+  exit /b 0
+)
+
+REM Get destination directory
+for %%F in ("%DST%") do set "DST_DIR=%%~dpF"
+call :EnsureDir "%DST_DIR%"
+if errorlevel 1 (
+  endlocal
+  exit /b 0
+)
+
+REM Copy file
+copy /B /Y "%SRC%" "%DST%" >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] Copy failed: %SRC% -^> %DST%
+  endlocal
+  exit /b 0
+)
+
+REM Verify size
+for %%A in ("%SRC%") do set "SRC_SIZE=%%~zA"
+for %%A in ("%DST%") do set "DST_SIZE=%%~zA"
+if not "%SRC_SIZE%"=="%DST_SIZE%" (
+  echo [ERROR] Size mismatch: %SRC% [%SRC_SIZE%] -^> %DST% [%DST_SIZE%]
+) else (
+  echo [OK] %SRC% -^> %DST%
+)
+
+endlocal
+exit /b 0
+
+REM ============================================================
+REM Helper: Copy directory recursively
+REM ============================================================
+:CopyDir
+setlocal
+set "SRC=%~1"
+set "DST=%~2"
+
+if not exist "%SRC%\*" (
+  echo [SKIP] Source directory not found: %SRC%
+  endlocal
+  exit /b 0
+)
+
+call :EnsureDir "%DST%"
+if errorlevel 1 (
+  endlocal
+  exit /b 0
+)
+
+xcopy /E /H /Y "%SRC%\*" "%DST%\" >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] XCopy failed: %SRC% -^> %DST%
+) else (
+  echo [OK] %SRC% -^> %DST%
+)
+
+endlocal
+exit /b 0
+
+REM ============================================================
+REM Helper: Create bundle and copy binary into it
+REM ============================================================
+:CreateAndCopyToBundle
+setlocal
+set "BINARY=%~1"
+set "BUNDLE_PATH=%~2"
+set "ICON=%~3"
+set "BUNDLE_SUBDIR=%~4"
+
+echo Creating bundle: %BUNDLE_PATH%
+call %CREATE_BUNDLE_SCRIPT% "%BUNDLE_PATH%" "%ICON%" %FORMAT%
+
+set "BUNDLE_BIN_DIR=%BUNDLE_PATH%\Contents\%BUNDLE_SUBDIR%"
+call :CopyFile "%BINARY%" "%BUNDLE_BIN_DIR%\%NAME%%FORMAT%"
+
+if exist "%ICUDAT_PATH%" (
+  call :CopyFile "%ICUDAT_PATH%" "%BUNDLE_BIN_DIR%\icudtl.dat"
+)
+
+endlocal
+exit /b 0
+
+REM ============================================================
+REM Main logic
+REM ============================================================
+:main
+
+REM Copy icudtl.dat next to built binary if exists
+if exist "%ICUDAT_PATH%" (
+  for %%F in ("%BUILT_BINARY%") do (
+    call :CopyFile "%ICUDAT_PATH%" "%%~dpFicudtl.dat"
   )
 )
 
-if %PLATFORM% == "x64" (
-  
+REM Handle .exe format
+if "%FORMAT%"==".exe" (
+  call :CopyFile "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%_%PLATFORM%.exe"
   if exist "%ICUDAT_PATH%" (
-    echo copying icudtl.dat file next to built binary: %BUILT_BINARY%
-    for %%F in (%BUILT_BINARY%) do (
-      copy /y %ICUDAT_PATH% "%%~dpF"
-    )
-  ) else (
-    echo icudtl.dat not found at %ICUDAT_PATH%, skipping...
+    call :CopyFile "%ICUDAT_PATH%" "%BUILD_DIR%\icudtl.dat"
   )
-
-  if not exist "%ProgramFiles(x86)%" (
-    echo "This batch script fails on 32 bit windows... edit accordingly"
-  )
-
-  if %FORMAT% == ".exe" (
-    echo copying exe to build dir: %BUILD_DIR%\%NAME%_%PLATFORM%.exe
-    copy /y %BUILT_BINARY% %BUILD_DIR%\%NAME%_%PLATFORM%.exe
-    if exist "%ICUDAT_PATH%" (
-      echo copying dat file to build dir: %BUILD_DIR%
-      copy /y %ICUDAT_PATH% %BUILD_DIR%
-    )
-  )
-
-  if %FORMAT% == ".dll" (
-    copy /y %BUILT_BINARY% %BUILD_DIR%\%NAME%_%PLATFORM%.dll
-    if exist "%ICUDAT_PATH%" (
-      copy /y %ICUDAT_PATH% %BUILD_DIR%
-    )
-  )
-  
-  if %FORMAT% == ".dll" (
-    if %COPY_VST2% == "1" (
-      echo copying 64bit binary to 64bit VST2 Plugins folder ... 
-      copy /y %BUILT_BINARY% %VST2_64_PATH%
-      if exist "%ICUDAT_PATH%" (
-        copy /y %ICUDAT_PATH% %VST2_64_PATH%
-      )
-    ) else (
-      echo not copying 64bit VST2 binary
-    )
-  )
-  
-  if %FORMAT% == ".vst3" (
-    echo copying 64bit binary to VST3 BUNDLE ...
-    call %CREATE_BUNDLE_SCRIPT% %BUILD_DIR%\%NAME%.vst3 %VST_ICON% %FORMAT%
-    copy /y %BUILT_BINARY% %BUILD_DIR%\%NAME%.vst3\Contents\x86_64-win
-    if exist "%ICUDAT_PATH%" (
-      copy /y %ICUDAT_PATH% %BUILD_DIR%\%NAME%.vst3\Contents\x86_64-win
-    )
-    if exist %VST3_64_PATH% (
-      echo copying VST3 bundle to 64bit VST3 Plugins folder ...
-      call %CREATE_BUNDLE_SCRIPT% %VST3_64_PATH%\%NAME%.vst3 %VST_ICON% %FORMAT%
-      xcopy /E /H /Y %BUILD_DIR%\%NAME%.vst3\Contents\*  %VST3_64_PATH%\%NAME%.vst3\Contents\
-    )
-  )
-  
-  if %FORMAT% == ".aaxplugin" (
-    echo copying 64bit binary to AAX BUNDLE ...
-    call %CREATE_BUNDLE_SCRIPT% %BUILD_DIR%\%NAME%.aaxplugin %AAX_ICON% %FORMAT%
-    copy /y %BUILT_BINARY% %BUILD_DIR%\%NAME%.aaxplugin\Contents\x64
-    if exist "%ICUDAT_PATH%" (
-      copy /y %ICUDAT_PATH% %BUILD_DIR%\%NAME%.aaxplugin\Contents\x64
-    )
-    echo copying 64bit bundle to 64bit AAX Plugins folder ... 
-    call %CREATE_BUNDLE_SCRIPT% %BUILD_DIR%\%NAME%.aaxplugin %AAX_ICON% %FORMAT%
-    xcopy /E /H /Y %BUILD_DIR%\%NAME%.aaxplugin\Contents\* %AAX_64_PATH%\%NAME%.aaxplugin\Contents\
-  )
-  
-  if %FORMAT% == ".clap" (
-    echo copying binary to CLAP Plugins folder ... 
-    copy /y %BUILT_BINARY% %CLAP_PATH%
-    if exist "%ICUDAT_PATH%" (
-      copy /y %ICUDAT_PATH% %CLAP_PATH%
-    )
-  )
+  goto :end
 )
+
+REM Handle .dll format (VST2)
+if "%FORMAT%"==".dll" (
+  call :CopyFile "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%_%PLATFORM%.dll"
+  if exist "%ICUDAT_PATH%" (
+    call :CopyFile "%ICUDAT_PATH%" "%BUILD_DIR%\icudtl.dat"
+  )
+  
+  if "%COPY_VST2%"=="1" (
+    if "%PLATFORM%"=="Win32" (
+      echo Installing VST2 [32-bit]...
+      call :CopyFile "%BUILT_BINARY%" "%VST2_32_PATH%\%NAME%.dll"
+      if exist "%ICUDAT_PATH%" (
+        call :CopyFile "%ICUDAT_PATH%" "%VST2_32_PATH%\icudtl.dat"
+      )
+    )
+    if "%PLATFORM%"=="x64" (
+      echo Installing VST2 [64-bit]...
+      call :CopyFile "%BUILT_BINARY%" "%VST2_64_PATH%\%NAME%.dll"
+      if exist "%ICUDAT_PATH%" (
+        call :CopyFile "%ICUDAT_PATH%" "%VST2_64_PATH%\icudtl.dat"
+      )
+    )
+  )
+  goto :end
+)
+
+REM Handle .vst3 format
+if "%FORMAT%"==".vst3" (
+  if "%PLATFORM%"=="Win32" (
+    echo Installing VST3 [32-bit]...
+    call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.vst3" "%VST_ICON%" "x86-win"
+    if exist "%VST3_32_PATH%\*" (
+      call :CreateAndCopyToBundle "%BUILT_BINARY%" "%VST3_32_PATH%\%NAME%.vst3" "%VST_ICON%" "x86-win"
+    )
+  )
+  if "%PLATFORM%"=="x64" (
+    echo Installing VST3 [64-bit]...
+    call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.vst3" "%VST_ICON%" "x86_64-win"
+    if exist "%VST3_64_PATH%\*" (
+      call :CreateAndCopyToBundle "%BUILT_BINARY%" "%VST3_64_PATH%\%NAME%.vst3" "%VST_ICON%" "x86_64-win"
+    )
+  )
+  goto :end
+)
+
+REM Handle .aaxplugin format
+if "%FORMAT%"==".aaxplugin" (
+  if "%PLATFORM%"=="Win32" (
+    echo Installing AAX [32-bit]...
+    call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.aaxplugin" "%AAX_ICON%" "Win32"
+    call :CopyDir "%BUILD_DIR%\%NAME%.aaxplugin\Contents" "%AAX_32_PATH%\%NAME%.aaxplugin\Contents"
+  )
+  if "%PLATFORM%"=="x64" (
+    echo Installing AAX [64-bit]...
+    call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.aaxplugin" "%AAX_ICON%" "x64"
+    call :CopyDir "%BUILD_DIR%\%NAME%.aaxplugin\Contents" "%AAX_64_PATH%\%NAME%.aaxplugin\Contents"
+  )
+  goto :end
+)
+
+REM Handle .clap format
+if "%FORMAT%"==".clap" (
+  if "%PLATFORM%"=="x64" (
+    echo Installing CLAP [64-bit]...
+    call :CopyFile "%BUILT_BINARY%" "%CLAP_PATH%\%NAME%.clap"
+    if exist "%ICUDAT_PATH%" (
+      call :CopyFile "%ICUDAT_PATH%" "%CLAP_PATH%\icudtl.dat"
+    )
+  )
+  goto :end
+)
+
+:end
+echo ============================================================
+echo POSTBUILD COMPLETE
+echo ============================================================
+exit /b 0
