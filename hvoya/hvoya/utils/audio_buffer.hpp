@@ -189,7 +189,7 @@ namespace hvoya {
 			inline void transform (Func&& func, n_chan_t c = 0) noexcept {
 				assert(c < _numChans);
 				for (n_frames_t i = 0; i < _numFrames; ++i)
-					_channels [c][i] = func (_channels [c][i]);
+					_channels [c][i] = func (_channels [c][i], i);
 			}
 
 
