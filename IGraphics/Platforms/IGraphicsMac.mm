@@ -363,35 +363,46 @@ void IGraphicsMac::ForceEndUserEdit()
   }
 }
 
+// All methods that use AppKit *must* be called on the main thread
 void IGraphicsMac::UpdateTooltips()
 {
-  if (!(mView && TooltipsEnabled()))
+  if (mTooltipUpdatePending.exchange(true))
     return;
 
-  @autoreleasepool {
+  IGraphicsMac* pThis = this;
 
-  [(IGRAPHICS_VIEW*) mView removeAllToolTips];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    pThis->mTooltipUpdatePending.store(false);
 
-  if (GetPopupMenuControl() && GetPopupMenuControl()->GetState() > IPopupMenuControl::kCollapsed)
-  {
-    return;
-  }
+    if (!pThis->mView)
+      return;
 
-  auto func = [this](IControl* pControl)
-  {
-    if (pControl->GetTooltip() && !pControl->IsHidden())
-    {
-      IRECT pR = pControl->GetTargetRECT();
-      if (!pR.Empty())
+    @autoreleasepool {
+      IGRAPHICS_VIEW* pView = (IGRAPHICS_VIEW*) pThis->mView;
+
+      [pView removeAllToolTips];
+
+      if (!pThis->TooltipsEnabled())
+        return;
+
+      if (pThis->GetPopupMenuControl() && pThis->GetPopupMenuControl()->GetState() > IPopupMenuControl::kCollapsed)
+        return;
+
+      auto func = [pView](IControl* pControl)
       {
-        [(IGRAPHICS_VIEW*) mView registerToolTip: pR];
-      }
-    }
-  };
+        if (pControl->GetTooltip() && !pControl->IsHidden())
+        {
+          IRECT r = pControl->GetTargetRECT();
+          if (!r.Empty())
+          {
+            [pView registerToolTip: r];
+          }
+        }
+      };
 
-  ForStandardControlsFunc(func);
-  
-  }
+      pThis->ForStandardControlsFunc(func);
+    }
+  });
 }
 
 const char* IGraphicsMac::GetPlatformAPIStr()

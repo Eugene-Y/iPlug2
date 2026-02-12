@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include <CoreGraphics/CoreGraphics.h>
 
 #include "IGraphics_select.h"
@@ -95,6 +97,7 @@ private:
   void StoreCursorPosition();
   
   void* mView = nullptr;
+  std::atomic<bool> mTooltipUpdatePending { false };
   CGPoint mCursorLockPosition;
   WDL_String mBundleID, mAppGroupID;
   friend int GetMouseOver(IGraphicsMac* pGraphics);
