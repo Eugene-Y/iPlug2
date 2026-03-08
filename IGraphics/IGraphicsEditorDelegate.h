@@ -11,6 +11,9 @@
 #pragma once
 
 #include <memory>
+#ifdef OS_LINUX
+#include <mutex>
+#endif
 
 #include "IPlugEditorDelegate.h"
 
@@ -90,9 +93,20 @@ public:
    * @return The new chunk position (endPos) */
   int UnserializeEditorSize(const IByteChunk& chunk, int startPos);
     
+#ifdef OS_LINUX
+  /** Mutex protecting mGraphics access from concurrent threads on Linux.
+   *  The host may call SendParameterValueFromDelegate, CloseWindow, etc.
+   *  from any thread while the timer/draw thread is running. Recursive
+   *  because resize paths re-enter (e.g. OnParentWindowResize calls
+   *  OnBeginHostResize/Resize/OnEndHostResize, and DrawResize may be
+   *  called from within OnDisplayTimer while the lock is held). */
+  std::recursive_mutex& GfxMutex() { return mGfxMutex; }
+#endif
+
 protected:
   std::function<IGraphics*()> mMakeGraphicsFunc = nullptr;
   std::function<void(IGraphics* pGraphics)> mLayoutFunc = nullptr;
+
 private:
   std::unique_ptr<IGraphics> mGraphics;
   int mLastWidth = 0;
@@ -101,6 +115,9 @@ private:
   bool mClosing = false; // used to prevent re-entrancy on closing
   bool mOpening = false; // set while the platform OpenWindow runs; a CloseWindow arriving during
                          // it is host view churn and is swallowed (see OpenWindow/CloseWindow)
+#ifdef OS_LINUX
+  mutable std::recursive_mutex mGfxMutex;
+#endif
 };
 
 END_IGRAPHICS_NAMESPACE
