@@ -85,7 +85,8 @@ namespace hvoya {
     
     class AudioBuffer final {
         public:
-        
+
+            using sample_type = sample_t;
             static constexpr n_chan_t MAX_CHANNELS = 16;
 
             AudioBuffer (n_chan_t = 2, n_frames_t = 512);
