@@ -12,6 +12,7 @@ namespace hvoya {
 					 float thicknessNearAnchor = 25.f, float thicknessFarFromAnchor = 2.f,
 					 float minArcLen = 2.f,
                      float angleMin = -135, float angleMax = 135, float aAnchor = -135,
+					 bool symmetric = false,
 					 bool drawRestOfTheArc = true,
 					 float centerOfMassAdjustment = 1.f,
 					 bool valueIsEditable = true,
@@ -24,6 +25,7 @@ namespace hvoya {
 					 _thicknessFarFromAnchor (thicknessFarFromAnchor),
 					 _thicknessNearAnchor (thicknessNearAnchor),
 					 _minArcLenPx (minArcLen),
+					 _symmetric (symmetric),
 					 _drawRestOfTheArc (drawRestOfTheArc),
 					 _centerOfMassAdjustment (centerOfMassAdjustment),
 					 _needAdjustWidget (true),
@@ -61,16 +63,25 @@ namespace hvoya {
 				const float cy = wb.MH();
 
 				const float handleAngle = mAngle1 + GetValue() * (mAngle2 - mAngle1);
-	            const float a1 = handleAngle >= mAnchorAngle ? mAnchorAngle
-											  : mAnchorAngle - (mAnchorAngle - handleAngle);
-	            const float a2 = handleAngle >= mAnchorAngle ? handleAngle
-											  : mAnchorAngle;
 
-				const float distFromAnchorNorm = handleAngle == mAnchorAngle ?
-					  0.f
-					: handleAngle > mAnchorAngle ?
-					(mAngle2 != mAnchorAngle) ? (handleAngle - mAnchorAngle) / (mAngle2 - mAnchorAngle) : 1.f
-				  : (mAnchorAngle != mAngle1) ? (mAnchorAngle - handleAngle) / (mAnchorAngle - mAngle1) : 1.f;
+				float a1, a2, distFromAnchorNorm;
+
+				if (_symmetric) {
+					const float halfSpread = GetValue() * (mAngle2 - mAngle1) / 2.f;
+					a1 = std::max (mAngle1, mAnchorAngle - halfSpread);
+					a2 = std::min (mAngle2, mAnchorAngle + halfSpread);
+					distFromAnchorNorm = GetValue();
+				} else {
+					a1 = handleAngle >= mAnchorAngle ? mAnchorAngle
+													  : mAnchorAngle - (mAnchorAngle - handleAngle);
+					a2 = handleAngle >= mAnchorAngle ? handleAngle
+													  : mAnchorAngle;
+					distFromAnchorNorm = handleAngle == mAnchorAngle ?
+						  0.f
+						: handleAngle > mAnchorAngle ?
+						(mAngle2 != mAnchorAngle) ? (handleAngle - mAnchorAngle) / (mAngle2 - mAnchorAngle) : 1.f
+					  : (mAnchorAngle != mAngle1) ? (mAnchorAngle - handleAngle) / (mAnchorAngle - mAngle1) : 1.f;
+				}
 
 				const float nearThick = std::min <float> (_thicknessNearAnchor, widgetRadius - 0.5f);
 				const float farThick = std::min <float> (_thicknessFarFromAnchor, widgetRadius - 0.5f);
@@ -110,7 +121,7 @@ namespace hvoya {
 						std::max (_minArcLenPx, _arcFixLineThickness)
 					  :_minArcLenPx;
 					g.DrawRadialLine (debug ? COLOR_RED : col,
-									  cx, cy, handleAngle,
+									  cx, cy, _symmetric ? mAnchorAngle : handleAngle,
 									  widgetRadius - t, widgetRadius,
 									  &mBlend, lw);
 				}
@@ -132,6 +143,10 @@ namespace hvoya {
 			void setMinArcLenPx (float len) {
 				assert (len >- 0.f);
 				_minArcLenPx = len;
+			}
+
+			void setSymmetric (bool s) {
+				_symmetric = s;
 			}
 
 			void setDrawRestOfTheArc (bool d) {
@@ -158,6 +173,7 @@ namespace hvoya {
 
 		protected:
 
+			bool _symmetric;
 			bool _drawRestOfTheArc;
 			float _minArcLenPx; // NB: default arc drawing backend is not perfect,
 								// with min <= 1 there might be a noticeable gap
