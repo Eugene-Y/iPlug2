@@ -85,7 +85,8 @@ namespace hvoya {
     
     class AudioBuffer final {
         public:
-        
+
+            using sample_type = sample_t;
             static constexpr n_chan_t MAX_CHANNELS = 16;
 
             AudioBuffer (n_chan_t = 2, n_frames_t = 512);
@@ -104,7 +105,14 @@ namespace hvoya {
             void copyTo   (iplug::sample**, n_chan_t, n_frames_t) noexcept;
             
             void fillFrom (const AudioBuffer& other) { copyContentFrom (other); }
-            
+
+			inline void copyChanFrom (const AudioBuffer& src, n_chan_t dstChan, n_chan_t srcChan) noexcept {
+				assert (dstChan < _numChans);
+				assert (srcChan < src.numChans());
+				assert (src.numFrames() <= _numFrames);
+				std::copy_n (src [srcChan], src.numFrames(), _channels [dstChan]);
+			}
+
             AudioBuffer subBuffer (n_frames_t begin, n_frames_t len = 0); // len 0 means full len
             
             void setNumChannels (n_chan_t);
@@ -152,9 +160,9 @@ namespace hvoya {
 			inline void fillWithCosineStep (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
 				assert (c < _numChans);
 				const sample_t d = b - a;
+				const sample_t piOverN = M_PI / (_numFrames - 1);
 				for (n_frames_t i = 0; i < _numFrames; ++i) {
-					sample_t t = sample_t (i) / (_numFrames - 1);
-					t = t * t * t * (t * (t * 6 - 15) + 10);
+					sample_t t = sample_t (0.5) * (1 - std::cos (piOverN * i));
 					_channels [c][i] = a + d * t;
 				}
 				assert (epsilonCheckInRange (back (c), a, b));
