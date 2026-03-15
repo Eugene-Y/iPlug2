@@ -3,6 +3,7 @@
 #include <array>
 #include <vector>
 #include <span>
+#include <numbers>
 #include <IPlugConstants.h>
 #include "types.hpp"
 #include <hvoya/utils/log/logger.hpp>
@@ -160,7 +161,7 @@ namespace hvoya {
 			inline void fillWithCosineStep (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
 				assert (c < _numChans);
 				const sample_t d = b - a;
-				const sample_t piOverN = M_PI / (_numFrames - 1);
+                const sample_t piOverN = std::numbers::pi / (_numFrames - 1);
 				for (n_frames_t i = 0; i < _numFrames; ++i) {
 					sample_t t = sample_t (0.5) * (1 - std::cos (piOverN * i));
 					_channels [c][i] = a + d * t;
