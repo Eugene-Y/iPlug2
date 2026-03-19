@@ -75,12 +75,12 @@ namespace hvoya {
 
             constexpr LUT (lut_gen_func_t gen)
                 : values() {
-                gen (N, values.begin());
+                gen (N, values.data());
                 check();
             }
 
             void constexpr generate (lut_gen_func_t gen) override {
-                gen (N, values.begin());
+                gen (N, values.data());
                 check();
             }
 
