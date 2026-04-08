@@ -44,7 +44,7 @@ namespace hvoya::midi_cc::mapper_serializer {
             size_t paramCount = 0;
             startPos = chunk.Get (&paramCount, startPos);
             assert (paramCount > 0);
-            ParamССMappings_t params (paramCount);
+            ParamCCMappings_t params (paramCount);
             for (size_t j = 0; j < paramCount; j++) {
                 auto& pm = params [j];
                 startPos = chunk.Get (&pm.paramId, startPos);

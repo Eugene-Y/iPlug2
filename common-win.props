@@ -9,7 +9,9 @@
     <IGRAPHICS_PATH>$(IPLUG2_ROOT)\IGraphics</IGRAPHICS_PATH>
     <DEPS_PATH>$(IPLUG2_ROOT)\Dependencies</DEPS_PATH>
     <JSON_PATH>$(DEPS_PATH)\Extras\nlohmann</JSON_PATH>
-    <IPLUG_INC_PATHS>$(WDL_PATH);$(IPLUG_PATH);$(EXTRAS_PATH);$(EXTRAS_PATH)\OSC;$(EXTRAS_PATH)\Synth;$(EXTRAS_PATH)\WebView;$(JSON_PATH);$(SolutionDir)\resources</IPLUG_INC_PATHS>
+	  <HVOYA_PATH>$(IPLUG2_ROOT)\hvoya</HVOYA_PATH>
+    <PLOG_PATH>$(HVOYA_PATH)\hvoya\libs\plog\include\</PLOG_PATH>
+    <IPLUG_INC_PATHS>$(WDL_PATH);$(IPLUG_PATH);$(PLOG_PATH);$(HVOYA_PATH);$(EXTRAS_PATH);$(EXTRAS_PATH)\OSC;$(EXTRAS_PATH)\Synth;$(EXTRAS_PATH)\WebView;$(JSON_PATH);$(SolutionDir)\resources</IPLUG_INC_PATHS>
     <IPLUG_DEPS_PATH>$(DEPS_PATH)\IPlug</IPLUG_DEPS_PATH>
     <IGRAPHICS_DEPS_PATH>$(DEPS_PATH)\IGraphics</IGRAPHICS_DEPS_PATH>
     <NANOVG_PATH>$(IGRAPHICS_DEPS_PATH)\NanoVG\src</NANOVG_PATH>
@@ -32,11 +34,11 @@
     <VST3_SDK Condition="'$(VST3_SDK)'==''">$(IPLUG_DEPS_PATH)\VST3_SDK</VST3_SDK>
     <ASIO_SDK Condition="'$(ASIO_SDK)'==''">$(IPLUG_DEPS_PATH)\RTAudio\include</ASIO_SDK>
     <AAX_SDK Condition="'$(AAX_SDK)'==''">$(IPLUG_DEPS_PATH)\AAX_SDK</AAX_SDK>
-    <CLAP_64_HOST_PATH Condition="'$(CLAP_64_HOST_PATH)'==''">$(ProgramW6432)\REAPER (x64)\reaper.exe</CLAP_64_HOST_PATH>
+    <CLAP_64_HOST_PATH Condition="'$(CLAP_64_HOST_PATH)'==''">$(ProgramW6432)\REAPER (arm64)\reaper.exe</CLAP_64_HOST_PATH>
     <VST2_32_HOST_PATH Condition="'$(VST2_32_HOST_PATH)'==''">$(ProgramFiles)\REAPER\reaper.exe</VST2_32_HOST_PATH>
-    <VST2_64_HOST_PATH Condition="'$(VST2_64_HOST_PATH)'==''">$(ProgramW6432)\REAPER (x64)\reaper.exe</VST2_64_HOST_PATH>
+    <VST2_64_HOST_PATH Condition="'$(VST2_64_HOST_PATH)'==''">$(ProgramW6432)\REAPER (arm64)\reaper.exe</VST2_64_HOST_PATH>
     <VST3_32_HOST_PATH Condition="'$(VST3_32_HOST_PATH)'==''">$(ProgramFiles)\REAPER\reaper.exe</VST3_32_HOST_PATH>
-    <VST3_64_HOST_PATH Condition="'$(VST3_64_HOST_PATH)'==''">$(ProgramW6432)\REAPER (x64)\reaper.exe</VST3_64_HOST_PATH>
+    <VST3_64_HOST_PATH Condition="'$(VST3_64_HOST_PATH)'==''">$(ProgramW6432)\REAPER (arm64)\reaper.exe</VST3_64_HOST_PATH>
     <VST3_32_PATH Condition="'$(VST3_32_PATH)'==''">$(CommonProgramFiles)\VST3</VST3_32_PATH>
     <VST3_64_PATH Condition="'$(VST3_64_PATH)'==''">$(CommonProgramW6432)\VST3</VST3_64_PATH>
     <VST2_32_PATH Condition="'$(VST2_32_PATH)'==''">$(ProgramFiles)\VstPlugins</VST2_32_PATH>
@@ -121,6 +123,12 @@
     </BuildMacro>
     <BuildMacro Include="JSON_PATH">
       <Value>$(JSON_PATH)</Value>
+    </BuildMacro>
+    <BuildMacro Include="PLOG_PATH">
+      <Value>$(PLOG_PATH)</Value>
+    </BuildMacro>
+    <BuildMacro Include="HVOYA_PATH">
+      <Value>$(HVOYA_PATH)</Value>
     </BuildMacro>
     <BuildMacro Include="IPLUG_INC_PATHS">
       <Value>$(IPLUG_INC_PATHS)</Value>

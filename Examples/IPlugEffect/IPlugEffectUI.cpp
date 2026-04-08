@@ -9,11 +9,11 @@ static_assert (PLUG_HEIGHT_NO_HEADER + PLUG_INFO_HEADER_HEIGHT == PLUG_HEIGHT,
 
 
 inline bool isDebug() {
-    #ifdef DEBUG
-        return 1;
-    #else
-        return 0;
-    #endif
+	#ifdef NDEBUG
+		return false;
+	#else
+		return true;
+	#endif
 }
 
 
@@ -81,7 +81,9 @@ void IPlugEffect::initializeLayout() {
 
             pG->AttachControl (new IPanelControl (headerR, getVersionColor()));
 
+			//https://github.com/iPlug2/iPlug2/wiki/06_Load_a_resource
             const ISVG logo = pG->LoadSVG (HVOYA_LOGO_HANDLE_FN);
+            assert (logo.IsValid());
             pG->AttachControl (new ISVGControl (headerR.GetPadded (-10), logo));
 
             const auto stringRect = [=] (int row, int col) {

@@ -146,8 +146,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>$(APP_DEFS);$(DEBUG_DEFS);$(EXTRA_DEBUG_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories);$(HVOYA_PATH);$(PLOG_PATH);</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(APP_LIBS);%(AdditionalDependencies)</AdditionalDependencies>
@@ -157,14 +159,20 @@
     <ResourceCompile>
       <Culture />
     </ResourceCompile>
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "APP" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>$(APP_DEFS);$(DEBUG_DEFS);$(EXTRA_DEBUG_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories);$(HVOYA_PATH);$(PLOG_PATH);</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(APP_LIBS);%(AdditionalDependencies)</AdditionalDependencies>
@@ -174,6 +182,10 @@
     <ResourceCompile>
       <Culture />
     </ResourceCompile>
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "APP" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -182,9 +194,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>$(APP_DEFS);$(RELEASE_DEFS);$(EXTRA_RELEASE_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories);$(HVOYA_PATH);$(PLOG_PATH);</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -195,6 +209,10 @@
     <ResourceCompile>
       <PreprocessorDefinitions>SA_API</PreprocessorDefinitions>
     </ResourceCompile>
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "APP" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -203,9 +221,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>$(APP_DEFS);$(RELEASE_DEFS);$(EXTRA_RELEASE_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories);$(HVOYA_PATH);$(PLOG_PATH);</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -216,6 +236,10 @@
     <ResourceCompile>
       <PreprocessorDefinitions>SA_API</PreprocessorDefinitions>
     </ResourceCompile>
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "APP" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracer|Win32'">
     <ClCompile>
@@ -224,8 +248,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>$(APP_DEFS);$(TRACER_DEFS);$(EXTRA_TRACER_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories);$(HVOYA_PATH);$(PLOG_PATH);</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -236,6 +262,10 @@
     <ResourceCompile>
       <PreprocessorDefinitions>SA_API</PreprocessorDefinitions>
     </ResourceCompile>
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "APP" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracer|x64'">
     <ClCompile>
@@ -244,8 +274,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>$(APP_DEFS);$(TRACER_DEFS);$(EXTRA_TRACER_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(APP_INC_PATHS);%(AdditionalIncludeDirectories);$(HVOYA_PATH);$(PLOG_PATH);</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -256,6 +288,10 @@
     <ResourceCompile>
       <PreprocessorDefinitions>SA_API</PreprocessorDefinitions>
     </ResourceCompile>
+    <PreBuildEvent>
+      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "APP" "$(Platform)"
+CALL "$(SolutionDir)scripts\prebuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(TargetPath)" "$(OutDir)"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="../config.h" />
@@ -272,6 +308,50 @@
     <ClInclude Include="..\..\..\Dependencies\IPlug\RTAudio\include\soundcard.h" />
     <ClInclude Include="..\..\..\Dependencies\IPlug\RTAudio\RtAudio.h" />
     <ClInclude Include="..\..\..\Dependencies\IPlug\RTMidi\RtMidi.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Appenders\AndroidAppender.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Appenders\ColorConsoleAppender.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Appenders\ConsoleAppender.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Appenders\DebugOutputAppender.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Appenders\EventLogAppender.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Appenders\IAppender.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Appenders\RollingFileAppender.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Converters\NativeEOLConverter.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Converters\UTF8Converter.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Formatters\CsvFormatter.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Formatters\FuncMessageFormatter.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Formatters\MessageOnlyFormatter.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Formatters\TxtFormatter.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Init.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Initializers\RollingFileInitializer.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Log.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Logger.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Record.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Severity.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\Util.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\libs\plog\include\plog\WinApi.h" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\arc_knob.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\audio_buffer.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\companders.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\dc_blocker.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\host_info_model.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\host_info_UI_tags.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\host_info_view.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\host_time_info.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\hxa_pow.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\log\logger.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\log\log_appender.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\log\log_formatter.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\lookup_table.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\midi_cc\controllable.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\midi_cc\control_decorator.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\midi_cc\mapper.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\midi_cc\mapper_serializer.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\midi_cc\mediator.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\midi_cc\message_tags.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\soft_limiter.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\types.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\utils.hpp" />
+    <ClInclude Include="..\..\..\hvoya\hvoya\utils\watchdog.hpp" />
     <ClInclude Include="..\..\..\IGraphics\Controls\IControls.h" />
     <ClInclude Include="..\..\..\IGraphics\Controls\IFPSDisplayControl.h" />
     <ClInclude Include="..\..\..\IGraphics\Controls\IPopupMenuControl.h" />
@@ -317,7 +397,7 @@
     <ClInclude Include="..\..\..\IPlug\IPlug_include_in_plug_hdr.h" />
     <ClInclude Include="..\..\..\IPlug\IPlug_include_in_plug_src.h" />
     <ClInclude Include="..\..\..\IPlug\ISender.h" />
-    <ClInclude Include="..\IPlugEffect.h" />
+    <ClInclude Include="..\IPlugEffect.hpp" />
     <ClInclude Include="..\resources\resource.h" />
   </ItemGroup>
   <ItemGroup>
@@ -327,6 +407,14 @@
     <ClCompile Include="..\..\..\Dependencies\IPlug\RTAudio\include\iasiothiscallresolver.cpp" />
     <ClCompile Include="..\..\..\Dependencies\IPlug\RTAudio\RtAudio.cpp" />
     <ClCompile Include="..\..\..\Dependencies\IPlug\RTMidi\RtMidi.cpp" />
+    <ClCompile Include="..\..\..\hvoya\hvoya\utils\audio_buffer.cpp" />
+    <ClCompile Include="..\..\..\hvoya\hvoya\utils\host_time_info.cpp" />
+    <ClCompile Include="..\..\..\hvoya\hvoya\utils\hxa_pow.cpp" />
+    <ClCompile Include="..\..\..\hvoya\hvoya\utils\log\logger.cpp" />
+    <ClCompile Include="..\..\..\hvoya\hvoya\utils\midi_cc\mapper.cpp" />
+    <ClCompile Include="..\..\..\hvoya\hvoya\utils\midi_cc\mapper_serializer.cpp" />
+    <ClCompile Include="..\..\..\hvoya\hvoya\utils\soft_limiter.cpp" />
+    <ClCompile Include="..\..\..\hvoya\hvoya\utils\utils.cpp" />
     <ClCompile Include="..\..\..\IGraphics\Controls\IControls.cpp" />
     <ClCompile Include="..\..\..\IGraphics\Controls\IPopupMenuControl.cpp" />
     <ClCompile Include="..\..\..\IGraphics\Controls\ITextEntryControl.cpp" />
@@ -361,6 +449,7 @@
     <ClCompile Include="..\..\..\IPlug\IPlugProcessor.cpp" />
     <ClCompile Include="..\..\..\IPlug\IPlugTimer.cpp" />
     <ClCompile Include="..\IPlugEffect.cpp" />
+    <ClCompile Include="..\IPlugEffectUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\resources\main.rc" />
@@ -375,6 +464,10 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="..\config\IPlugEffect-mac.xcconfig" />
+    <None Include="..\resources\img\hvoya_logo_white_single.svg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="..\resources\fonts\RobotoMono-Regular.ttf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

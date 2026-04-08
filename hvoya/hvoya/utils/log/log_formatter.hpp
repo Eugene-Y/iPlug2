@@ -40,22 +40,23 @@ namespace hvoya {
         plog::util::nstring statefulFormat (const plog::Record& record) const {
             tm t;
             plog::util::localtime_s (&t, &record.getTime().time);
-            const auto setfill = [](auto&& s) { return std::setfill (PLOG_NSTR (s)); };
+
+            const auto setfill = [](auto&& s) { return std::setfill (static_cast <plog::util::nchar> (s)); };
             using std::setw;
 
             plog::util::nostringstream ss;
             ss << setfill ('0') << setw (2) << t.tm_hour << PLOG_NSTR (":")
-                << setfill ('0') << setw (2) << t.tm_min << PLOG_NSTR (":")
-                << setfill ('0') << setw (2) << t.tm_sec << PLOG_NSTR (".")
-                << setfill ('0') << setw (3) << static_cast<int> (record.getTime().millitm) << PLOG_NSTR (" ");
+			   << setfill ('0') << setw (2) << t.tm_min << PLOG_NSTR (":")
+			   << setfill ('0') << setw (2) << t.tm_sec << PLOG_NSTR (".")
+               << setfill ('0') << setw (3) << static_cast<int> (record.getTime().millitm) << PLOG_NSTR (" ");
 
-            ss << " | " << setfill (' ') << setw (6) << _bufIdProvider() << " | ";
+            ss << PLOG_NSTR (" | ") << setfill (' ') << setw (6) << _bufIdProvider() << PLOG_NSTR (" | ");
 
             ss << setfill (' ') << setw (5) << std::left
                << PLUG_NAME << PLOG_NSTR ("_") << PLUG_PRODUCT <<  PLOG_NSTR ("_")
                << _instanceIdProvider() << PLOG_NSTR (' ');
 
-            ss << setfill (' ') << setw (5) << std::left << plog::severityToString(record.getSeverity()) << PLOG_NSTR ("  ");
+            ss << setfill (' ') << setw (5) << std::left << plog::severityToString (record.getSeverity()) << PLOG_NSTR ("  ");
 			
             //ss << PLOG_NSTR ("[") << record.getFunc() << PLOG_NSTR ("@") << record.getLine() << PLOG_NSTR ("] ");
 			

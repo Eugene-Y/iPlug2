@@ -171,10 +171,10 @@ namespace hvoya::midi_cc {
                     default: return false;
                 }
                 
-                const pid_t pId = this->GetParamIdx();
+                const PId_t pId = this->GetParamIdx();
                 LOGD << "MIDI CC: param " << pId << ": action " << action;
-                this->GetDelegate()->SendArbitraryMsgFromDelegate (MT::mtag_listen_to_pid, sizeof (pid_t), &pId);
-                this->GetDelegate()->SendArbitraryMsgFromDelegate (action, sizeof (pid_t), &pId);
+                this->GetDelegate()->SendArbitraryMsgFromDelegate (MT::mtag_listen_to_pid, sizeof (PId_t), &pId);
+                this->GetDelegate()->SendArbitraryMsgFromDelegate (action, sizeof (PId_t), &pId);
                 
                 return true;
             }

@@ -7,7 +7,7 @@ LIVE_PATH = "$(ProgramData)\Ableton\Live 11 Suite\Program\Ableton Live 11 Suite.
 FL_PATH = "$(ProgramFiles)\Image-Line\FL Studio 20\FL.exe"
 CUBASE_PATH = "$(ProgramFiles)\Steinberg\Cubase 11\Cubase11.exe"
 S1_PATH = "$(ProgramFiles)\PreSonus\Studio One 4\Studio One.exe"
-REAPER_PATH = "$(ProgramFiles)\REAPER\\reaper.exe"
+REAPER_PATH = "$(ProgramFiles)\REAPER (arm64)\\reaper.exe"
 SONAR_PATH = "$(ProgramFiles)\Cakewalk\SONAR X3 Producer\SONARPDR.exe"
 VST3TESTHOST_PATH = "$(ProgramFiles)\Steinberg\VST3PluginTestHost\VST3PluginTestHost.exe"
 
@@ -16,7 +16,7 @@ LIVE_X64_PATH = "$(ProgramData)\Ableton\Live 11 Suite\Program\Ableton Live 11 Su
 FL_X64_PATH = "$(ProgramFiles)\Image-Line\FL Studio 20\FL64.exe"
 CUBASE_X64_PATH = "$(ProgramW6432)\Steinberg\Cubase 11\Cubase11.exe"
 S1_X64_PATH = "$(ProgramW6432)\PreSonus\Studio One 4\Studio One.exe"
-REAPER_X64_PATH = "$(ProgramW6432)\REAPER (x64)\\reaper.exe"
+REAPER_X64_PATH = "$(ProgramW6432)\REAPER (arm64)\\reaper.exe"
 SONAR_X64_PATH = "$(ProgramW6432)\Cakewalk\SONAR X3 Producer\SONARPDR.exe"
 VST3TESTHOST_X64_PATH = "$(ProgramW6432)\Steinberg\VST3PluginTestHost\VST3PluginTestHost.exe"
 
