@@ -25,7 +25,26 @@ namespace hvoya {
         par_lim_thresh,
         par_lim_softness,
         par_master_mix,
-        num_params
+
+        num_params = par_master_mix + 1, // <-------- NB
+
+        par_reserved_01,
+        par_reserved_02,
+        par_reserved_03,
+        par_reserved_04,
+        par_reserved_05,
+        par_reserved_06,
+        par_reserved_07,
+        par_reserved_08,
+        par_reserved_09,
+        par_reserved_10,
+        par_reserved_11,
+        par_reserved_12,
+        par_reserved_13,
+        par_reserved_14,
+        par_reserved_15,
+        par_reserved_16,
+        last_param = par_reserved_16,
     };
 
 }
@@ -55,6 +74,10 @@ class IPlugEffect final : public Plugin {
         
         bool SerializeState(IByteChunk&) const override;
         int UnserializeState(const IByteChunk&, int startPos) override;
+		bool serializeParams (IByteChunk&) const;
+		int unserializeParams (const IByteChunk&, int pos);
+		bool serializeUIScale (IByteChunk&) const;
+		int unserializeUIScale (const IByteChunk&, int pos);
 
 		static size_t vMajor (hvoya::version_hex_t v) { return (v & 0xFFFF0000) >> 16; }
         static size_t vMinor (hvoya::version_hex_t v) { return (v & 0x0000FF00) >> 8; }
@@ -86,6 +109,13 @@ class IPlugEffect final : public Plugin {
 		std::atomic <bool> _needsUIUpdate { false };
 		bool tryUpdateLayout();
 		void triggerUIUpdate() { _needsUIUpdate.store (true, std::memory_order_release); }
+
+		std::atomic <bool> _uiRescaleIsPending { false };
+		float _pendingUIScale { 1.f };
+		bool setPendingUIScale();
+		void onUIResize (int uiW, int uiH, float scale, bool resizingInProgress) {
+			_pendingUIScale = scale;
+		}
 
         hvoya::HostInfoModel <IPlugEffect> _hostInfoModel; // TODO doesnt update chans
         hvoya::HostInfoView <IPlugEffect> _hostInfoView;

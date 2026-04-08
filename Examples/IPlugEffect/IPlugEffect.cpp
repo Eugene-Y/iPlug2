@@ -32,7 +32,11 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
 
     #if IPLUG_EDITOR // http://bit.ly/2S64BDd
         mMakeGraphicsFunc = [&]() {
-            return MakeGraphics (*this, PLUG_WIDTH, PLUG_HEIGHT, PLUG_FPS, GetScaleForScreen (PLUG_WIDTH, PLUG_HEIGHT));
+            float scale = _uiRescaleIsPending.load (std::memory_order_acquire)
+                ? _pendingUIScale
+                : GetScaleForScreen (PLUG_WIDTH, PLUG_HEIGHT);
+            _uiRescaleIsPending.store (false, std::memory_order_release);
+            return MakeGraphics (*this, PLUG_WIDTH, PLUG_HEIGHT, PLUG_FPS, scale);
         };
 		initializeLayout();
     #endif
@@ -154,16 +158,96 @@ bool IPlugEffect::SerializeState (IByteChunk &chunk) const {
     LOGD << "version " << vMajor (vHex) << "." << vMinor (vHex) << "." << vPatch (vHex);
 
     _midiCCMediator.serialize (chunk);
-    return SerializeParams (chunk);
+    bool ok = serializeParams (chunk);
+    ok &= serializeUIScale (chunk);
+    return ok;
 }
 
 
-int IPlugEffect::UnserializeState (const IByteChunk &chunk, int startPos) {
+int IPlugEffect::UnserializeState (const IByteChunk &chunk, int pos) {
     LOGD << "Unserializing state";
     version_hex_t vHex = 0;
-    startPos = chunk.Get (&vHex, startPos);
+    pos = chunk.Get (&vHex, pos);
     LOGD << "version " << vMajor (vHex) << "." << vMinor (vHex) << "." << vPatch (vHex);
 
-    startPos = _midiCCMediator.unserialize (chunk, startPos);
-    return UnserializeParams (chunk, startPos);
+    if (pos >= 0) pos = _midiCCMediator.unserialize (chunk, pos);
+    pos = unserializeParams (chunk, pos);
+    pos = unserializeUIScale (chunk, pos);
+    return pos;
+}
+
+
+bool IPlugEffect::serializeParams (IByteChunk& chunk) const {
+	bool savedOK = true;
+	double v;
+	v = hvoya::num_params;
+	savedOK &= (chunk.Put(&v) > 0);
+
+	for (int i = 0; i < hvoya::num_params && savedOK; ++i) {
+		const IParam* pParam = GetParam (i);
+		v = pParam->Value();
+		savedOK &= (chunk.Put(&v) > 0);
+	}
+	return savedOK;
+}
+
+
+int IPlugEffect::unserializeParams (const IByteChunk& chunk, int startPos) {
+	auto pos = startPos;
+	ENTER_PARAMS_MUTEX
+
+	double numParamsInChunk;
+	const int numParamsInCurrentVersion = hvoya::num_params;
+	pos = chunk.Get (&numParamsInChunk, pos);
+
+	const int nInChunk = int (numParamsInChunk);
+	if (nInChunk < 0 || nInChunk > 1024) {
+		LOGE << "unserializeParams: invalid param count in chunk: " << numParamsInChunk;
+		LEAVE_PARAMS_MUTEX
+		return -1;
+	}
+
+	for (int i = 0; i < nInChunk && pos >= 0; ++i) {
+		double v = 0.0;
+		auto prevPos = pos;
+		pos = chunk.Get (&v, pos);
+		if (pos >= 0) {
+			if (i < numParamsInCurrentVersion) {
+				IParam* pParam = GetParam (i);
+				pParam->Set(v);
+			}
+			else {
+				LOGD << "skipping param " << i;
+			}
+		}
+		else {
+			pos = prevPos;
+			break;
+		}
+	}
+
+	OnParamReset (kPresetRecall);
+	LEAVE_PARAMS_MUTEX
+
+	return pos;
+}
+
+
+int IPlugEffect::unserializeUIScale (const IByteChunk &chunk, int pos) {
+	double uiScale = 1;
+	pos = chunk.Get (&uiScale, pos);
+	if (uiScale < 0 || uiScale > 20) {
+		LOGE << "UI scale is garbage!";
+		uiScale = 1;
+	}
+	_pendingUIScale = uiScale;
+	_uiRescaleIsPending.store (true, std::memory_order_release);
+	_needsUIUpdate.store (true, std::memory_order_release);
+	return pos;
+}
+
+
+bool IPlugEffect::serializeUIScale (IByteChunk& chunk) const {
+	double uiScale = GetUI() ? GetUI()->GetDrawScale() : _pendingUIScale;
+	return (chunk.Put (&uiScale) > 0);
 }
