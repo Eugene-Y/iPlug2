@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM - CALL "$(SolutionDir)scripts\postbuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(COPY_VST2)" "$(TargetPath)" "$(VST2_32_PATH)" "$(VST2_64_PATH)" "$(VST3_32_PATH)" "$(VST3_64_PATH)" "$(AAX_32_PATH)" "$(AAX_64_PATH)" "$(CLAP_PATH)" "$(BUILD_DIR)" "$(VST_ICON)" "$(AAX_ICON)" "$(CREATE_BUNDLE_SCRIPT)" "$(ICUDAT_PATH)"
+REM - CALL "$(SolutionDir)scripts\postbuild-win.bat" "$(TargetExt)" "$(BINARY_NAME)" "$(Platform)" "$(COPY_VST2)" "$(TargetPath)" "$(VST2_ARM64EC_PATH)" "$(VST2_X64_PATH)" "$(VST3_ARM64EC_PATH)" "$(VST3_X64_PATH)" "$(AAX_ARM64EC_PATH)" "$(AAX_X64_PATH)" "$(CLAP_ARM64EC_PATH)" "$(CLAP_X64_PATH)" "$(BUILD_DIR)" "$(VST_ICON)" "$(AAX_ICON)" "$(CREATE_BUNDLE_SCRIPT)" "$(ICUDAT_PATH)"
 
 REM Parse arguments
 set FORMAT=%~1
@@ -9,23 +9,25 @@ set NAME=%~2
 set PLATFORM=%~3
 set COPY_VST2=%~4
 set BUILT_BINARY=%~5
-set VST2_32_PATH=%~6
-set VST2_64_PATH=%~7 
-set VST3_32_PATH=%~8
-set VST3_64_PATH=%~9
-shift
-shift 
+set VST2_ARM64EC_PATH=%~6
+set VST2_X64_PATH=%~7
+set VST3_ARM64EC_PATH=%~8
+set VST3_X64_PATH=%~9
 shift
 shift
-shift 
 shift
 shift
-set AAX_32_PATH=%~3
-set AAX_64_PATH=%~4
-set CLAP_PATH=%~5
-set BUILD_DIR=%~6
-set VST_ICON=%~7
-set AAX_ICON=%~8
+shift
+shift
+shift
+set AAX_ARM64EC_PATH=%~3
+set AAX_X64_PATH=%~4
+set CLAP_ARM64EC_PATH=%~5
+set CLAP_X64_PATH=%~6
+set BUILD_DIR=%~7
+set VST_ICON=%~8
+set AAX_ICON=%~9
+shift
 set CREATE_BUNDLE_SCRIPT=%~9
 shift
 set ICUDAT_PATH=%~9
@@ -179,20 +181,20 @@ if "%FORMAT%"==".dll" (
   if exist "%ICUDAT_PATH%" (
     call :CopyFile "%ICUDAT_PATH%" "%BUILD_DIR%\icudtl.dat"
   )
-  
+
   if "%COPY_VST2%"=="1" (
-    if "%PLATFORM%"=="Win32" (
-      echo Installing VST2 [32-bit]...
-      call :CopyFile "%BUILT_BINARY%" "%VST2_32_PATH%\%NAME%.dll"
+    if "%PLATFORM%"=="ARM64EC" (
+      echo Installing VST2 [ARM64EC]...
+      call :CopyFile "%BUILT_BINARY%" "%VST2_ARM64EC_PATH%\%NAME%.dll"
       if exist "%ICUDAT_PATH%" (
-        call :CopyFile "%ICUDAT_PATH%" "%VST2_32_PATH%\icudtl.dat"
+        call :CopyFile "%ICUDAT_PATH%" "%VST2_ARM64EC_PATH%\icudtl.dat"
       )
     )
     if "%PLATFORM%"=="x64" (
       echo Installing VST2 [64-bit]...
-      call :CopyFile "%BUILT_BINARY%" "%VST2_64_PATH%\%NAME%.dll"
+      call :CopyFile "%BUILT_BINARY%" "%VST2_X64_PATH%\%NAME%.dll"
       if exist "%ICUDAT_PATH%" (
-        call :CopyFile "%ICUDAT_PATH%" "%VST2_64_PATH%\icudtl.dat"
+        call :CopyFile "%ICUDAT_PATH%" "%VST2_X64_PATH%\icudtl.dat"
       )
     )
   )
@@ -201,18 +203,18 @@ if "%FORMAT%"==".dll" (
 
 REM Handle .vst3 format
 if "%FORMAT%"==".vst3" (
-  if "%PLATFORM%"=="Win32" (
-    echo Installing VST3 [32-bit]...
-    call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.vst3" "%VST_ICON%" "x86-win"
-    if exist "%VST3_32_PATH%\*" (
-      call :CreateAndCopyToBundle "%BUILT_BINARY%" "%VST3_32_PATH%\%NAME%.vst3" "%VST_ICON%" "x86-win"
+  if "%PLATFORM%"=="ARM64EC" (
+    echo Installing VST3 [ARM64EC]...
+    call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.vst3" "%VST_ICON%" "arm64ec-win"
+    if exist "%VST3_ARM64EC_PATH%\*" (
+      call :CreateAndCopyToBundle "%BUILT_BINARY%" "%VST3_ARM64EC_PATH%\%NAME%.vst3" "%VST_ICON%" "arm64ec-win"
     )
   )
   if "%PLATFORM%"=="x64" (
     echo Installing VST3 [64-bit]...
     call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.vst3" "%VST_ICON%" "x86_64-win"
-    if exist "%VST3_64_PATH%\*" (
-      call :CreateAndCopyToBundle "%BUILT_BINARY%" "%VST3_64_PATH%\%NAME%.vst3" "%VST_ICON%" "x86_64-win"
+    if exist "%VST3_X64_PATH%\*" (
+      call :CreateAndCopyToBundle "%BUILT_BINARY%" "%VST3_X64_PATH%\%NAME%.vst3" "%VST_ICON%" "x86_64-win"
     )
   )
   goto :end
@@ -220,26 +222,33 @@ if "%FORMAT%"==".vst3" (
 
 REM Handle .aaxplugin format
 if "%FORMAT%"==".aaxplugin" (
-  if "%PLATFORM%"=="Win32" (
-    echo Installing AAX [32-bit]...
-    call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.aaxplugin" "%AAX_ICON%" "Win32"
-    call :CopyDir "%BUILD_DIR%\%NAME%.aaxplugin\Contents" "%AAX_32_PATH%\%NAME%.aaxplugin\Contents"
+  if "%PLATFORM%"=="ARM64EC" (
+    echo Installing AAX [ARM64EC]...
+    call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.aaxplugin" "%AAX_ICON%" "Arm64ec"
+    call :CopyDir "%BUILD_DIR%\%NAME%.aaxplugin\Contents" "%AAX_ARM64EC_PATH%\%NAME%.aaxplugin\Contents"
   )
   if "%PLATFORM%"=="x64" (
     echo Installing AAX [64-bit]...
     call :CreateAndCopyToBundle "%BUILT_BINARY%" "%BUILD_DIR%\%NAME%.aaxplugin" "%AAX_ICON%" "x64"
-    call :CopyDir "%BUILD_DIR%\%NAME%.aaxplugin\Contents" "%AAX_64_PATH%\%NAME%.aaxplugin\Contents"
+    call :CopyDir "%BUILD_DIR%\%NAME%.aaxplugin\Contents" "%AAX_X64_PATH%\%NAME%.aaxplugin\Contents"
   )
   goto :end
 )
 
 REM Handle .clap format
 if "%FORMAT%"==".clap" (
+  if "%PLATFORM%"=="ARM64EC" (
+    echo Installing CLAP [ARM64EC]...
+    call :CopyFile "%BUILT_BINARY%" "%CLAP_ARM64EC_PATH%\%NAME%.clap"
+    if exist "%ICUDAT_PATH%" (
+      call :CopyFile "%ICUDAT_PATH%" "%CLAP_ARM64EC_PATH%\icudtl.dat"
+    )
+  )
   if "%PLATFORM%"=="x64" (
     echo Installing CLAP [64-bit]...
-    call :CopyFile "%BUILT_BINARY%" "%CLAP_PATH%\%NAME%.clap"
+    call :CopyFile "%BUILT_BINARY%" "%CLAP_X64_PATH%\%NAME%.clap"
     if exist "%ICUDAT_PATH%" (
-      call :CopyFile "%ICUDAT_PATH%" "%CLAP_PATH%\icudtl.dat"
+      call :CopyFile "%ICUDAT_PATH%" "%CLAP_X64_PATH%\icudtl.dat"
     )
   )
   goto :end
