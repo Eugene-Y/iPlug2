@@ -116,7 +116,26 @@ namespace hvoya::utils {
     }
 
 
+    template <typename T>
+    inline void integrateInplace (std::span<T> data, T* pAccum) {
+		assert (!data.empty());
+        data.front() += *pAccum;
+        for (size_t i = 1; i < data.size(); ++i)
+            data[i] += data[i - 1];
+        *pAccum = data.back();
+    }
+
+
+    template <typename T>
+    inline void integrateNthInplace (std::span<T> data, size_t order, std::span<T> accums) {
+		assert (accums.size() >= order);
+        // reverse order: undo D_n first, then D_{n-1}, ..., then D_1
+        for (size_t n = order; n > 0; --n)
+            integrateInplace (data, &(accums [n - 1]));
+    }
+
+
     void interleave   (const AudioBuffer& src, AudioBuffer& dest);
     void deinterleave (const AudioBuffer& src, AudioBuffer& dest);
-    
+
 } // ns hvoya::utils
