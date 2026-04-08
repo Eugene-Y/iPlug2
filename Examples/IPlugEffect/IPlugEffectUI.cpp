@@ -232,9 +232,22 @@ void IPlugEffect::setTooltips (IGraphics* pG) {
 
 bool IPlugEffect::tryUpdateLayout() {
 	bool ok = true;
+	ok &= setPendingUIScale();
 	ok &= updateHostInfoView();
 	//LOGD << "tryUpdateLayout " << (ok ? "OK" : "failed");
 	return ok;
+}
+
+
+bool IPlugEffect::setPendingUIScale() {
+	if (!_uiRescaleIsPending.load (std::memory_order_acquire))
+		return true;
+	if (auto pG = GetUI()) {
+		LOGD << "setting UI scale " << _pendingUIScale;
+		pG->Resize (PLUG_WIDTH, PLUG_HEIGHT, _pendingUIScale, false);
+		_uiRescaleIsPending.store (false, std::memory_order_release);
+	}
+	return true;
 }
 
 
