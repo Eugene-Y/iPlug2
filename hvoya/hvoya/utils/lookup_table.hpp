@@ -75,12 +75,12 @@ namespace hvoya {
 
             constexpr LUT (lut_gen_func_t gen)
                 : values() {
-                gen (N, values.begin());
+                gen (N, values.data());
                 check();
             }
 
             void constexpr generate (lut_gen_func_t gen) override {
-                gen (N, values.begin());
+                gen (N, values.data());
                 check();
             }
 
@@ -92,12 +92,12 @@ namespace hvoya {
             constexpr uint_fast16_t size() const override { return N; }
 
             constexpr sample_t* data()  noexcept override { return values.data(); }
-            constexpr sample_t* begin() noexcept override { return values.begin(); }
-            constexpr sample_t* end()   noexcept override { return values.end(); }
-            
+            constexpr sample_t* begin() noexcept override { return values.data(); }
+            constexpr sample_t* end()   noexcept override { return values.data() + N; }
+
             constexpr const sample_t* cdata()  const noexcept override { return values.data(); }
-            constexpr const sample_t* cbegin() const noexcept override { return values.cbegin(); }
-            constexpr const sample_t* cend()   const noexcept override { return values.cend(); }
+            constexpr const sample_t* cbegin() const noexcept override { return values.data(); }
+            constexpr const sample_t* cend()   const noexcept override { return values.data() + N; }
 
             constexpr const sample_t& operator[] (uint_fast16_t i) const override {
                 assert (i < N);
