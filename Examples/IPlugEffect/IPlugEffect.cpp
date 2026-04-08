@@ -22,7 +22,6 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
                 [this]() { return _bufId.load(); }),
         _hostInfoModel (this, &IPlugEffect::triggerUIUpdate),
         _hostInfoView (this),
-		_uiUpdateWatchdog (this, &IPlugEffect::tryUpdateLayout),
         _midiCCMediator (this),
         _master_mix (1.) {
     ++_sNumInstances;
@@ -36,7 +35,6 @@ IPlugEffect::IPlugEffect (const InstanceInfo& info)
             return MakeGraphics (*this, PLUG_WIDTH, PLUG_HEIGHT, PLUG_FPS, GetScaleForScreen (PLUG_WIDTH, PLUG_HEIGHT));
         };
 		initializeLayout();
-		_uiUpdateWatchdog.start();
     #endif
     
     _softLimiter.setThreshold (12);
@@ -91,7 +89,8 @@ void IPlugEffect::initializeParams() {
 
 
 void IPlugEffect::OnIdle() {
-
+	if (_needsUIUpdate.exchange (false, std::memory_order_acq_rel))
+		tryUpdateLayout();
 }
 
 
@@ -104,7 +103,7 @@ void IPlugEffect::OnActivate (bool enable) {
 void IPlugEffect::OnReset() {
     resetPrevParamVals();
     _hostInfoModel.reset();
-	_uiUpdateWatchdog.notify();
+	_needsUIUpdate.store (true, std::memory_order_release);
 }
 
 

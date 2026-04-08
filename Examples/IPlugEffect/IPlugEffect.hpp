@@ -10,7 +10,6 @@
 #include <hvoya/utils/host_info_model.hpp>
 #include <hvoya/utils/host_info_view.hpp>
 #include <hvoya/utils/soft_limiter.hpp>
-#include <hvoya/utils/watchdog.hpp>
 #include <hvoya/utils/midi_cc/mediator.hpp>
 
 
@@ -84,9 +83,9 @@ class IPlugEffect final : public Plugin {
         void initializeLayout();
 		void setTooltips (IGraphics*);
 
-		hvoya::Watchdog <IPlugEffect> _uiUpdateWatchdog;
+		std::atomic <bool> _needsUIUpdate { false };
 		bool tryUpdateLayout();
-		void triggerUIUpdate() { _uiUpdateWatchdog.notify(); }
+		void triggerUIUpdate() { _needsUIUpdate.store (true, std::memory_order_release); }
 
         hvoya::HostInfoModel <IPlugEffect> _hostInfoModel; // TODO doesnt update chans
         hvoya::HostInfoView <IPlugEffect> _hostInfoView;
