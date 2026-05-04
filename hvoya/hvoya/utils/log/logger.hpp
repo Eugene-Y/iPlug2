@@ -13,17 +13,29 @@
 
 namespace hvoya {
 
+#ifndef PLOG_DISABLE_LOGGING
+
     // TODO add indent control
     class StatefulLogger {
         public:
             StatefulLogger (fIdProvider bufIdp = [](){ return 0; },
                             fIdProvider instanceIdp = [](){ return 0; });
             virtual ~StatefulLogger();
-            
+
         private:
             StatefulFormatter _formatter;
             ConsoleAppender <StatefulFormatter> _consoleAppender;
             plog::Logger <PLOG_DEFAULT_INSTANCE_ID>* _logger;
     };
+
+#else
+
+    class StatefulLogger {
+        public:
+            StatefulLogger (fIdProvider = [](){ return 0; },
+                            fIdProvider = [](){ return 0; }) {}
+    };
+
+#endif
 
 }

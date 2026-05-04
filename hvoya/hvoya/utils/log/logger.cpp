@@ -11,6 +11,8 @@
 #include "logger.hpp"
 
 
+#ifndef PLOG_DISABLE_LOGGING
+
 namespace hvoya {
 
     StatefulLogger::StatefulLogger (fIdProvider p1, fIdProvider p2) :
@@ -34,3 +36,5 @@ namespace hvoya {
     }
 
 }
+
+#endif
