@@ -24,10 +24,8 @@ namespace hvoya {
 
 
     StatefulLogger::~StatefulLogger() {
-        if (_logger) {
-            _consoleAppender.disable();
+        if (_logger) 
             _logger->removeStatefulAppender (&_consoleAppender);
-        }
     }
 
 }
