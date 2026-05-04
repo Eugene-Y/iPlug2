@@ -4,6 +4,9 @@
 //  Created by Eugene Yakshin on 09.11.2021.
 //
 
+#include <chrono>
+#include <thread>
+
 #include <plog/Initializers/RollingFileInitializer.h>
 #include "logger.hpp"
 
@@ -24,8 +27,10 @@ namespace hvoya {
 
 
     StatefulLogger::~StatefulLogger() {
-        if (_logger) 
+        if (_logger) {
+            std::this_thread::sleep_for (std::chrono::milliseconds (50));
             _logger->removeStatefulAppender (&_consoleAppender);
+        }
     }
 
 }
