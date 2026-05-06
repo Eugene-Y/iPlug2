@@ -256,6 +256,16 @@ namespace hvoya {
 				return _channels [c];
 			}
 
+			inline std::span<sample_t> chanSpan (n_chan_t c = 0) noexcept {
+				assert (c < _numChans);
+				return { _channels [c], _numFrames };
+			}
+
+			inline std::span<const sample_t> chanSpan (n_chan_t c = 0) const noexcept {
+				assert (c < _numChans);
+				return { _channels [c], _numFrames };
+			}
+
 			n_chan_t maxNumChans() const noexcept { return MAX_CHANNELS; }
 
 			bool isValid (sample_t thresh = 1) const noexcept {
