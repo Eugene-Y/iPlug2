@@ -319,8 +319,6 @@ IVTabSwitchControl::IVTabSwitchControl(const IRECT& bounds, IActionFunction aF, 
 {
   AttachIControl(this, label);
   mText = style.valueText;
-  mText.mAlign = mStyle.valueText.mAlign = EAlign::Center;
-  mText.mVAlign = mStyle.valueText.mVAlign = EVAlign::Middle;
   mShape = shape;
 
   for (auto& option : options)
