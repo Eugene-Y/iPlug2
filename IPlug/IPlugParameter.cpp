@@ -89,7 +89,7 @@ IParam::IParam()
   memset(mParamGroup, 0, MAX_PARAM_LABEL_LEN * sizeof(char));
 };
 
-void IParam::InitBool(const char* name, bool defaultVal, const char* label, int flags, const char* group, const char* offText, const char* onText)
+IParam* IParam::InitBool(const char* name, bool defaultVal, const char* label, int flags, const char* group, const char* offText, const char* onText)
 {
   if (mType == kTypeNone) mType = kTypeBool;
   
@@ -97,9 +97,10 @@ void IParam::InitBool(const char* name, bool defaultVal, const char* label, int 
 
   SetDisplayText(0, offText);
   SetDisplayText(1, onText);
+  return this;
 }
 
-void IParam::InitEnum(const char* name, int defaultVal, int nEnums, const char* label, int flags, const char* group, const char* listItems, ...)
+IParam* IParam::InitEnum(const char* name, int defaultVal, int nEnums, const char* label, int flags, const char* group, const char* listItems, ...)
 {
   if (mType == kTypeNone) mType = kTypeEnum;
   
@@ -115,9 +116,10 @@ void IParam::InitEnum(const char* name, int defaultVal, int nEnums, const char* 
       SetDisplayText(i, va_arg(args, const char*));
     va_end(args);
   }
+  return this;
 }
 
-void IParam::InitEnum(const char* name, int defaultVal, const std::initializer_list<const char*>& listItems, int flags, const char* group)
+IParam* IParam::InitEnum(const char* name, int defaultVal, const std::initializer_list<const char*>& listItems, int flags, const char* group)
 {
   if (mType == kTypeNone) mType = kTypeEnum;
 
@@ -128,9 +130,10 @@ void IParam::InitEnum(const char* name, int defaultVal, const std::initializer_l
   {
     SetDisplayText(idx++, item);
   }
+  return this;
 }
 
-void IParam::InitEnum(const char* name, int defaultVal, const std::vector<std::string>& listItems, int flags, const char* group)
+IParam* IParam::InitEnum(const char* name, int defaultVal, const std::vector<std::string>& listItems, int flags, const char* group)
 {
   if (mType == kTypeNone) mType = kTypeEnum;
 
@@ -141,16 +144,18 @@ void IParam::InitEnum(const char* name, int defaultVal, const std::vector<std::s
   {
     SetDisplayText(idx++, item.c_str());
   }
+  return this;
 }
 
-void IParam::InitInt(const char* name, int defaultVal, int minVal, int maxVal, const char* label, int flags, const char* group, const Shape& shape)
+IParam* IParam::InitInt(const char* name, int defaultVal, int minVal, int maxVal, const char* label, int flags, const char* group, const Shape& shape)
 {
   if (mType == kTypeNone) mType = kTypeInt;
   
   InitDouble(name, (double) defaultVal, (double) minVal, (double) maxVal, 1.0, label, flags | kFlagStepped, group, shape);
+  return this;
 }
 
-void IParam::InitDouble(const char* name, double defaultVal, double minVal, double maxVal, double step, const char* label, int flags, const char* group, const Shape& shape, EParamUnit unit, DisplayFunc displayFunc)
+IParam* IParam::InitDouble(const char* name, double defaultVal, double minVal, double maxVal, double step, const char* label, int flags, const char* group, const Shape& shape, EParamUnit unit, DisplayFunc displayFunc)
 {
   if (mType == kTypeNone) mType = kTypeDouble;
   
@@ -181,24 +186,28 @@ void IParam::InitDouble(const char* name, double defaultVal, double minVal, doub
     
   mShape = std::unique_ptr<Shape>(shape.Clone());
   mShape->Init(*this);
+  return this;
 }
 
-void IParam::InitFrequency(const char *name, double defaultVal, double minVal, double maxVal, double step, int flags, const char *group)
+IParam* IParam::InitFrequency(const char *name, double defaultVal, double minVal, double maxVal, double step, int flags, const char *group)
 {
   InitDouble(name, defaultVal, minVal, maxVal, step, "Hz", flags, group, ShapeExp(), kUnitFrequency);
+  return this;
 }
 
-void IParam::InitSeconds(const char *name, double defaultVal, double minVal, double maxVal, double step, int flags, const char *group)
+IParam* IParam::InitSeconds(const char *name, double defaultVal, double minVal, double maxVal, double step, int flags, const char *group)
 {
   InitDouble(name, defaultVal, minVal, maxVal, step, "Seconds", flags, group, ShapeLinear(), kUnitSeconds);
+  return this;
 }
 
-void IParam::InitMilliseconds(const char *name, double defaultVal, double minVal, double maxVal, int flags, const char *group)
+IParam* IParam::InitMilliseconds(const char *name, double defaultVal, double minVal, double maxVal, int flags, const char *group)
 {
   InitDouble(name, defaultVal, minVal, maxVal, 1, "ms", flags, group, ShapeLinear(), kUnitMilliseconds);
+  return this;
 }
 
-void IParam::InitPitch(const char *name, int defaultVal, int minVal, int maxVal, int flags, const char *group, bool middleCisC)
+IParam* IParam::InitPitch(const char *name, int defaultVal, int minVal, int maxVal, int flags, const char *group, bool middleCisC)
 {
   InitEnum(name, defaultVal, (maxVal - minVal) + 1, "", flags, group);
   WDL_String displayText;
@@ -207,24 +216,28 @@ void IParam::InitPitch(const char *name, int defaultVal, int minVal, int maxVal,
     MidiNoteName(i, displayText, /*cents*/false, middleCisC);
     SetDisplayText(i - minVal, displayText.Get());
   }
+  return this;
 }
 
-void IParam::InitGain(const char *name, double defaultVal, double minVal, double maxVal, double step, int flags, const char *group)
+IParam* IParam::InitGain(const char *name, double defaultVal, double minVal, double maxVal, double step, int flags, const char *group)
 {
   InitDouble(name, defaultVal, minVal, maxVal, step, "dB", flags, group, ShapeLinear(), kUnitDB);
+  return this;
 }
 
-void IParam::InitPercentage(const char *name, double defaultVal, double minVal, double maxVal, int flags, const char *group)
+IParam* IParam::InitPercentage(const char *name, double defaultVal, double minVal, double maxVal, int flags, const char *group)
 {
   InitDouble(name, defaultVal, minVal, maxVal, 1, "%", flags, group, ShapeLinear(), kUnitPercentage);
+  return this;
 }
 
-void IParam::InitAngleDegrees(const char *name, double defaultVal, double minVal, double maxVal, int flags, const char *group)
+IParam* IParam::InitAngleDegrees(const char *name, double defaultVal, double minVal, double maxVal, int flags, const char *group)
 {
   InitDouble(name, defaultVal, minVal, maxVal, 1, "degrees", flags, group, ShapeLinear(), kUnitDegrees);
+  return this;
 }
 
-void IParam::Init(const IParam& p, const char* searchStr, const char* replaceStr, const char* newGroup)
+IParam* IParam::Init(const IParam& p, const char* searchStr, const char* replaceStr, const char* newGroup)
 {
   if (mType == kTypeNone) mType = p.Type();
 
@@ -256,20 +269,23 @@ void IParam::Init(const IParam& p, const char* searchStr, const char* replaceStr
     const char* str = p.GetDisplayTextAtIdx(i, &val);
     SetDisplayText(val, str);
   }
+  return this;
 }
 
-void IParam::SetDisplayText(double value, const char* str)
+IParam* IParam::SetDisplayText(double value, const char* str)
 {
   int n = mDisplayTexts.GetSize();
   mDisplayTexts.Resize(n + 1);
   DisplayText* pDT = mDisplayTexts.Get() + n;
   pDT->mValue = value;
   strcpy(pDT->mText, str);
+  return this;
 }
 
-void IParam::SetDisplayPrecision(int precision)
+IParam* IParam::SetDisplayPrecision(int precision)
 {
   mDisplayPrecision = precision;
+  return this;
 }
 
 void IParam::GetDisplay(double value, bool normalized, WDL_String& str, bool withDisplayText) const

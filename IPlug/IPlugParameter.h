@@ -151,7 +151,7 @@ public:
    * @param group The parameter's group
    * @param offText The display text when the parameter value == 0.
    * @param onText The display text when the parameter value == 1. */
-  void InitBool(const char* name, bool defaultValue, const char* label = "", int flags = 0, const char* group = "", const char* offText = "off", const char* onText = "on");
+  IParam* InitBool(const char* name, bool defaultValue, const char* label = "", int flags = 0, const char* group = "", const char* offText = "off", const char* onText = "on");
   
   /** Initialize the parameter as an enumerated list
    * @param name The parameter's name
@@ -161,7 +161,7 @@ public:
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group
    * @param listItems VARARG list of enum items, the length of which must match nEnums */
-  void InitEnum(const char* name, int defaultValue, int nEnums, const char* label = "", int flags = 0, const char* group = "", const char* listItems = 0, ...);
+  IParam* InitEnum(const char* name, int defaultValue, int nEnums, const char* label = "", int flags = 0, const char* group = "", const char* listItems = 0, ...);
 
   /** Initialize the parameter as enum
    * @param name The parameter's name
@@ -169,8 +169,8 @@ public:
    * @param listItems An initializer list of CStrings for the list items
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitEnum(const char* name, int defaultValue, const std::initializer_list<const char*>& listItems, int flags = 0, const char* group = "");
-  void InitEnum(const char* name, int defaultValue, const std::vector<std::string>&           listItems, int flags = 0, const char* group = "");
+  IParam* InitEnum(const char* name, int defaultValue, const std::initializer_list<const char*>& listItems, int flags = 0, const char* group = "");
+  IParam* InitEnum(const char* name, int defaultValue, const std::vector<std::string>&           listItems, int flags = 0, const char* group = "");
 
   /** Initialize the parameter as integer
    * @param name The parameter's name
@@ -180,7 +180,7 @@ public:
    * @param label The parameter's unit suffix (eg. dB, %)
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitInt(const char* name, int defaultValue, int minVal, int maxVal, const char* label = "", int flags = 0, const char* group = "", const Shape& shape = ShapeLinear());
+  IParam* InitInt(const char* name, int defaultValue, int minVal, int maxVal, const char* label = "", int flags = 0, const char* group = "", const Shape& shape = ShapeLinear());
 
   /** Initialize the parameter as double
    * @param name The parameter's name
@@ -194,7 +194,7 @@ public:
    * @param shape A Parameter::Shape struct that determines the skewing of the parameters values across its range
    * @param unit Used by AudioUnit plugins to determine the appearance of parameters, based on the kind of data they represent
    * @param displayFunc Custom display function, conforming to DisplayFunc */
-  void InitDouble(const char* name, double defaultVal, double minVal, double maxVal, double step, const char* label = "", int flags = 0, const char* group = "", const Shape& shape = ShapeLinear(), EParamUnit unit = kUnitCustom, DisplayFunc displayFunc = nullptr);
+  IParam* InitDouble(const char* name, double defaultVal, double minVal, double maxVal, double step, const char* label = "", int flags = 0, const char* group = "", const Shape& shape = ShapeLinear(), EParamUnit unit = kUnitCustom, DisplayFunc displayFunc = nullptr);
 
   /** Initialize the parameter as seconds
    * @param name The parameter's name
@@ -204,7 +204,7 @@ public:
    * @param step The step size of the parameter
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitSeconds(const char* name, double defaultVal = 1., double minVal = 0., double maxVal = 10., double step = 0.1, int flags = 0, const char* group = "");
+  IParam* InitSeconds(const char* name, double defaultVal = 1., double minVal = 0., double maxVal = 10., double step = 0.1, int flags = 0, const char* group = "");
   
   /** Initialize the parameter as milliseconds
    * @param name The parameter's name
@@ -214,7 +214,7 @@ public:
    * @param step The step size of the parameter
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitMilliseconds(const char* name, double defaultVal = 1., double minVal = 0., double maxVal = 100., int flags = 0, const char* group = "");
+  IParam* InitMilliseconds(const char* name, double defaultVal = 1., double minVal = 0., double maxVal = 100., int flags = 0, const char* group = "");
 
   /** Initialize the parameter as frequency
    * @param name The parameter's name
@@ -224,7 +224,7 @@ public:
    * @param step The step size of the parameter
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitFrequency(const char* name, double defaultVal = 1000., double minVal = 0.1, double maxVal = 10000., double step = 0.1, int flags = 0, const char* group = "");
+  IParam* InitFrequency(const char* name, double defaultVal = 1000., double minVal = 0.1, double maxVal = 10000., double step = 0.1, int flags = 0, const char* group = "");
   
   /** Initialize the parameter as pitch
    * @param name The parameter's name
@@ -233,7 +233,7 @@ public:
    * @param maxVal The maximum value of the parameter
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitPitch(const char* name, int defaultVal = 60, int minVal = 0, int maxVal = 128, int flags = 0, const char* group = "", bool middleCisC4 = false);
+  IParam* InitPitch(const char* name, int defaultVal = 60, int minVal = 0, int maxVal = 128, int flags = 0, const char* group = "", bool middleCisC4 = false);
   
   /** Initialize the parameter as gain (units in decibels)
    * @param name The parameter's name
@@ -243,7 +243,7 @@ public:
    * @param step The step size of the parameter
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitGain(const char* name, double defaultVal = 0., double minVal = -70., double maxVal = 24., double step = 0.5, int flags = 0, const char* group = "");
+  IParam* InitGain(const char* name, double defaultVal = 0., double minVal = -70., double maxVal = 24., double step = 0.5, int flags = 0, const char* group = "");
   
   /** Initialize the parameter as percentage
    * @param name The parameter's name
@@ -252,7 +252,7 @@ public:
    * @param maxVal The maximum value of the parameter
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitPercentage(const char* name, double defaultVal = 0., double minVal = 0., double maxVal = 100., int flags = 0, const char* group = "");
+  IParam* InitPercentage(const char* name, double defaultVal = 0., double minVal = 0., double maxVal = 100., int flags = 0, const char* group = "");
 
   /** Initialize the parameter as angle in degrees
    * @param name The parameter's name
@@ -261,14 +261,14 @@ public:
    * @param maxVal The maximum value of the parameter
    * @param flags The parameter's flags \see IParam::EFlags
    * @param group The parameter's group */
-  void InitAngleDegrees(const char* name, double defaultVal = 0., double minVal = 0., double maxVal = 360., int flags = 0, const char* group = "");
+  IParam* InitAngleDegrees(const char* name, double defaultVal = 0., double minVal = 0., double maxVal = 360., int flags = 0, const char* group = "");
 
   /** Initialize the parameter based on another parameter, replacing a CString in the name
    * @param p The existing parameter
    * @param searchStr Search string for modifying the parameter name
    * @param replaceStr Replace string for modifying the parameter name
    * @param newGroup Group for the new parameter */
-  void Init(const IParam& p, const char* searchStr = "", const char* replaceStr = "", const char* newGroup = "");
+  IParam* Init(const IParam& p, const char* searchStr = "", const char* replaceStr = "", const char* newGroup = "");
   
   /** Convert a textual representation of the parameter value to a double (real value)
    * @param str CString textual representation of the parameter value 
@@ -329,19 +329,27 @@ public:
   /** Set some text to display for a particular value, e.g. -70dB could display "-inf"
    * @param value The value for which to display the text
    * @param str CString text to display at value */
-  void SetDisplayText(double value, const char* str);
+  IParam* SetDisplayText(double value, const char* str);
 
   /** Set the parameters display precision
  * @param precision The display precision in digits*/
-  void SetDisplayPrecision(int precision);
+  IParam* SetDisplayPrecision(int precision);
 
   /** Set the parameters label after creation. WARNING: if this is called after the host has queried plugin parameters, the host may display the label as it was previously
    * @param label CString for the label */
-  void SetLabel(const char* label) { strcpy(mLabel, label); }
-  
+  IParam* SetLabel(const char* label) { strcpy(mLabel, label); return this; }
+
   /** Set the function to translate display values
    * @param func A function conforming to DisplayFunc */
-  void SetDisplayFunc(DisplayFunc func) { mDisplayFunction = func; }
+  IParam* SetDisplayFunc(DisplayFunc func) { mDisplayFunction = std::move(func); return this; }
+
+  /** Replace the parameter's shape. Safe to call during initialization, before audio starts.
+   * @param shape The new shape */
+  IParam* SetShape(const Shape& shape) {
+	mShape = std::unique_ptr<Shape>(shape.Clone());
+	mShape->Init(*this);
+	return this;
+  }
 
   /** Gets a readable value of the parameter
    * @return double Current value of the parameter */
