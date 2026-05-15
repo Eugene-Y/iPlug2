@@ -2,7 +2,7 @@
 
 #include <IControls.h>
 
-namespace hvoya {
+namespace hvoya::ui {
     
     class ArcKnob : public IVKnobControl {
         public:
@@ -210,4 +210,4 @@ namespace hvoya {
 
     }; // class ArcKnob
 
-} // ns hvoya
+} // ns hvoya::ui

@@ -10,7 +10,7 @@
 #include <vector>
 
 
-namespace hvoya {
+namespace hvoya::ui {
 
 
 // IVKnobControl variant for morphing between N named options.
@@ -394,4 +394,4 @@ private:
 };
 
 
-} // namespace hvoya
+} // namespace hvoya::ui

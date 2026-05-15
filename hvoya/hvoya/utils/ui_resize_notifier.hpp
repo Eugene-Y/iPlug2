@@ -2,7 +2,7 @@
 
 #include <IControls.h>
 
-namespace hvoya {
+namespace hvoya::ui {
     
     class UIResizeNotifier : public IControl {
         public:
@@ -38,4 +38,4 @@ namespace hvoya {
 
     }; // class UIResizeNotifier
 
-} // ns hvoya
+} // ns hvoya::ui
