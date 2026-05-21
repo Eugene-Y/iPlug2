@@ -20,6 +20,8 @@
 // No prepare() call required — just setFactor() and go.
 //
 
+// TODO: FIXME 16x does not work correctly
+
 #include <cassert>
 #include <vector>
 
@@ -158,15 +160,15 @@ public:
                 _up4x[c].process_block (dst[c], scratch2x (c), nFrames * 2);
             }
             else if (_factor == 8) {
-                _up2x[c].process_block (scratch2x (c), src[c], nFrames);
+                _up2x[c].process_block (scratch2x (c), src[c],        nFrames);
                 _up4x[c].process_block (scratch4x (c), scratch2x (c), nFrames * 2);
-                _up8x[c].process_block (dst[c], scratch4x (c), nFrames * 4);
+                _up8x[c].process_block (dst[c],        scratch4x (c), nFrames * 4);
             }
             else { // 16
-                _up2x[c].process_block (scratch2x (c), src[c], nFrames);
-                _up4x[c].process_block (scratch4x (c), scratch2x (c), nFrames * 2);
-                _up8x[c].process_block (scratch8x (c), scratch4x (c), nFrames * 4);
-                _up16x[c].process_block (dst[c], scratch8x (c), nFrames * 8);
+                _up2x[c].process_block  (scratch2x (c), src[c],        nFrames);
+                _up4x[c].process_block  (scratch4x (c), scratch2x (c), nFrames * 2);
+                _up8x[c].process_block  (scratch8x (c), scratch4x (c), nFrames * 4);
+                _up16x[c].process_block (dst[c],        scratch8x (c), nFrames * 8);
             }
         }
     }
@@ -187,17 +189,17 @@ public:
 
         for (n_chan_t c = 0; c < nChans; ++c) {
             if (_factor == 16) {
-                _dn16x[c].process_block (scratch8x (c), src[c], nOutFrames * 8);
-                _dn8x[c].process_block (scratch4x (c), scratch8x (c), nOutFrames * 4);
-                _dn4x[c].process_block (scratch2x (c), scratch4x (c), nOutFrames * 2);
-                _dn2x[c].process_block (dst[c], scratch2x (c), nOutFrames);
+                _dn16x[c].process_block (scratch8x (c), src[c],        nOutFrames * 8);
+                _dn8x[c] .process_block (scratch4x (c), scratch8x (c), nOutFrames * 4);
+                _dn4x[c] .process_block (scratch2x (c), scratch4x (c), nOutFrames * 2);
+                _dn2x[c] .process_block (dst[c],        scratch2x (c), nOutFrames);
             } else if (_factor == 8) {
-                _dn8x[c].process_block (scratch4x (c), src[c], nOutFrames * 4);
+                _dn8x[c].process_block (scratch4x (c), src[c],        nOutFrames * 4);
                 _dn4x[c].process_block (scratch2x (c), scratch4x (c), nOutFrames * 2);
-                _dn2x[c].process_block (dst[c], scratch2x (c), nOutFrames);
+                _dn2x[c].process_block (dst[c],        scratch2x (c), nOutFrames);
             } else if (_factor == 4) {
-                _dn4x[c].process_block (scratch2x (c), src[c], nOutFrames * 2);
-                _dn2x[c].process_block (dst[c], scratch2x (c), nOutFrames);
+                _dn4x[c].process_block (scratch2x (c), src[c],        nOutFrames * 2);
+                _dn2x[c].process_block (dst[c],        scratch2x (c), nOutFrames);
             } else { // _factor == 2
                 _dn2x[c].process_block (dst[c], src[c], nOutFrames);
             }
