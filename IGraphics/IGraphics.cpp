@@ -191,6 +191,24 @@ void IGraphics::RemoveControl(IControl* pControl)
   SetAllControlsDirty();
 }
 
+void IGraphics::BringControlToFront(IControl* pControl)
+{
+  auto moveToEnd = [this](IControl* p) {
+    const int idx = mControls.Find(p);
+    if (idx >= 0 && idx < mControls.GetSize() - 1) {
+      mControls.Delete(idx, false);   // remove without freeing
+      mControls.Add(p);               // re-append at end
+    }
+  };
+
+  moveToEnd(pControl);
+
+  // Move immediate children after the container so they render on top of its background.
+  if (auto* container = pControl->As<IContainerBase>())
+    for (int i = 0; i < container->NChildren(); ++i)
+      moveToEnd(container->GetChild(i));
+}
+
 void IGraphics::RemoveAllControls()
 {
   ReleaseMouseCapture();

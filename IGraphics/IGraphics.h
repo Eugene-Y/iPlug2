@@ -1468,7 +1468,12 @@ public:
   
   /** Remove a control at using ptr, (frees memory). */
   void RemoveControl(IControl* pControl);
-  
+
+  /** Move a control to the highest z-order position (drawn last = visually on top of all others).
+   *  If pControl is an IContainerBase, its immediate children are moved after it so they also
+   *  remain on top. Useful when dynamic rebuilds append new controls past an overlay/about box. */
+  void BringControlToFront(IControl* pControl);
+
   /** Removes all regular IControls from the control list, as well as special controls (frees memory). */
   void RemoveAllControls();
   
