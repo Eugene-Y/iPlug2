@@ -345,114 +345,75 @@ void UserTabPanel::buildPickerMenu(IPopupMenu& menu, const ControlRegistry::Node
 //  Child control factories
 
 IControl* UserTabPanel::makeLockBtn(const IRECT& r) {
-    return new IVButtonControl(r,
-        [this](IControl*) { toggleLock(); },
-        _unlocked ? "lock" : "edit",
-        _btnStyle);
+    return (new IVButtonControl(r, DefaultClickActionFunc, _unlocked ? "lock" : "edit", _btnStyle))
+        ->SetAnimationEndActionFunction([this](IControl*) { toggleLock(); });
 }
 
 IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
-    // Centre a fixed-size button inside the available area so "+" is mid-screen.
     const IRECT btnR = r.GetCentredInside(std::min(r.W(), 80.f), std::min(r.H(), 40.f));
-    return new IVButtonControl(btnR,
-        [this, slotIdx, btnR](IControl*) { showParamPicker(slotIdx, btnR); },
-        "+",
-        _editBtnStyle);
+    return (new IVButtonControl(btnR, DefaultClickActionFunc, "+", _editBtnStyle))
+        ->SetAnimationEndActionFunction([this, slotIdx, btnR](IControl*) {
+            showParamPicker(slotIdx, btnR);
+        });
 }
 
 IControl* UserTabPanel::makeRemoveBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return new IVButtonControl(r,
-        [this, slotIdx, entryIdx](IControl*) { removeEntry(slotIdx, entryIdx); },
-        "x",
-        _editBtnStyle);
+    return (new IVButtonControl(r, DefaultClickActionFunc, "x", _editBtnStyle))
+        ->SetAnimationEndActionFunction([this, slotIdx, entryIdx](IControl*) {
+            removeEntry(slotIdx, entryIdx);
+        });
 }
 
 IControl* UserTabPanel::makeMoveBtn(const IRECT& r, int slotIdx, int delta, const char* label) {
-    return new IVButtonControl(r,
-        [this, slotIdx, delta](IControl*) { moveSlot(slotIdx, delta); },
-        label,
-        _editBtnStyle);
+    return (new IVButtonControl(r, DefaultClickActionFunc, label, _editBtnStyle))
+        ->SetAnimationEndActionFunction([this, slotIdx, delta](IControl*) {
+            moveSlot(slotIdx, delta);
+        });
 }
 
 IControl* UserTabPanel::makeSaveBtn(const IRECT& r) {
-    return new IVButtonControl(r,
-        [this](IControl* pBtn) {
-            pBtn->SetValue(0.);
-            pBtn->SetDirty(false);
+    return (new IVButtonControl(r, DefaultClickActionFunc, "save", _btnStyle))
+        ->SetAnimationEndActionFunction([this](IControl*) {
             WDL_String fileName("layout"), path;
             GetUI()->PromptForFile(fileName, path, EFileAction::Save, _fileExt.c_str(),
                 [this](const WDL_String& fn, const WDL_String&) {
-                    if (fn.GetLength())
-                        saveLayout(fn.Get());
+                    if (fn.GetLength()) saveLayout(fn.Get());
                 });
-        },
-        "save",
-        _btnStyle);
+        });
 }
 
 IControl* UserTabPanel::makeLoadBtn(const IRECT& r) {
-    return new IVButtonControl(r,
-        [this](IControl* pBtn) {
-            pBtn->SetValue(0.);
-            pBtn->SetDirty(false);
+    return (new IVButtonControl(r, DefaultClickActionFunc, "load", _btnStyle))
+        ->SetAnimationEndActionFunction([this](IControl*) {
             WDL_String fileName, path;
             GetUI()->PromptForFile(fileName, path, EFileAction::Open, _fileExt.c_str(),
                 [this](const WDL_String& fn, const WDL_String&) {
-                    if (fn.GetLength())
-                        loadLayout(fn.Get());
+                    if (fn.GetLength()) loadLayout(fn.Get());
                 });
-        },
-        "load",
-        _btnStyle);
+        });
 }
 
 IControl* UserTabPanel::makeCopyBtn(const IRECT& r) {
-    return new IVButtonControl(r,
-        [this](IControl* pBtn) {
-            pBtn->SetValue(0.);
-            pBtn->SetDirty(false);
-            copyToClipboard();
-        },
-        "copy",
-        _btnStyle);
+    return (new IVButtonControl(r, DefaultClickActionFunc, "copy", _btnStyle))
+        ->SetAnimationEndActionFunction([this](IControl*) { copyToClipboard(); });
 }
 
 IControl* UserTabPanel::makePasteBtn(const IRECT& r) {
-    return new IVButtonControl(r,
-        [this](IControl* pBtn) {
-            pBtn->SetValue(0.);
-            pBtn->SetDirty(false);
-            pasteFromClipboard();
-        },
-        "paste",
-        _btnStyle);
+    return (new IVButtonControl(r, DefaultClickActionFunc, "paste", _btnStyle))
+        ->SetAnimationEndActionFunction([this](IControl*) { pasteFromClipboard(); });
 }
 
 IControl* UserTabPanel::makeClearBtn(const IRECT& r) {
-    auto* btn = new IVButtonControl(r,
-        [this](IControl* pBtn) {
-            pBtn->SetValue(0.);
-            pBtn->SetDirty(false);
-            clearSlots();
-        },
-        "clear",
-        _btnStyle);
-    if (_slots.empty())
-        btn->SetDisabled(true);
+    auto* btn = (new IVButtonControl(r, DefaultClickActionFunc, "clear", _btnStyle))
+        ->SetAnimationEndActionFunction([this](IControl*) { clearSlots(); });
+    if (_slots.empty()) btn->SetDisabled(true);
     return btn;
 }
 
 IControl* UserTabPanel::makeUndoBtn(const IRECT& r) {
-    auto* btn = new IVButtonControl(r,
-        [this](IControl* pBtn) {
-            pBtn->SetValue(0.);
-            pBtn->SetDirty(false);
-            undo();
-        },
-        "undo",
-        _btnStyle);
-    if (_history.empty())
-        btn->SetDisabled(true);
+    auto* btn = (new IVButtonControl(r, DefaultClickActionFunc, "undo", _btnStyle))
+        ->SetAnimationEndActionFunction([this](IControl*) { undo(); });
+    if (_history.empty()) btn->SetDisabled(true);
     return btn;
 }
 
