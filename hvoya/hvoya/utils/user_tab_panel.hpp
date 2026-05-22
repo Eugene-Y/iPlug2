@@ -36,8 +36,9 @@
  *   - Thin outlines are drawn around each entry cell and each slot column.
  *   - A stack of buttons appears below "lock": save, load, copy, paste, clear, undo.
  *     clear and undo are greyed out when unavailable.
- * Clicking "+" opens a popup in insertion order (as registered in ControlRegistry);
- * already-full target slots or duplicate-in-slot entries are shown disabled.
+ * Clicking "+" opens a popup mirroring the group tree registered in ControlRegistry:
+ * top-level groups appear as submenus (folders), entries inside them as leaf items.
+ * Nesting can be arbitrary. Already-full or duplicate-in-slot entries are disabled.
  *
  * FILE FORMAT
  * -----------
@@ -103,7 +104,7 @@
 
 #include <vector>
 #include <functional>
-#include <climits>
+#include <set>
 #include <IControl.h>
 #include "control_registry.hpp"
 
@@ -208,10 +209,10 @@ public:
     static bool isPad(int id) { return id < 0; }
 
 private:
-    // Sentinel pushed into _pickerParamOrder at the separator position so that
-    // menu indices (which include the separator on macOS) stay aligned with the vector.
-    // Must not collide with any real param ID or padding ID.
-    static constexpr int kPickerSepSentinel = INT_MIN;
+    // Tags on IPopupMenu::Item encode the control ID: tag = id + kPickerTagOffset.
+    // kPickerTagOffset = -kPad1_2 = 3, so the most-negative valid ID (kPad1_2 = -3)
+    // maps to tag 0. All valid tags are >= 0; iPlug2's default "no tag" sentinel is -1.
+    static constexpr int kPickerTagOffset = 3;
 
 private:
     static constexpr float kSmallBtnW    = 20.f;
@@ -229,9 +230,8 @@ private:
     std::string                    _pluginVersion;
     std::string                    _fileExt;
 
-    int              _pendingPickerSlotIdx = -1;
-    std::vector<int> _pickerParamOrder;
-    IPopupMenu       _pickerMenu;  // must outlive CreatePopupMenu (async on macOS)
+    int        _pendingPickerSlotIdx = -1;
+    IPopupMenu _pickerMenu;  // must outlive CreatePopupMenu (async on macOS)
 
     void rebuild();        // clears and recreates all child controls from _slots
     void clearChildren();  // removes children from IGraphics and clears mChildren
@@ -245,6 +245,12 @@ private:
     void moveSlot(int slotIdx, int delta);  // delta = -1 (left) or +1 (right)
 
     void showParamPicker(int slotIdx, IRECT fromRect);  // fromRect positions the popup
+
+    // Recursively populate menu from the registry's group tree node.
+    // Leaf entries become tagged items; group nodes become submenus.
+    // Padding entries (isPad) are skipped — the caller appends them manually.
+    void buildPickerMenu(IPopupMenu& menu, const ControlRegistry::Node& node,
+                         int slotIdx, const std::set<int>& usedInSlot) const;
 
     IControl* makeLockBtn   (const IRECT& r);
     IControl* makePlusBtn   (const IRECT& r, int slotIdx);  // r = available area; button centred inside

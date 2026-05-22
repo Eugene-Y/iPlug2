@@ -92,17 +92,32 @@ UserTabPanel::UserTabPanel(const IRECT& bounds,
 }
 
 
+namespace {
+
+// Walk the chosen item chain into any submenu, returning the leaf item's tag.
+// Returns -1 if no tag is set (separator, submenu title, or untagged item).
+int findChosenTag(IPopupMenu* menu) {
+    if (!menu) return -1;
+    auto* chosen = menu->GetChosenItem();
+    if (!chosen) return -1;
+    if (auto* sub = chosen->GetSubmenu())
+        return findChosenTag(sub);
+    return chosen->GetTag();
+}
+
+} // namespace
+
 void UserTabPanel::OnPopupMenuSelection(IPopupMenu* pMenu, int) {
     if (!pMenu || pMenu->GetChosenItemIdx() < 0) {
         rebuild();  // reset button pressed states after dismissed-without-selection
         return;
     }
 
-    const int idx = pMenu->GetChosenItemIdx();
-    if (idx >= (int)_pickerParamOrder.size()) { rebuild(); return; }
+    const int tag = findChosenTag(pMenu);
+    if (tag < 0) { rebuild(); return; }  // no tag = separator, submenu header, or dismissed
 
-    const int paramId = _pickerParamOrder[idx];
-    if (paramId == kPickerSepSentinel) { rebuild(); return; }  // separator — not selectable
+    const int paramId = tag - kPickerTagOffset;
+    if (!_factories.has(paramId)) { rebuild(); return; }
 
     if (_pendingPickerSlotIdx < 0)
         addSlot(paramId);
@@ -271,9 +286,7 @@ void UserTabPanel::OnDrop(const char* str) {
 
 void UserTabPanel::showParamPicker(int slotIdx, IRECT fromRect) {
     _pendingPickerSlotIdx = slotIdx;
-    _pickerParamOrder.clear();
 
-    // collect already-used params so duplicates in the target slot can be disabled
     std::set<int> usedInTargetSlot;
     if (slotIdx >= 0 && slotIdx < (int)_slots.size())
         for (int p : _slots[slotIdx].params)
@@ -281,34 +294,50 @@ void UserTabPanel::showParamPicker(int slotIdx, IRECT fromRect) {
 
     _pickerMenu.Clear();
 
-    // Real parameters first (non-padding, insertion order).
-    for (auto& [paramId, desc] : _factories) {
-        if (isPad(paramId)) continue;
-        auto* item = _pickerMenu.AddItem(desc.displayName.c_str());
-        bool noRoom = slotIdx >= 0 && !_slots[slotIdx].hasRoom(_factories, desc.heightFrac);
-        if (usedInTargetSlot.count(paramId) || noRoom)
-            item->SetEnabled(false);
-        _pickerParamOrder.push_back(paramId);
-    }
+    // Build the group tree into the menu — folders become submenus, leaves become items.
+    // Padding entries are skipped here and appended manually below.
+    buildPickerMenu(_pickerMenu, _factories.root(), slotIdx, usedInTargetSlot);
 
     // Padding spacers at the bottom, separated.
-    // AddSeparator() occupies a menu index on macOS — push a sentinel so indices stay aligned.
+    // Items are created with an explicit tag so selection is identified via GetTag(),
+    // not by menu index (which is fragile in the presence of separators and submenus).
     _pickerMenu.AddSeparator();
-    _pickerParamOrder.push_back(kPickerSepSentinel);  // separator occupies a menu index on macOS
     for (int padId : { kPad1_8, kPad1_4, kPad1_2 }) {
         const auto& desc = _factories.at(padId);
-        auto* item = _pickerMenu.AddItem(desc.displayName.c_str());
+        int flags = IPopupMenu::Item::kNoFlags;
         if (slotIdx >= 0) {
-            // Inside an existing slot: disable if no room or slot is already pad-only.
+            // Inside an existing slot: disable if no room or the slot is already pad-only.
             bool padOnly = _slots[slotIdx].params.size() == 1 && isPad(_slots[slotIdx].params[0]);
             bool noRoom  = !_slots[slotIdx].hasRoom(_factories, desc.heightFrac);
-            if (padOnly || noRoom) item->SetEnabled(false);
+            if (padOnly || noRoom) flags = IPopupMenu::Item::kDisabled;
         }
-        // slotIdx == -1 (new slot): padding creates a narrow column — always enabled.
-        _pickerParamOrder.push_back(padId);
+        // slotIdx == -1 (new slot): padding creates a narrow column spacer — always enabled.
+        _pickerMenu.AddItem(new IPopupMenu::Item(desc.displayName.c_str(), flags, padId + kPickerTagOffset));
     }
 
     GetUI()->CreatePopupMenu(*this, _pickerMenu, fromRect);
+}
+
+void UserTabPanel::buildPickerMenu(IPopupMenu& menu, const ControlRegistry::Node& node,
+                                   int slotIdx, const std::set<int>& usedInSlot) const {
+    for (const auto& child : node.children) {
+        if (child.isGroup) {
+            // Group node → submenu. The submenu is owned by the Item (unique_ptr inside).
+            auto* submenu = new IPopupMenu(child.group->name.c_str());
+            buildPickerMenu(*submenu, *child.group, slotIdx, usedInSlot);
+            menu.AddItem(new IPopupMenu::Item(child.group->name.c_str(), submenu));
+        } else {
+            const int id = child.leafId;
+            if (isPad(id)) continue;  // padding spacers are appended separately at the bottom
+            if (!_factories.has(id)) continue;
+
+            const auto& desc = _factories.at(id);
+            bool noRoom  = slotIdx >= 0 && !_slots[slotIdx].hasRoom(_factories, desc.heightFrac);
+            bool disabled = usedInSlot.count(id) || noRoom;
+            const int flags = disabled ? IPopupMenu::Item::kDisabled : IPopupMenu::Item::kNoFlags;
+            menu.AddItem(new IPopupMenu::Item(desc.displayName.c_str(), flags, id + kPickerTagOffset));
+        }
+    }
 }
 
 
