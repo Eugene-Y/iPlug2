@@ -150,7 +150,9 @@ public:
                  OnChangedFn onChanged,
                  std::string pluginName,      // written to file header, e.g. "Melter"
                  std::string pluginVersion,   // written to file header, e.g. "1.2.3"
-                 std::string fileExt = "hvoya"); // extension shown in PromptForFile dialogs
+                 std::string fileExt = "hvoya",       // extension shown in PromptForFile dialogs
+                 const char* iconFontName = nullptr,  // icon font for swap buttons; nullptr = use btnStyle font
+                 const char* removeFontName = nullptr); // icon font for remove (✕) buttons; nullptr = use btnStyle font
 
     const std::vector<Slot>& slots()      const { return _slots; }
     bool                     isUnlocked() const { return _unlocked; }
@@ -223,8 +225,10 @@ private:
     std::vector<std::vector<Slot>> _history;   // undo stack; cleared on each edit-mode entry
     bool                           _unlocked;
     IVStyle                        _btnStyle;
-    IVStyle                        _editBtnStyle;  // bigger, centered, accent-colored — used for +/x/</>
-    IColor                         _editColor;     // accent color for edit-mode overlays and buttons
+    IVStyle                        _editBtnStyle;       // bigger, centered, accent-colored — used for +
+    IVStyle                        _entryBtnStyle;      // same as _editBtnStyle but 0.75× font — used for x on entries
+    IVStyle                        _swapBtnStyle;       // icon font variant of _editBtnStyle — used for <-> and ^v swap buttons
+    IColor                         _editColor;          // accent color for edit-mode overlays and buttons
     OnChangedFn                    _onChanged;
     std::string                    _pluginName;
     std::string                    _pluginVersion;
@@ -242,7 +246,8 @@ private:
     void addSlot(int paramId);
     void addToSlot(int slotIdx, int paramId);
     void removeEntry(int slotIdx, int entryIdx);
-    void moveSlot(int slotIdx, int delta);  // delta = -1 (left) or +1 (right)
+    void swapSlots  (int slotIdx);              // swap slot[slotIdx] ↔ slot[slotIdx+1]
+    void swapEntries(int slotIdx, int entryIdx); // swap entry[entryIdx] ↔ entry[entryIdx+1] within slot
 
     void showParamPicker(int slotIdx, IRECT fromRect);  // fromRect positions the popup
 
@@ -255,7 +260,8 @@ private:
     IControl* makeLockBtn   (const IRECT& r);
     IControl* makePlusBtn   (const IRECT& r, int slotIdx);  // r = available area; button centred inside
     IControl* makeRemoveBtn (const IRECT& r, int slotIdx, int entryIdx);
-    IControl* makeMoveBtn   (const IRECT& r, int slotIdx, int delta, const char* label);
+    IControl* makeSwapSlotsBtn  (const IRECT& r, int slotIdx);
+    IControl* makeSwapEntriesBtn(const IRECT& r, int slotIdx, int entryIdx);
     IControl* makeSaveBtn   (const IRECT& r);
     IControl* makeLoadBtn   (const IRECT& r);
     IControl* makeCopyBtn   (const IRECT& r);

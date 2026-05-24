@@ -42,7 +42,9 @@ UserTabPanel::UserTabPanel(const IRECT& bounds,
                            OnChangedFn onChanged,
                            std::string pluginName,
                            std::string pluginVersion,
-                           std::string fileExt)
+                           std::string fileExt,
+                           const char* iconFontName,
+                           const char* removeFontName)
     : IContainerBase(bounds)
     , _factories(std::move(factories))
     , _slots(std::move(initialSlots))
@@ -55,10 +57,20 @@ UserTabPanel::UserTabPanel(const IRECT& bounds,
     , _fileExt(std::move(fileExt))
 {
     _editBtnStyle = _btnStyle;
-    _editBtnStyle.labelText.mSize   = _btnStyle.labelText.mSize * 2.f;
-    _editBtnStyle.labelText.mVAlign = EVAlign::Middle;
-    _editBtnStyle.labelText.mAlign  = EAlign::Center;
+    _editBtnStyle.labelText.mSize    = _btnStyle.labelText.mSize * 2.f;
+    _editBtnStyle.labelText.mVAlign  = EVAlign::Middle;
+    _editBtnStyle.labelText.mAlign   = EAlign::Center;
     _editBtnStyle.labelText.mFGColor = editColor;
+
+    _entryBtnStyle = _editBtnStyle;
+    _entryBtnStyle.labelText.mSize   = _editBtnStyle.labelText.mSize * 0.75f;
+
+    _swapBtnStyle = _editBtnStyle;
+    if (iconFontName)
+        strncpy(_swapBtnStyle.labelText.mFont, iconFontName, sizeof(_swapBtnStyle.labelText.mFont) - 1);
+
+    if (removeFontName)
+        strncpy(_entryBtnStyle.labelText.mFont, removeFontName, sizeof(_entryBtnStyle.labelText.mFont) - 1);
 
     // Register built-in padding spacers. Negative IDs never conflict with real params.
     // heightFrac doubles as widthFrac when the entry is the sole occupant of a slot.
@@ -162,11 +174,20 @@ void UserTabPanel::removeEntry(int slotIdx, int entryIdx) {
     rebuild();
 }
 
-void UserTabPanel::moveSlot(int slotIdx, int delta) {
-    const int target = slotIdx + delta;
-    if (target < 0 || target >= (int)_slots.size()) return;
+void UserTabPanel::swapSlots(int slotIdx) {
+    if (slotIdx < 0 || slotIdx + 1 >= (int)_slots.size()) return;
     pushHistory();
-    std::swap(_slots[slotIdx], _slots[target]);
+    std::swap(_slots[slotIdx], _slots[slotIdx + 1]);
+    notifyChanged();
+    rebuild();
+}
+
+void UserTabPanel::swapEntries(int slotIdx, int entryIdx) {
+    assert(slotIdx >= 0 && slotIdx < (int)_slots.size());
+    auto& slot = _slots[slotIdx];
+    if (entryIdx < 0 || entryIdx + 1 >= (int)slot.params.size()) return;
+    pushHistory();
+    std::swap(slot.params[entryIdx], slot.params[entryIdx + 1]);
     notifyChanged();
     rebuild();
 }
@@ -358,17 +379,20 @@ IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
 }
 
 IControl* UserTabPanel::makeRemoveBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "x", _editBtnStyle))
+    return (new IVButtonControl(r, DefaultClickActionFunc, "✕", _entryBtnStyle))
         ->SetAnimationEndActionFunction([this, slotIdx, entryIdx](IControl*) {
             removeEntry(slotIdx, entryIdx);
         });
 }
 
-IControl* UserTabPanel::makeMoveBtn(const IRECT& r, int slotIdx, int delta, const char* label) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, label, _editBtnStyle))
-        ->SetAnimationEndActionFunction([this, slotIdx, delta](IControl*) {
-            moveSlot(slotIdx, delta);
-        });
+IControl* UserTabPanel::makeSwapSlotsBtn(const IRECT& r, int slotIdx) {
+    return (new IVButtonControl(r, DefaultClickActionFunc, "◄►", _swapBtnStyle))
+        ->SetAnimationEndActionFunction([this, slotIdx](IControl*) { swapSlots(slotIdx); });
+}
+
+IControl* UserTabPanel::makeSwapEntriesBtn(const IRECT& r, int slotIdx, int entryIdx) {
+    return (new IVButtonControl(r, DefaultClickActionFunc, "▲▼", _swapBtnStyle))
+        ->SetAnimationEndActionFunction([this, slotIdx, entryIdx](IControl*) { swapEntries(slotIdx, entryIdx); });
 }
 
 IControl* UserTabPanel::makeSaveBtn(const IRECT& r) {
@@ -461,7 +485,6 @@ void UserTabPanel::rebuild() {
     const int nCols = (int)_slots.size() + (_unlocked ? 1 : 0);
     if (nCols == 0) { pG->SetAllControlsDirty(); return; }
 
-    // Gap between adjacent slots (horizontal) and between stacked entries (vertical).
     constexpr float kGap = 5.f;
 
     // Column width weights: normal slot = 1.0; pad-only slot = its heightFrac (e.g. 0.25).
@@ -494,42 +517,45 @@ void UserTabPanel::rebuild() {
     const IColor kSlotOutlineColor  { 140, _editColor.R, _editColor.G, _editColor.B };
     const IColor kEntryOutlineColor {  80, _editColor.R, _editColor.G, _editColor.B };
 
+    // Swap-slots buttons: one per inter-slot gap, drawn in the header row.
+    // The button is wider than the 5px gap and overlaps both adjacent column headers;
+    // it is centred on the gap line so it doesn't obstruct the "+" buttons which are
+    // centred inside their own (wider) columns.
+    constexpr float kSwapBtnW = 60.f;
+    if (_unlocked) {
+        for (int s = 0; s < (int)_slots.size() - 1; ++s) {
+            const float cx = colLefts[s] + colWidths[s] + kGap / 2.f;
+            const IRECT swapR { cx - kSwapBtnW / 2.f, headerRow.T,
+                                cx + kSwapBtnW / 2.f, headerRow.B };
+            AddChildControl(makeSwapSlotsBtn(swapR, s));
+        }
+    }
+
     for (int s = 0; s < (int)_slots.size(); ++s) {
-        const IRECT sliceHeader  = _unlocked ? colRect(s, headerRow) : IRECT();
         const IRECT sliceContent = colRect(s, contentR);
         const auto& slot = _slots[s];
-
-        // Header row: [<]  [+ if room and not pad-only]  [>]
         const bool padOnly = slot.params.size() == 1 && isPad(slot.params[0]);
-        if (_unlocked) {
-            if (s > 0)
-                AddChildControl(makeMoveBtn(
-                    sliceHeader.SubRectHorizontal(3, 0), s, -1, "<"));
-            if (!padOnly && slot.hasRoom(_factories, 0.125f))
-                AddChildControl(makePlusBtn(
-                    sliceHeader.SubRectHorizontal(3, 1), s));
-            if (s < (int)_slots.size() - 1)
-                AddChildControl(makeMoveBtn(
-                    sliceHeader.SubRectHorizontal(3, 2), s, +1, ">"));
-        }
 
-        // Count valid entries and split frac totals: spacers take an absolute slice of
-        // sliceContent.H(); real controls share the remainder proportionally.
-        int   nValid        = 0;
-        float spacerFrac    = 0.f;  // sum of padding heightFracs
-        float realFrac      = 0.f;  // sum of real control heightFracs
+        // Header: "+" to add another entry to this slot (centred in the header cell).
+        if (_unlocked && !padOnly && slot.hasRoom(_factories, 0.125f))
+            AddChildControl(makePlusBtn(colRect(s, headerRow), s));
+
+        // Count valid entries and split frac totals.
+        int   nValid     = 0;
+        float spacerFrac = 0.f;
+        float realFrac   = 0.f;
         for (int p : slot.params) {
             if (!_factories.has(p)) continue;
             ++nValid;
             if (isPad(p)) spacerFrac += _factories.at(p).heightFrac;
             else          realFrac   += _factories.at(p).heightFrac;
         }
-        if (realFrac < 1e-4f) realFrac = 1.f;  // pad-only slot: avoid div-by-zero
+        if (realFrac < 1e-4f) realFrac = 1.f;
 
         const float slotH        = sliceContent.H();
-        const float spacerPx     = spacerFrac * slotH;  // spacers: absolute fraction of slot
+        const float spacerPx     = spacerFrac * slotH;
         const float availH       = slotH - kGap * std::max(nValid - 1, 0);
-        const float availForReal = availH - spacerPx;   // real controls share what's left
+        const float availForReal = availH - spacerPx;
 
         float yPx = 0.f;
         for (int e = 0; e < (int)slot.params.size(); ++e) {
@@ -537,36 +563,35 @@ void UserTabPanel::rebuild() {
             if (!_factories.has(paramId)) continue;
 
             const auto& desc   = _factories.at(paramId);
-            // Spacers:
-            //   standalone slot (padOnly) — the column IS the spacer; entry fills full height.
-            //   stacked inside a slot    — absolute fraction of slot height.
-            // Real controls: proportional share of remaining height.
             const float entryH = isPad(paramId)
                 ? (padOnly ? slotH : desc.heightFrac * slotH)
                 : (desc.heightFrac / realFrac) * availForReal;
             const IRECT entryR {
-                sliceContent.L,
-                sliceContent.T + yPx,
-                sliceContent.R,
-                sliceContent.T + yPx + entryH
+                sliceContent.L, sliceContent.T + yPx,
+                sliceContent.R, sliceContent.T + yPx + entryH
             };
 
             AddChildControl(desc.factory(entryR));
 
             if (_unlocked) {
-                // For pad-only slots the entry rect equals the full slot rect, so the
-                // entry outline would be identical to the slot outline — skip it to avoid
-                // drawing two borders on top of each other.
                 if (!padOnly)
                     AddChildControl(new BorderOverlay(entryR, kEntryOutlineColor));
-                const IRECT removeR = entryR.GetFromTRHC(kSmallBtnW, kEditHeaderH);
-                AddChildControl(makeRemoveBtn(removeR, s, e));
+                AddChildControl(makeRemoveBtn(entryR.GetFromTRHC(kSmallBtnW, kEditHeaderH), s, e));
             }
 
             yPx += entryH + kGap;
+
+            // Swap-entries button: same width as the slot swap button, centred horizontally
+            // in the slot column and vertically on the 5px gap — overlaps neighbours slightly.
+            if (_unlocked && e < (int)slot.params.size() - 1) {
+                const float cx = sliceContent.L + sliceContent.W() * 0.125f;  // left quarter
+                const float cy = sliceContent.T + yPx - kGap / 2.f;
+                const IRECT swapR { cx - kSwapBtnW / 2.f, cy - kEditHeaderH / 2.f,
+                                    cx + kSwapBtnW / 2.f, cy + kEditHeaderH / 2.f };
+                AddChildControl(makeSwapEntriesBtn(swapR, s, e));
+            }
         }
 
-        // Slot outline drawn after all entries so it sits on top of the entry outlines.
         if (_unlocked)
             AddChildControl(new BorderOverlay(sliceContent, kSlotOutlineColor));
     }
