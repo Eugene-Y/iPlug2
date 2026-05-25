@@ -81,7 +81,12 @@ struct NoteGlider {
     }
 
     // CC offset in note units, applied to the output (not the target).
-    void setCCOffset (T offset) { _ccOffset = offset; }
+    // Ramps to the new value over kCCSmoothBlks sub-blocks to prevent zipper noise.
+    void setCCOffset (T offset) {
+        if (offset == _tgtCCOffset) return;
+        _tgtCCOffset      = offset;
+        _ccSmoothRemaining = kCCSmoothBlks;
+    }
 
     // Advance one sub-block and return current Hz (including CC offset).
     T tick () {
@@ -96,6 +101,12 @@ struct NoteGlider {
                 _totalSubBlks = T (0);
                 _elapsed      = T (0);
             }
+        }
+        if (_ccSmoothRemaining > T (0)) {
+            _ccOffset += (_tgtCCOffset - _ccOffset) / _ccSmoothRemaining;
+            _ccSmoothRemaining -= T (1);
+            if (_ccSmoothRemaining <= T (0))
+                _ccOffset = _tgtCCOffset;
         }
         return utils::noteToFreq (_curNote + _ccOffset);
     }
@@ -112,7 +123,11 @@ private:
     bool _noteActive   = false;
     T    _totalSubBlks = T (0);
     T    _elapsed      = T (0);
-    T    _ccOffset     = T (0);
+    T    _ccOffset          = T (0);
+    T    _tgtCCOffset       = T (0);
+    T    _ccSmoothRemaining = T (0);
+
+    static constexpr int kCCSmoothBlks = 8; // ~2.9ms at 44.1kHz / 16-sample sub-blocks
 
     static T _computeTarget (int midiNote, int octShift, int semiShift, int centShift) {
         return T (midiNote) + T (octShift) * T (12) + T (semiShift) + T (centShift) / T (100);
