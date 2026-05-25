@@ -77,9 +77,13 @@ namespace hvoya::midi_cc {
                 }
                 
                 
-            void setCCNumber (CC_t cc) override { 
+            void setCCNumber (CC_t cc) override {
                 _cc = cc;
                 setMinMaxDisplaysToFullRange();
+            }
+
+            void clearCCNumber() override {
+                clearCC();
             }
 
 
