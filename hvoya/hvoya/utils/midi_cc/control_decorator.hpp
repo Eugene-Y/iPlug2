@@ -34,6 +34,7 @@ namespace hvoya::midi_cc {
             std::string _maxDisplay;
             PId_t       _paramId;
             CC_t        _cc;
+            int         _midiBaseTag = 0; // VST3: flat tag of the first MIDI CC submenu item
 
             // not safe if the Delegate params are not yet initialized
             auto getParam() {
@@ -114,6 +115,10 @@ namespace hvoya::midi_cc {
 
 				contextMenu.AddItem (getParam()->GetName(), -1, IPopupMenu::Item::Flags::kTitle);
 				contextMenu.AddSeparator();
+                // VST3 flattens submenus into sequential tags; record the offset so
+                // OnContextSelection can normalize the tag back to the local submenu index.
+                // offset = contextMenu items before us (2: title + sep) + 1 (group-start tag)
+                _midiBaseTag = contextMenu.NItems() + 1;
                 contextMenu.AddItem ("MIDI CC", subMenu);
                 
                 C::CreateContextMenu (contextMenu);
@@ -121,7 +126,15 @@ namespace hvoya::midi_cc {
 
             
             void OnContextSelection (int itemSelected) override {
-                if (tryProcessMidiCCMenuSelection (itemSelected))
+#if defined VST3_API || defined VST3C_API
+                // In VST3 the context menu delivers a flat sequential tag, not a
+                // per-submenu index. Normalise back to the local submenu index so
+                // tryProcessMidiCCMenuSelection sees 0-based values.
+                const int localIdx = itemSelected - _midiBaseTag;
+#else
+                const int localIdx = itemSelected;
+#endif
+                if (tryProcessMidiCCMenuSelection (localIdx))
                     return;
                 C::OnContextSelection (itemSelected);
             }
@@ -173,8 +186,10 @@ namespace hvoya::midi_cc {
                 
                 const PId_t pId = this->GetParamIdx();
                 LOGD << "MIDI CC: param " << pId << ": action " << action;
-                this->GetDelegate()->SendArbitraryMsgFromDelegate (MT::mtag_listen_to_pid, sizeof (PId_t), &pId);
-                this->GetDelegate()->SendArbitraryMsgFromDelegate (action, sizeof (PId_t), &pId);
+                // SendArbitraryMsgFromUI correctly routes to the processor in all formats
+                // (including VST3 where GetDelegate() is the controller, not the processor).
+                this->GetDelegate()->SendArbitraryMsgFromUI (MT::mtag_listen_to_pid, iplug::kNoTag, sizeof (PId_t), &pId);
+                this->GetDelegate()->SendArbitraryMsgFromUI (action, iplug::kNoTag, sizeof (PId_t), &pId);
                 
                 return true;
             }
