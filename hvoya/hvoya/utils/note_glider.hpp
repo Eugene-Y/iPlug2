@@ -80,12 +80,15 @@ struct NoteGlider {
         }
     }
 
+    // CC smooth duration in sub-blocks. Call whenever sample rate or OS factor changes.
+    void setCCSmoothBlks (T blks) { _ccSmoothBlks = blks > T (0) ? blks : T (0); }
+
     // CC offset in note units, applied to the output (not the target).
-    // Ramps to the new value over kCCSmoothBlks sub-blocks to prevent zipper noise.
+    // Ramps to the new value over _ccSmoothBlks sub-blocks to prevent zipper noise.
     void setCCOffset (T offset) {
         if (offset == _tgtCCOffset) return;
-        _tgtCCOffset      = offset;
-        _ccSmoothRemaining = kCCSmoothBlks;
+        _tgtCCOffset       = offset;
+        _ccSmoothRemaining = _ccSmoothBlks;
     }
 
     // Advance one sub-block and return current Hz (including CC offset).
@@ -125,9 +128,8 @@ private:
     T    _elapsed      = T (0);
     T    _ccOffset          = T (0);
     T    _tgtCCOffset       = T (0);
+    T    _ccSmoothBlks      = T (8);
     T    _ccSmoothRemaining = T (0);
-
-    static constexpr int kCCSmoothBlks = 8; // ~2.9ms at 44.1kHz / 16-sample sub-blocks
 
     static T _computeTarget (int midiNote, int octShift, int semiShift, int centShift) {
         return T (midiNote) + T (octShift) * T (12) + T (semiShift) + T (centShift) / T (100);
