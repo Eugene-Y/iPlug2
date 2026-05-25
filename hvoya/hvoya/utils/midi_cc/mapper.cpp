@@ -76,23 +76,40 @@ namespace hvoya::midi_cc {
     }
             
     
-    std::vector <Mapper::ResolvedParam> Mapper::processMidiCC (CC_t cc, double normVal) {
+    std::vector <Mapper::ResolvedParam> Mapper::processMidiCC (CC_t cc, double normVal, int midiChannel) {
         //MCCM_LOGD << "process midi cc " << cc;
         if (_isLearning) {
             addMapping (cc, _listeningPId);
             _isLearning = false;
         }
-        
+
         auto it = _ccToParamMap.find (cc);
         if (it != _ccToParamMap.end()) {
             std::vector <ResolvedParam> mapped;
             for (const auto& pM : it->second) {
-                mapped.emplace_back (pM.paramId, pM.mapVal (normVal));
+                if (midiChannel == 0 || pM.channelMatches (midiChannel))
+                    mapped.emplace_back (pM.paramId, pM.mapVal (normVal));
             }
             return mapped;
         }
-        
+
         return {};
+    }
+
+
+    int Mapper::getCCForParam (PId_t id) const {
+        for (const auto& [cc, params] : _ccToParamMap)
+            for (const auto& pm : params)
+                if (pm.paramId == id)
+                    return cc;
+        return cc_not_set;
+    }
+
+
+    void Mapper::setChannelForParam (PId_t id, int channel) {
+        for (auto& [cc, params] : _ccToParamMap)
+            for (auto& pm : params)
+                if (pm.paramId == id) { pm.channel = channel; return; }
     }
         
         

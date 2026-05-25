@@ -35,6 +35,9 @@ namespace hvoya::utils {
     
     template <typename T>
     T noteToFreq (T n, T A4 = 440) { return A4 * std::pow (T (2), T (n - 69) / 12); }
+
+    template <typename T>
+    T freqToNote (T f, T A4 = 440) { return T (69) + T (12) * std::log2 (f / A4); }
     
 	
 	template <typename T>

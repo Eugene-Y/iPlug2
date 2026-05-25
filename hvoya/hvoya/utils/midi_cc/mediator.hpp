@@ -77,8 +77,9 @@ namespace hvoya::midi_cc {
                 assert (msg.StatusMsg() == IMidiMsg::kControlChange);
                 const auto cc = msg.ControlChangeIdx();
                 const double normValue = msg.ControlChange (cc);
-                //LOGD << "ProcessMidiCC " << cc << " val " << normValue;
-                const auto mappedParams = _mapper.processMidiCC (cc, normValue);
+                const int channel1Idx = msg.Channel() + 1;  // IMidiMsg::Channel() is 0-indexed
+                //LOGD << "ProcessMidiCC " << cc << " val " << normValue << " ch " << channel1Idx;
+                const auto mappedParams = _mapper.processMidiCC (cc, normValue, channel1Idx);
                 for (auto& p : mappedParams) {
                     IParam* param = _plugin->GetParam (p.id);
                     _plugin->BeginInformHostOfParamChange (p.id);
@@ -88,17 +89,30 @@ namespace hvoya::midi_cc {
                     _plugin->EndInformHostOfParamChange (p.id);
                 }
             }
-            
-            
+
+
             void serialize (IByteChunk& bc) const {
                 mapper_serializer::serialize (_mapper, bc);
             }
-            
-            
-            int unserialize (const IByteChunk& bc, int startPos) {
-                startPos = mapper_serializer::unserialize (_mapper, bc, startPos);
+
+
+            // plugVersion: the plugin's serialized version_hex (0 = old/unknown).
+            int unserialize (const IByteChunk& bc, int startPos, int plugVersion = 0) {
+                startPos = mapper_serializer::unserialize (_mapper, bc, startPos, plugVersion);
                 UpdateMidiControllableUI();
                 return startPos;
+            }
+
+
+            // Returns the CC number mapped to the given param, or -1 if none.
+            int getCCForParam (PId_t paramId) const {
+                return _mapper.getCCForParam (paramId);
+            }
+
+
+            // Sets the MIDI channel filter for an existing CC mapping (0=all, 1-16=specific).
+            void setChannelForParam (PId_t paramId, int channel) {
+                _mapper.setChannelForParam (paramId, channel);
             }
             
             

@@ -11,6 +11,8 @@ namespace hvoya::midi_cc::mapper_serializer {
     #endif
     
     
+    static constexpr int kChannelVersion = 0x00000300;
+
     void serialize (const Mapper& mapper, iplug::IByteChunk& chunk) {
         const auto& map = mapper.getCCtoParamMap();
         const size_t mapSize = map.size();
@@ -27,16 +29,18 @@ namespace hvoya::midi_cc::mapper_serializer {
                 chunk.Put (&param.cc);
                 chunk.Put (&param.minVal);
                 chunk.Put (&param.maxVal);
+                chunk.Put (&param.channel);  // added in kChannelVersion
             }
         }
     }
-    
-    
-    int unserialize (Mapper& mapper, const iplug::IByteChunk& chunk, int startPos) {
+
+
+    int unserialize (Mapper& mapper, const iplug::IByteChunk& chunk, int startPos, int plugVersion) {
+        const bool hasChannel = plugVersion >= kChannelVersion;
         CCtoParamMap_t map;
         size_t mapSize = 0;
         startPos = chunk.Get (&mapSize, startPos);
-        CCMAP_LOGD << "unserializing. map size: " << mapSize;
+        CCMAP_LOGD << "unserializing. map size: " << mapSize << " hasChannel: " << hasChannel;
         for (size_t i = 0; i < mapSize; i++) {
             CC_t cc = 0;
             startPos = chunk.Get (&cc, startPos);
@@ -51,6 +55,10 @@ namespace hvoya::midi_cc::mapper_serializer {
                 startPos = chunk.Get (&pm.cc,      startPos);
                 startPos = chunk.Get (&pm.minVal,  startPos);
                 startPos = chunk.Get (&pm.maxVal,  startPos);
+                if (hasChannel)
+                    startPos = chunk.Get (&pm.channel, startPos);
+                else
+                    pm.channel = 0;
             }
             map [cc] = params;
         }

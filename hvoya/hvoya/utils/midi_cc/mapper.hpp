@@ -16,11 +16,12 @@
 namespace hvoya::midi_cc {
     
     struct ParamCCMapping {
-        PId_t paramId;
-        CC_t cc;
-        double minVal { 0.0 };
-        double maxVal { 1.0 };
-        
+        PId_t  paramId;
+        CC_t   cc;
+        double minVal   { 0.0 };
+        double maxVal   { 1.0 };
+        int    channel  { 0 };   // 0 = all channels, 1-16 = specific (1-indexed)
+
         ParamCCMapping (PId_t id = pid_not_set, CC_t cc = cc_not_set)
           : paramId (id), cc (cc) {}
 
@@ -29,6 +30,10 @@ namespace hvoya::midi_cc {
             mapped = minVal + mapped * (maxVal - minVal);
             assert (mapped >= 0 && mapped <= 1);
             return mapped;
+        }
+
+        bool channelMatches (int midiChannel1Indexed) const {
+            return channel == 0 || channel == midiChannel1Indexed;
         }
     };
     
@@ -56,9 +61,16 @@ namespace hvoya::midi_cc {
             
             void clearAllMappings ();
             void clearMappingForParam (PId_t);
-            
-            std::vector <ResolvedParam> processMidiCC (CC_t, double normVal);
-            
+
+            // midiChannel: 1-indexed (1-16); pass 0 to skip channel filtering
+            std::vector <ResolvedParam> processMidiCC (CC_t, double normVal, int midiChannel = 0);
+
+            // Returns the CC number mapped to the given param, or cc_not_set if none.
+            int getCCForParam (PId_t) const;
+
+            // Sets the channel filter for an existing mapping (0=all, 1-16=specific).
+            void setChannelForParam (PId_t, int channel);
+
             const CCtoParamMap_t& getCCtoParamMap() const { return _ccToParamMap; }
             void setCCtoParamMap (CCtoParamMap_t&& map) { _ccToParamMap = std::move (map); }
             
