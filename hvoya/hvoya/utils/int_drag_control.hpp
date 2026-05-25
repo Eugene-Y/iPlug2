@@ -49,7 +49,12 @@ public:
         if (!p) return;
 
         WDL_String str;
-        str.SetFormatted(32, "%d", static_cast<int>(std::round(p->FromNormalized(GetValue()))));
+        const double rawVal = p->FromNormalized(GetValue());
+        // Use param's GetDisplay so enum labels (e.g. "all") and custom DisplayFuncs work.
+        // Fall back to %d only if GetDisplay leaves the string empty.
+        p->GetDisplay(rawVal, false, str, true);
+        if (str.GetLength() == 0)
+            str.SetFormatted(32, "%d", static_cast<int>(std::round(rawVal)));
 
         g.DrawText(mStyle.valueText.WithFGColor(GetColor(over ? kX1 : kFG)),
                    str.Get(), mRECT, &mBlend);
