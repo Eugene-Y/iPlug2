@@ -200,7 +200,8 @@ public:
 
     // ── Layout constants — adjust these to tune the panel geometry ───────────────
     static constexpr float kEditHeaderH   = 18.f;   // height of the header row (lock/edit btn + slot headers)
-    static constexpr float kEntryGap      = 2.f;    // px gap between entries within a slot, and between columns
+    static constexpr float kEntryGap      = 2.f;    // px gap between entries within a slot (vertical)
+    static constexpr float kSlotGap       = 0.f;    // px gap between slot columns (horizontal)
     static constexpr float kSwapBtnW      = 60.f;   // width of slot-swap and entry-swap buttons
     static constexpr float kPlusBtnMaxW   = 80.f;   // max width of "+" button (clamped to available space)
     static constexpr float kPlusBtnMaxH   = 40.f;   // max height of "+" button

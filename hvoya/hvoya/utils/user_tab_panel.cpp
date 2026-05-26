@@ -506,7 +506,7 @@ void UserTabPanel::rebuild() {
     if (_unlocked) totalWeight += 1.f;  // new-slot column has weight 1
 
     // Pre-compute column left edges and widths proportional to weight.
-    const float availW = contentR.W() - kEntryGap * (nCols - 1);
+    const float availW = contentR.W() - kSlotGap * (nCols - 1);
     std::vector<float> colWidths(nCols), colLefts(nCols);
     colLefts[0] = contentR.L;
     for (int s = 0; s < (int)_slots.size(); ++s)
@@ -514,7 +514,7 @@ void UserTabPanel::rebuild() {
     if (_unlocked)
         colWidths[nCols - 1] = availW * 1.f / totalWeight;
     for (int i = 1; i < nCols; ++i)
-        colLefts[i] = colLefts[i-1] + colWidths[i-1] + kEntryGap;
+        colLefts[i] = colLefts[i-1] + colWidths[i-1] + kSlotGap;
 
     auto colRect = [&](int col, const IRECT& row) -> IRECT {
         return { colLefts[col], row.T, colLefts[col] + colWidths[col], row.B };
@@ -530,7 +530,7 @@ void UserTabPanel::rebuild() {
     // centred inside their own (wider) columns.
     if (_unlocked) {
         for (int s = 0; s < (int)_slots.size() - 1; ++s) {
-            const float cx = colLefts[s] + colWidths[s] + kEntryGap / 2.f;
+            const float cx = colLefts[s] + colWidths[s] + kSlotGap / 2.f;
             const IRECT swapR { cx - kSwapBtnW / 2.f, headerRow.T,
                                 cx + kSwapBtnW / 2.f, headerRow.B };
             AddChildControl(makeSwapSlotsBtn(swapR, s));
