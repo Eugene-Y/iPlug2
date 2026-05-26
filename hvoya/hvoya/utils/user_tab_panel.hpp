@@ -198,8 +198,12 @@ public:
     void OnAttached() override { rebuild(); }
     void OnPopupMenuSelection(IPopupMenu* pMenu, int valIdx) override;
 
-    // Expose so callers can reserve space in the padding row above the content area.
-    static constexpr float kEditHeaderH = 18.f;
+    // ── Layout constants — adjust these to tune the panel geometry ───────────────
+    static constexpr float kEditHeaderH   = 18.f;   // height of the header row (lock/edit btn + slot headers)
+    static constexpr float kEntryGap      = 2.f;    // px gap between entries within a slot, and between columns
+    static constexpr float kSwapBtnW      = 60.f;   // width of slot-swap and entry-swap buttons
+    static constexpr float kPlusBtnMaxW   = 80.f;   // max width of "+" button (clamped to available space)
+    static constexpr float kPlusBtnMaxH   = 40.f;   // max height of "+" button
 
     // Padding pseudo-param IDs (negative — never conflict with real plugin params >= 0).
     // Added to an existing slot  → vertical spacer (fraction of slot height).
@@ -214,11 +218,10 @@ private:
     // Tags on IPopupMenu::Item encode the control ID: tag = id + kPickerTagOffset.
     // kPickerTagOffset = -kPad1_2 = 3, so the most-negative valid ID (kPad1_2 = -3)
     // maps to tag 0. All valid tags are >= 0; iPlug2's default "no tag" sentinel is -1.
-    static constexpr int kPickerTagOffset = 3;
-
-private:
-    static constexpr float kSmallBtnW    = 20.f;
-    static constexpr float kLockBtnW     = 40.f;
+    static constexpr int   kPickerTagOffset = 3;
+    static constexpr float kSwapEntryOffX   = 0.125f; // horizontal position of entry-swap btn (fraction of slot width)
+    static constexpr float kSmallBtnW       = 20.f;   // width of ✕ remove button
+    static constexpr float kLockBtnW        = 40.f;   // width of lock/edit button
 
     ControlRegistry                _factories;  // owned — lambdas inside capture mediator by ref (stable)
     std::vector<Slot>              _slots;

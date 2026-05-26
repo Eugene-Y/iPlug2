@@ -14,12 +14,14 @@ using namespace igraphics;
 
 namespace {
 
+static constexpr float kBorderStroke = 1.f;  // edit-mode border overlay stroke width (px)
+
 // Thin transparent border drawn on top of a control rect in edit mode.
 // IsHit returns false so mouse events pass through to the controls beneath.
 struct BorderOverlay : public IControl {
     IColor mBorderColor;
     BorderOverlay(const IRECT& r, IColor col) : IControl(r), mBorderColor(col) {}
-    void Draw(IGraphics& g) override { g.DrawRect(mBorderColor, mRECT, nullptr, 1.f); }
+    void Draw(IGraphics& g) override { g.DrawRect(mBorderColor, mRECT, nullptr, kBorderStroke); }
     bool IsHit(float, float) const override { return false; }
 };
 
@@ -371,7 +373,7 @@ IControl* UserTabPanel::makeLockBtn(const IRECT& r) {
 }
 
 IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
-    const IRECT btnR = r.GetCentredInside(std::min(r.W(), 80.f), std::min(r.H(), 40.f));
+    const IRECT btnR = r.GetCentredInside(std::min(r.W(), kPlusBtnMaxW), std::min(r.H(), kPlusBtnMaxH));
     return (new IVButtonControl(btnR, DefaultClickActionFunc, "+", _editBtnStyle))
         ->SetAnimationEndActionFunction([this, slotIdx, btnR](IControl*) {
             showParamPicker(slotIdx, btnR);
@@ -449,8 +451,15 @@ void UserTabPanel::clearChildren() {
     auto* pG = GetUI();
     if (!pG) { mChildren.Empty(false); return; }
     for (int i = NChildren() - 1; i >= 0; --i) {
-        pG->RemoveControl(GetChild(i));  // deletes the control
-        mChildren.Delete(i, false);       // remove stale ptr from our list
+        auto* child = GetChild(i);
+        // IContainerBase children are attached to IGraphics directly via AttachControl.
+        // RemoveControl on the outer container only deletes the container itself;
+        // the inner children stay in pG->mControls as invisible orphans.  Strip them first.
+        if (auto* nested = dynamic_cast<IContainerBase*>(child))
+            for (int j = nested->NChildren() - 1; j >= 0; --j)
+                pG->RemoveControl(nested->GetChild(j));
+        pG->RemoveControl(child);
+        mChildren.Delete(i, false);
     }
 }
 
@@ -485,8 +494,6 @@ void UserTabPanel::rebuild() {
     const int nCols = (int)_slots.size() + (_unlocked ? 1 : 0);
     if (nCols == 0) { pG->SetAllControlsDirty(); return; }
 
-    constexpr float kGap = 5.f;
-
     // Column width weights: normal slot = 1.0; pad-only slot = its heightFrac (e.g. 0.25).
     std::vector<float> slotWeights(_slots.size(), 1.f);
     for (int s = 0; s < (int)_slots.size(); ++s) {
@@ -499,7 +506,7 @@ void UserTabPanel::rebuild() {
     if (_unlocked) totalWeight += 1.f;  // new-slot column has weight 1
 
     // Pre-compute column left edges and widths proportional to weight.
-    const float availW = contentR.W() - kGap * (nCols - 1);
+    const float availW = contentR.W() - kEntryGap * (nCols - 1);
     std::vector<float> colWidths(nCols), colLefts(nCols);
     colLefts[0] = contentR.L;
     for (int s = 0; s < (int)_slots.size(); ++s)
@@ -507,7 +514,7 @@ void UserTabPanel::rebuild() {
     if (_unlocked)
         colWidths[nCols - 1] = availW * 1.f / totalWeight;
     for (int i = 1; i < nCols; ++i)
-        colLefts[i] = colLefts[i-1] + colWidths[i-1] + kGap;
+        colLefts[i] = colLefts[i-1] + colWidths[i-1] + kEntryGap;
 
     auto colRect = [&](int col, const IRECT& row) -> IRECT {
         return { colLefts[col], row.T, colLefts[col] + colWidths[col], row.B };
@@ -518,13 +525,12 @@ void UserTabPanel::rebuild() {
     const IColor kEntryOutlineColor {  80, _editColor.R, _editColor.G, _editColor.B };
 
     // Swap-slots buttons: one per inter-slot gap, drawn in the header row.
-    // The button is wider than the 5px gap and overlaps both adjacent column headers;
+    // The button is wider than kEntryGap and overlaps both adjacent column headers;
     // it is centred on the gap line so it doesn't obstruct the "+" buttons which are
     // centred inside their own (wider) columns.
-    constexpr float kSwapBtnW = 60.f;
     if (_unlocked) {
         for (int s = 0; s < (int)_slots.size() - 1; ++s) {
-            const float cx = colLefts[s] + colWidths[s] + kGap / 2.f;
+            const float cx = colLefts[s] + colWidths[s] + kEntryGap / 2.f;
             const IRECT swapR { cx - kSwapBtnW / 2.f, headerRow.T,
                                 cx + kSwapBtnW / 2.f, headerRow.B };
             AddChildControl(makeSwapSlotsBtn(swapR, s));
@@ -537,7 +543,14 @@ void UserTabPanel::rebuild() {
         const bool padOnly = slot.params.size() == 1 && isPad(slot.params[0]);
 
         // Header: "+" to add another entry to this slot (centred in the header cell).
-        if (_unlocked && !padOnly && slot.hasRoom(_factories, 0.125f))
+        // Show the button if at least one registered (non-pad) item fits — don't use a
+        // hardcoded threshold because the smallest item may be smaller than any fixed value.
+        const bool canAddMore = std::any_of(
+            _factories.begin(), _factories.end(),
+            [&](const ControlRegistry::Entry& e) {
+                return !isPad(e.id) && slot.hasRoom(_factories, e.desc.heightFrac);
+            });
+        if (_unlocked && !padOnly && canAddMore)
             AddChildControl(makePlusBtn(colRect(s, headerRow), s));
 
         // Count valid entries and split frac totals.
@@ -554,7 +567,7 @@ void UserTabPanel::rebuild() {
 
         const float slotH        = sliceContent.H();
         const float spacerPx     = spacerFrac * slotH;
-        const float availH       = slotH - kGap * std::max(nValid - 1, 0);
+        const float availH       = slotH - kEntryGap * std::max(nValid - 1, 0);
         const float availForReal = availH - spacerPx;
 
         float yPx = 0.f;
@@ -579,13 +592,13 @@ void UserTabPanel::rebuild() {
                 AddChildControl(makeRemoveBtn(entryR.GetFromTRHC(kSmallBtnW, kEditHeaderH), s, e));
             }
 
-            yPx += entryH + kGap;
+            yPx += entryH + kEntryGap;
 
             // Swap-entries button: same width as the slot swap button, centred horizontally
-            // in the slot column and vertically on the 5px gap — overlaps neighbours slightly.
+            // in the slot column and vertically on the gap — overlaps neighbours slightly.
             if (_unlocked && e < (int)slot.params.size() - 1) {
-                const float cx = sliceContent.L + sliceContent.W() * 0.125f;  // left quarter
-                const float cy = sliceContent.T + yPx - kGap / 2.f;
+                const float cx = sliceContent.L + sliceContent.W() * kSwapEntryOffX;
+                const float cy = sliceContent.T + yPx - kEntryGap / 2.f;
                 const IRECT swapR { cx - kSwapBtnW / 2.f, cy - kEditHeaderH / 2.f,
                                     cx + kSwapBtnW / 2.f, cy + kEditHeaderH / 2.f };
                 AddChildControl(makeSwapEntriesBtn(swapR, s, e));
