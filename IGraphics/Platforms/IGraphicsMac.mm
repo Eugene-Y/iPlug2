@@ -146,12 +146,12 @@ void IGraphicsMac::CloseWindow()
     eglTerminate([pView getEGLDisplay]);
 #endif
 
+    mView = nullptr; // null before release so any pending UpdateTooltips block exits early
     [pView removeAllToolTips];
     [pView killTimer];
     [pView removeFromSuperview];
     [pView release];
-      
-    mView = nullptr;
+
     OnViewDestroyed();
   }
 }
@@ -379,11 +379,13 @@ void IGraphicsMac::UpdateTooltips()
     return;
 
   IGraphicsMac* pThis = this;
+  void* capturedView = mView;
 
   dispatch_async(dispatch_get_main_queue(), ^{
     pThis->mTooltipUpdatePending.store(false);
 
-    if (!pThis->mView)
+    // Bail if view was closed or replaced since we were queued
+    if (!pThis->mView || pThis->mView != capturedView)
       return;
 
     @autoreleasepool {
