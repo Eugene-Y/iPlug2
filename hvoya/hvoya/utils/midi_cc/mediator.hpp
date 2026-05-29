@@ -104,6 +104,19 @@ namespace hvoya::midi_cc {
             }
 
 
+            // ── CC map access (for external serialization) ───────────────────
+
+            const CCtoParamMap_t& getCCtoParamMap() const {
+                return _mapper.getCCtoParamMap();
+            }
+
+            // Replace the entire CC map and refresh the UI.
+            void setCCtoParamMap (CCtoParamMap_t map) {
+                _mapper.setCCtoParamMap (std::move (map));
+                refreshUI();
+            }
+
+
             // Returns the CC number mapped to the given param, or -1 if none.
             int getCCForParam (PId_t paramId) const {
                 return _mapper.getCCForParam (paramId);

@@ -32,6 +32,7 @@
 #include <IControl.h>
 #include <IControls.h>
 #include <filesystem>
+#include <functional>
 #include <hvoya/utils/preset_manager.hpp>
 
 namespace hvoya::ui {
@@ -65,6 +66,12 @@ public:
     PresetStripControl& setShowUndo        (bool v)          { _showUndo     = v;  return *this; }
     PresetStripControl& setShowDir         (bool v)          { _showDir      = v;  return *this; }
     PresetStripControl& setShowScan        (bool v)          { _showScan     = v;  return *this; }
+
+    // Called whenever the strip is toggled. `collapsed` reflects the NEW state.
+    // Use to show/hide companion controls (e.g. CC save/load buttons).
+    PresetStripControl& setOnToggle (std::function<void(bool collapsed)> fn) {
+        _onToggle = std::move(fn); return *this;
+    }
 
     // ── Drawing ───────────────────────────────────────────────────────────────
 
@@ -110,7 +117,11 @@ public:
         const Zone z = hitZone(x, y);
         if (_pressedZone != z) { _pressedZone = z; SetDirty(false); }
         switch (z) {
-            case Zone::Toggle: _collapsed = !_collapsed; SetDirty(false); break;
+            case Zone::Toggle:
+                _collapsed = !_collapsed;
+                if (_onToggle) _onToggle(_collapsed);
+                SetDirty(false);
+                break;
             case Zone::Prev:   _manager.prev();          SetDirty(false); break;
             case Zone::Next:   _manager.next();          SetDirty(false); break;
             case Zone::Undo:   _manager.undo();          SetDirty(false); break;
@@ -257,12 +268,13 @@ private:
             });
     }
 
-    PresetManager& _manager;
-    Zone           _hoverZone      = Zone::None;
-    Zone           _pressedZone    = Zone::None;
+    PresetManager&                  _manager;
+    std::function<void(bool)>       _onToggle;
+    Zone                            _hoverZone      = Zone::None;
+    Zone                            _pressedZone    = Zone::None;
     bool           _collapsed      = true;
-    std::string    _collapsedLabel = "presets >";
-    std::string    _expandedLabel  = "<";
+    std::string    _collapsedLabel = "presets >>";
+    std::string    _expandedLabel  = "<<";
     bool           _showSaveLoad    = true;
     bool           _showUndo        = true;
     bool           _showDir         = true;

@@ -68,5 +68,6 @@ namespace hvoya::midi_cc::mapper_serializer {
     
     
     #undef CCMAP_LOGD
-    
+
 }
+
