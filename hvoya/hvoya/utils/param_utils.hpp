@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <vector>
+#include <string>
+#include <functional>
 #include <IPlugParameter.h>
 
 
@@ -38,6 +40,16 @@ namespace hvoya::params {
             }
             const auto& last = segs.back();
             str.SetFormatted(64, "%.*f %s", last.decimals, value / last.divisor, last.unit);
+        };
+    }
+
+
+    // Wraps a std::string-returning function as an IParam::DisplayFunc.
+    // Lets you write display logic in modern C++ (std::format etc.) without touching WDL_String.
+    inline IParam::DisplayFunc makeDisplayFunc (std::function <std::string (double)> fn)
+    {
+        return [fn = std::move (fn)](double v, WDL_String& str) {
+            str.Set (fn (v).c_str());
         };
     }
 
