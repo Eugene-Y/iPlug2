@@ -20,6 +20,10 @@
 #include "IPlugStructs.h"
 #include "IPlugLogger.h"
 
+#include <functional>
+#include <string>
+#include <string_view>
+
 BEGIN_IPLUG_NAMESPACE
 
 /** Base class that contains plug-in info and state manipulation methods */
@@ -273,17 +277,27 @@ public:
    * @return int The new chunk position (endPos). */
   int UnserializePresets(const IByteChunk& chunk, int startPos); 
   
-  /** Writes a call to MakePreset() for the current preset to a new text file
-   * @param file The full path of the file to write or overwrite. */
+  /** Returns a MakePreset() call for the current preset as a string. */
+  std::string GetPresetSrc() const;
+
+  /** Returns a MakePresetFromNamedParams() call for the current preset as a string.
+   * @param paramName callable that maps a parameter index to its enum name string */
+  std::string GetPresetFromNamedParamsSrc(std::function<std::string_view(int)> paramName) const;
+
+  /** Returns a MakePresetFromBlob() call for the current preset as a string. */
+  std::string GetPresetBlobSrc() const;
+
+  /** Appends GetPresetSrc() to a file.
+   * @param file The full path of the file. */
   void DumpMakePresetSrc(const char* file) const;
 
-  /** Writes a call to MakePresetFromNamedParams() for the current preset to a new text file
-   * @param file The full path of the file to write or overwrite
-   * @param paramEnumNames A list of all parameter names. e.g. const char* pParamNames[] = {"kParam1", "kParam2", "kParam3"}; */
-  void DumpMakePresetFromNamedParamsSrc(const char* file, const char* paramEnumNames[]) const;
+  /** Appends GetPresetFromNamedParamsSrc() to a file.
+   * @param file The full path of the file
+   * @param paramName callable that maps a parameter index to its enum name string */
+  void DumpMakePresetFromNamedParamsSrc(const char* file, std::function<std::string_view(int)> paramName) const;
 
-  /** Writes a call to MakePresetFromBlob() for the current preset to a new text file
-   * @param file The full path of the file to write or overwrite. */
+  /** Appends GetPresetBlobSrc() to a file.
+   * @param file The full path of the file. */
   void DumpPresetBlob(const char* file) const;
 
   /** Save current state as a VST2 format preset

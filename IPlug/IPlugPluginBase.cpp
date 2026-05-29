@@ -17,6 +17,10 @@
 #include "wdlendian.h"
 #include "wdl_base64.h"
 
+#include <functional>
+#include <string>
+#include <string_view>
+
 using namespace iplug;
 
 IPluginBase::IPluginBase(int nParams, int nPresets)
@@ -538,111 +542,104 @@ int IPluginBase::UnserializePresets(const IByteChunk& chunk, int startPos)
   return pos;
 }
 
-void IPluginBase::DumpMakePresetSrc(const char* filename) const
+static std::string FormatParamVal(const IParam* pParam)
 {
-  bool sDumped = false;
-  if (!sDumped)
+  char buf[32];
+  switch (pParam->Type())
   {
-    sDumped = true;
-    int i, n = NParams();
-    FILE* fp = fopen(filename, "a");
-    
-    if (!fp)
-      return;
-    
-    int idx = GetCurrentPresetIdx();
-    fprintf(fp, "MakePreset(\"%s\"", GetPresetName(idx));
-    for (i = 0; i < n; ++i)
-    {
-      const IParam* pParam = GetParam(i);
-      constexpr int maxLen = 32;
-      char paramVal[maxLen];
-      
-      switch (pParam->Type())
-      {
-        case IParam::kTypeBool:
-          snprintf(paramVal, maxLen, "%s", (pParam->Bool() ? "true" : "false"));
-          break;
-        case IParam::kTypeInt:
-          snprintf(paramVal, maxLen, "%d", pParam->Int());
-          break;
-        case IParam::kTypeEnum:
-          snprintf(paramVal, maxLen, "%d", pParam->Int());
-          break;
-        case IParam::kTypeDouble:
-        default:
-          snprintf(paramVal, maxLen, "%.6f", pParam->Value());
-          break;
-      }
-      fprintf(fp, ", %s", paramVal);
-    }
-    fprintf(fp, ");\n");
-    fclose(fp);
+    case IParam::kTypeBool:
+      return pParam->Bool() ? "true" : "false";
+    case IParam::kTypeInt:
+    case IParam::kTypeEnum:
+      snprintf(buf, sizeof(buf), "%d", pParam->Int());
+      break;
+    case IParam::kTypeDouble:
+    default:
+      snprintf(buf, sizeof(buf), "%.6f", pParam->Value());
+      break;
   }
+  return buf;
 }
 
-void IPluginBase::DumpMakePresetFromNamedParamsSrc(const char* filename, const char* paramEnumNames[]) const
+std::string IPluginBase::GetPresetSrc() const
 {
-  bool sDumped = false;
-  
-  if (!sDumped)
+  const int idx = GetCurrentPresetIdx();
+  std::string s = "MakePreset(\"";
+  s += GetPresetName(idx);
+  s += "\"";
+  for (int i = 0; i < NParams(); ++i)
   {
-    sDumped = true;
-    int i, n = NParams();
-    FILE* fp = fopen(filename, "a");
-    
-    if (!fp)
-      return;
-    
-    int idx = GetCurrentPresetIdx();
-    fprintf(fp, "  MakePresetFromNamedParams(\"%s\", %d", GetPresetName(idx), n);
-    for (i = 0; i < n; ++i)
-    {
-      const IParam* pParam = GetParam(i);
-      constexpr int maxLen = 32;
-      char paramVal[maxLen];
-      switch (pParam->Type())
-      {
-        case IParam::kTypeBool:
-          snprintf(paramVal, maxLen, "%s", (pParam->Bool() ? "true" : "false"));
-          break;
-        case IParam::kTypeInt:
-          snprintf(paramVal, maxLen, "%d", pParam->Int());
-          break;
-        case IParam::kTypeEnum:
-          snprintf(paramVal, maxLen, "%d", pParam->Int());
-          break;
-        case IParam::kTypeDouble:
-        default:
-          snprintf(paramVal, maxLen, "%.6f", pParam->Value());
-          break;
-      }
-      fprintf(fp, ",\n    %s, %s", paramEnumNames[i], paramVal);
-    }
-    fprintf(fp, ");\n");
-    fclose(fp);
+    s += ", ";
+    s += FormatParamVal(GetParam(i));
   }
+  s += ");\n";
+  return s;
 }
 
-void IPluginBase::DumpPresetBlob(const char* filename) const
+std::string IPluginBase::GetPresetFromNamedParamsSrc(std::function<std::string_view(int)> paramName) const
 {
-  FILE* fp = fopen(filename, "a");
-  
-  if (!fp)
-    return;
-  
-  int idx = GetCurrentPresetIdx();
-  fprintf(fp, "MakePresetFromBlob(\"%s\", \"", GetPresetName(idx));
-  
+  const int n = NParams();
+  const int idx = GetCurrentPresetIdx();
+  std::string s = "MakePresetFromNamedParams(\"";
+  s += GetPresetName(idx);
+  s += "\", ";
+  s += std::to_string(n);
+  for (int i = 0; i < n; ++i)
+  {
+    s += ",\n  ";
+    s += paramName(i);
+    s += ", ";
+    s += FormatParamVal(GetParam(i));
+  }
+  s += ");\n";
+  return s;
+}
+
+std::string IPluginBase::GetPresetBlobSrc() const
+{
+  const int idx = GetCurrentPresetIdx();
   char buf[MAX_BLOB_LENGTH];
-  
   IByteChunk* pPresetChunk = &mPresets.Get(mCurrentPresetIdx)->mChunk;
-  uint8_t* byteStart = pPresetChunk->GetData();
-  
-  wdl_base64encode(byteStart, buf, pPresetChunk->Size());
-  
-  fprintf(fp, "%s\", %i);\n", buf, pPresetChunk->Size());
-  fclose(fp);
+  wdl_base64encode(pPresetChunk->GetData(), buf, pPresetChunk->Size());
+
+  std::string s = "MakePresetFromBlob(\"";
+  s += GetPresetName(idx);
+  s += "\", \"";
+  s += buf;
+  s += "\", ";
+  s += std::to_string(pPresetChunk->Size());
+  s += ");\n";
+  return s;
+}
+
+void IPluginBase::DumpMakePresetSrc(const char* file) const
+{
+  if (FILE* fp = fopen(file, "a"))
+  {
+    const auto s = GetPresetSrc();
+    fputs(s.c_str(), fp);
+    fclose(fp);
+  }
+}
+
+void IPluginBase::DumpMakePresetFromNamedParamsSrc(const char* file, std::function<std::string_view(int)> paramName) const
+{
+  if (FILE* fp = fopen(file, "a"))
+  {
+    const auto s = GetPresetFromNamedParamsSrc(paramName);
+    fputs(s.c_str(), fp);
+    fclose(fp);
+  }
+}
+
+void IPluginBase::DumpPresetBlob(const char* file) const
+{
+  if (FILE* fp = fopen(file, "a"))
+  {
+    const auto s = GetPresetBlobSrc();
+    fputs(s.c_str(), fp);
+    fclose(fp);
+  }
 }
 
 // confusing... IByteChunk will force storage as little endian on big endian platforms,
