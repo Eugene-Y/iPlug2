@@ -310,10 +310,18 @@ public:
    * @return /c true on success */
   bool SaveBankAsFXB(const char* file) const;
 
-  /** Load VST2 format preset 
+  /** Load VST2 format preset
    * @param file The full path of the file to load
    * @return /c true on success */
   bool LoadPresetFromFXP(const char* file);
+
+  /** Load plugin state from an FXP file without modifying the preset bank.
+   * Unlike LoadPresetFromFXP, this does NOT call ModifyCurrentPreset, so
+   * factory preset slots are never overwritten. Use this from a PresetManager
+   * or any code that treats factory presets as read-only.
+   * @param file The full path of the .fxp file to load
+   * @return \c true on success */
+  bool LoadStateFromFXP(const char* file);
 
   /** Load VST2 format bank [VST2 only]
    * @param file The full path of the file to load

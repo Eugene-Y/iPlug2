@@ -99,7 +99,7 @@ namespace hvoya::midi_cc {
             // plugVersion: the plugin's serialized version_hex (0 = old/unknown).
             int unserialize (const IByteChunk& bc, int startPos, int plugVersion = 0) {
                 startPos = mapper_serializer::unserialize (_mapper, bc, startPos, plugVersion);
-                UpdateMidiControllableUI();
+                refreshUI();
                 return startPos;
             }
 
@@ -116,14 +116,13 @@ namespace hvoya::midi_cc {
             }
             
             
-            void UpdateMidiControllableUI() {
-                if (_controlsUpdatedOnLoad) 
-                    return;
-                    
+            // Syncs knob CC-number indicators to the current mapper state.
+            // Safe to call any time; no-op when UI is not open.
+            void refreshUI() {
                 auto pG = _plugin->GetUI();
-                if (!pG) 
+                if (!pG)
                     return;
-            
+
                 const auto& map = _mapper.getCCtoParamMap();
                 for (const auto& [cc, params] : map) {
                     for (const auto& param : params) {
@@ -137,7 +136,6 @@ namespace hvoya::midi_cc {
                         }
                     }
                 }
-                _controlsUpdatedOnLoad = true;
             }
             
             
@@ -145,7 +143,6 @@ namespace hvoya::midi_cc {
         
             PluginType* _plugin;
             Mapper _mapper;
-            bool _controlsUpdatedOnLoad = false;
             
     };
     

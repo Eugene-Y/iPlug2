@@ -911,8 +911,72 @@ bool IPluginBase::LoadPresetFromFXP(const char* file)
       }
     }
   }
-  
+
   return false;
+}
+
+bool IPluginBase::LoadStateFromFXP(const char* file)
+{
+  if (!CStringHasContents(file)) return false;
+
+  FILE* fp = fopen(file, "rb");
+  if (!fp) return false;
+
+  IByteChunk pgm;
+  fseek(fp, 0, SEEK_END);
+  long fileSize = ftell(fp);
+  rewind(fp);
+  pgm.Resize((int) fileSize);
+  fread(pgm.GetData(), fileSize, 1, fp);
+  fclose(fp);
+
+  int pos = 0;
+  int32_t chunkMagic, byteSize, fxpMagic, fxpVersion, pluginID, pluginVersion, numParams;
+  char prgName[28];
+
+  pos = pgm.Get(&chunkMagic,    pos); chunkMagic    = WDL_bswap_if_le(chunkMagic);
+  pos = pgm.Get(&byteSize,      pos); (void)byteSize;
+  pos = pgm.Get(&fxpMagic,      pos); fxpMagic      = WDL_bswap_if_le(fxpMagic);
+  pos = pgm.Get(&fxpVersion,    pos); fxpVersion    = WDL_bswap_if_le(fxpVersion);
+  pos = pgm.Get(&pluginID,      pos); pluginID      = WDL_bswap_if_le(pluginID);
+  pos = pgm.Get(&pluginVersion, pos); (void)pluginVersion;
+  pos = pgm.Get(&numParams,     pos); (void)numParams;
+  pos = pgm.GetBytes(prgName, 28, pos);
+
+  if (chunkMagic != 'CcnK') return false;
+  if (fxpVersion != kFXPVersionNum) return false;
+  if (pluginID != GetUniqueID()) return false;
+
+  bool ok = false;
+
+  if (DoesStateChunks() && fxpMagic == 'FPCh')
+  {
+    int32_t chunkSize;
+    pos = pgm.Get(&chunkSize, pos); chunkSize = WDL_bswap_if_le(chunkSize);
+    IByteChunk::GetIPlugVerFromChunk(pgm, pos);
+    ok = (UnserializeState(pgm, pos) > 0);
+  }
+  else if (fxpMagic == 'FxCk')
+  {
+    ENTER_PARAMS_MUTEX
+    for (int i = 0; i < NParams(); i++)
+    {
+      WDL_EndianFloat v32;
+      pos = pgm.Get(&v32.int32, pos);
+      v32.int32 = WDL_bswap_if_le(v32.int32);
+      GetParam(i)->SetNormalized((double) v32.f);
+    }
+    LEAVE_PARAMS_MUTEX
+    ok = true;
+  }
+
+  if (ok)
+  {
+    OnRestoreState();
+    InformHostOfPresetChange();
+  }
+
+  return ok;
 }
 
 bool IPluginBase::LoadBankFromFXB(const char* file)
