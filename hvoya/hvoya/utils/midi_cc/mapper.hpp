@@ -22,7 +22,7 @@ namespace hvoya::midi_cc {
         double maxVal   { 1.0 };
         int    channel  { 0 };   // 0 = all channels, 1-16 = specific (1-indexed)
 
-        ParamCCMapping (PId_t id = pid_not_set, CC_t cc = cc_not_set)
+        ParamCCMapping (PId_t id = uninit::pid, CC_t cc = uninit::cc)
           : paramId (id), cc (cc) {}
 
         double mapVal (double normalized) const {
@@ -65,7 +65,7 @@ namespace hvoya::midi_cc {
             // midiChannel: 1-indexed (1-16); pass 0 to skip channel filtering
             std::vector <ResolvedParam> processMidiCC (CC_t, double normVal, int midiChannel = 0);
 
-            // Returns the CC number mapped to the given param, or cc_not_set if none.
+            // Returns the CC number mapped to the given param, or uninit::cc if none.
             int getCCForParam (PId_t) const;
 
             // Sets the channel filter for an existing mapping (0=all, 1-16=specific).
@@ -76,7 +76,7 @@ namespace hvoya::midi_cc {
             
         private:
 
-            PId_t _listeningPId = pid_not_set;
+            PId_t _listeningPId = uninit::pid;
             IControllable* _pListeningControllable = nullptr;
             bool _isLearning = false;
             CCtoParamMap_t _ccToParamMap;

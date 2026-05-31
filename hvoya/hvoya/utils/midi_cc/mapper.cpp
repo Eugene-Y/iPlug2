@@ -102,7 +102,7 @@ namespace hvoya::midi_cc {
             for (const auto& pm : params)
                 if (pm.paramId == id)
                     return cc;
-        return cc_not_set;
+        return uninit::cc;
     }
 
 

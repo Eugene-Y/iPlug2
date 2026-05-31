@@ -38,7 +38,7 @@ namespace hvoya::midi_cc {
 
             // not safe if the Delegate params are not yet initialized
             auto getParam() {
-                assert (_paramId != pid_not_set);
+                assert (_paramId != uninit::pid);
                 return this->GetDelegate()->GetParam (_paramId);
             }
             
@@ -73,7 +73,7 @@ namespace hvoya::midi_cc {
             ControlDecorator (Args&&... args)
                 : C (std::forward <Args> (args)...) {
                     _paramId = this->GetParamIdx();
-                    _cc = cc_not_set;
+                    _cc = uninit::cc;
                 }
                 
                 
@@ -98,7 +98,7 @@ namespace hvoya::midi_cc {
             void CreateContextMenu (IPopupMenu& contextMenu) override {
                 IPopupMenu* subMenu = new IPopupMenu ("MIDI CC");
                 
-                const bool mapped = _cc != cc_not_set;
+                const bool mapped = _cc != uninit::cc;
 
                 subMenu->AddItem ("Learn");
                 
@@ -146,7 +146,7 @@ namespace hvoya::midi_cc {
         private:
 
             void clearCC() {
-                _cc = cc_not_set;
+                _cc = uninit::cc;
                 _minDisplay.clear();
                 _maxDisplay.clear();
             }
