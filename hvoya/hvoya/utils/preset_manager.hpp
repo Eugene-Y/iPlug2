@@ -42,6 +42,12 @@
  *   Every navigation or load call pushes the current serialized state AND
  *   preset index onto a ring buffer (depth = kUndoDepth). undo() restores both.
  *   Individual parameter tweaks are NOT tracked — that is the host's job.
+ *
+ *   Only deliberate on-screen edits (EParamSource::kUI) mark a preset dirty.
+ *   Host automation (kHost) and MIDI CC (kDelegate) are live, host/performer-
+ *   owned control, not unsaved edits: tracking them as dirty would trap undo in
+ *   a perpetual baseline-revert whenever a continuous LFO or recorded CC lane is
+ *   active. See onParamChanged().
  */
 
 #include <IPlugPluginBase.h>
@@ -299,8 +305,15 @@ public:
     // O(1), safe to call from UI thread every frame
     bool isModified() const { return _modified.load(std::memory_order_relaxed); }
 
-    // Call this from OnParamChange — sets the modified flag (thread-safe)
-    void onParamChanged() { _modified.store(true, std::memory_order_relaxed); }
+    // Call this from OnParamChange. Only a deliberate on-screen edit (kUI) marks
+    // the preset dirty. Host automation (kHost) and MIDI CC (kDelegate) are live
+    // control owned by the host/performer, not unsaved edits — tracking them as
+    // dirty would (a) light the "*" spuriously and (b) trap undo in an infinite
+    // baseline-revert while a continuous LFO / recorded CC lane keeps re-dirtying.
+    void onParamChanged(iplug::EParamSource source) {
+        if (source == iplug::kUI)
+            _modified.store(true, std::memory_order_relaxed);
+    }
 
     const std::string& presetDir()   const { return _presetDir; }
 
