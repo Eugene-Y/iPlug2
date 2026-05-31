@@ -4,15 +4,16 @@
  *
  * Collapsed (default):
  *
- *   [presets *]
+ *   [presets >>]
  *
  * Expanded (click [presets] to toggle):
  *
- *   [presets *]  [<]  [ group/name * ]  [>]  [undo]  [save]  [load]  [dir]  [scan]
+ *   [<<]  [<]  [ group/name ]  [>]  [undo]  [save]  [load]  [dir]  [scan]
  *
- *   presets — collapse/expand toggle; shows * when state is modified
+ *   presets — collapse/expand toggle
  *   </>     — cycle through presets (factory + user)
- *   name    — current preset; asterisk when params are modified
+ *   name    — current preset, or "user preset" when the patch is custom
+ *             (edited, randomized or mutated)
  *   undo    — revert last preset switch (dimmed when unavailable)
  *   save    — PromptForFile(Save) → saveToFile
  *   load    — PromptForFile(Open) → loadFromFile
@@ -83,9 +84,8 @@ public:
         auto hov = [&](Zone z) { return _hoverZone   == z; };
         auto prs = [&](Zone z) { return _pressedZone == z; };
 
-        // Toggle button — always visible, shows * when modified
-        const std::string toggleLabel = (_collapsed ? _collapsedLabel : _expandedLabel)
-                                      + (_collapsed && _manager.isModified() ? " *" : "");
+        // Toggle button — always visible
+        const std::string& toggleLabel = _collapsed ? _collapsedLabel : _expandedLabel;
         drawBtn(g, zones.toggle, toggleLabel.c_str(), hov(Zone::Toggle), false, prs(Zone::Toggle));
 
         if (_collapsed) return;
@@ -98,11 +98,16 @@ public:
         if (_showDir)     drawBtn(g, zones.folder, "dir",  hov(Zone::Folder), false, prs(Zone::Folder));
         if (_showScan)    drawBtn(g, zones.scan,   "scan", hov(Zone::Scan),   false, prs(Zone::Scan));
 
-        // Name label — stretches between nav and action buttons
-        const std::string name  = _manager.currentName();
-        const std::string group = _manager.currentGroup();
-        const std::string label = (group.empty() ? name : group + "/" + name)
-                                + (_manager.isModified() ? " *" : "");
+        // Name label — stretches between nav and action buttons. A custom patch
+        // (edited / randomized / mutated) shows as "user preset".
+        std::string label;
+        if (_manager.isCustomPatch()) {
+            label = "user preset";
+        } else {
+            const std::string name  = _manager.currentName();
+            const std::string group = _manager.currentGroup();
+            label = group.empty() ? name : group + "/" + name;
+        }
         if (_hoverZone == Zone::Name)
             g.FillRect(GetColor(kHL), zones.name, &mBlend);
         g.DrawText(mStyle.valueText

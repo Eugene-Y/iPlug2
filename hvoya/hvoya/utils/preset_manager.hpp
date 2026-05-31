@@ -40,7 +40,8 @@
  * UNDO
  * ----
  *   Every navigation or load call pushes the current serialized state AND
- *   preset index onto a ring buffer (depth = kUndoDepth). undo() restores both.
+ *   preset index onto a ring buffer (depth = constructor's undoDepth, default
+ *   kDefaultUndoDepth). undo() restores both.
  *   Individual parameter tweaks are NOT tracked — that is the host's job.
  *
  *   Only deliberate on-screen edits (EParamSource::kUI) mark a preset dirty.
@@ -75,7 +76,7 @@ public:
         std::string group;  // parent subdirectory name, "" if root-level
     };
 
-    static constexpr int kUndoDepth = 20;
+    static constexpr int kDefaultUndoDepth = 100;
 
     // CC-map callbacks — optional. When set, the manager snapshots the map
     // before every state load and restores it afterwards, so MIDI CC
@@ -92,10 +93,12 @@ public:
 
     PresetManager(iplug::IPluginBase* plugin,
                   std::string_view    pluginName,
-                  std::string_view    presetDir)
+                  std::string_view    presetDir,
+                  int                 undoDepth = kDefaultUndoDepth)
         : _plugin    (plugin)
         , _pluginName(pluginName)
         , _presetDir (presetDir)
+        , _undoDepth (std::max(1, undoDepth))
     {
         // Build index map for factory presets, skipping uninitialized slots
         // (iPlug2 names uninitialized slots "empty" — UNUSED_PRESET_NAME).
@@ -171,6 +174,18 @@ public:
             captureBaseline();
         }
         _undoStack.pop_front();
+    }
+
+    // Wraps a wholesale programmatic patch change (randomize / mutate) as one
+    // undo step: the pre-change state is pushed onto the stack (so undo walks
+    // back through every such change, like preset navigation), then the new
+    // state becomes the clean baseline. applyChange performs the parameter writes.
+    template <class ApplyFn>
+    void changePatch(ApplyFn&& applyChange) {
+        pushUndo();
+        applyChange();
+        _currentIdx = -1;        // result is a custom patch, not a stored preset
+        captureBaseline();
     }
 
     // ── File I/O ──────────────────────────────────────────────────────────────
@@ -297,6 +312,11 @@ public:
         return (ui >= 0 && ui < userCount()) ? _userPresets[ui].group : "";
     }
 
+    // True when the live patch is not a pristine stored preset — edited,
+    // randomized, mutated, or never loaded from one. The strip shows it as
+    // "user preset" instead of a preset name.
+    bool isCustomPatch() const { return _currentIdx < 0 || isModified(); }
+
     // Directory to open file dialogs in: last-used dir, or _presetDir if none.
     const std::string& browseDir() const {
         return _lastUsedDir.empty() ? _presetDir : _lastUsedDir;
@@ -346,6 +366,7 @@ private:
     std::vector<UserPreset> _userPresets;
 
     std::deque<UndoEntry>       _undoStack;
+    int                         _undoDepth;       // max entries kept on the undo ring buffer
     mutable std::atomic<bool>   _modified { false };
     iplug::IByteChunk           _baselineChunk;  // clean state of the current preset
 
@@ -365,7 +386,7 @@ private:
     }
 
     void pushUndo() {
-        if (static_cast<int>(_undoStack.size()) >= kUndoDepth)
+        if (static_cast<int>(_undoStack.size()) >= _undoDepth)
             _undoStack.pop_back();
         const bool dirty = _modified.load(std::memory_order_relaxed);
         // baselineChunk is only needed when dirty — skip the copy otherwise.
