@@ -89,6 +89,26 @@ public:
         _ccUnserialize = std::move(unserializeFn);
     }
 
+    // Workspace callbacks — optional. "Workspace" is state that should SURVIVE a
+    // preset swap (not be overwritten by the loaded preset): e.g. a morph rig, custom
+    // UI layout. Like the CC map, the manager snapshots it before every state load
+    // and restores it afterwards. A host PROJECT load goes through the plugin
+    // directly (not the manager), so it restores the workspace from the chunk as
+    // normal — only preset-strip swaps / undo preserve it.
+    using WorkspaceSerializeFn   = std::function<void(iplug::IByteChunk&)>;
+    using WorkspaceUnserializeFn = std::function<void(const iplug::IByteChunk&)>;
+
+    void setWorkspaceCallbacks(WorkspaceSerializeFn serializeFn, WorkspaceUnserializeFn unserializeFn) {
+        _wsSerialize   = std::move(serializeFn);
+        _wsUnserialize = std::move(unserializeFn);
+    }
+
+    // Optional gate for strip navigation (next / prev / goTo). When set and it
+    // returns false, navigation is ignored — e.g. while a plugin is in a sub-mode
+    // (morph) where preset switching is repurposed or disabled. File load is not gated.
+    using NavGateFn = std::function<bool()>;
+    void setNavigationGate(NavGateFn fn) { _navGate = std::move(fn); }
+
     // ── Construction ──────────────────────────────────────────────────────────
 
     PresetManager(iplug::IPluginBase* plugin,
@@ -127,19 +147,19 @@ public:
     // ── Navigation ────────────────────────────────────────────────────────────
 
     void next() {
-        if (totalCount() == 0) return;
+        if (totalCount() == 0 || !navAllowed()) return;
         pushUndo();
         applyIdx(_currentIdx < 0 ? 0 : (_currentIdx + 1) % totalCount());
     }
 
     void prev() {
-        if (totalCount() == 0) return;
+        if (totalCount() == 0 || !navAllowed()) return;
         pushUndo();
         applyIdx(_currentIdx < 0 ? totalCount() - 1 : (_currentIdx - 1 + totalCount()) % totalCount());
     }
 
     void goTo(int idx) {
-        if (idx == _currentIdx || idx < 0 || idx >= totalCount()) return;
+        if (idx == _currentIdx || idx < 0 || idx >= totalCount() || !navAllowed()) return;
         pushUndo();
         applyIdx(idx);
     }
@@ -147,6 +167,7 @@ public:
     void undo() {
         InternalRestoreScope guard(_restoringInternally);
         auto cc = snapshotCCMap();
+        auto ws = snapshotWorkspace();
 
         if (_modified.load(std::memory_order_relaxed)) {
             // First undo while dirty: revert to the baseline of the current
@@ -155,6 +176,7 @@ public:
             _plugin->UnserializeState(_baselineChunk, pos);
             _plugin->OnRestoreState();
             restoreCCMap(cc);
+            restoreWorkspace(ws);
             captureBaseline();   // _modified → false, _baselineChunk stays same
             return;
         }
@@ -165,6 +187,7 @@ public:
         _plugin->UnserializeState(entry.chunk, pos);
         _plugin->OnRestoreState();
         restoreCCMap(cc);
+        restoreWorkspace(ws);
         _currentIdx = std::clamp(entry.presetIdx, -1, std::max(-1, totalCount() - 1));
         // Restore the dirty flag that was in effect when this entry was pushed.
         // If it was modified, update baseline to match (so a further undo works).
@@ -253,6 +276,9 @@ public:
         InternalRestoreScope guard(_restoringInternally);
         pushUndo();
         auto cc = snapshotCCMap();
+        // NB: workspace is NOT snapshotted here — an explicit file load opens the
+        // COMPLETE patch (sound + workspace), unlike strip navigation (next/prev/goTo),
+        // which preserves the current workspace. (CC stays snapshotted for now.)
         if (!_plugin->LoadStateFromFXP(path.c_str())) {
             LOGE << "[PresetManager] load FAILED: " << path;
             _undoStack.pop_front();
@@ -431,6 +457,10 @@ private:
     CCSerializeFn   _ccSerialize;
     CCUnserializeFn _ccUnserialize;
 
+    WorkspaceSerializeFn   _wsSerialize;
+    WorkspaceUnserializeFn _wsUnserialize;
+    NavGateFn              _navGate;
+
     bool isFactory(int idx) const { return idx >= 0 && idx < factoryCount(); }
 
     iplug::IByteChunk snapshotCCMap() const {
@@ -442,6 +472,18 @@ private:
     void restoreCCMap(const iplug::IByteChunk& c) const {
         if (_ccUnserialize && c.Size() > 0) _ccUnserialize(c);
     }
+
+    iplug::IByteChunk snapshotWorkspace() const {
+        iplug::IByteChunk c;
+        if (_wsSerialize) _wsSerialize(c);
+        return c;
+    }
+
+    void restoreWorkspace(const iplug::IByteChunk& c) const {
+        if (_wsUnserialize && c.Size() > 0) _wsUnserialize(c);
+    }
+
+    bool navAllowed() const { return !_navGate || _navGate(); }
 
     void pushUndo() {
         if (static_cast<int>(_undoStack.size()) >= _undoDepth)
@@ -459,11 +501,13 @@ private:
         InternalRestoreScope guard(_restoringInternally);
         _currentIdx = idx;
         auto cc = snapshotCCMap();
+        auto ws = snapshotWorkspace();
         if (isFactory(idx)) {
             const int pi = _factoryIdxMap[idx];
             LOGD << "[PresetManager] factory preset: " << _plugin->GetPresetName(pi);
             _plugin->RestorePreset(pi);
             restoreCCMap(cc);
+            restoreWorkspace(ws);
         } else {
             const int ui = idx - factoryCount();
             if (ui >= 0 && ui < userCount()) {
@@ -477,6 +521,7 @@ private:
                     return;
                 }
                 restoreCCMap(cc);
+                restoreWorkspace(ws);
                 LOGD << "[PresetManager] navigated to: " << p.name
                      << (p.group.empty() ? "" : " [" + p.group + "]");
             }
