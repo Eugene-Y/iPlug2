@@ -61,6 +61,7 @@ public:
     PresetStripControl& setCollapsedLabel        (const char* s) { _collapsedLabel    = s;  return *this; }
     PresetStripControl& setExpandedLabel         (const char* s) { _expandedLabel     = s;  return *this; }
     PresetStripControl& setCollapsedToggleWidth  (float px)      { _collapsedToggleW  = px; return *this; }
+    PresetStripControl& setCollapsed             (bool c)        { _collapsed         = c;  return *this; }
     PresetStripControl& setExpandedToggleWidth   (float px)      { _expandedToggleW   = px; return *this; }
 
     PresetStripControl& setShowSaveLoad    (bool v)          { _showSaveLoad = v;  return *this; }

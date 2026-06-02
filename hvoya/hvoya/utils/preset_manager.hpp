@@ -145,6 +145,7 @@ public:
     }
 
     void undo() {
+        InternalRestoreScope guard(_restoringInternally);
         auto cc = snapshotCCMap();
 
         if (_modified.load(std::memory_order_relaxed)) {
@@ -188,6 +189,53 @@ public:
         captureBaseline();
     }
 
+    // ── Sub-session squash / commit ─────────────────────────────────────────────
+    //
+    // A "sub-session" (e.g. a morph session) is driven directly on the live params
+    // rather than through changePatch, and may push several intermediate undo steps
+    // (point selects). Mark the position when it begins, then on exit squash those
+    // steps and optionally record ONE outer step — so the host-level history sees
+    // the whole session as a single transaction.
+
+    using UndoMark = std::size_t;
+
+    // Current undo-stack depth — pass to commitFromState / squashUndoTo on exit.
+    UndoMark undoMark() const { return _undoStack.size(); }
+
+    // Drop undo entries pushed since `mark`. Baseline / dirty flag are untouched —
+    // for an exit that must not rebaseline (a no-op session). If the depth ring
+    // dropped pre-session entries during the session, this conservatively keeps
+    // whatever remains (never over-truncates older history).
+    void squashUndoTo(UndoMark mark) {
+        while (_undoStack.size() > mark) _undoStack.pop_front();
+    }
+
+    // Close a sub-session as one atomic step: squash its intermediate entries, push
+    // `preState` (the state from before the session) as the single undo step if
+    // non-empty, and make the current live state the new clean baseline. Empty
+    // preState → just squash + rebaseline (no back-step).
+    void commitFromState(const iplug::IByteChunk& preState, UndoMark mark) {
+        squashUndoTo(mark);
+        if (preState.Size() > 0) {
+            if (static_cast<int>(_undoStack.size()) >= _undoDepth)
+                _undoStack.pop_back();
+            _undoStack.push_front({ preState, iplug::IByteChunk{}, _currentIdx, false });
+        }
+        _currentIdx = -1;        // a baked / programmatic result is a custom patch
+        captureBaseline();
+    }
+
+    // Call from the plugin's OnRestoreState(). On a genuine EXTERNAL restore (host
+    // project load, host-level undo) the manager's baseline must follow the new
+    // state and stale undo history is dropped. The manager's OWN restores
+    // (undo()/navigation, which also reach OnRestoreState) must NOT do this — the
+    // reentrancy guard suppresses them.
+    void onHostStateRestored() {
+        if (_restoringInternally) return;
+        _undoStack.clear();
+        captureBaseline();
+    }
+
     // ── File I/O ──────────────────────────────────────────────────────────────
 
     void saveToFile(const std::string& path) {
@@ -202,6 +250,7 @@ public:
     }
 
     bool loadFromFile(const std::string& path) {
+        InternalRestoreScope guard(_restoringInternally);
         pushUndo();
         auto cc = snapshotCCMap();
         if (!_plugin->LoadStateFromFXP(path.c_str())) {
@@ -355,6 +404,15 @@ private:
         bool              modified;
     };
 
+    // RAII flag set while the manager itself drives a state restore, so the plugin's
+    // OnRestoreState → onHostStateRestored() can tell our restores from a host load.
+    bool _restoringInternally = false;
+    struct InternalRestoreScope {
+        bool& flag; bool prev;
+        explicit InternalRestoreScope(bool& f) : flag(f), prev(f) { flag = true; }
+        ~InternalRestoreScope() { flag = prev; }
+    };
+
     // ── Members ───────────────────────────────────────────────────────────────
 
     iplug::IPluginBase*     _plugin;
@@ -398,6 +456,7 @@ private:
     // Navigate to idx. If the target user preset file is missing, removes it
     // from the list and clamps _currentIdx without changing DSP state.
     void applyIdx(int idx) {
+        InternalRestoreScope guard(_restoringInternally);
         _currentIdx = idx;
         auto cc = snapshotCCMap();
         if (isFactory(idx)) {
