@@ -244,7 +244,7 @@ void IControl::Hide(bool hide)
 
 void IControl::SetDisabled(bool disable)
 {
-  mBlend.mWeight = (disable ? GRAYED_ALPHA : 1.0f);
+  mBlend.mWeight = (disable ? mDisabledOpacity : 1.0f);
   mDisabled = disable;
   SetDirty(false);
 }

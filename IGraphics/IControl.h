@@ -366,6 +366,16 @@ public:
   /** @return \c true if the control is disabled */
   bool IsDisabled() const { return mDisabled; }
 
+  /** Set the opacity applied to the whole control while it is disabled. The default
+   * SetDisabled fades the control by setting mBlend.mWeight to this value (default
+   * GRAYED_ALPHA). Raise it to make a disabled control read clearer (e.g. when it still
+   * shows a meaningful live value). Applied immediately if the control is already disabled.
+   * @param opacity Disabled-state opacity in [0, 1] */
+  void SetDisabledOpacity(float opacity) { mDisabledOpacity = opacity; if (mDisabled) { mBlend.mWeight = opacity; SetDirty(false); } }
+
+  /** @return the disabled-state opacity (see SetDisabledOpacity) */
+  float GetDisabledOpacity() const { return mDisabledOpacity; }
+
   /** Specify whether the control should respond to mouse overs when disabled
    * @param allow \c true if it should respond to mouse overs when disabled (false by default) */
   void SetMouseOverWhenDisabled(bool allow) { mMouseOverWhenDisabled = allow; }
@@ -549,6 +559,7 @@ protected:
   
   IText mText;
   IBlend mBlend;
+  float mDisabledOpacity = GRAYED_ALPHA; // Opacity applied to the whole control when disabled (see SetDisabledOpacity)
   int mTextEntryLength = DEFAULT_TEXT_ENTRY_LEN;
   bool mDirty = true;
   bool mHide = false;
@@ -837,6 +848,16 @@ public:
   /** Get the style of this IVControl
    * @return IVStyle */
   IVStyle GetStyle() const { return mStyle; }
+
+  /** Set how strongly this control fades when disabled. The amount is a contrast
+   * applied to the fill/text colors in the DrawPressable* helpers (0 = no fade,
+   * GRAYED_ALPHA = the framework default). Lower it to make a disabled control
+   * read less washed-out without touching the global GRAYED_ALPHA constant.
+   * @param contrast Disabled-state contrast in [0, 1] */
+  void SetDisabledContrast(float contrast) { mDisabledContrast = contrast; }
+
+  /** @return the disabled-state contrast (see SetDisabledContrast) */
+  float GetDisabledContrast() const { return mDisabledContrast; }
   
   /** Get the adjusted bounds for the widget handle, based on the style settings
    * @param handleBounds The initial bounds
@@ -956,7 +977,7 @@ public:
     IRECT centreBounds = bounds.GetPadded(-mStyle.shadowOffset);
     IRECT shadowBounds = bounds.GetTranslated(mStyle.shadowOffset, mStyle.shadowOffset);
     const IBlend blend = mControl->GetBlend();
-    const float contrast = disabled ? -GRAYED_ALPHA : 0.f;
+    const float contrast = disabled ? -mDisabledContrast : 0.f;
     
     if(!pressed && !disabled && mStyle.drawShadows)
       g.FillEllipse(GetColor(kSH), shadowBounds);
@@ -1029,7 +1050,7 @@ public:
     IRECT centreBounds = handleBounds.GetPadded(-mStyle.shadowOffset);
     IRECT shadowBounds = handleBounds.GetTranslated(mStyle.shadowOffset, mStyle.shadowOffset);
     const IBlend blend = mControl->GetBlend();
-    const float contrast = disabled ? -GRAYED_ALPHA : 0.f;
+    const float contrast = disabled ? -mDisabledContrast : 0.f;
     float cR = GetRoundedCornerRadius(handleBounds);
 
     const float tlr = rtl ? cR : 0.f;
@@ -1129,7 +1150,7 @@ public:
     y3 = centered.R * s + centered.B * c + yT;
 
     const IBlend blend = mControl->GetBlend();
-    const float contrast = disabled ? -GRAYED_ALPHA : 0.f;
+    const float contrast = disabled ? -mDisabledContrast : 0.f;
 
     if (pressed)
       g.FillTriangle(GetColor(kPR).WithContrast(contrast), x1, y1, x2, y2, x3, y3/*, &blend*/);
@@ -1259,6 +1280,7 @@ public:
 protected:
   IControl* mControl = nullptr;
   IVStyle mStyle; // IVStyle that defines certain common properties of an IVControl
+  float mDisabledContrast = GRAYED_ALPHA; // How strongly the control fades when disabled (see SetDisabledContrast)
   bool mLabelInWidget = false; // Should the Label text be displayed inside the widget
   bool mValueInWidget = false; // Should the Value text be displayed inside the widget
   float mSplashRadius = 0.f; // Modified during the default SplashClickAnimationFunc to specify the radius of the splash
