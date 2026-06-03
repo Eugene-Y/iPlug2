@@ -109,6 +109,47 @@ public:
     using NavGateFn = std::function<bool()>;
     void setNavigationGate(NavGateFn fn) { _navGate = std::move(fn); }
 
+    // ── Context-sensitive preset application (redirect) ─────────────────────────
+    //
+    // Normally choosing a preset (strip nav OR an explicit file load) swaps the whole patch.
+    // A host may want it to mean something else IN A GIVEN CONTEXT — e.g. while editing a morph
+    // point, load only its SOUND into that point; or, while morphing, forbid a whole-patch swap
+    // altogether. The manager doesn't know the host's context, so it offers each preset to an
+    // optional redirect and obeys its verdict.
+
+    // Where a preset comes from (an explicit Kind, not an int sentinel → clear + extensible).
+    struct PresetSource {
+        enum class Kind { BrowseList, File };
+        Kind        kind      = Kind::BrowseList;
+        int         listIndex = -1;     // valid when kind == BrowseList (factory or user)
+        std::string filePath;           // valid when kind == File (an .fxp opened outside the list)
+        bool fromList() const { return kind == Kind::BrowseList; }
+        static PresetSource list(int idx)        { return { Kind::BrowseList, idx, {} }; }
+        static PresetSource file(std::string p)  { return { Kind::File, -1, std::move(p) }; }
+    };
+
+    // The redirect's verdict for a source (consulted BEFORE normal application / the nav gate):
+    //   PassThrough — not claimed; apply normally (swap the whole patch).
+    //   Handled     — the host applied it to its own destination (e.g. the selected morph point);
+    //                 the manager does nothing else (list nav still moves the displayed index so
+    //                 the strip name follows; a claimed file does NOT enter the list).
+    //   Block       — do nothing at all (e.g. forbid a whole-patch swap while morphing) — a no-op.
+    enum class PresetApply { PassThrough, Handled, Block };
+    using PresetRedirectFn = std::function<PresetApply(const PresetSource&)>;
+    void setPresetRedirect(PresetRedirectFn fn) { _redirect = std::move(fn); }
+
+    // Resolve a browse-list index to a peekable origin (so a redirect can READ a preset without
+    // applying it): factoryPluginIdx() >= 0 for a factory preset (index into the plugin's own
+    // preset list), else userPresetPath() gives the .fxp path.
+    int factoryPluginIdx(int navIdx) const {
+        return isFactory(navIdx) ? _factoryIdxMap[static_cast<size_t>(navIdx)] : -1;
+    }
+    std::string userPresetPath(int navIdx) const {
+        const int ui = navIdx - factoryCount();
+        return (ui >= 0 && ui < userCount()) ? _userPresets[static_cast<size_t>(ui)].path
+                                             : std::string{};
+    }
+
     // ── Construction ──────────────────────────────────────────────────────────
 
     PresetManager(iplug::IPluginBase* plugin,
@@ -147,21 +188,18 @@ public:
     // ── Navigation ────────────────────────────────────────────────────────────
 
     void next() {
-        if (totalCount() == 0 || !navAllowed()) return;
-        pushUndo();
-        applyIdx(_currentIdx < 0 ? 0 : (_currentIdx + 1) % totalCount());
+        if (totalCount() == 0) return;
+        navigateTo(_currentIdx < 0 ? 0 : (_currentIdx + 1) % totalCount());
     }
 
     void prev() {
-        if (totalCount() == 0 || !navAllowed()) return;
-        pushUndo();
-        applyIdx(_currentIdx < 0 ? totalCount() - 1 : (_currentIdx - 1 + totalCount()) % totalCount());
+        if (totalCount() == 0) return;
+        navigateTo(_currentIdx < 0 ? totalCount() - 1 : (_currentIdx - 1 + totalCount()) % totalCount());
     }
 
     void goTo(int idx) {
-        if (idx == _currentIdx || idx < 0 || idx >= totalCount() || !navAllowed()) return;
-        pushUndo();
-        applyIdx(idx);
+        if (idx < 0 || idx >= totalCount()) return;
+        navigateTo(idx);
     }
 
     void undo() {
@@ -278,6 +316,12 @@ public:
     }
 
     bool loadFromFile(const std::string& path) {
+        // The redirect may claim the file (e.g. load only its sound into the selected morph
+        // point → Handled; a claimed file is NOT entered into the list) or forbid the whole-patch
+        // load in this context (e.g. while morphing → Block, a no-op).
+        const PresetApply v = _redirect ? _redirect(PresetSource::file(path)) : PresetApply::PassThrough;
+        if (v == PresetApply::Handled) return true;
+        if (v == PresetApply::Block)   return false;
         InternalRestoreScope guard(_restoringInternally);
         pushUndo();
         auto cc = snapshotCCMap();
@@ -473,6 +517,7 @@ private:
     WorkspaceSerializeFn   _wsSerialize;
     WorkspaceUnserializeFn _wsUnserialize;
     NavGateFn              _navGate;
+    PresetRedirectFn       _redirect;
 
     bool isFactory(int idx) const { return idx >= 0 && idx < factoryCount(); }
 
@@ -497,6 +542,18 @@ private:
     }
 
     bool navAllowed() const { return !_navGate || _navGate(); }
+
+    // Shared core of next/prev/goTo. The redirect (if any) runs first and may claim the target
+    // without touching the patch; we then just move the displayed index so the strip name
+    // follows. Otherwise normal, gated navigation.
+    void navigateTo(int target) {
+        const PresetApply v = _redirect ? _redirect(PresetSource::list(target)) : PresetApply::PassThrough;
+        if (v == PresetApply::Handled) { _currentIdx = target; return; }   // host took it; name follows
+        if (v == PresetApply::Block)   return;                             // forbidden in this context
+        if (!navAllowed() || target == _currentIdx) return;               // legacy gate / already there
+        pushUndo();
+        applyIdx(target);
+    }
 
     // Snapshot the live state as an undo/redo entry (baselineChunk only when dirty).
     UndoEntry captureEntry() const {

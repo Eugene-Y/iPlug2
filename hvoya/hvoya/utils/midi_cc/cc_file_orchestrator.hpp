@@ -25,13 +25,17 @@
  *   });
  */
 
-#include "mapper_hvoya_adapter.hpp"
-#include <hvoya/utils/hvoya_file.hpp>
+#include <functional>
+#include <string>
 
 #include <IControls.h>
 
-#include <functional>
-#include <string>
+#include <hvoya/utils/hvoya_file.hpp>
+#include "resources/fonts/IconsForkAwesome.h"
+#include "resources/fonts/IconsFontaudio.h"
+#include "mapper_hvoya_adapter.hpp"
+
+
 
 
 namespace hvoya::midi_cc {
