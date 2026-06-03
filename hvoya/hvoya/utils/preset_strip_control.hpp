@@ -66,6 +66,7 @@ public:
 
     PresetStripControl& setShowSaveLoad    (bool v)          { _showSaveLoad = v;  return *this; }
     PresetStripControl& setShowUndo        (bool v)          { _showUndo     = v;  return *this; }
+    PresetStripControl& setShowRedo        (bool v)          { _showRedo     = v;  return *this; }
     PresetStripControl& setShowDir         (bool v)          { _showDir      = v;  return *this; }
     PresetStripControl& setShowScan        (bool v)          { _showScan     = v;  return *this; }
 
@@ -94,6 +95,7 @@ public:
         drawBtn(g, zones.prev, "<",  hov(Zone::Prev), false, prs(Zone::Prev));
         drawBtn(g, zones.next, ">",  hov(Zone::Next), false, prs(Zone::Next));
         if (_showUndo)    drawBtn(g, zones.undo,   "undo", hov(Zone::Undo),   !_manager.canUndo(), prs(Zone::Undo));
+        if (_showRedo)    drawBtn(g, zones.redo,   "redo", hov(Zone::Redo),   !_manager.canRedo(), prs(Zone::Redo));
         if (_showSaveLoad){ drawBtn(g, zones.save, "save", hov(Zone::Save),   false, prs(Zone::Save));
                             drawBtn(g, zones.load, "load", hov(Zone::Load),   false, prs(Zone::Load)); }
         if (_showDir)     drawBtn(g, zones.folder, "dir",  hov(Zone::Folder), false, prs(Zone::Folder));
@@ -131,6 +133,7 @@ public:
             case Zone::Prev:   _manager.prev();          SetDirty(false); break;
             case Zone::Next:   _manager.next();          SetDirty(false); break;
             case Zone::Undo:   _manager.undo();          SetDirty(false); break;
+            case Zone::Redo:   _manager.redo();          SetDirty(false); break;
             case Zone::Save:   promptSave();                              break;
             case Zone::Load:   promptLoad();                              break;
             case Zone::Folder: _manager.openFolder();                     break;
@@ -158,10 +161,10 @@ public:
 private:
     // ── Zone geometry ─────────────────────────────────────────────────────────
 
-    enum class Zone { None, Toggle, Prev, Name, Next, Undo, Save, Load, Folder, Scan };
+    enum class Zone { None, Toggle, Prev, Name, Next, Undo, Redo, Save, Load, Folder, Scan };
 
     struct Zones {
-        IRECT toggle, prev, name, next, undo, save, load, folder, scan;
+        IRECT toggle, prev, name, next, undo, redo, save, load, folder, scan;
         // Unset zones are default-constructed (zero-size IRECT), safe to ignore.
     };
 
@@ -194,6 +197,7 @@ private:
         if (_showScan)   z.scan   = rslice(wideW);
         if (_showDir)    z.folder = rslice(btnW);
         if (_showSaveLoad) { z.load = rslice(wideW); z.save = rslice(wideW); }
+        if (_showRedo)   z.redo   = rslice(wideW);
         if (_showUndo)   z.undo   = rslice(wideW);
         z.next = rslice(btnW);
 
@@ -208,6 +212,7 @@ private:
         if (z.prev  .Contains(x, y)) return Zone::Prev;
         if (z.next  .Contains(x, y)) return Zone::Next;
         if (z.undo  .Contains(x, y)) return Zone::Undo;
+        if (z.redo  .Contains(x, y)) return Zone::Redo;
         if (z.save  .Contains(x, y)) return Zone::Save;
         if (z.load  .Contains(x, y)) return Zone::Load;
         if (z.folder.Contains(x, y)) return Zone::Folder;
@@ -283,6 +288,7 @@ private:
     std::string    _expandedLabel  = "<<";
     bool           _showSaveLoad    = true;
     bool           _showUndo        = true;
+    bool           _showRedo        = false;   // opt-in (off keeps existing strips unchanged)
     bool           _showDir         = true;
     bool           _showScan        = true;
     float          _collapsedToggleW = 0;   // 0 = auto (H * 4.5)

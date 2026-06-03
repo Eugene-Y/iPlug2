@@ -171,7 +171,9 @@ public:
 
         if (_modified.load(std::memory_order_relaxed)) {
             // First undo while dirty: revert to the baseline of the current
-            // preset without consuming the navigation stack.
+            // preset without consuming the navigation stack. The current (dirty)
+            // state goes onto the redo stack so redo can bring it back.
+            pushBounded(_redoStack, captureEntry());
             int pos = 0;
             _plugin->UnserializeState(_baselineChunk, pos);
             _plugin->OnRestoreState();
@@ -182,22 +184,23 @@ public:
         }
 
         if (_undoStack.empty()) return;
-        const auto& entry = _undoStack.front();
-        int pos = 0;
-        _plugin->UnserializeState(entry.chunk, pos);
-        _plugin->OnRestoreState();
-        restoreCCMap(cc);
-        restoreWorkspace(ws);
-        _currentIdx = std::clamp(entry.presetIdx, -1, std::max(-1, totalCount() - 1));
-        // Restore the dirty flag that was in effect when this entry was pushed.
-        // If it was modified, update baseline to match (so a further undo works).
-        if (entry.modified) {
-            _modified.store(true, std::memory_order_relaxed);
-            _baselineChunk = entry.baselineChunk;  // original clean state before tweaks
-        } else {
-            captureBaseline();
-        }
+        pushBounded(_redoStack, captureEntry());   // current state → redo
+        UndoEntry entry = _undoStack.front();
         _undoStack.pop_front();
+        restoreEntry(entry, cc, ws);
+    }
+
+    // Step forward again through states undone away from. The current state is pushed
+    // back onto the undo stack (so undo returns here) WITHOUT clearing redo.
+    void redo() {
+        if (_redoStack.empty()) return;
+        InternalRestoreScope guard(_restoringInternally);
+        auto cc = snapshotCCMap();
+        auto ws = snapshotWorkspace();
+        pushBounded(_undoStack, captureEntry());
+        UndoEntry entry = _redoStack.front();
+        _redoStack.pop_front();
+        restoreEntry(entry, cc, ws);
     }
 
     // Wraps a wholesale programmatic patch change (randomize / mutate) as one
@@ -244,6 +247,7 @@ public:
                 _undoStack.pop_back();
             _undoStack.push_front({ preState, iplug::IByteChunk{}, _currentIdx, false });
         }
+        _redoStack.clear();      // a committed forward result invalidates redo
         _currentIdx = -1;        // a baked / programmatic result is a custom patch
         captureBaseline();
     }
@@ -256,6 +260,7 @@ public:
     void onHostStateRestored() {
         if (_restoringInternally) return;
         _undoStack.clear();
+        _redoStack.clear();
         captureBaseline();
     }
 
@@ -406,13 +411,20 @@ public:
     // dirty would (a) light the "*" spuriously and (b) trap undo in an infinite
     // baseline-revert while a continuous LFO / recorded CC lane keeps re-dirtying.
     void onParamChanged(iplug::EParamSource source) {
-        if (source == iplug::kUI)
+        if (source == iplug::kUI) {
             _modified.store(true, std::memory_order_relaxed);
+            // A genuine on-screen edit branches history → redo no longer applies.
+            // (The manager's own restores broadcast as kPresetRecall/kDelegate, not
+            // kUI, so they don't reach here.)
+            if (!_restoringInternally && !_redoStack.empty())
+                _redoStack.clear();
+        }
     }
 
     const std::string& presetDir()   const { return _presetDir; }
 
     bool canUndo()      const { return _modified.load(std::memory_order_relaxed) || !_undoStack.empty(); }
+    bool canRedo()      const { return !_redoStack.empty(); }
     int  currentIdx()   const { return _currentIdx; }
     int  factoryCount() const { return static_cast<int>(_factoryIdxMap.size()); }
     int  userCount()    const { return static_cast<int>(_userPresets.size()); }
@@ -450,6 +462,7 @@ private:
     std::vector<UserPreset> _userPresets;
 
     std::deque<UndoEntry>       _undoStack;
+    std::deque<UndoEntry>       _redoStack;       // states undone away from; cleared on any new forward edit
     int                         _undoDepth;       // max entries kept on the undo ring buffer
     mutable std::atomic<bool>   _modified { false };
     iplug::IByteChunk           _baselineChunk;  // clean state of the current preset
@@ -485,14 +498,40 @@ private:
 
     bool navAllowed() const { return !_navGate || _navGate(); }
 
-    void pushUndo() {
-        if (static_cast<int>(_undoStack.size()) >= _undoDepth)
-            _undoStack.pop_back();
+    // Snapshot the live state as an undo/redo entry (baselineChunk only when dirty).
+    UndoEntry captureEntry() const {
         const bool dirty = _modified.load(std::memory_order_relaxed);
-        // baselineChunk is only needed when dirty — skip the copy otherwise.
-        _undoStack.push_front({ serializeCurrent(),
-                                dirty ? _baselineChunk : iplug::IByteChunk{},
-                                _currentIdx, dirty });
+        return { serializeCurrent(),
+                 dirty ? _baselineChunk : iplug::IByteChunk{},
+                 _currentIdx, dirty };
+    }
+
+    void pushBounded(std::deque<UndoEntry>& stack, UndoEntry e) {
+        if (static_cast<int>(stack.size()) >= _undoDepth)
+            stack.pop_back();
+        stack.push_front(std::move(e));
+    }
+
+    // Apply a previously captured entry (used by both undo and redo). The caller
+    // has already snapshotted/needs to restore CC + workspace around it.
+    void restoreEntry(const UndoEntry& e, const iplug::IByteChunk& cc, const iplug::IByteChunk& ws) {
+        int pos = 0;
+        _plugin->UnserializeState(e.chunk, pos);
+        _plugin->OnRestoreState();
+        restoreCCMap(cc);
+        restoreWorkspace(ws);
+        _currentIdx = std::clamp(e.presetIdx, -1, std::max(-1, totalCount() - 1));
+        if (e.modified) {
+            _modified.store(true, std::memory_order_relaxed);
+            _baselineChunk = e.baselineChunk;   // original clean state before tweaks
+        } else {
+            captureBaseline();
+        }
+    }
+
+    void pushUndo() {
+        pushBounded(_undoStack, captureEntry());
+        _redoStack.clear();   // a fresh forward action invalidates the redo history
     }
 
     // Navigate to idx. If the target user preset file is missing, removes it

@@ -123,6 +123,16 @@ namespace hvoya::midi_cc {
             }
 
 
+            // Arm learning for a param that has no on-screen control (e.g. the morph
+            // pad's X/Y): the next CC routed through ProcessMidiCC binds to it.
+            void learnForParam (PId_t paramId) { _mapper.setLearningForParam (paramId, nullptr); }
+            void cancelLearning() { _mapper.cancelLearning(); }
+            bool isLearning() const { return _mapper.isLearning(); }
+
+            // Drop the CC mapping for a param (e.g. to clear a learned X/Y).
+            void clearMappingForParam (PId_t paramId) { _mapper.clearMappingForParam (paramId); }
+
+
             // Sets the MIDI channel filter for an existing CC mapping (0=all, 1-16=specific).
             void setChannelForParam (PId_t paramId, int channel) {
                 _mapper.setChannelForParam (paramId, channel);

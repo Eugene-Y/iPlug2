@@ -54,6 +54,10 @@ namespace hvoya::midi_cc {
             
             void setListeningParamId (PId_t i) { _listeningPId = i; }
             void setLearningForParam (PId_t, IControllable*);
+
+            // Abort an armed learn (no CC arrived) without binding anything.
+            void cancelLearning() { _isLearning = false; _pListeningControllable = nullptr; }
+            bool isLearning() const { return _isLearning; }
             
             void setMaxForListeningParam (double);
             void setMinForListeningParam (double);
