@@ -31,6 +31,7 @@
 #include <IControls.h>
 
 #include <hvoya/utils/hvoya_file.hpp>
+#include <hvoya/utils/glyph_label.hpp>
 #include "resources/fonts/IconsForkAwesome.h"
 #include "resources/fonts/IconsFontaudio.h"
 #include "mapper_hvoya_adapter.hpp"
@@ -91,6 +92,13 @@ public:
     // Default filename pre-filled in the Save dialog (e.g. "ccmap.hvoya").
     CCFileOrchestrator& setDefaultFilename (const char* name)  { _defaultFilename = name;           return *this; }
 
+    // Opt-in icon / mixed-font labels. When set, the button is drawn as a
+    // GlyphButtonControl with that label instead of the default "save cc"/"load cc"
+    // text button. `runGap` spaces the glyphs within a mixed label.
+    CCFileOrchestrator& setSaveLabel   (hvoya::ui::GlyphLabel l) { _saveLabel = std::move (l); return *this; }
+    CCFileOrchestrator& setLoadLabel   (hvoya::ui::GlyphLabel l) { _loadLabel = std::move (l); return *this; }
+    CCFileOrchestrator& setLabelRunGap (float px)               { _labelRunGap = px;          return *this; }
+
 
     // ── Button factory ────────────────────────────────────────────────────────
     // Creates save/load buttons using the style set via setStyle() / color setters.
@@ -98,33 +106,42 @@ public:
     // Caller attaches them with kTagSave / kTagLoad and manages their visibility.
 
     Buttons makeButtons (const IRECT& saveR, const IRECT& loadR) {
-        auto* save = new IVButtonControl (saveR,
-            [this](IControl* pC) {
-                pC->SetValue (0.0); pC->SetDirty (false); // clear pressed highlight
-                WDL_String fn, path;
-                fn.Set (_defaultFilename.c_str());
-                path.Set (_browseDir().c_str());
-                pC->GetUI()->PromptForFile (fn, path, EFileAction::Save, "hvoya",
-                    [this](const WDL_String& chosen, const WDL_String&) {
-                        if (chosen.GetLength()) _save (chosen.Get());
-                    });
-            }, "save cc", _style);
+        auto saveClick = [this](IControl* pC) {
+            pC->SetValue (0.0); pC->SetDirty (false); // clear pressed highlight
+            WDL_String fn, path;
+            fn.Set (_defaultFilename.c_str());
+            path.Set (_browseDir().c_str());
+            pC->GetUI()->PromptForFile (fn, path, EFileAction::Save, "hvoya",
+                [this](const WDL_String& chosen, const WDL_String&) {
+                    if (chosen.GetLength()) _save (chosen.Get());
+                });
+        };
+        auto loadClick = [this](IControl* pC) {
+            pC->SetValue (0.0); pC->SetDirty (false); // clear pressed highlight
+            WDL_String fn, path;
+            path.Set (_browseDir().c_str());
+            pC->GetUI()->PromptForFile (fn, path, EFileAction::Open, "hvoya",
+                [this](const WDL_String& chosen, const WDL_String&) {
+                    if (chosen.GetLength()) _load (chosen.Get());
+                });
+        };
 
-        auto* load = new IVButtonControl (loadR,
-            [this](IControl* pC) {
-                pC->SetValue (0.0); pC->SetDirty (false); // clear pressed highlight
-                WDL_String fn, path;
-                path.Set (_browseDir().c_str());
-                pC->GetUI()->PromptForFile (fn, path, EFileAction::Open, "hvoya",
-                    [this](const WDL_String& chosen, const WDL_String&) {
-                        if (chosen.GetLength()) _load (chosen.Get());
-                    });
-            }, "load cc", _style);
+        IControl* save = makeButton (saveR, _saveLabel, "save cc", std::move (saveClick));
+        IControl* load = makeButton (loadR, _loadLabel, "load cc", std::move (loadClick));
 
         save->Hide (true);
         load->Hide (true);
 
         return { save, load };
+    }
+
+    IControl* makeButton (const IRECT& r, const hvoya::ui::GlyphLabel& label,
+                          const char* fallbackText, std::function<void(IControl*)> onClick) {
+        if (label.empty())
+            return new IVButtonControl (r, std::move (onClick), fallbackText, _style);
+        auto* b = new hvoya::ui::GlyphButtonControl (r, label, std::move (onClick), _style);
+        b->setRunGap (_labelRunGap);
+        return b;
     }
 
 
@@ -157,6 +174,9 @@ private:
     std::function<void()>        _onLoaded;
     IVStyle                      _style;
     std::string                  _defaultFilename = "ccmap.hvoya";
+    hvoya::ui::GlyphLabel        _saveLabel;   // empty → default "save cc" text button
+    hvoya::ui::GlyphLabel        _loadLabel;
+    float                        _labelRunGap = 0.f;
 };
 
 } // namespace hvoya::midi_cc

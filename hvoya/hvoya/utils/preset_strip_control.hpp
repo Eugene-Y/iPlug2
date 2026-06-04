@@ -28,12 +28,17 @@
  *
  * The control does NOT own the PresetManager — it holds a reference.
  * Collapsed/expanded state is not serialized.
+ *
+ * Button labels default to plain text. Any button can be relabelled — including
+ * with icon-font glyphs or mixed-font GlyphLabels — via the set*Label setters
+ * (the caller registers the fonts and passes the glyph strings).
  */
 
 #include <IControl.h>
 #include <IControls.h>
 #include <filesystem>
 #include <functional>
+#include <hvoya/utils/glyph_label.hpp>
 #include <hvoya/utils/preset_manager.hpp>
 
 namespace hvoya::ui {
@@ -58,11 +63,26 @@ public:
     PresetStripControl& setFrameColor      (const IColor& c) { mStyle.colorSpec.mColors[kFR] = c; return *this; }
     PresetStripControl& setTextColor       (const IColor& c) { mStyle.valueText.mFGColor = c;     return *this; }
 
-    PresetStripControl& setCollapsedLabel        (const char* s) { _collapsedLabel    = s;  return *this; }
-    PresetStripControl& setExpandedLabel         (const char* s) { _expandedLabel     = s;  return *this; }
+    PresetStripControl& setCollapsedLabel        (GlyphLabel l)  { _collapsedLabel    = std::move (l); return *this; }
+    PresetStripControl& setExpandedLabel         (GlyphLabel l)  { _expandedLabel     = std::move (l); return *this; }
     PresetStripControl& setCollapsedToggleWidth  (float px)      { _collapsedToggleW  = px; return *this; }
     PresetStripControl& setCollapsed             (bool c)        { _collapsed         = c;  return *this; }
     PresetStripControl& setExpandedToggleWidth   (float px)      { _expandedToggleW   = px; return *this; }
+
+    // Per-button labels — plain by default; pass a GlyphLabel for icon / mixed-font glyphs.
+    PresetStripControl& setPrevLabel (GlyphLabel l) { _prevLabel = std::move (l); return *this; }
+    PresetStripControl& setNextLabel (GlyphLabel l) { _nextLabel = std::move (l); return *this; }
+    PresetStripControl& setUndoLabel (GlyphLabel l) { _undoLabel = std::move (l); return *this; }
+    PresetStripControl& setRedoLabel (GlyphLabel l) { _redoLabel = std::move (l); return *this; }
+    PresetStripControl& setSaveLabel (GlyphLabel l) { _saveLabel = std::move (l); return *this; }
+    PresetStripControl& setLoadLabel (GlyphLabel l) { _loadLabel = std::move (l); return *this; }
+    PresetStripControl& setDirLabel  (GlyphLabel l) { _dirLabel  = std::move (l); return *this; }
+    PresetStripControl& setScanLabel (GlyphLabel l) { _scanLabel = std::move (l); return *this; }
+    PresetStripControl& setRunGap    (float px)     { _runGap    = px;            return *this; }
+
+    // Scales the width of the action buttons (undo/redo/save/load/dir/scan) — handy
+    // when they carry narrow icon glyphs instead of words. 1.0 = default; <1 narrows.
+    PresetStripControl& setActionButtonWidthScale (float s) { _actionWScale = s; return *this; }
 
     PresetStripControl& setShowSaveLoad    (bool v)          { _showSaveLoad = v;  return *this; }
     PresetStripControl& setShowUndo        (bool v)          { _showUndo     = v;  return *this; }
@@ -87,19 +107,19 @@ public:
         auto prs = [&](Zone z) { return _pressedZone == z; };
 
         // Toggle button — always visible
-        const std::string& toggleLabel = _collapsed ? _collapsedLabel : _expandedLabel;
-        drawBtn(g, zones.toggle, toggleLabel.c_str(), hov(Zone::Toggle), false, prs(Zone::Toggle));
+        drawBtn(g, zones.toggle, _collapsed ? _collapsedLabel : _expandedLabel,
+                hov(Zone::Toggle), false, prs(Zone::Toggle));
 
         if (_collapsed) return;
 
-        drawBtn(g, zones.prev, "<",  hov(Zone::Prev), false, prs(Zone::Prev));
-        drawBtn(g, zones.next, ">",  hov(Zone::Next), false, prs(Zone::Next));
-        if (_showUndo)    drawBtn(g, zones.undo,   "undo", hov(Zone::Undo),   !_manager.canUndo(), prs(Zone::Undo));
-        if (_showRedo)    drawBtn(g, zones.redo,   "redo", hov(Zone::Redo),   !_manager.canRedo(), prs(Zone::Redo));
-        if (_showSaveLoad){ drawBtn(g, zones.save, "save", hov(Zone::Save),   false, prs(Zone::Save));
-                            drawBtn(g, zones.load, "load", hov(Zone::Load),   false, prs(Zone::Load)); }
-        if (_showDir)     drawBtn(g, zones.folder, "dir",  hov(Zone::Folder), false, prs(Zone::Folder));
-        if (_showScan)    drawBtn(g, zones.scan,   "scan", hov(Zone::Scan),   false, prs(Zone::Scan));
+        drawBtn(g, zones.prev, _prevLabel, hov(Zone::Prev), false, prs(Zone::Prev));
+        drawBtn(g, zones.next, _nextLabel, hov(Zone::Next), false, prs(Zone::Next));
+        if (_showUndo)    drawBtn(g, zones.undo,   _undoLabel, hov(Zone::Undo),   !_manager.canUndo(), prs(Zone::Undo));
+        if (_showRedo)    drawBtn(g, zones.redo,   _redoLabel, hov(Zone::Redo),   !_manager.canRedo(), prs(Zone::Redo));
+        if (_showSaveLoad){ drawBtn(g, zones.save, _saveLabel, hov(Zone::Save),   false, prs(Zone::Save));
+                            drawBtn(g, zones.load, _loadLabel, hov(Zone::Load),   false, prs(Zone::Load)); }
+        if (_showDir)     drawBtn(g, zones.folder, _dirLabel,  hov(Zone::Folder), false, prs(Zone::Folder));
+        if (_showScan)    drawBtn(g, zones.scan,   _scanLabel, hov(Zone::Scan),   false, prs(Zone::Scan));
 
         // Name label — stretches between nav and action buttons. A custom patch
         // (edited / randomized / mutated) shows as "user preset".
@@ -169,9 +189,10 @@ private:
     };
 
     Zones computeZones() const {
-        const float btnW            = mRECT.H() * 1.8f;   // square-ish nav buttons
-        const float wideW           = mRECT.H() * 2.8f;   // save / load / scan / undo
-        const float toggleCollapsed = _collapsedToggleW > 0 ? _collapsedToggleW : mRECT.H() * 4.5f;
+        const float btnW            = mRECT.H() * 1.8f;                  // nav buttons (prev/next)
+        const float wideW           = mRECT.H() * 2.8f * _actionWScale;  // undo/redo/save/load/scan
+        const float dirW            = mRECT.H() * 1.8f * _actionWScale;  // dir/folder
+        const float toggleCollapsed = _collapsedToggleW > 0 ? _collapsedToggleW : mRECT.H() * 1.2f;
         const float toggleExpanded  = _expandedToggleW  > 0 ? _expandedToggleW  : mRECT.H() * 1.2f;
 
         float x = mRECT.L;
@@ -195,7 +216,7 @@ private:
             return IRECT(rx, mRECT.T, rx + w, mRECT.B);
         };
         if (_showScan)   z.scan   = rslice(wideW);
-        if (_showDir)    z.folder = rslice(btnW);
+        if (_showDir)    z.folder = rslice(dirW);
         if (_showSaveLoad) { z.load = rslice(wideW); z.save = rslice(wideW); }
         if (_showRedo)   z.redo   = rslice(wideW);
         if (_showUndo)   z.undo   = rslice(wideW);
@@ -223,7 +244,7 @@ private:
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    void drawBtn(IGraphics& g, const IRECT& r, const char* label,
+    void drawBtn(IGraphics& g, const IRECT& r, const GlyphLabel& label,
                  bool hover, bool disabled = false, bool pressed = false) const {
         if (!disabled) {
             if (pressed)    g.FillRect(GetColor(kPR), r, &mBlend);
@@ -233,11 +254,9 @@ private:
         if (frame.A > 0)
             g.DrawRect(disabled ? frame.WithOpacity(0.35f) : frame, r, &mBlend, 1.f);
         const float txtOpacity = disabled ? 0.35f : 1.f;
-        g.DrawText(mStyle.valueText
-                       .WithFGColor(mStyle.valueText.mFGColor.WithOpacity(txtOpacity))
-                       .WithAlign(EAlign::Center)
-                       .WithVAlign(EVAlign::Middle),
-                   label, r, &mBlend);
+        const IText base = mStyle.valueText
+                               .WithFGColor(mStyle.valueText.mFGColor.WithOpacity(txtOpacity));
+        drawGlyphLabel(g, label, r, base, &mBlend, _runGap);
     }
 
     void promptSave() {
@@ -284,15 +303,25 @@ private:
     Zone                            _hoverZone      = Zone::None;
     Zone                            _pressedZone    = Zone::None;
     bool           _collapsed      = true;
-    std::string    _collapsedLabel = "presets >>";
-    std::string    _expandedLabel  = "<<";
+    GlyphLabel     _collapsedLabel = ">>";
+    GlyphLabel     _expandedLabel  = "<<";
+    GlyphLabel     _prevLabel      = "<";
+    GlyphLabel     _nextLabel      = ">";
+    GlyphLabel     _undoLabel      = "undo";
+    GlyphLabel     _redoLabel      = "redo";
+    GlyphLabel     _saveLabel      = "save";
+    GlyphLabel     _loadLabel      = "load";
+    GlyphLabel     _dirLabel       = "dir";
+    GlyphLabel     _scanLabel      = "scan";
+    float          _runGap         = 0.f;
+    float          _actionWScale   = 1.f;
     bool           _showSaveLoad    = true;
     bool           _showUndo        = true;
     bool           _showRedo        = false;   // opt-in (off keeps existing strips unchanged)
     bool           _showDir         = true;
     bool           _showScan        = true;
-    float          _collapsedToggleW = 0;   // 0 = auto (H * 4.5)
-    float          _expandedToggleW  = 0;   // 0 = auto (H * 1.2)
+    float          _collapsedToggleW = 0;   // 0 = auto
+    float          _expandedToggleW  = 0;   // 0 = auto
 };
 
 } // namespace hvoya::ui

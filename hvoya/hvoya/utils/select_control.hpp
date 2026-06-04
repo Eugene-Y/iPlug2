@@ -1,6 +1,7 @@
 #pragma once
 
 #include <IControls.h>
+#include <algorithm>
 
 namespace hvoya::ui {
 
@@ -33,6 +34,29 @@ public:
     , _frameThickness (frameThickness)
     {}
 
+    // Lay the options out as a `cols` × `rows` grid (row-major) instead of a single
+    // row/column. Pass 0 to either to fall back to the linear, direction-based layout.
+    SelectControl& setGrid (int cols, int rows) {
+        _cols = cols;
+        _rows = rows;
+        if (GetUI()) OnResize();
+        return *this;
+    }
+
+    void OnResize () override {
+        if (_cols <= 0 || _rows <= 0) { IVTabSwitchControl::OnResize(); return; }
+
+        SetTargetRECT (MakeRects (mRECT));
+        mButtons.Resize (0);
+        for (int i = 0; i < mNumStates; ++i) {
+            const int row = std::min (i / _cols, _rows - 1);
+            const int col = i % _cols;
+            mButtons.Add (mWidgetBounds.SubRectVertical (_rows, row)
+                                       .SubRectHorizontal (_cols, col));
+        }
+        SetDirty (false);
+    }
+
     void DrawButton (IGraphics& g, const IRECT& r,
                      bool pressed, bool mouseOver,
                      ETabSegment, bool disabled) override
@@ -49,6 +73,8 @@ public:
 
 private:
     float _frameThickness;
+    int   _cols = 0;   // 0 = linear (direction-based) layout
+    int   _rows = 0;
 };
 
 } // ns hvoya::ui
