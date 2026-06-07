@@ -18,8 +18,7 @@ namespace hvoya::midi_cc {
     }
             
     
-    void Mapper::setLearningForParam (PId_t i, IControllable* p) {
-        _pListeningControllable = p;
+    void Mapper::setLearningForParam (PId_t i) {
         clearMappingForParam (i);
         MCCM_LOGD << "learning param " << i;
         _listeningPId = i;
@@ -56,7 +55,6 @@ namespace hvoya::midi_cc {
     void Mapper::clearAllMappings () {
         _ccToParamMap.clear();
         _listeningPId = -1;
-        _pListeningControllable = nullptr;
         MCCM_LOGD << "clear all mappings";
     }
             
@@ -115,15 +113,15 @@ namespace hvoya::midi_cc {
         
     void Mapper::addMapping (CC_t cc, PId_t i) {
         MCCM_LOGD << "add mapping CC " << cc << " -> param " << i;
-        if (_pListeningControllable) {
-            _pListeningControllable->setCCNumber (cc);
-            _pListeningControllable = nullptr;
-        }
         auto& params = _ccToParamMap [cc];
         auto it = findMappingIteratorForPId (params, i);
         if (it == params.end()) {
             params.emplace_back (ParamCCMapping (i, cc));
         }
+        // Don't touch UI controls here — addMapping runs on the audio thread and the
+        // control may have been destroyed by a layout rebuild while learn was armed
+        // (that dangling setCCNumber() was a crash). Flag for the UI thread to refresh.
+        _ccMapDirtyForUI.store (true, std::memory_order_relaxed);
     }
             
             

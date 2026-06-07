@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+#include <atomic>
 
 #include <hvoya/utils/log/logger.hpp>
 #include <hvoya/utils/types.hpp>
@@ -53,11 +54,16 @@ namespace hvoya::midi_cc {
             };
             
             void setListeningParamId (PId_t i) { _listeningPId = i; }
-            void setLearningForParam (PId_t, IControllable*);
+            void setLearningForParam (PId_t);
 
             // Abort an armed learn (no CC arrived) without binding anything.
-            void cancelLearning() { _isLearning = false; _pListeningControllable = nullptr; }
+            void cancelLearning() { _isLearning = false; }
             bool isLearning() const { return _isLearning; }
+
+            // True once a CC was bound on the audio thread (learn completed). The UI thread
+            // consumes this to refresh control CC# indicators — the audio thread must never
+            // touch UI controls (they may have been destroyed by a layout rebuild).
+            bool takeUIDirty() { return _ccMapDirtyForUI.exchange (false); }
             
             void setMaxForListeningParam (double);
             void setMinForListeningParam (double);
@@ -81,8 +87,8 @@ namespace hvoya::midi_cc {
         private:
 
             PId_t _listeningPId = uninit::pid;
-            IControllable* _pListeningControllable = nullptr;
-            bool _isLearning = false;
+            std::atomic<bool> _isLearning { false };       // armed on the message thread, cleared on audio
+            std::atomic<bool> _ccMapDirtyForUI { false };  // set on audio when a CC binds; UI thread refreshes
             CCtoParamMap_t _ccToParamMap;
         
             void addMapping (CC_t, PId_t);
