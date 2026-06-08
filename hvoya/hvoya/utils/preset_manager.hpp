@@ -253,6 +253,12 @@ public:
         captureBaseline();
     }
 
+    // Make the current live state the clean baseline WITHOUT recording an undo step (and without
+    // clearing redo). For a host action that changes state but must not be undoable on its own —
+    // e.g. selecting a morph point to edit (navigation, not a patch edit). Subsequent dirty edits
+    // revert to here; the previous undo entry (the last real change) stays poppable.
+    void rebaseline() { captureBaseline(); }
+
     // ── Sub-session squash / commit ─────────────────────────────────────────────
     //
     // A "sub-session" (e.g. a morph session) is driven directly on the live params
