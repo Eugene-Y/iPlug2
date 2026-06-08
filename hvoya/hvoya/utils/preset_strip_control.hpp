@@ -161,6 +161,10 @@ public:
             default: break;
         }
     }
+	
+	void OnMouseDblClick(float x, float y, const IMouseMod& mod) override {
+		OnMouseDown (x, y, mod);
+	}
 
     void OnMouseUp(float x, float y, const IMouseMod&) override {
         if (_pressedZone != Zone::None) { _pressedZone = Zone::None; SetDirty(false); }
