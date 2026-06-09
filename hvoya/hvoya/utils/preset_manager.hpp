@@ -103,11 +103,18 @@ public:
         _wsUnserialize = std::move(unserializeFn);
     }
 
-    // Optional gate for strip navigation (next / prev / goTo). When set and it
-    // returns false, navigation is ignored — e.g. while a plugin is in a sub-mode
-    // (morph) where preset switching is repurposed or disabled. File load is not gated.
     using NavGateFn = std::function<bool()>;
     void setNavigationGate(NavGateFn fn) { _navGate = std::move(fn); }
+
+    // Optional predicates for the strip UI: when set and returns true, the corresponding
+    // button is shown disabled. Separate from the redirect (which has side effects on
+    // Handled) — these are pure queries called every frame by PresetStripControl.
+    using BlockedFn = std::function<bool()>;
+    void setNavBlockedWhen  (BlockedFn fn) { _navBlocked  = std::move(fn); }
+    void setLoadBlockedWhen (BlockedFn fn) { _loadBlocked = std::move(fn); }
+
+    bool isNavEnabled()  const { return !_navBlocked  || !_navBlocked();  }
+    bool isLoadEnabled() const { return !_loadBlocked || !_loadBlocked(); }
 
     // ── Context-sensitive preset application (redirect) ─────────────────────────
     //
@@ -289,10 +296,11 @@ public:
         if (preState.Size() > 0) {
             if (static_cast<int>(_undoStack.size()) >= _undoDepth)
                 _undoStack.pop_back();
-            _undoStack.push_front({ preState, iplug::IByteChunk{}, _currentIdx, false });
+            _undoStack.push_front({ preState, iplug::IByteChunk{}, _currentIdx, false, false });
         }
         _redoStack.clear();      // a committed forward result invalidates redo
         _currentIdx = -1;        // a baked / programmatic result is a custom patch
+        _divergedFromIndex = false;
         captureBaseline();
     }
 
@@ -318,6 +326,7 @@ public:
         LOGD << "[PresetManager] saved: " << path;
         _lastUsedDir = std::filesystem::path(path).parent_path().string();
         _currentIdx  = factoryCount() + ensureInList(path);
+        _divergedFromIndex = false;
         captureBaseline();
     }
 
@@ -343,6 +352,7 @@ public:
         LOGD << "[PresetManager] loaded: " << path;
         _lastUsedDir = std::filesystem::path(path).parent_path().string();
         _currentIdx  = factoryCount() + ensureInList(path);
+        _divergedFromIndex = false;
         captureBaseline();
         return true;
     }
@@ -443,9 +453,16 @@ public:
     }
 
     // True when the live patch is not a pristine stored preset — edited,
-    // randomized, mutated, or never loaded from one. The strip shows it as
-    // "user preset" instead of a preset name.
-    bool isCustomPatch() const { return _currentIdx < 0 || isModified(); }
+    // randomized, mutated, never loaded from one, or explicitly marked diverged
+    // (see markPatchCustom). The strip shows it as "user preset" instead of a name.
+    bool isCustomPatch() const { return _currentIdx < 0 || isModified() || _divergedFromIndex; }
+
+    // Mark the live patch as no longer matching the preset at the remembered index, WITHOUT
+    // discarding that index. The strip then shows "user preset", but next/prev keep cycling
+    // from the last preset position. Use when the host changes the sound to something that
+    // isn't the indexed preset yet the navigation position should be preserved (e.g. switching
+    // between morph points). Cleared automatically the next time a preset is actually applied.
+    void markPatchCustom() { _divergedFromIndex = true; }
 
     // Directory to open file dialogs in: last-used dir, or _presetDir if none.
     const std::string& browseDir() const {
@@ -490,6 +507,7 @@ private:
         iplug::IByteChunk baselineChunk;  // clean baseline at push time
         int               presetIdx;
         bool              modified;
+        bool              diverged;       // patch diverged from presetIdx (see _divergedFromIndex)
     };
 
     // RAII flag set while the manager itself drives a state restore, so the plugin's
@@ -515,6 +533,7 @@ private:
     std::deque<UndoEntry>       _redoStack;       // states undone away from; cleared on any new forward edit
     int                         _undoDepth;       // max entries kept on the undo ring buffer
     mutable std::atomic<bool>   _modified { false };
+    bool                        _divergedFromIndex = false;  // patch no longer matches preset @ _currentIdx (index kept)
     iplug::IByteChunk           _baselineChunk;  // clean state of the current preset
 
     CCSerializeFn   _ccSerialize;
@@ -524,6 +543,8 @@ private:
     WorkspaceUnserializeFn _wsUnserialize;
     NavGateFn              _navGate;
     PresetRedirectFn       _redirect;
+    BlockedFn              _navBlocked;
+    BlockedFn              _loadBlocked;
 
     bool isFactory(int idx) const { return idx >= 0 && idx < factoryCount(); }
 
@@ -554,7 +575,7 @@ private:
     // follows. Otherwise normal, gated navigation.
     void navigateTo(int target) {
         const PresetApply v = _redirect ? _redirect(PresetSource::list(target)) : PresetApply::PassThrough;
-        if (v == PresetApply::Handled) { _currentIdx = target; return; }   // host took it; name follows
+        if (v == PresetApply::Handled) { _currentIdx = target; _divergedFromIndex = false; return; }   // host took it; name follows
         if (v == PresetApply::Block)   return;                             // forbidden in this context
         if (!navAllowed() || target == _currentIdx) return;               // legacy gate / already there
         pushUndo();
@@ -566,7 +587,7 @@ private:
         const bool dirty = _modified.load(std::memory_order_relaxed);
         return { serializeCurrent(),
                  dirty ? _baselineChunk : iplug::IByteChunk{},
-                 _currentIdx, dirty };
+                 _currentIdx, dirty, _divergedFromIndex };
     }
 
     void pushBounded(std::deque<UndoEntry>& stack, UndoEntry e) {
@@ -584,6 +605,7 @@ private:
         restoreCCMap(cc);
         restoreWorkspace(ws);
         _currentIdx = std::clamp(e.presetIdx, -1, std::max(-1, totalCount() - 1));
+        _divergedFromIndex = e.diverged;
         if (e.modified) {
             _modified.store(true, std::memory_order_relaxed);
             _baselineChunk = e.baselineChunk;   // original clean state before tweaks
@@ -602,6 +624,7 @@ private:
     void applyIdx(int idx) {
         InternalRestoreScope guard(_restoringInternally);
         _currentIdx = idx;
+        _divergedFromIndex = false;   // the live patch now IS this preset → strip shows its name
         auto cc = snapshotCCMap();
         auto ws = snapshotWorkspace();
         if (isFactory(idx)) {

@@ -112,12 +112,14 @@ public:
 
         if (_collapsed) return;
 
-        drawBtn(g, zones.prev, _prevLabel, hov(Zone::Prev), false, prs(Zone::Prev));
-        drawBtn(g, zones.next, _nextLabel, hov(Zone::Next), false, prs(Zone::Next));
+        const bool navOff  = !_manager.isNavEnabled();
+        const bool loadOff = !_manager.isLoadEnabled();
+        drawBtn(g, zones.prev, _prevLabel, hov(Zone::Prev), navOff,  prs(Zone::Prev));
+        drawBtn(g, zones.next, _nextLabel, hov(Zone::Next), navOff,  prs(Zone::Next));
         if (_showUndo)    drawBtn(g, zones.undo,   _undoLabel, hov(Zone::Undo),   !_manager.canUndo(), prs(Zone::Undo));
         if (_showRedo)    drawBtn(g, zones.redo,   _redoLabel, hov(Zone::Redo),   !_manager.canRedo(), prs(Zone::Redo));
-        if (_showSaveLoad){ drawBtn(g, zones.save, _saveLabel, hov(Zone::Save),   false, prs(Zone::Save));
-                            drawBtn(g, zones.load, _loadLabel, hov(Zone::Load),   false, prs(Zone::Load)); }
+        if (_showSaveLoad){ drawBtn(g, zones.save, _saveLabel, hov(Zone::Save),   false,   prs(Zone::Save));
+                            drawBtn(g, zones.load, _loadLabel, hov(Zone::Load),   loadOff, prs(Zone::Load)); }
         if (_showDir)     drawBtn(g, zones.folder, _dirLabel,  hov(Zone::Folder), false, prs(Zone::Folder));
         if (_showScan)    drawBtn(g, zones.scan,   _scanLabel, hov(Zone::Scan),   false, prs(Zone::Scan));
 
@@ -131,11 +133,13 @@ public:
             const std::string group = _manager.currentGroup();
             label = group.empty() ? name : group + "/" + name;
         }
-        if (_hoverZone == Zone::Name)
+        if (!navOff && _hoverZone == Zone::Name)
             g.FillRect(GetColor(kHL), zones.name, &mBlend);
+        const float nameTxtOpacity = navOff ? 0.35f : 1.f;
         g.DrawText(mStyle.valueText
                        .WithAlign(EAlign::Center)
-                       .WithVAlign(EVAlign::Middle),
+                       .WithVAlign(EVAlign::Middle)
+                       .WithFGColor(mStyle.valueText.mFGColor.WithOpacity(nameTxtOpacity)),
                    label.c_str(), zones.name, &mBlend);
     }
 

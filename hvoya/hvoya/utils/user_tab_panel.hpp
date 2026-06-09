@@ -107,6 +107,7 @@
 #include <set>
 #include <IControl.h>
 #include "control_registry.hpp"
+#include "glyph_label.hpp"
 
 namespace hvoya::ui {
 
@@ -156,6 +157,26 @@ public:
 
     const std::vector<Slot>& slots()      const { return _slots; }
     bool                     isUnlocked() const { return _unlocked; }
+
+    // ── Button labels (declarative, opt-in) ──────────────────────────────────────
+    // Every menu button defaults to plain text (the IVButtonControl look other plugins
+    // get). Pass a GlyphLabel (build with hvoya::ui::icon(glyph, font) + operator+) and
+    // that button is drawn as a mixed-font GlyphButtonControl instead — same behaviour,
+    // icon look. The lock button has one label per state (edit ↔ lock). runGap spaces
+    // the runs of a mixed word+icon label.
+    UserTabPanel& setEditLabel        (GlyphLabel l) { _editLabel        = std::move(l); return *this; }  // shown when locked (click → edit)
+    UserTabPanel& setLockLabel        (GlyphLabel l) { _lockLabel        = std::move(l); return *this; }  // shown when unlocked (click → lock)
+    UserTabPanel& setPlusLabel        (GlyphLabel l) { _plusLabel        = std::move(l); return *this; }  // add control / add slot
+    UserTabPanel& setRemoveLabel      (GlyphLabel l) { _removeLabel      = std::move(l); return *this; }  // ✕ on an entry
+    UserTabPanel& setSwapSlotsLabel   (GlyphLabel l) { _swapSlotsLabel   = std::move(l); return *this; }  // ◄► move column
+    UserTabPanel& setSwapEntriesLabel (GlyphLabel l) { _swapEntriesLabel = std::move(l); return *this; }  // ▲▼ reorder in slot
+    UserTabPanel& setSaveLabel        (GlyphLabel l) { _saveLabel        = std::move(l); return *this; }
+    UserTabPanel& setLoadLabel        (GlyphLabel l) { _loadLabel        = std::move(l); return *this; }
+    UserTabPanel& setCopyLabel        (GlyphLabel l) { _copyLabel        = std::move(l); return *this; }
+    UserTabPanel& setPasteLabel       (GlyphLabel l) { _pasteLabel       = std::move(l); return *this; }
+    UserTabPanel& setClearLabel       (GlyphLabel l) { _clearLabel       = std::move(l); return *this; }
+    UserTabPanel& setUndoLabel        (GlyphLabel l) { _undoLabel        = std::move(l); return *this; }
+    UserTabPanel& setLabelRunGap      (float px)     { _labelRunGap      = px;           return *this; }
 
     // Toggle edit mode programmatically — e.g. bind to a keyboard shortcut.
     // Entering edit mode (unlocked = true) resets the undo history.
@@ -238,6 +259,12 @@ private:
     std::string                    _pluginVersion;
     std::string                    _fileExt;
 
+    // Opt-in icon / mixed-font button labels (empty → plain-text IVButtonControl).
+    GlyphLabel _editLabel, _lockLabel, _plusLabel, _removeLabel,
+               _swapSlotsLabel, _swapEntriesLabel,
+               _saveLabel, _loadLabel, _copyLabel, _pasteLabel, _clearLabel, _undoLabel;
+    float      _labelRunGap = 0.f;
+
     int        _pendingPickerSlotIdx = -1;
     IPopupMenu _pickerMenu;  // must outlive CreatePopupMenu (async on macOS)
 
@@ -260,6 +287,12 @@ private:
     // Padding entries (isPad) are skipped — the caller appends them manually.
     void buildPickerMenu(IPopupMenu& menu, const ControlRegistry::Node& node,
                          int slotIdx, const std::set<int>& usedInSlot) const;
+
+    // Builds a button: a mixed-font GlyphButtonControl when `label` is non-empty,
+    // else the plain-text IVButtonControl (fallback text + style). `onClick` runs on
+    // release for both paths. Caller may SetDisabled() on the returned control.
+    IControl* makeButton(const IRECT& r, const GlyphLabel& label, const char* fallbackText,
+                         const IVStyle& style, std::function<void(IControl*)> onClick);
 
     IControl* makeLockBtn   (const IRECT& r);
     IControl* makePlusBtn   (const IRECT& r, int slotIdx);  // r = available area; button centred inside

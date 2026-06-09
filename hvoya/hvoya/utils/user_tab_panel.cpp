@@ -367,78 +367,83 @@ void UserTabPanel::buildPickerMenu(IPopupMenu& menu, const ControlRegistry::Node
 // ──────────────────────────────────────────────
 //  Child control factories
 
+IControl* UserTabPanel::makeButton(const IRECT& r, const GlyphLabel& label, const char* fallbackText,
+                                   const IVStyle& style, std::function<void(IControl*)> onClick) {
+    if (label.empty())
+        return (new IVButtonControl(r, DefaultClickActionFunc, fallbackText, style))
+            ->SetAnimationEndActionFunction(std::move(onClick));
+
+    // GlyphButtonControl draws its text through style.valueText; the IVButton styles
+    // configure labelText (the button caption), so mirror it across.
+    IVStyle gstyle = style;
+    gstyle.valueText = style.labelText;
+    auto* b = new GlyphButtonControl(r, label, std::move(onClick), gstyle);
+    b->setRunGap(_labelRunGap);
+    return b;
+}
+
 IControl* UserTabPanel::makeLockBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, _unlocked ? "lock" : "edit", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { toggleLock(); });
+    return makeButton(r, _unlocked ? _lockLabel : _editLabel, _unlocked ? "lock" : "edit", _btnStyle,
+        [this](IControl*) { toggleLock(); });
 }
 
 IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
     const IRECT btnR = r.GetCentredInside(std::min(r.W(), kPlusBtnMaxW), std::min(r.H(), kPlusBtnMaxH));
-    return (new IVButtonControl(btnR, DefaultClickActionFunc, "+", _editBtnStyle))
-        ->SetAnimationEndActionFunction([this, slotIdx, btnR](IControl*) {
-            showParamPicker(slotIdx, btnR);
-        });
+    return makeButton(btnR, _plusLabel, "+", _editBtnStyle,
+        [this, slotIdx, btnR](IControl*) { showParamPicker(slotIdx, btnR); });
 }
 
 IControl* UserTabPanel::makeRemoveBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "✕", _entryBtnStyle))
-        ->SetAnimationEndActionFunction([this, slotIdx, entryIdx](IControl*) {
-            removeEntry(slotIdx, entryIdx);
-        });
+    return makeButton(r, _removeLabel, "✕", _entryBtnStyle,
+        [this, slotIdx, entryIdx](IControl*) { removeEntry(slotIdx, entryIdx); });
 }
 
 IControl* UserTabPanel::makeSwapSlotsBtn(const IRECT& r, int slotIdx) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "◄►", _swapBtnStyle))
-        ->SetAnimationEndActionFunction([this, slotIdx](IControl*) { swapSlots(slotIdx); });
+    return makeButton(r, _swapSlotsLabel, "◄►", _swapBtnStyle,
+        [this, slotIdx](IControl*) { swapSlots(slotIdx); });
 }
 
 IControl* UserTabPanel::makeSwapEntriesBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "▲▼", _swapBtnStyle))
-        ->SetAnimationEndActionFunction([this, slotIdx, entryIdx](IControl*) { swapEntries(slotIdx, entryIdx); });
+    return makeButton(r, _swapEntriesLabel, "▲▼", _swapBtnStyle,
+        [this, slotIdx, entryIdx](IControl*) { swapEntries(slotIdx, entryIdx); });
 }
 
 IControl* UserTabPanel::makeSaveBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "save", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) {
-            WDL_String fileName("layout"), path;
-            GetUI()->PromptForFile(fileName, path, EFileAction::Save, _fileExt.c_str(),
-                [this](const WDL_String& fn, const WDL_String&) {
-                    if (fn.GetLength()) saveLayout(fn.Get());
-                });
-        });
+    return makeButton(r, _saveLabel, "save", _btnStyle, [this](IControl*) {
+        WDL_String fileName("layout"), path;
+        GetUI()->PromptForFile(fileName, path, EFileAction::Save, _fileExt.c_str(),
+            [this](const WDL_String& fn, const WDL_String&) {
+                if (fn.GetLength()) saveLayout(fn.Get());
+            });
+    });
 }
 
 IControl* UserTabPanel::makeLoadBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "load", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) {
-            WDL_String fileName, path;
-            GetUI()->PromptForFile(fileName, path, EFileAction::Open, _fileExt.c_str(),
-                [this](const WDL_String& fn, const WDL_String&) {
-                    if (fn.GetLength()) loadLayout(fn.Get());
-                });
-        });
+    return makeButton(r, _loadLabel, "load", _btnStyle, [this](IControl*) {
+        WDL_String fileName, path;
+        GetUI()->PromptForFile(fileName, path, EFileAction::Open, _fileExt.c_str(),
+            [this](const WDL_String& fn, const WDL_String&) {
+                if (fn.GetLength()) loadLayout(fn.Get());
+            });
+    });
 }
 
 IControl* UserTabPanel::makeCopyBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "copy", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { copyToClipboard(); });
+    return makeButton(r, _copyLabel, "copy", _btnStyle, [this](IControl*) { copyToClipboard(); });
 }
 
 IControl* UserTabPanel::makePasteBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "paste", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { pasteFromClipboard(); });
+    return makeButton(r, _pasteLabel, "paste", _btnStyle, [this](IControl*) { pasteFromClipboard(); });
 }
 
 IControl* UserTabPanel::makeClearBtn(const IRECT& r) {
-    auto* btn = (new IVButtonControl(r, DefaultClickActionFunc, "clear", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { clearSlots(); });
+    auto* btn = makeButton(r, _clearLabel, "clear", _btnStyle, [this](IControl*) { clearSlots(); });
     if (_slots.empty()) btn->SetDisabled(true);
     return btn;
 }
 
 IControl* UserTabPanel::makeUndoBtn(const IRECT& r) {
-    auto* btn = (new IVButtonControl(r, DefaultClickActionFunc, "undo", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { undo(); });
+    auto* btn = makeButton(r, _undoLabel, "undo", _btnStyle, [this](IControl*) { undo(); });
     if (_history.empty()) btn->SetDisabled(true);
     return btn;
 }

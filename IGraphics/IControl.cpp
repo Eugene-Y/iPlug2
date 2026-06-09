@@ -829,7 +829,7 @@ void IKnobControlBase::OnMouseUp(float x, float y, const IMouseMod& mod)
 
 void IKnobControlBase::OnMouseDrag(float x, float y, float dX, float dY, const IMouseMod& mod)
 {
-  double gearing = IsFineControl(mod, false) ? mGearing * 10.0 : mGearing;
+  double gearing = IsFineControl(mod, false) ? mGearing * 20.0 : mGearing; // TODO add fineGearingCoeff w setter
   
   IRECT dragBounds = GetKnobDragBounds();
 
