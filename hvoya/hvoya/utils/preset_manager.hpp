@@ -42,7 +42,10 @@
  *   Every navigation or load call pushes the current serialized state AND
  *   preset index onto a ring buffer (depth = constructor's undoDepth, default
  *   kDefaultUndoDepth). undo() restores both.
- *   Individual parameter tweaks are NOT tracked — that is the host's job.
+ *   A single on-screen edit gesture is committed as ONE undo step via
+ *   commitDirtyEdit() (call it at the end of a knob gesture); host automation of a
+ *   single param is still the host's job. An uncommitted dirty edit (e.g. one made
+ *   outside a gesture bracket) is reverted in one shot by undo()'s dirty branch.
  *
  *   Only deliberate on-screen edits (EParamSource::kUI) mark a preset dirty.
  *   Host automation (kHost) and MIDI CC (kDelegate) are live, host/performer-
@@ -228,7 +231,9 @@ public:
             return;
         }
 
-        if (_undoStack.empty()) return;
+        // Floored at _undoFloor while a morph session is open → in-morph undo stays within the
+        // session and never walks into the pre-morph normal history (0 = no floor / normal mode).
+        if (_undoStack.size() <= _undoFloor) return;
         pushBounded(_redoStack, captureEntry());   // current state → redo
         UndoEntry entry = _undoStack.front();
         _undoStack.pop_front();
@@ -242,7 +247,7 @@ public:
         InternalRestoreScope guard(_restoringInternally);
         auto cc = snapshotCCMap();
         auto ws = snapshotWorkspace();
-        pushBounded(_undoStack, captureEntry());
+        pushUndoBounded(captureEntry());
         UndoEntry entry = _redoStack.front();
         _redoStack.pop_front();
         restoreEntry(entry, cc, ws);
@@ -279,6 +284,16 @@ public:
     // Current undo-stack depth — pass to commitFromState / squashUndoTo on exit.
     UndoMark undoMark() const { return _undoStack.size(); }
 
+    // ── In-session undo floor (for a morph session) ─────────────────────────────
+    //
+    // While a sub-session is open, "floor" the undo line at the engage point so undo/redo stay
+    // WITHIN the session: undo() / canUndo() won't pop below `floor`, so the pre-session normal
+    // history isn't reachable until the session is committed as one step on exit. (Redo is
+    // naturally bounded — the first in-session commit clears it.) Set on engage, clear on EVERY
+    // session-exit path. The floor auto-tracks ring eviction (see pushUndoBounded).
+    void setUndoFloor(UndoMark floor) { _undoFloor = std::min(floor, _undoStack.size()); }
+    void clearUndoFloor()             { _undoFloor = 0; }
+
     // Drop undo entries pushed since `mark`. Baseline / dirty flag are untouched —
     // for an exit that must not rebaseline (a no-op session). If the depth ring
     // dropped pre-session entries during the session, this conservatively keeps
@@ -293,15 +308,33 @@ public:
     // preState → just squash + rebaseline (no back-step).
     void commitFromState(const iplug::IByteChunk& preState, UndoMark mark) {
         squashUndoTo(mark);
-        if (preState.Size() > 0) {
-            if (static_cast<int>(_undoStack.size()) >= _undoDepth)
-                _undoStack.pop_back();
-            _undoStack.push_front({ preState, iplug::IByteChunk{}, _currentIdx, false, false });
-        }
+        if (preState.Size() > 0)
+            pushUndoBounded({ preState, iplug::IByteChunk{}, _currentIdx, false, false });
         _redoStack.clear();      // a committed forward result invalidates redo
         _currentIdx = -1;        // a baked / programmatic result is a custom patch
         _divergedFromIndex = false;
         captureBaseline();
+    }
+
+    // Commit the current uncommitted dirty edit (the param tweaks made since the last
+    // clean baseline) as ONE undo step, then rebaseline. The pre-edit state is the clean
+    // baseline; the preset INDEX is KEPT (the live patch now diverges from that preset —
+    // next/prev still cycle from it, the strip shows "user preset"). No-op if not dirty.
+    //
+    // Call at the end of a normal (non-morph) param-knob gesture so several separate edits
+    // after a preset load each undo individually, instead of collapsing into a single
+    // revert-to-baseline. (Differs from commitFromState, which forgets the index because a
+    // morph bake / set-all yields a brand-new custom patch. Differs from undo()'s dirty
+    // branch, which travels BACKWARD to the baseline; this commits the edit going forward.)
+    void commitDirtyEdit() {
+        if (!_modified.load(std::memory_order_relaxed)) return;
+        // Push the pre-edit clean state, carrying the index + diverged flag as they were
+        // BEFORE this edit, so undo lands exactly on the prior (pristine-or-diverged) state.
+        pushUndoBounded({ _baselineChunk, iplug::IByteChunk{}, _currentIdx, false, _divergedFromIndex });
+        _redoStack.clear();              // a fresh forward edit invalidates redo
+        if (_currentIdx >= 0)
+            _divergedFromIndex = true;   // the live patch no longer matches the stored preset
+        captureBaseline();               // post-edit state becomes the new clean baseline
     }
 
     // Call from the plugin's OnRestoreState(). On a genuine EXTERNAL restore (host
@@ -313,8 +346,15 @@ public:
         if (_restoringInternally) return;
         _undoStack.clear();
         _redoStack.clear();
+        _undoFloor = 0;          // fresh history; any morph session re-floors via reconcileSession
         captureBaseline();
     }
+
+    // True while the manager itself is driving a state restore (undo/redo/navigation),
+    // as opposed to an external host load. Lets the plugin's OnRestoreState() honor the
+    // restored chunk's transient UI selection (e.g. a morph point) during undo/redo,
+    // while still clearing a stray selection on a genuine host load. See onHostStateRestored().
+    bool isRestoringInternally() const { return _restoringInternally; }
 
     // ── File I/O ──────────────────────────────────────────────────────────────
 
@@ -490,7 +530,7 @@ public:
 
     const std::string& presetDir()   const { return _presetDir; }
 
-    bool canUndo()      const { return _modified.load(std::memory_order_relaxed) || !_undoStack.empty(); }
+    bool canUndo()      const { return _modified.load(std::memory_order_relaxed) || _undoStack.size() > _undoFloor; }
     bool canRedo()      const { return !_redoStack.empty(); }
     int  currentIdx()   const { return _currentIdx; }
     int  factoryCount() const { return static_cast<int>(_factoryIdxMap.size()); }
@@ -532,6 +572,7 @@ private:
     std::deque<UndoEntry>       _undoStack;
     std::deque<UndoEntry>       _redoStack;       // states undone away from; cleared on any new forward edit
     int                         _undoDepth;       // max entries kept on the undo ring buffer
+    UndoMark                    _undoFloor = 0;    // in-session undo floor (0 = none); see setUndoFloor
     mutable std::atomic<bool>   _modified { false };
     bool                        _divergedFromIndex = false;  // patch no longer matches preset @ _currentIdx (index kept)
     iplug::IByteChunk           _baselineChunk;  // clean state of the current preset
@@ -596,6 +637,17 @@ private:
         stack.push_front(std::move(e));
     }
 
+    // Push onto the UNDO stack with ring bounding, keeping the in-morph floor correct: if the ring
+    // is full we drop the OLDEST (bottom) entry — which sits at/below the floor — so the floor index
+    // (counted from the bottom) must shift down by one to keep pointing at the same engage boundary.
+    void pushUndoBounded(UndoEntry e) {
+        if (static_cast<int>(_undoStack.size()) >= _undoDepth) {
+            _undoStack.pop_back();
+            if (_undoFloor > 0) --_undoFloor;
+        }
+        _undoStack.push_front(std::move(e));
+    }
+
     // Apply a previously captured entry (used by both undo and redo). The caller
     // has already snapshotted/needs to restore CC + workspace around it.
     void restoreEntry(const UndoEntry& e, const iplug::IByteChunk& cc, const iplug::IByteChunk& ws) {
@@ -615,7 +667,7 @@ private:
     }
 
     void pushUndo() {
-        pushBounded(_undoStack, captureEntry());
+        pushUndoBounded(captureEntry());
         _redoStack.clear();   // a fresh forward action invalidates the redo history
     }
 
