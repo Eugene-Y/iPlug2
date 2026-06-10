@@ -47,6 +47,14 @@
  *   single param is still the host's job. An uncommitted dirty edit (e.g. one made
  *   outside a gesture bracket) is reverted in one shot by undo()'s dirty branch.
  *
+ *   Sub-session floor: a host can bracket a sub-session (e.g. a morph session) with
+ *   setUndoFloor(undoMark()) on enter / clearUndoFloor() on exit, so undo()/canUndo()
+ *   stay WITHIN the session and never walk into the history beneath it; the session is
+ *   then committed as one outer step via commitFromState() on exit. NB undo()'s dirty
+ *   branch reverts to _baselineChunk REGARDLESS of the floor, so a sub-session whose
+ *   state differs from the surrounding history (e.g. morph on vs off) should rebaseline()
+ *   on enter, else a dirty-revert escapes the session. See squashUndoTo/commitFromState.
+ *
  *   Only deliberate on-screen edits (EParamSource::kUI) mark a preset dirty.
  *   Host automation (kHost) and MIDI CC (kDelegate) are live, host/performer-
  *   owned control, not unsaved edits: tracking them as dirty would trap undo in
