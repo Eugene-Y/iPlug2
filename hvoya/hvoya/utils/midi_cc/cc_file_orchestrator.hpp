@@ -32,8 +32,6 @@
 
 #include <hvoya/utils/hvoya_file.hpp>
 #include <hvoya/utils/glyph_label.hpp>
-#include "resources/fonts/IconsForkAwesome.h"
-#include "resources/fonts/IconsFontaudio.h"
 #include "mapper_hvoya_adapter.hpp"
 
 
