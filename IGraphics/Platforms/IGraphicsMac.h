@@ -35,6 +35,7 @@ public:
   void CloseWindow() override;
   bool WindowIsOpen() override;
   void PlatformResize(bool parentHasResized) override;
+  void DrawNow() override;
   void AttachPlatformView(const IRECT& r, void* pView) override;
   void RemovePlatformView(void* pView) override;
   void HidePlatformView(void* pView, bool hide) override;
