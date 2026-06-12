@@ -829,7 +829,7 @@ void IKnobControlBase::OnMouseUp(float x, float y, const IMouseMod& mod)
 
 void IKnobControlBase::OnMouseDrag(float x, float y, float dX, float dY, const IMouseMod& mod)
 {
-  double gearing = IsFineControl(mod, false) ? mGearing * 20.0 : mGearing; // TODO add fineGearingCoeff w setter
+  double gearing = IsFineControl(mod, false) ? mGearing * mFineGearing : mGearing;
   
   IRECT dragBounds = GetKnobDragBounds();
 
@@ -954,7 +954,7 @@ void ISliderControlBase::OnMouseDrag(float x, float y, float dX, float dY, const
     }
   }
   
-  double gearing = IsFineControl(mod, false) ? mGearing * 10.0 : mGearing;
+  double gearing = IsFineControl(mod, false) ? mGearing * mFineGearing : mGearing;
 
   if (mDirection == EDirection::Vertical)
     mMouseDragValue += static_cast<double>(dY / static_cast<double>(mTrackBounds.T - mTrackBounds.B) / gearing);

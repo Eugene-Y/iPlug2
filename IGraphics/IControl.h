@@ -1406,6 +1406,8 @@ public:
   void OnMouseWheel(float x, float y, const IMouseMod& mod, float d) override;
   
   void SetGearing(double gearing) { mGearing = gearing; }
+  /** Set the multiplier applied to gearing when holding the fine-control (shift) modifier. Larger = finer/more precise dragging. */
+  void SetFineGearing(double coeff) { mFineGearing = coeff; }
   bool IsFineControl(const IMouseMod& mod, bool wheel) const;
 
 protected:
@@ -1416,6 +1418,7 @@ protected:
   bool mHideCursorOnDrag = true;
   EDirection mDirection;
   double mGearing;
+  double mFineGearing = 20.0;
   bool mMouseDown = false;
   double mMouseDragValue = 0.0;
 };
@@ -1434,14 +1437,17 @@ public:
   void OnMouseWheel(float x, float y, const IMouseMod& mod, float d) override;
 
   void SetGearing(double gearing) { mGearing = gearing; }
+  /** Set the multiplier applied to gearing when holding the fine-control (shift) modifier. Larger = finer/more precise dragging. */
+  void SetFineGearing(double coeff) { mFineGearing = coeff; }
   bool IsFineControl(const IMouseMod& mod, bool wheel) const;
-  
+
 protected:
   bool mHideCursorOnDrag = true;
   EDirection mDirection;
   IRECT mTrackBounds;
   float mHandleSize;
   double mGearing;
+  double mFineGearing = 10.0;
   bool mMouseDown = false;
   double mMouseDragValue;
 };
