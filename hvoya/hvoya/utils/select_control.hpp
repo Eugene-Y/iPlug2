@@ -34,6 +34,14 @@ public:
     , _frameThickness (frameThickness)
     {}
 
+    // Suppress the "selected option" highlight without changing the param value — the grid then
+    // reads as having no active choice (e.g. the pass-type grid while the filter shape is a
+    // user-blend that no single type expresses). Hover feedback is unaffected.
+    SelectControl& setDisplayUnselected (bool b) {
+        if (_displayUnselected != b) { _displayUnselected = b; SetDirty (false); }
+        return *this;
+    }
+
     // Lay the options out as a `cols` × `rows` grid (row-major) instead of a single
     // row/column. Pass 0 to either to fall back to the linear, direction-based layout.
     SelectControl& setGrid (int cols, int rows) {
@@ -61,6 +69,7 @@ public:
                      bool pressed, bool mouseOver,
                      ETabSegment, bool disabled) override
     {
+        if (_displayUnselected) pressed = false;   // no option reads as selected
         const float opacity = disabled ? 0.35f : 1.f;
         if (pressed || mouseOver) {
             const IColor fill = pressed ? GetColor (kPR) : GetColor (kHL);
@@ -75,6 +84,7 @@ private:
     float _frameThickness;
     int   _cols = 0;   // 0 = linear (direction-based) layout
     int   _rows = 0;
+    bool  _displayUnselected = false;
 };
 
 } // ns hvoya::ui
