@@ -42,6 +42,16 @@ public:
         _widget.setStyle (active ? _fill      : _track,    // active: light-gray track; idle: transparent
                           active ? _activeFill : _fill,     // active: accent fill;      idle: light-gray
                           _labelText);
+        _widget.setAnchor (_anchor);
+
+        // With a top label the track shrinks to the lower half and the label sits above it;
+        // otherwise the track fills the whole control (label-on-track look).
+        IRECT trackR = mRECT;
+        if (!_topLabel.empty()) {
+            g.DrawText (_topLabelText, _topLabel.c_str(), mRECT.GetFromTop (mRECT.H() * 0.5f), &mBlend);
+            trackR = mRECT.GetFromBottom (mRECT.H() * 0.5f);
+        }
+
         std::string label = _label;
         if (_showIntValue) {
             if (const IParam* p = GetParam()) {
@@ -50,14 +60,14 @@ public:
                     ? std::format ("{:.{}f}", v, _valueDecimalPlaces)
                     : std::to_string (static_cast<int> (std::round (v)));
                 if (_valueSuffix.empty()) {
-                    label += ' ';
+                    if (!label.empty()) label += ' ';
                     label += valStr;
                 } else {
                     label = valStr + ' ' + _valueSuffix;
                 }
             }
         }
-        _widget.draw (g, mRECT, static_cast<float> (GetValue()), label, &mBlend);
+        _widget.draw (g, trackR, static_cast<float> (GetValue()), label, &mBlend);
     }
 
     // Delta-based drag with gearing so Shift gives fine control (×10 slower).
@@ -88,6 +98,13 @@ public:
     void setValueSuffix       (std::string s)     { _valueSuffix = std::move (s); SetDirty (false); }
     // Number of decimal places (0 = integer display, the default).
     void setValueDecimalPlaces (int n)            { _valueDecimalPlaces = n;      SetDirty (false); }
+    // Optional label drawn ABOVE the track (the track then shrinks to the lower half). Leave
+    // unset for the inline label-on-track look.
+    void setTopLabel (std::string label, const IText& text) {
+        _topLabel = std::move (label); _topLabelText = text; SetDirty (false);
+    }
+    // The normalized fraction the fill grows from (0 = left edge, 0.5 = track centre). See SliderWidget.
+    void setAnchor (float frac) { _anchor = std::clamp (frac, 0.f, 1.f); SetDirty (false); }
 
 private:
     SliderWidget _widget;
@@ -97,6 +114,9 @@ private:
     std::string  _valueSuffix;
     bool         _showIntValue      = false;
     int          _valueDecimalPlaces = 0;
+    std::string  _topLabel;
+    IText        _topLabelText;
+    float        _anchor            = 0.f;
 };
 
 } // namespace hvoya::ui
