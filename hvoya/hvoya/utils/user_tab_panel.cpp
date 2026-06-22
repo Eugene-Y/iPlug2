@@ -379,6 +379,12 @@ IControl* UserTabPanel::makeButton(const IRECT& r, const GlyphLabel& label, cons
     gstyle.valueText = style.labelText;
     auto* b = new GlyphButtonControl(r, label, std::move(onClick), gstyle);
     b->setRunGap(_labelRunGap);
+    if (_hasHighlightColor) {
+        // No background-rect highlight; instead the glyph itself recolors on hover.
+        b->setMouseOverColor(COLOR_TRANSPARENT);
+        b->setPressedColor(COLOR_TRANSPARENT);
+        b->setMouseOverTextColor(_highlightColor);
+    }
     return b;
 }
 
@@ -389,7 +395,8 @@ IControl* UserTabPanel::makeLockBtn(const IRECT& r) {
 
 IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
     const IRECT btnR = r.GetCentredInside(std::min(r.W(), kPlusBtnMaxW), std::min(r.H(), kPlusBtnMaxH));
-    return makeButton(btnR, _plusLabel, "+", _editBtnStyle,
+    // _entryBtnStyle (same size as the ✕ remove glyph) — the ×2 _editBtnStyle "+" was oversized.
+    return makeButton(btnR, _plusLabel, "+", _entryBtnStyle,
         [this, slotIdx, btnR](IControl*) { showParamPicker(slotIdx, btnR); });
 }
 
@@ -604,8 +611,8 @@ void UserTabPanel::rebuild() {
             if (_unlocked && e < (int)slot.params.size() - 1) {
                 const float cx = sliceContent.L + sliceContent.W() * kSwapEntryOffX;
                 const float cy = sliceContent.T + yPx - kEntryGap / 2.f;
-                const IRECT swapR { cx - kSwapBtnW / 2.f, cy - kEditHeaderH / 2.f,
-                                    cx + kSwapBtnW / 2.f, cy + kEditHeaderH / 2.f };
+                const IRECT swapR { cx - kSwapEntryBtnW / 2.f, cy - kSwapEntryBtnH / 2.f,
+                                    cx + kSwapEntryBtnW / 2.f, cy + kSwapEntryBtnH / 2.f };
                 AddChildControl(makeSwapEntriesBtn(swapR, s, e));
             }
         }
@@ -614,9 +621,11 @@ void UserTabPanel::rebuild() {
             AddChildControl(new BorderOverlay(sliceContent, kSlotOutlineColor));
     }
 
-    // Global "new slot" column — rightmost, edit mode only; "+" centred in full column
+    // Global "new slot" column — rightmost, edit mode only. The right-edge menu column
+    // (lock/save/…) overlays this column, so reserve its width before centring the "+"
+    // (shifts the glyph half the menu width left, into the visible area).
     if (_unlocked) {
-        AddChildControl(makePlusBtn(colRect(nCols - 1, contentR), -1));
+        AddChildControl(makePlusBtn(colRect(nCols - 1, contentR).GetReducedFromRight(kLockBtnW), -1));
     }
 
     // Lock button added last → always on top of content controls in z-order.

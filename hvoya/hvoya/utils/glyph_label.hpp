@@ -123,6 +123,8 @@ public:
     GlyphButtonControl& setPressedColor    (const IColor& c)  { mStyle.colorSpec.mColors[kPR] = c;         return *this; }
     GlyphButtonControl& setFrameColor      (const IColor& c)  { mStyle.colorSpec.mColors[kFR] = c;         return *this; }
     GlyphButtonControl& setTextColor       (const IColor& c)  { mStyle.valueText.mFGColor = c;             return *this; }
+    // When set, the glyph (not a background rect) recolors to `c` while hovered.
+    GlyphButtonControl& setMouseOverTextColor (const IColor& c) { _mouseOverTextColor = c; _hasMouseOverText = true; return *this; }
 
     void Draw (IGraphics& g) override {
         const IColor bg = GetColor (kBG);
@@ -131,7 +133,9 @@ public:
         else if (mMouseIsOver) g.FillRect (GetColor (kHL), mRECT, &mBlend);
         const IColor frame = GetColor (kFR);
         if (frame.A > 0) g.DrawRect (frame, mRECT, &mBlend, 1.f);
-        drawGlyphLabel (g, _label, mRECT, mStyle.valueText, &mBlend, _runGap);
+        IText txt = mStyle.valueText;
+        if (mMouseIsOver && _hasMouseOverText) txt.mFGColor = _mouseOverTextColor;
+        drawGlyphLabel (g, _label, mRECT, txt, &mBlend, _runGap);
     }
 
     void OnMouseDown (float, float, const IMouseMod&) override { _pressed = true; SetDirty (false); }
@@ -146,6 +150,8 @@ private:
     std::function<void(IControl*)> _onClick;
     float                          _runGap  = 0.f;
     bool                           _pressed = false;
+    IColor                         _mouseOverTextColor;
+    bool                           _hasMouseOverText = false;
 };
 
 } // namespace hvoya::ui

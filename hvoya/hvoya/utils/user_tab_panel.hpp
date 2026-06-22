@@ -178,6 +178,15 @@ public:
     UserTabPanel& setUndoLabel        (GlyphLabel l) { _undoLabel        = std::move(l); return *this; }
     UserTabPanel& setLabelRunGap      (float px)     { _labelRunGap      = px;           return *this; }
 
+    // Hover color of the edit-mode action glyphs (+ / ✕ / swap ◄► / swap ▲▼). At rest the
+    // glyphs draw in editColor (the accent); on mouse-over they recolor to `c` — the glyph
+    // itself, not a background rectangle (the rect highlight is suppressed for these buttons).
+    UserTabPanel& setHighlightColor (IColor c) {
+        _highlightColor    = c;
+        _hasHighlightColor = true;
+        return *this;
+    }
+
     // Toggle edit mode programmatically — e.g. bind to a keyboard shortcut.
     // Entering edit mode (unlocked = true) resets the undo history.
     void setUnlocked(bool unlocked) {
@@ -223,7 +232,9 @@ public:
     static constexpr float kEditHeaderH   = 18.f;   // height of the header row (lock/edit btn + slot headers)
     static constexpr float kEntryGap      = 2.f;    // px gap between entries within a slot (vertical)
     static constexpr float kSlotGap       = 0.f;    // px gap between slot columns (horizontal)
-    static constexpr float kSwapBtnW      = 60.f;   // width of slot-swap and entry-swap buttons
+    static constexpr float kSwapBtnW      = 40.f;   // width of slot-swap (horizontal ◄►) button
+    static constexpr float kSwapEntryBtnW = 40.f;   // width of entry-swap (vertical ▲▼) button — narrower for the upright glyph
+    static constexpr float kSwapEntryBtnH = 24.f;   // height of entry-swap button — taller so the upright glyph isn't clipped
     static constexpr float kPlusBtnMaxW   = 80.f;   // max width of "+" button (clamped to available space)
     static constexpr float kPlusBtnMaxH   = 40.f;   // max height of "+" button
 
@@ -264,6 +275,9 @@ private:
                _swapSlotsLabel, _swapEntriesLabel,
                _saveLabel, _loadLabel, _copyLabel, _pasteLabel, _clearLabel, _undoLabel;
     float      _labelRunGap = 0.f;
+
+    IColor _highlightColor;                // hover color for action glyphs (see setHighlightColor)
+    bool   _hasHighlightColor = false;
 
     int        _pendingPickerSlotIdx = -1;
     IPopupMenu _pickerMenu;  // must outlive CreatePopupMenu (async on macOS)
