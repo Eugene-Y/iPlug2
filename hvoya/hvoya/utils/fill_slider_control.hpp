@@ -24,8 +24,16 @@ using namespace iplug::igraphics;
 //   active — background = fill,   fill = activeFill    (e.g. light-gray track, accent fill)
 // so hovering or dragging highlights the slider. Appearance is declarative — the colours and
 // label are given explicitly and drawn exactly as given (no style-slot decoding).
+//
+// Two mouse-interaction modes, switched by setMouseMode():
+//   RelativeDrag (default) — a click does NOT change the value; dragging up/down adjusts it
+//                            incrementally per the gearing (drag up = increase).
+//   JumpToClick            — a click jumps the value to the clicked position, then horizontal
+//                            dragging tracks the cursor (also gearing-scaled).
 class FillSliderControl : public ISliderControlBase {
 public:
+    enum class MouseMode { RelativeDrag, JumpToClick };
+
     FillSliderControl (const IRECT& bounds, int paramIdx,
                        const IColor& track, const IColor& fill, const IColor& activeFill,
                        const IText& labelText, std::string label,
@@ -53,7 +61,15 @@ public:
         }
 
         std::string label = _label;
-        if (_showIntValue) {
+        if (_useParamDisplay) {
+            // Defer all formatting to the param's own SetDisplayFunc (prefix, unit, sentinels) —
+            // the single source of truth, identical to what the host shows.
+            if (const IParam* p = GetParam()) {
+                WDL_String s;
+                p->GetDisplay (GetValue(), true, s);
+                label = s.Get();
+            }
+        } else if (_showIntValue) {
             if (const IParam* p = GetParam()) {
                 const double v = p->FromNormalized (GetValue());
                 const std::string valStr = _valueDecimalPlaces > 0
@@ -70,14 +86,27 @@ public:
         _widget.draw (g, trackR, static_cast<float> (GetValue()), label, &mBlend);
     }
 
-    // Delta-based drag with gearing so Shift gives fine control (×10 slower).
-    // SnapToMouse on initial click is handled by the base OnMouseDown; here we only
-    // apply incremental movement so gearing actually works with mHideCursorOnDrag = false.
-    void OnMouseDrag (float, float, float dX, float, const IMouseMod& mod) override {
+    void OnMouseDown (float x, float y, const IMouseMod& mod) override {
+        if (_mouseMode == MouseMode::JumpToClick) {
+            ISliderControlBase::OnMouseDown (x, y, mod);   // base snaps the value to the click
+            return;
+        }
+        // RelativeDrag: grab without changing the value — the drag does the work.
+        mMouseDown = true;
+        mMouseDragValue = GetValue();
+        IControl::OnMouseDown (x, y, mod);
+    }
+
+    // Delta-based drag with gearing so Shift gives fine control (×10 slower); we apply incremental
+    // movement ourselves so gearing works with mHideCursorOnDrag = false. The reference span is the
+    // track width in both modes, so the gearing feel is identical: JumpToClick reads horizontal
+    // motion (track the cursor), RelativeDrag reads vertical motion (drag up = increase).
+    void OnMouseDrag (float, float, float dX, float dY, const IMouseMod& mod) override {
         const double trackW = mTrackBounds.W();
         if (trackW == 0.) return;
         const double gear = IsFineControl (mod, false) ? mGearing * 10. : mGearing;
-        mMouseDragValue = std::clamp (mMouseDragValue + dX / trackW / gear, 0., 1.);
+        const double d = _mouseMode == MouseMode::JumpToClick ? dX : -dY;
+        mMouseDragValue = std::clamp (mMouseDragValue + d / trackW / gear, 0., 1.);
         SetValue (mMouseDragValue);
         SetDirty();
     }
@@ -96,6 +125,9 @@ public:
     void setShowIntValue (bool show)              { _showIntValue = show; SetDirty (false); }
     // When non-empty, switches the int-value display to "value suffix" (e.g. "-80 dB").
     void setValueSuffix       (std::string s)     { _valueSuffix = std::move (s); SetDirty (false); }
+    // When true, the on-track value is the param's own GetDisplay() string (its SetDisplayFunc, unit
+    // and sentinels) — takes precedence over the showIntValue/suffix path.
+    void setUseParamDisplay   (bool use)          { _useParamDisplay = use; SetDirty (false); }
     // Number of decimal places (0 = integer display, the default).
     void setValueDecimalPlaces (int n)            { _valueDecimalPlaces = n;      SetDirty (false); }
     // Optional label drawn ABOVE the track (the track then shrinks to the lower half). Leave
@@ -105,6 +137,8 @@ public:
     }
     // The normalized fraction the fill grows from (0 = left edge, 0.5 = track centre). See SliderWidget.
     void setAnchor (float frac) { _anchor = std::clamp (frac, 0.f, 1.f); SetDirty (false); }
+    // Mouse-interaction mode (see the class comment). Defaults to RelativeDrag.
+    void setMouseMode (MouseMode mode) { _mouseMode = mode; }
 
 private:
     SliderWidget _widget;
@@ -112,11 +146,13 @@ private:
     IText        _labelText;
     std::string  _label;
     std::string  _valueSuffix;
+    bool         _useParamDisplay   = false;
     bool         _showIntValue      = false;
     int          _valueDecimalPlaces = 0;
     std::string  _topLabel;
     IText        _topLabelText;
     float        _anchor            = 0.f;
+    MouseMode    _mouseMode         = MouseMode::RelativeDrag;
 };
 
 } // namespace hvoya::ui
