@@ -126,32 +126,81 @@ public:
     // When set, the glyph (not a background rect) recolors to `c` while hovered.
     GlyphButtonControl& setMouseOverTextColor (const IColor& c) { _mouseOverTextColor = c; _hasMouseOverText = true; return *this; }
 
+    // Opt-in: when set, the button is enabled only while `fn` returns true. It is
+    // re-evaluated on a throttle (the predicate may be cheap-ish but not free, e.g. a
+    // clipboard probe), so the button polls — IsDirty stays true while a predicate is
+    // installed. A disabled button dims its glyph and ignores clicks/hover.
+    GlyphButtonControl& setEnabledFn (std::function<bool()> fn) { _enabledFn = std::move (fn); return *this; }
+
     void Draw (IGraphics& g) override {
+        if (_enabledFn && --_enabledThrottle <= 0) {
+            _enabledThrottle = kEnabledThrottleFrames;
+            _enabled = _enabledFn();
+        }
         const IColor bg = GetColor (kBG);
         if (bg.A > 0) g.FillRect (bg, mRECT, &mBlend);
-        if (_pressed)          g.FillRect (GetColor (kPR), mRECT, &mBlend);
-        else if (mMouseIsOver) g.FillRect (GetColor (kHL), mRECT, &mBlend);
+        if (_enabled) {
+            if (_pressed)          g.FillRect (GetColor (kPR), mRECT, &mBlend);
+            else if (mMouseIsOver) g.FillRect (GetColor (kHL), mRECT, &mBlend);
+        }
         const IColor frame = GetColor (kFR);
         if (frame.A > 0) g.DrawRect (frame, mRECT, &mBlend, 1.f);
         IText txt = mStyle.valueText;
-        if (mMouseIsOver && _hasMouseOverText) txt.mFGColor = _mouseOverTextColor;
+        if (mMouseIsOver && _hasMouseOverText && _enabled) txt.mFGColor = _mouseOverTextColor;
+        if (!_enabled) txt.mFGColor = txt.mFGColor.WithOpacity (0.35f);
         drawGlyphLabel (g, _label, mRECT, txt, &mBlend, _runGap);
     }
 
-    void OnMouseDown (float, float, const IMouseMod&) override { _pressed = true; SetDirty (false); }
+    bool IsDirty () override { return _enabledFn ? true : IControl::IsDirty(); }
+
+    void OnMouseDown (float, float, const IMouseMod&) override { if (_enabled) { _pressed = true; SetDirty (false); } }
     void OnMouseUp (float x, float y, const IMouseMod&) override {
         _pressed = false;
         SetDirty (false);
-        if (_onClick && mRECT.Contains (x, y)) _onClick (this);
+        if (_enabled && _onClick && mRECT.Contains (x, y)) _onClick (this);
     }
 
 private:
+    static constexpr int           kEnabledThrottleFrames = 20;
+
     GlyphLabel                     _label;
     std::function<void(IControl*)> _onClick;
     float                          _runGap  = 0.f;
     bool                           _pressed = false;
     IColor                         _mouseOverTextColor;
     bool                           _hasMouseOverText = false;
+    std::function<bool()>          _enabledFn;
+    bool                           _enabled = true;
+    int                            _enabledThrottle = 0;
+};
+
+// Non-interactive centered glyph label — mouse-transparent, never highlights. For
+// row prefixes that name a block of buttons (e.g. a "midi:" tag before CC buttons).
+class GlyphLabelControl : public IControl, public IVectorBase {
+public:
+    GlyphLabelControl (const IRECT& bounds, GlyphLabel label, const IVStyle& style = DEFAULT_STYLE)
+        : IControl (bounds)
+        , IVectorBase (style)
+        , _label (std::move (label))
+    {
+        AttachIControl (this, "");
+        SetIgnoreMouse (true);
+    }
+
+    GlyphLabelControl& setLabel           (GlyphLabel l)    { _label = std::move (l); SetDirty (false); return *this; }
+    GlyphLabelControl& setRunGap          (float px)        { _runGap = px;                              return *this; }
+    GlyphLabelControl& setBackgroundColor (const IColor& c) { mStyle.colorSpec.mColors[kBG] = c;         return *this; }
+    GlyphLabelControl& setTextColor       (const IColor& c) { mStyle.valueText.mFGColor = c;             return *this; }
+
+    void Draw (IGraphics& g) override {
+        const IColor bg = GetColor (kBG);
+        if (bg.A > 0) g.FillRect (bg, mRECT, &mBlend);
+        drawGlyphLabel (g, _label, mRECT, mStyle.valueText, &mBlend, _runGap);
+    }
+
+private:
+    GlyphLabel _label;
+    float      _runGap = 0.f;
 };
 
 } // namespace hvoya::ui

@@ -198,8 +198,7 @@ private:
 
     Zones computeZones() const {
         const float btnW            = mRECT.H() * 1.8f;                  // nav buttons (prev/next)
-        const float wideW           = mRECT.H() * 2.8f * _actionWScale;  // undo/redo/save/load/scan
-        const float dirW            = mRECT.H() * 1.8f * _actionWScale;  // dir/folder
+        const float wideW           = mRECT.H() * 2.8f * _actionWScale;  // all action buttons (undo/redo/save/load/dir/scan) — uniform width
         const float toggleCollapsed = _collapsedToggleW > 0 ? _collapsedToggleW : mRECT.H() * 1.2f;
         const float toggleExpanded  = _expandedToggleW  > 0 ? _expandedToggleW  : mRECT.H() * 1.2f;
 
@@ -224,7 +223,7 @@ private:
             return IRECT(rx, mRECT.T, rx + w, mRECT.B);
         };
         if (_showScan)   z.scan   = rslice(wideW);
-        if (_showDir)    z.folder = rslice(dirW);
+        if (_showDir)    z.folder = rslice(wideW);
         if (_showSaveLoad) { z.load = rslice(wideW); z.save = rslice(wideW); }
         if (_showRedo)   z.redo   = rslice(wideW);
         if (_showUndo)   z.undo   = rslice(wideW);
