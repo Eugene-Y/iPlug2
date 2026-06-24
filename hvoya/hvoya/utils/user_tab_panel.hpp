@@ -178,6 +178,19 @@ public:
     UserTabPanel& setUndoLabel        (GlyphLabel l) { _undoLabel        = std::move(l); return *this; }
     UserTabPanel& setLabelRunGap      (float px)     { _labelRunGap      = px;           return *this; }
 
+    // Width of the right-edge menu column (lock/edit + save/load/copy/paste/clear/undo)
+    // and the new-slot "+" reservation. Defaults to kLockBtnW (fits text labels). With
+    // single-icon labels it can be squeezed to ~kEditHeaderH so the menu barely narrows
+    // the editable area — the unlocked layout then previews the locked one closely.
+    UserTabPanel& setMenuButtonWidth  (float px)     { _menuBtnW         = px;           return *this; }
+
+    // In edit mode the panel grows UPWARD by `px` and the per-column edit chrome (slot-swap + add
+    // buttons) moves into that gained band, sitting ABOVE the control cells instead of overlapping
+    // them. Content keeps the original bounds (so it matches a sibling layout of that rect); the
+    // lock/menu column stays anchored to the content, not the gained band. 0 (default) = no growth,
+    // chrome overlays the content top. The host frees the space above (e.g. collapses a strip there).
+    UserTabPanel& setEditExpandTop    (float px)     { _editExpandTop    = px;           return *this; }
+
     // Hover color of the edit-mode action glyphs (+ / ✕ / swap ◄► / swap ▲▼). At rest the
     // glyphs draw in editColor (the accent); on mouse-over they recolor to `c` — the glyph
     // itself, not a background rectangle (the rect highlight is suppressed for these buttons).
@@ -275,6 +288,9 @@ private:
                _swapSlotsLabel, _swapEntriesLabel,
                _saveLabel, _loadLabel, _copyLabel, _pasteLabel, _clearLabel, _undoLabel;
     float      _labelRunGap = 0.f;
+    float      _menuBtnW    = kLockBtnW;    // right-edge menu column width (see setMenuButtonWidth)
+    float      _editExpandTop = 0.f;        // upward growth in edit mode (see setEditExpandTop)
+    IRECT      _baseRECT;                   // attach bounds (the content area); edit mode grows upward from here
 
     IColor _highlightColor;                // hover color for action glyphs (see setHighlightColor)
     bool   _hasHighlightColor = false;
@@ -305,8 +321,15 @@ private:
     // Builds a button: a mixed-font GlyphButtonControl when `label` is non-empty,
     // else the plain-text IVButtonControl (fallback text + style). `onClick` runs on
     // release for both paths. Caller may SetDisabled() on the returned control.
+    //
+    // `bgHighlight` picks the hover/press look of glyph buttons:
+    //   false → the edit-mode action-glyph look: no background rect, the glyph itself
+    //           recolors to the highlight color on hover (set via setHighlightColor).
+    //   true  → the menu look: glyph stays light, the background fills with the style's
+    //           kHL (hover) / kPR (press) — a highlight behind the glyph.
     IControl* makeButton(const IRECT& r, const GlyphLabel& label, const char* fallbackText,
-                         const IVStyle& style, std::function<void(IControl*)> onClick);
+                         const IVStyle& style, std::function<void(IControl*)> onClick,
+                         bool bgHighlight = false);
 
     IControl* makeLockBtn   (const IRECT& r);
     IControl* makePlusBtn   (const IRECT& r, int slotIdx);  // r = available area; button centred inside

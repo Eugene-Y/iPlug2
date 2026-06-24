@@ -96,6 +96,11 @@ public:
         _onToggle = std::move(fn); return *this;
     }
 
+    // Enables/disables the collapse/expand toggle button. When disabled the button is
+    // drawn dimmed and clicks are ignored — the strip stays in its current state. (The
+    // host can hold the strip collapsed during a mode where the row is repurposed.)
+    PresetStripControl& setToggleEnabled (bool v) { _toggleEnabled = v; SetDirty(false); return *this; }
+
     // ── Drawing ───────────────────────────────────────────────────────────────
 
     void Draw(IGraphics& g) override {
@@ -106,9 +111,9 @@ public:
         auto hov = [&](Zone z) { return _hoverZone   == z; };
         auto prs = [&](Zone z) { return _pressedZone == z; };
 
-        // Toggle button — always visible
+        // Toggle button — always visible (dimmed + inert when disabled)
         drawBtn(g, zones.toggle, _collapsed ? _collapsedLabel : _expandedLabel,
-                hov(Zone::Toggle), false, prs(Zone::Toggle));
+                hov(Zone::Toggle), !_toggleEnabled, prs(Zone::Toggle));
 
         if (_collapsed) return;
 
@@ -150,6 +155,7 @@ public:
         if (_pressedZone != z) { _pressedZone = z; SetDirty(false); }
         switch (z) {
             case Zone::Toggle:
+                if (!_toggleEnabled) break;   // inert while disabled
                 _collapsed = !_collapsed;
                 if (_onToggle) _onToggle(_collapsed);
                 SetDirty(false);
@@ -310,6 +316,7 @@ private:
     Zone                            _hoverZone      = Zone::None;
     Zone                            _pressedZone    = Zone::None;
     bool           _collapsed      = true;
+    bool           _toggleEnabled  = true;
     GlyphLabel     _collapsedLabel = ">>";
     GlyphLabel     _expandedLabel  = "<<";
     GlyphLabel     _prevLabel      = "<";
