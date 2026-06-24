@@ -84,6 +84,11 @@ public:
     // when they carry narrow icon glyphs instead of words. 1.0 = default; <1 narrows.
     PresetStripControl& setActionButtonWidthScale (float s) { _actionWScale = s; return *this; }
 
+    // Sets the action buttons (undo/redo/save/load/dir/scan) to an absolute pixel width,
+    // overriding the height-relative scale — use to match a companion button row in the same
+    // strip (e.g. CC buttons). 0 (default) keeps the scale-based width.
+    PresetStripControl& setActionButtonWidth (float px) { _actionBtnW = px; return *this; }
+
     PresetStripControl& setShowSaveLoad    (bool v)          { _showSaveLoad = v;  return *this; }
     PresetStripControl& setShowUndo        (bool v)          { _showUndo     = v;  return *this; }
     PresetStripControl& setShowRedo        (bool v)          { _showRedo     = v;  return *this; }
@@ -204,7 +209,8 @@ private:
 
     Zones computeZones() const {
         const float btnW            = mRECT.H() * 1.8f;                  // nav buttons (prev/next)
-        const float wideW           = mRECT.H() * 2.8f * _actionWScale;  // all action buttons (undo/redo/save/load/dir/scan) — uniform width
+        const float wideW           = _actionBtnW > 0.f ? _actionBtnW    // absolute width (match a companion row)
+                                                        : mRECT.H() * 2.8f * _actionWScale;  // all action buttons — uniform width
         const float toggleCollapsed = _collapsedToggleW > 0 ? _collapsedToggleW : mRECT.H() * 1.2f;
         const float toggleExpanded  = _expandedToggleW  > 0 ? _expandedToggleW  : mRECT.H() * 1.2f;
 
@@ -329,6 +335,7 @@ private:
     GlyphLabel     _scanLabel      = "scan";
     float          _runGap         = 0.f;
     float          _actionWScale   = 1.f;
+    float          _actionBtnW     = 0.f;   // >0 → absolute action-button width (overrides the scale)
     bool           _showSaveLoad    = true;
     bool           _showUndo        = true;
     bool           _showRedo        = false;   // opt-in (off keeps existing strips unchanged)
