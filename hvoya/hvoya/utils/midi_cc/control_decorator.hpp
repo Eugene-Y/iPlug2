@@ -28,13 +28,19 @@ namespace hvoya::midi_cc {
                 mtag_invert,
                 mtag_setMin,
                 mtag_setMax,
+                // Appended; present only when enableCombineModeMenu(true) AND mapped.
+                mtag_modeSeparator,
+                mtag_absolute,
+                mtag_modulate,
             };
-            
+
             std::string _minDisplay;
             std::string _maxDisplay;
             PId_t       _paramId;
             CC_t        _cc;
             int         _midiBaseTag = 0; // VST3: flat tag of the first MIDI CC submenu item
+            bool        _combineModeMenu = false; // opt-in (modulatable params only)
+            int         _combineMode = 0;         // 0 = Absolute, 1 = Modulate (display stash)
 
             // not safe if the Delegate params are not yet initialized
             auto getParam() {
@@ -82,6 +88,10 @@ namespace hvoya::midi_cc {
                 setMinMaxDisplaysToFullRange();
             }
 
+            // Opt-in (driven by the mediator for modulatable params): adds an
+            // Absolute/Modulate radio pair to the MIDI-CC submenu when mapped.
+            void enableCombineModeMenu (bool on) { _combineModeMenu = on; }
+
             void clearCCNumber() override {
                 clearCC();
             }
@@ -116,6 +126,12 @@ namespace hvoya::midi_cc {
                 s = "Set Max";
                 if (mapped) s += " (" + _maxDisplay + ")";
                 subMenu->AddItem (s.c_str())->SetEnabled (mapped);
+
+                if (_combineModeMenu && mapped) {
+                    subMenu->AddSeparator();
+                    subMenu->AddItem ("Absolute")->SetChecked (_combineMode == 0);
+                    subMenu->AddItem ("Modulate")->SetChecked (_combineMode == 1);
+                }
 
 				contextMenu.AddItem (getParam()->GetName(), -1, IPopupMenu::Item::Flags::kTitle);
 				contextMenu.AddSeparator();
@@ -152,8 +168,8 @@ namespace hvoya::midi_cc {
             }
 
             bool tryProcessMidiCCMenuSelection (int itemSelected) {
-                if (itemSelected == mtag_separator 
-                    || itemSelected < mtag_learn || itemSelected > mtag_setMax)
+                if (itemSelected == mtag_separator || itemSelected == mtag_modeSeparator
+                    || itemSelected < mtag_learn || itemSelected > mtag_modulate)
                     return false;
                     
                 typedef midi_cc::MessageTags MT;
@@ -180,11 +196,21 @@ namespace hvoya::midi_cc {
                         updateDisplay (_minDisplay);
                         break;
                     
-                    case mtag_setMax: 
-                        action = MT::mtag_set_max; 
+                    case mtag_setMax:
+                        action = MT::mtag_set_max;
                         updateDisplay (_maxDisplay);
                         break;
-                    
+
+                    case mtag_absolute:
+                        action = MT::mtag_set_cc_absolute;
+                        _combineMode = 0;
+                        break;
+
+                    case mtag_modulate:
+                        action = MT::mtag_set_cc_modulate;
+                        _combineMode = 1;
+                        break;
+
                     default: return false;
                 }
                 

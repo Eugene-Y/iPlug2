@@ -10,6 +10,10 @@ namespace hvoya::midi_cc {
             mtag_invert_range,
             mtag_set_min,
             mtag_set_max,
+            // CC combine-mode (Gneiss-only; other plugins never send these). Appended so the
+            // enum stays additive — the shared mapper/serializer is untouched.
+            mtag_set_cc_absolute,
+            mtag_set_cc_modulate,
         msg_tags_end,
         num_msg_tags = msg_tags_end - msg_tags_begin
     };
