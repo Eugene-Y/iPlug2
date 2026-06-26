@@ -25,7 +25,24 @@ namespace hvoya::midi_cc {
             
             template <typename Control, typename... Args>
             Control* createLearnable (Args&&... args) const {
-                return new Learnable <Control> (std::forward <Args> (args)...);
+                auto* dec = new Learnable <Control> (std::forward <Args> (args)...);
+                // Opt-in Absolute/Modulate menu for plugins that expose modulatability
+                // (Gneiss). Sand/Scape/DMT lack the hook → the menu never appears.
+                if constexpr (requires { _plugin->isParamModulatable (PId_t {}); }) {
+                    if (_plugin->isParamModulatable (dec->GetParamIdx()))
+                        dec->enableCombineModeMenu (true);
+                }
+                if constexpr (requires { _plugin->ccUsesDepthGesture (PId_t {}); }) {
+                    if (_plugin->ccUsesDepthGesture (dec->GetParamIdx()))
+                        dec->enableDepthGesture (true);
+                }
+                // Constant CC-presence dot — opt-in per plugin. Sand/Scape/DMT lack the trait
+                // → no dot, look unchanged.
+                if constexpr (requires { _plugin->wantsCCPresenceDot(); }) {
+                    if (_plugin->wantsCCPresenceDot())
+                        dec->enablePresenceDot (true);
+                }
+                return dec;
             }
             
             
@@ -83,6 +100,15 @@ namespace hvoya::midi_cc {
                 const auto mappedParams = _mapper.processMidiCC (cc, normValue, channel1Idx);
                 for (auto& p : mappedParams) {
                     if (skip (p.id)) continue;
+                    // Relative-CC (Modulate) path — opt-in per plugin via these hooks. Plugins
+                    // without them (Sand/Scape/DMT) always take the Absolute base-write below.
+                    // The mapper's min/max are ignored in Modulate; the raw CC norm is handed off.
+                    if constexpr (requires { _plugin->isRelativeCC (p.id); _plugin->onRelativeCC (p.id, normValue); }) {
+                        if (_plugin->isRelativeCC (p.id)) {
+                            _plugin->onRelativeCC (p.id, normValue);
+                            continue;
+                        }
+                    }
                     IParam* param = _plugin->GetParam (p.id);
                     _plugin->BeginInformHostOfParamChange (p.id);
                     param->SetNormalized (p.mappedNormalizedVal);
