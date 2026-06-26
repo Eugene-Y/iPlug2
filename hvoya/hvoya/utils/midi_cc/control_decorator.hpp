@@ -151,6 +151,12 @@ namespace hvoya::midi_cc {
                     this->SetDirty (false);
                 }
             }
+            void setModeDisplay (int mode) override {
+                if (_combineMode != mode) {
+                    _combineMode = mode;
+                    this->SetDirty (false);
+                }
+            }
 
             void clearCCNumber() override {
                 clearCC();
@@ -330,14 +336,15 @@ namespace hvoya::midi_cc {
             // Modulate mode from base toward base+depth; while armed, a faint bipolar preview.
             // Geometry is heuristic (default knob angle range) pending the control geometry descriptor.
             void drawModArc (IGraphics& g) {
+                if (!(_combineModeMenu && _combineMode == 1 && _cc != uninit::cc)) return;
+                const double base = this->GetValue();
                 if constexpr (requires (C& c) { c.GetRadius(); }) {
-                    if (!(_combineModeMenu && _combineMode == 1 && _cc != uninit::cc)) return;
+                    // Knobs: an arc around the widget circle.
                     const IRECT wb = this->GetWidgetBounds();
                     const float cx = wb.MW(), cy = wb.MH();
                     const float r  = this->GetRadius() + _arcRadiusPad;
                     auto angleOf = [](double v) { return -135.f + float (std::clamp (v, 0.0, 1.0)) * 270.f; };
-                    const double base  = this->GetValue();
-                    const float  aBase = angleOf (base);
+                    const float aBase = angleOf (base);
                     if (_armDepth) {
                         // A symmetric "drag either way" hint around base — symmetric in ANGLE (not value),
                         // clamped only at the knob's physical ends, so it reads bidirectional anywhere.
@@ -350,13 +357,28 @@ namespace hvoya::midi_cc {
                     }
                     if (_modDepth == 0.0) return;
                     if (_modBipolar) {   // ± : symmetric span around base
-                        const float a = angleOf (base - std::abs (_modDepth));
-                        const float b = angleOf (base + std::abs (_modDepth));
-                        g.DrawArc (_arcColor, cx, cy, r, a, b, &this->mBlend, _arcThickness);
+                        g.DrawArc (_arcColor, cx, cy, r, angleOf (base - std::abs (_modDepth)),
+                                   angleOf (base + std::abs (_modDepth)), &this->mBlend, _arcThickness);
                         return;
                     }
                     const float aEnd = angleOf (base + _modDepth);
                     g.DrawArc (_arcColor, cx, cy, r, std::min (aBase, aEnd), std::max (aBase, aEnd), &this->mBlend, _arcThickness);
+                } else {
+                    // Sliders (and other non-knob controls): a horizontal strip along the bottom edge,
+                    // same thickness as the arc, spanning base→base+depth. (Heuristic track = mRECT for
+                    // now; refine with the geometry descriptor — see docs/modulation.md Polish.)
+                    const float y = this->mRECT.B - _arcThickness * 0.5f - 0.5f;
+                    auto xOf = [&](double v) { return this->mRECT.L + float (std::clamp (v, 0.0, 1.0)) * this->mRECT.W(); };
+                    if (_armDepth) {
+                        IColor faint = _arcColor;
+                        faint.A = _arcColor.A / 2;
+                        g.DrawLine (faint, xOf (base - 0.25), y, xOf (base + 0.25), y, &this->mBlend, _arcThickness);
+                        return;
+                    }
+                    if (_modDepth == 0.0) return;
+                    const double lo = _modBipolar ? base - std::abs (_modDepth) : base;
+                    const double hi = _modBipolar ? base + std::abs (_modDepth) : base + _modDepth;
+                    g.DrawLine (_arcColor, xOf (lo), y, xOf (hi), y, &this->mBlend, _arcThickness);
                 }
             }
 

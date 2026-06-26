@@ -16,6 +16,9 @@ namespace hvoya::midi_cc {
             virtual void setModDepth (double /*signedNormExtent*/) {}
             // Bipolar modulation (e.g. a ± freq CC direction): the arc spans both sides of base.
             virtual void setModBipolar (bool /*bipolar*/) {}
+            // Authoritative combine mode pushed by the host (0 = Absolute, 1 = Modulate) so the
+            // control's display stays in sync across preset load / clear / external changes.
+            virtual void setModeDisplay (int /*mode*/) {}
     };
 
 }
