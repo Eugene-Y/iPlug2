@@ -107,6 +107,19 @@ public:
     // Default filename pre-filled in the Save dialog (e.g. "ccmap.hvoya").
     CCFileOrchestrator& setDefaultFilename (const char* name)  { _defaultFilename = name;           return *this; }
 
+    // Opt-in: let the plugin add/read extra sections in the CC file/clipboard (e.g. Gneiss's per-param
+    // combine mode, which isn't in the shared mapper). No-op for plugins that don't set it.
+    CCFileOrchestrator& setExtraSectionIO (std::function<void(HvoyaFile&)>       build,
+                                           std::function<void(const HvoyaFile&)> apply) {
+        _onBuildExtra = std::move (build);
+        _onApplyExtra = std::move (apply);
+        return *this;
+    }
+
+    // Opt-in: called right BEFORE an incoming CC map (file or clipboard) overwrites the live one, so
+    // the plugin can record an undo step. No-op for plugins that don't set it.
+    CCFileOrchestrator& setBeforeApply (std::function<void()> fn) { _onBeforeApply = std::move (fn); return *this; }
+
     // Opt-in icon / mixed-font labels. When set, the button is drawn as a
     // GlyphButtonControl with that label instead of the default "save cc"/"load cc"
     // text button. `runGap` spaces the glyphs within a mixed label.
@@ -210,13 +223,16 @@ private:
     HvoyaFile _buildFile () const {
         HvoyaFile f (_pluginName, _pluginVersion);
         MapperHvoyaAdapter::writeSection (_mediator.getCCtoParamMap(), f);
+        if (_onBuildExtra) _onBuildExtra (f);
         return f;
     }
 
     void _applyFile (const HvoyaFile& f) {
         auto map = MapperHvoyaAdapter::readSection (f);
         if (!map) return;
+        if (_onBeforeApply) _onBeforeApply();   // record an undo step before the map is overwritten
         _mediator.setCCtoParamMap (std::move (*map));
+        if (_onApplyExtra) _onApplyExtra (f);
         if (_onLoaded) _onLoaded();
     }
 
@@ -256,6 +272,9 @@ private:
     std::string                  _pluginVersion;
     std::function<std::string()> _browseDir;
     std::function<void()>        _onLoaded;
+    std::function<void(HvoyaFile&)>       _onBuildExtra;
+    std::function<void(const HvoyaFile&)> _onApplyExtra;
+    std::function<void()>                 _onBeforeApply;
     IVStyle                      _style;
     std::string                  _defaultFilename = "ccmap.hvoya";
     hvoya::ui::GlyphLabel        _saveLabel;   // empty → default "save cc" text button

@@ -19,6 +19,9 @@ namespace hvoya::midi_cc {
             // Authoritative combine mode pushed by the host (0 = Absolute, 1 = Modulate) so the
             // control's display stays in sync across preset load / clear / external changes.
             virtual void setModeDisplay (int /*mode*/) {}
+            // True while a set-depth drag is in progress on this control, so an external per-idle value
+            // writer (e.g. a note-mode glider push) can skip it and not fight the gesture.
+            virtual bool isAuthoringDepth() const { return false; }
     };
 
 }

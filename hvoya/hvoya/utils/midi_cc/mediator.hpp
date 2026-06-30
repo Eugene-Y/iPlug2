@@ -21,6 +21,10 @@ namespace hvoya::midi_cc {
         
             CCMediator (PluginType* p) : _plugin (p) {}
             ~CCMediator() = default;
+
+            // Accent color for the CC presence dot's mouse-down fill — set once by the UI so the dot
+            // matches the plugin's accent. Applied to every decorator that gets a dot in createLearnable.
+            void setPresenceDotAccent (const IColor& c) { _presenceDotAccent = c; _hasPresenceDotAccent = true; }
             
             
             template <typename Control, typename... Args>
@@ -36,11 +40,18 @@ namespace hvoya::midi_cc {
                     if (_plugin->ccUsesDepthGesture (dec->GetParamIdx()))
                         dec->enableDepthGesture (true);
                 }
+                // Freq params show a live oct/semi/cent readout during the set-depth drag.
+                if constexpr (requires { _plugin->ccDepthIsFreq (PId_t {}); }) {
+                    if (_plugin->ccDepthIsFreq (dec->GetParamIdx()))
+                        dec->enableFreqDepthReadout (true);
+                }
                 // Constant CC-presence dot — opt-in per plugin. Sand/Scape/DMT lack the trait
                 // → no dot, look unchanged.
                 if constexpr (requires { _plugin->wantsCCPresenceDot(); }) {
-                    if (_plugin->wantsCCPresenceDot())
+                    if (_plugin->wantsCCPresenceDot()) {
                         dec->enablePresenceDot (true);
+                        if (_hasPresenceDotAccent) dec->setPresenceDotAccentColor (_presenceDotAccent);
+                    }
                 }
                 return dec;
             }
@@ -208,7 +219,9 @@ namespace hvoya::midi_cc {
         
             PluginType* _plugin;
             Mapper _mapper;
-            
+            IColor _presenceDotAccent;
+            bool   _hasPresenceDotAccent = false;
+
     };
     
 

@@ -16,6 +16,7 @@ namespace hvoya::midi_cc {
             mtag_set_cc_modulate,
             mtag_set_cc_depth,    // payload: SetDepthMsg (set-depth gesture commit)
             mtag_invert_cc_depth, // payload: PId_t (flip a relative-CC depth's direction)
+            mtag_set_cc_bipolar,  // payload: PId_t (toggle ±: CC center = base, swings both ways)
         msg_tags_end,
         num_msg_tags = msg_tags_end - msg_tags_begin
     };

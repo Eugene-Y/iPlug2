@@ -242,7 +242,8 @@ public:
         // Floored at _undoFloor while a morph session is open → in-morph undo stays within the
         // session and never walks into the pre-morph normal history (0 = no floor / normal mode).
         if (_undoStack.size() <= _undoFloor) return;
-        pushBounded(_redoStack, captureEntry());   // current state → redo
+        const bool ccStep = _undoStack.front().ccInChunk;   // the redo of a CC step is also a CC step
+        pushBounded(_redoStack, captureEntry(ccStep));       // current state → redo
         UndoEntry entry = _undoStack.front();
         _undoStack.pop_front();
         restoreEntry(entry, cc, ws);
@@ -255,7 +256,8 @@ public:
         InternalRestoreScope guard(_restoringInternally);
         auto cc = snapshotCCMap();
         auto ws = snapshotWorkspace();
-        pushUndoBounded(captureEntry());
+        const bool ccStep = _redoStack.front().ccInChunk;
+        pushUndoBounded(captureEntry(ccStep));
         UndoEntry entry = _redoStack.front();
         _redoStack.pop_front();
         restoreEntry(entry, cc, ws);
@@ -343,6 +345,14 @@ public:
         if (_currentIdx >= 0)
             _divergedFromIndex = true;   // the live patch no longer matches the stored preset
         captureBaseline();               // post-edit state becomes the new clean baseline
+    }
+
+    // Record a CC-map edit (learn / clear / paste / file) as ONE undo step. The CC map is workspace,
+    // normally preserved across patch undos; but here the map IS the change, so the entry is flagged
+    // ccInChunk and undo/redo restore it from the entry's chunk. Call BEFORE applying the edit.
+    void recordCCUndoStep() {
+        pushUndoBounded(captureEntry(/*ccInChunk*/ true));
+        _redoStack.clear();   // a fresh forward action invalidates the redo history
     }
 
     // Call from the plugin's OnRestoreState(). On a genuine EXTERNAL restore (host
@@ -556,6 +566,7 @@ private:
         int               presetIdx;
         bool              modified;
         bool              diverged;       // patch diverged from presetIdx (see _divergedFromIndex)
+        bool              ccInChunk = false; // CC-map step: restore the map FROM chunk, don't overlay live
     };
 
     // RAII flag set while the manager itself drives a state restore, so the plugin's
@@ -631,12 +642,13 @@ private:
         applyIdx(target);
     }
 
-    // Snapshot the live state as an undo/redo entry (baselineChunk only when dirty).
-    UndoEntry captureEntry() const {
+    // Snapshot the live state as an undo/redo entry (baselineChunk only when dirty). ccInChunk marks
+    // a CC-map step, so restoreEntry restores the map from the chunk instead of overlaying the live one.
+    UndoEntry captureEntry(bool ccInChunk = false) const {
         const bool dirty = _modified.load(std::memory_order_relaxed);
         return { serializeCurrent(),
                  dirty ? _baselineChunk : iplug::IByteChunk{},
-                 _currentIdx, dirty, _divergedFromIndex };
+                 _currentIdx, dirty, _divergedFromIndex, ccInChunk };
     }
 
     void pushBounded(std::deque<UndoEntry>& stack, UndoEntry e) {
@@ -662,7 +674,9 @@ private:
         int pos = 0;
         _plugin->UnserializeState(e.chunk, pos);
         _plugin->OnRestoreState();
-        restoreCCMap(cc);
+        // A CC-map step's chunk already carries the map to restore (UnserializeState applied it);
+        // overlaying the live snapshot would un-revert it. Patch steps preserve the live workspace map.
+        if (!e.ccInChunk) restoreCCMap(cc);
         restoreWorkspace(ws);
         _currentIdx = std::clamp(e.presetIdx, -1, std::max(-1, totalCount() - 1));
         _divergedFromIndex = e.diverged;
