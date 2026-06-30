@@ -551,8 +551,13 @@ namespace hvoya::midi_cc {
                     if (!modulate) {   // Absolute: fixed vertical min/max ticks on the track (no contour)
                         if (ccRangeRestricted()) {
                             const float len = _presenceDotRadius * 2.f;   // length = MIDI dot diameter
+                            // Align to the slider's true value mapping (the fill spans mRECT edge to
+                            // edge), inset by half the line thickness so the bound marks reach the very
+                            // ends of the track yet still sit fully inside the control rectangle.
+                            const float halfW = _arcThickness * 0.5f;
                             auto tick = [&](double norm) {
-                                const float x = xOf (norm);
+                                const float x = this->mRECT.L + halfW
+                                              + float (std::clamp (norm, 0.0, 1.0)) * (this->mRECT.W() - 2.f * halfW);
                                 g.DrawLine (_arcColor, x, y, x, y - len, &this->mBlend, _arcThickness);
                             };
                             tick (_ccMin); tick (_ccMax);
