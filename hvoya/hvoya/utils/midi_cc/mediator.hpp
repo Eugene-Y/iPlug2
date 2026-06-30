@@ -25,6 +25,10 @@ namespace hvoya::midi_cc {
             // Accent color for the CC presence dot's mouse-down fill — set once by the UI so the dot
             // matches the plugin's accent. Applied to every decorator that gets a dot in createLearnable.
             void setPresenceDotAccent (const IColor& c) { _presenceDotAccent = c; _hasPresenceDotAccent = true; }
+
+            // Modulation arc/strip color — set once by the UI (typically a paler tint of the accent).
+            // Applied to every modulatable decorator in createLearnable.
+            void setModArcColor (const IColor& c) { _modArcColor = c; _hasModArcColor = true; }
             
             
             template <typename Control, typename... Args>
@@ -33,8 +37,10 @@ namespace hvoya::midi_cc {
                 // Opt-in Absolute/Modulate menu for plugins that expose modulatability
                 // (Gneiss). Sand/Scape/DMT lack the hook → the menu never appears.
                 if constexpr (requires { _plugin->isParamModulatable (PId_t {}); }) {
-                    if (_plugin->isParamModulatable (dec->GetParamIdx()))
+                    if (_plugin->isParamModulatable (dec->GetParamIdx())) {
                         dec->enableCombineModeMenu (true);
+                        if (_hasModArcColor) dec->setModArcColor (_modArcColor);
+                    }
                 }
                 if constexpr (requires { _plugin->ccUsesDepthGesture (PId_t {}); }) {
                     if (_plugin->ccUsesDepthGesture (dec->GetParamIdx()))
@@ -70,6 +76,7 @@ namespace hvoya::midi_cc {
 
                     case mtag_learn_cc:
                         _mapper.setLearningForParam (pId);
+                        refreshUI();   // start the learn-target dot blink (moves it off any prior target)
                         return true;
                         
                     case mtag_clear_cc:
@@ -177,6 +184,9 @@ namespace hvoya::midi_cc {
             // Drop the CC mapping for a param (e.g. to clear a learned X/Y).
             void clearMappingForParam (PId_t paramId) { _mapper.clearMappingForParam (paramId); }
 
+            // Drop the ENTIRE CC map and refresh control indicators (the "clear all" action).
+            void clearAllMappings() { _mapper.clearAllMappings(); refreshUI(); }
+
 
             // Sets the MIDI channel filter for an existing CC mapping (0=all, 1-16=specific).
             void setChannelForParam (PId_t paramId, int channel) {
@@ -212,6 +222,15 @@ namespace hvoya::midi_cc {
                         }
                     }
                 }
+
+                // Blink the active learn target's presence dot ("I'm listening"), clearing the flag on
+                // every other control (so re-arming on a new param moves the blink, and a completed bind
+                // — which refreshes via takeUIDirty — stops it).
+                const PId_t learnPid = _mapper.learningParamId();
+                pG->ForAllControlsFunc ([learnPid](iplug::igraphics::IControl* c) {
+                    if (auto* ctrl = dynamic_cast <IControllable*> (c))
+                        ctrl->setLearning (learnPid != uninit::pid && c->GetParamIdx() == learnPid);
+                });
             }
             
             
@@ -221,6 +240,8 @@ namespace hvoya::midi_cc {
             Mapper _mapper;
             IColor _presenceDotAccent;
             bool   _hasPresenceDotAccent = false;
+            IColor _modArcColor;
+            bool   _hasModArcColor = false;
 
     };
     

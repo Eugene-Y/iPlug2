@@ -42,6 +42,8 @@ namespace hvoya::midi_cc {
 
             std::string _minDisplay;
             std::string _maxDisplay;
+            double      _ccMin = 0.0;  // Absolute CC sweep range (normalized), pushed via setParamMinMax;
+            double      _ccMax = 1.0;  // shown as min/max ticks outside the knob when restricted.
             PId_t       _paramId;
             CC_t        _cc;
             int         _midiBaseTag = 0; // VST3: flat tag of the first MIDI CC submenu item
@@ -54,15 +56,22 @@ namespace hvoya::midi_cc {
             bool        _presenceDot       = false;
             IColor      _presenceDotColor  = IColor (200, 150, 150, 150);
             IColor      _presenceDotAccentColor = IColor (255, 95, 55, 200); // mouse-down fill (overridden by the plugin's accent)
+            IColor      _presenceDotHoverColor   = IColor (255, 235, 235, 235); // mouse-over fill: bright, font-like
+            IColor      _presenceDotOutlineColor = IColor (255,  60,  60,  60); // mouse-over ring: dark bg gray
             float       _presenceDotRadius = 2.5f;
             float       _presenceDotInset  = 3.5f; // from the control's bottom-right corner
             float       _presenceDotStroke = 1.0f;
-            bool        _dotHover = false; // mouse over the dot → filled with its own color
+            float       _presenceDotOffsetX = 0.f; // nudge, in dot-diameter units (unusual controls)
+            float       _presenceDotOffsetY = 0.f;
+            bool        _dotHover = false; // mouse over the dot → bright fill + dark outline
             bool        _dotDown  = false; // mouse pressed on the dot → filled with the accent
 
             // Relative-CC modulation arc (drawn only in Modulate, knob controls). Source-colored.
             double      _modDepth     = 0.0;   // signed normalized extent from base (pushed by host)
             bool        _modBipolar   = false; // arc spans both sides of base (± direction)
+            double      _modLiveNorm  = NAN;   // live modulated position (normalized); NAN = no marker
+            IColor      _modLiveDotColor;      // override; else derived (knob contour / slider font)
+            bool        _hasLiveDotColor = false;
             bool        _depthGesture = false; // this param authors depth via the drag gesture (non-freq)
             float       _arcRadiusFrac = 0.8f; // knob arc radius as a fraction of the knob radius —
                                                // INSIDE the widget so neighbours can't overpaint it
@@ -74,11 +83,14 @@ namespace hvoya::midi_cc {
             // push) can't corrupt it mid-drag and Shift-fine can toggle without a jump.
             bool        _armDepth      = false;
             bool        _gestureActive = false;
+            bool        _learning      = false; // this control is the active MIDI-learn target → blink the dot
+            bool        _blinkOn       = false; // current blink-animation state (armed OR learning)
             double      _gestureBaseNorm = 0.0;
             double      _gestureExtent   = 0.0;  // signed normalized extent from base, accumulated
             static constexpr float kGestureRange = 200.f; // px of vertical drag for full [0,1]
             static constexpr double kGestureFine = 0.1;   // Shift-held drag multiplier (10× finer)
             static constexpr int   kArmBlinkMs   = 500;
+            static constexpr double kRangeEps    = 1e-4;  // Absolute range counts as "restricted" beyond this
 
             // Freq depth readout: opt-in for params whose depth is musical pitch (cutoffs). During the
             // set-depth drag the live oct/semi/cent delta floats near the cursor in the shared
@@ -144,7 +156,14 @@ namespace hvoya::midi_cc {
             // Presence dot — declarative, named visual setters (opt-in per plugin).
             void enablePresenceDot   (bool on)          { _presenceDot = on; }
             void setPresenceDotColor (const IColor& c)  { _presenceDotColor = c; }
-            void setPresenceDotAccentColor (const IColor& c) { _presenceDotAccentColor = c; }
+            void setPresenceDotAccentColor  (const IColor& c) { _presenceDotAccentColor = c; }
+            void setPresenceDotHoverColor   (const IColor& c) { _presenceDotHoverColor = c; }
+            void setPresenceDotOutlineColor (const IColor& c) { _presenceDotOutlineColor = c; }
+            // Nudge the dot in dot-diameter units (declared on IControllable for per-control tweaks).
+            void setPresenceDotOffset (float dxDiameters, float dyDiameters) override {
+                _presenceDotOffsetX = dxDiameters;
+                _presenceDotOffsetY = dyDiameters;
+            }
             void setPresenceDotRadius (float r)         { _presenceDotRadius = r; }
             void setPresenceDotInset  (float i)         { _presenceDotInset = i; }
             void setPresenceDotStroke (float w)         { _presenceDotStroke = w; }
@@ -167,6 +186,15 @@ namespace hvoya::midi_cc {
                     this->SetDirty (false);
                 }
             }
+            void setModLiveValue (double normVal) override {
+                if (_modLiveNorm != normVal) {   // NAN != x is always true → first finite push repaints
+                    _modLiveNorm = normVal;
+                    this->SetDirty (false);
+                }
+            }
+            // Explicit override for the live dot's color (declarative). Default: the knob's contour
+            // color, or a slider's font color — derived in drawModArc from the control's own style.
+            void setModLiveDotColor (const IColor& c) { _modLiveDotColor = c; _hasLiveDotColor = true; }
             void setModeDisplay (int mode) override {
                 if (_combineMode != mode) {
                     _combineMode = mode;
@@ -186,6 +214,10 @@ namespace hvoya::midi_cc {
                 assert (pP);
                 updateDisplay (_minDisplay, normMin);
                 updateDisplay (_maxDisplay, normMax);
+                if (_ccMin != normMin || _ccMax != normMax) {
+                    _ccMin = normMin; _ccMax = normMax;
+                    this->SetDirty (false);   // redraw the Absolute range ticks
+                }
             }
 
 
@@ -193,10 +225,31 @@ namespace hvoya::midi_cc {
             // control exposes it — lower-right corner, clear of any centred value text; else mRECT.
             void presenceDotCenter (float& cx, float& cy) const {
                 IRECT anchor = this->mRECT;
-                if constexpr (requires (const C& c) { c.GetWidgetBounds(); })
-                    anchor = this->GetWidgetBounds();
-                cx = anchor.R - _presenceDotInset - _presenceDotRadius;
-                cy = anchor.B - _presenceDotInset - _presenceDotRadius;
+                // Use the widget rect when the control exposes a real one. Some controls inherit
+                // GetWidgetBounds() but never set it (it stays empty at 0,0,0,0) — anchoring the dot
+                // there would place it near the window origin and OnResize would then stretch the hit
+                // rect across the top-left of the UI (stealing clicks from the tabs). Fall back to mRECT.
+                if constexpr (requires (const C& c) { c.GetWidgetBounds(); }) {
+                    const IRECT wb = this->GetWidgetBounds();
+                    if (wb.W() > 0.f && wb.H() > 0.f) anchor = wb;
+                }
+                cx = anchor.R - _presenceDotInset - _presenceDotRadius + _presenceDotOffsetX * 2.f * _presenceDotRadius;
+                cy = anchor.B - _presenceDotInset - _presenceDotRadius + _presenceDotOffsetY * 2.f * _presenceDotRadius;
+            }
+
+            // Some controls shrink their hit area below mRECT (e.g. WrapKnobControl targets just the knob
+            // circle, not the label band). A presence dot anchored to the widget — especially once nudged
+            // by setPresenceDotOffset — can then fall OUTSIDE that target rect, so the cursor never
+            // dispatches a mouseover to this control when it's over the drawn dot. Extend the hit area to
+            // cover the dot so it's actually hoverable/clickable.
+            void OnResize() override {
+                C::OnResize();
+                if (_presenceDot) {
+                    float cx, cy;
+                    presenceDotCenter (cx, cy);
+                    const float r = _presenceDotRadius + 4.f;   // matches hitPresenceDot's slack
+                    this->SetTargetRECT (this->mTargetRECT.Union (IRECT (cx - r, cy - r, cx + r, cy + r)));
+                }
             }
 
             bool hitPresenceDot (float x, float y) const {
@@ -209,18 +262,25 @@ namespace hvoya::midi_cc {
             void Draw (IGraphics& g) override {
                 C::Draw (g);
                 drawModArc (g);
-                if (_presenceDot && _cc != uninit::cc) {
-                    // While armed for the set-depth gesture the dot blinks (off on each cycle's
-                    // second half). The animation is free-running, so progress grows unbounded → take
-                    // the fractional phase.
-                    if (_armDepth && std::fmod (this->GetAnimationProgress(), 1.0) >= 0.5) return;
+                // Drawn for a bound CC, or while this control is the MIDI-learn target (a blinking
+                // dot is the "I'm listening" signal even before a CC binds).
+                if (_presenceDot && (_cc != uninit::cc || _learning)) {
+                    // The dot blinks while the set-depth gesture is armed OR this control is the
+                    // learn target (off on each cycle's second half). The animation is free-running,
+                    // so progress grows unbounded → take the fractional phase.
+                    if (_blinkOn && std::fmod (this->GetAnimationProgress(), 1.0) >= 0.5) return;
                     float cx, cy;
                     presenceDotCenter (cx, cy);
-                    // Pressed → accent fill; hovered → fill with the dot's own color; else a hollow ring.
+                    // Pressed → accent fill; hovered → bright fill + dark ring; else a hollow ring.
+                    // The active states grow by the stroke width so the filled dot never looks shrunk
+                    // next to the hollow ring it replaces.
+                    const float rActive = _presenceDotRadius + _presenceDotStroke;
                     if (_dotDown)
-                        g.FillCircle (_presenceDotAccentColor, cx, cy, _presenceDotRadius, &this->mBlend);
-                    else if (_dotHover)
-                        g.FillCircle (_presenceDotColor, cx, cy, _presenceDotRadius, &this->mBlend);
+                        g.FillCircle (_presenceDotAccentColor, cx, cy, rActive, &this->mBlend);
+                    else if (_dotHover) {
+                        g.FillCircle (_presenceDotHoverColor,   cx, cy, rActive, &this->mBlend);
+                        g.DrawCircle (_presenceDotOutlineColor, cx, cy, rActive, &this->mBlend, _presenceDotStroke);
+                    }
                     else
                         g.DrawCircle (_presenceDotColor, cx, cy, _presenceDotRadius, &this->mBlend, _presenceDotStroke);
                 }
@@ -302,12 +362,24 @@ namespace hvoya::midi_cc {
                 C::OnMouseOut();
             }
 
-            // Arm/disarm the set-depth gesture, driving the dot's blink animation. The blink func is
-            // free-running (just keeps the control dirty); Draw derives the on/off phase from progress.
-            void setArmed (bool on) {
-                _armDepth = on;
-                if (on) this->SetAnimation ([](iplug::igraphics::IControl* c) { c->SetDirty (false); }, kArmBlinkMs);
-                else    this->SetAnimation (iplug::igraphics::IAnimationFunction (nullptr));
+            // Arm/disarm the set-depth gesture; drives the dot's blink (see updateBlink).
+            void setArmed (bool on) { _armDepth = on; updateBlink(); }
+
+            // Pushed by the mediator: this control is the active MIDI-learn target, so blink the dot
+            // as an "I'm listening" signal (shares the gesture-arm blink).
+            void setLearning (bool on) override { if (_learning != on) { _learning = on; updateBlink(); } }
+
+            // The dot blinks while the set-depth gesture is armed OR this control is the learn target.
+            // Either source keeps a free-running blink animation alive (it just keeps the control dirty);
+            // Draw derives the on/off phase from its progress. Re-arm only on an actual state change so an
+            // unrelated repaint can't reset the blink phase.
+            void updateBlink() {
+                const bool on = _armDepth || _learning;
+                if (on != _blinkOn) {
+                    _blinkOn = on;
+                    if (on) this->SetAnimation ([](iplug::igraphics::IControl* c) { c->SetDirty (false); }, kArmBlinkMs);
+                    else    this->SetAnimation (iplug::igraphics::IAnimationFunction (nullptr));
+                }
                 this->SetDirty (false);
             }
 
@@ -383,6 +455,7 @@ namespace hvoya::midi_cc {
                 _cc = uninit::cc;
                 _minDisplay.clear();
                 _maxDisplay.clear();
+                _ccMin = 0.0; _ccMax = 1.0;   // drop the Absolute range ticks
                 _combineMode = 0;        // unmapped → back to the Absolute default display
                 if (_armDepth) setArmed (false);
             }
@@ -390,8 +463,16 @@ namespace hvoya::midi_cc {
             // Relative-CC modulation arc — knob controls only (uses the knob's geometry). Drawn in
             // Modulate mode from base toward base+depth; while armed, a faint bipolar preview.
             // Geometry is heuristic (default knob angle range) pending the control geometry descriptor.
+            // True when the Absolute CC sweep covers less than the full param span → worth a hint.
+            bool ccRangeRestricted() const {
+                return std::min (_ccMin, _ccMax) > kRangeEps || std::max (_ccMin, _ccMax) < 1.0 - kRangeEps;
+            }
+
             void drawModArc (IGraphics& g) {
-                if (!(_combineModeMenu && _combineMode == 1 && _cc != uninit::cc)) return;
+                // CC hints only for modulatable, mapped params. Modulate → the depth arc/strip + live
+                // dot; Absolute → min/max range ticks (the CC's reachable sweep), only when restricted.
+                if (!_combineModeMenu || _cc == uninit::cc) return;
+                const bool modulate = _combineMode == 1;
                 const double base = this->GetValue();
                 if constexpr (requires (C& c) { c.GetRadius(); }) {
                     // Knobs (always an IVKnobControl-derivative here): arc around the widget circle.
@@ -402,7 +483,27 @@ namespace hvoya::midi_cc {
                     const float r  = this->GetRadius() * _arcRadiusFrac;   // inside the widget
                     const float a1 = this->mAngle1, a2 = this->mAngle2;
                     auto angleOf = [a1, a2](double v) { return a1 + float (std::clamp (v, 0.0, 1.0)) * (a2 - a1); };
+                    if (!modulate) {   // Absolute: fixed-size min/max ticks just OUTSIDE the knob ring
+                        if (ccRangeRestricted()) {
+                            const float r0  = this->GetRadius();              // start at the knob's edge
+                            const float len = _presenceDotRadius * 2.f;        // length = MIDI dot diameter
+                            const float w   = this->mPointerThickness;         // width = knob handle thickness
+                            // DrawRadialLine is the knob's own pointer primitive → identical geometry.
+                            g.DrawRadialLine (_arcColor, cx, cy, angleOf (_ccMin), r0, r0 + len, &this->mBlend, w);
+                            g.DrawRadialLine (_arcColor, cx, cy, angleOf (_ccMax), r0, r0 + len, &this->mBlend, w);
+                        }
+                        return;
+                    }
                     const float aBase = angleOf (base);
+                    if (_gestureActive) {
+                        // Live preview while dragging: arc from the gesture's start to the current
+                        // position (the existing committed arc is suppressed — this IS the new depth).
+                        const float aStart = angleOf (_gestureBaseNorm);
+                        const float aCur   = angleOf (_gestureBaseNorm + _gestureExtent);
+                        g.DrawArc (_arcColor, cx, cy, r, std::min (aStart, aCur), std::max (aStart, aCur),
+                                   &this->mBlend, _arcThickness);
+                        return;
+                    }
                     if (_armDepth) {
                         // A symmetric "drag either way" hint around base — symmetric in ANGLE (not value),
                         // clamped only at the knob's physical ends, so it reads bidirectional anywhere.
@@ -414,13 +515,28 @@ namespace hvoya::midi_cc {
                         return;
                     }
                     if (_modDepth == 0.0) return;
+                    // The live modulator dot sits on the arc at the value the CC currently produces;
+                    // a small opaque circle (diameter = arc thickness) in the knob's contour color.
+                    auto drawLiveDot = [&] {
+                        if (std::isnan (_modLiveNorm)) return;
+                        const float rad = iplug::igraphics::DegToRad (angleOf (_modLiveNorm) - 90.f);
+                        IColor dc;
+                        if (_hasLiveDotColor) dc = _modLiveDotColor;
+                        else if constexpr (requires (C& c) { c.GetColor (iplug::igraphics::kFR); })
+                            dc = this->GetColor (iplug::igraphics::kFR);
+                        else dc = _arcColor;
+                        g.FillCircle (dc, cx + r * std::cos (rad), cy + r * std::sin (rad),
+                                      _arcThickness * 0.5f, &this->mBlend);
+                    };
                     if (_modBipolar) {   // ± : symmetric span around base
                         g.DrawArc (_arcColor, cx, cy, r, angleOf (base - std::abs (_modDepth)),
                                    angleOf (base + std::abs (_modDepth)), &this->mBlend, _arcThickness);
+                        drawLiveDot();
                         return;
                     }
                     const float aEnd = angleOf (base + _modDepth);
                     g.DrawArc (_arcColor, cx, cy, r, std::min (aBase, aEnd), std::max (aBase, aEnd), &this->mBlend, _arcThickness);
+                    drawLiveDot();
                 } else {
                     // Sliders (and other non-knob controls): a horizontal strip along the bottom edge,
                     // same thickness as the arc, spanning base→base+depth. (Heuristic track = mRECT for
@@ -432,6 +548,24 @@ namespace hvoya::midi_cc {
                     auto xOf = [&](double v) {
                         return this->mRECT.L + padX + float (std::clamp (v, 0.0, 1.0)) * (this->mRECT.W() - 2 * padX);
                     };
+                    if (!modulate) {   // Absolute: fixed vertical min/max ticks on the track (no contour)
+                        if (ccRangeRestricted()) {
+                            const float len = _presenceDotRadius * 2.f;   // length = MIDI dot diameter
+                            auto tick = [&](double norm) {
+                                const float x = xOf (norm);
+                                g.DrawLine (_arcColor, x, y, x, y - len, &this->mBlend, _arcThickness);
+                            };
+                            tick (_ccMin); tick (_ccMax);
+                        }
+                        return;
+                    }
+                    if (_gestureActive) {
+                        // Live preview while dragging: line from the gesture's start to the current
+                        // position (suppresses the existing committed strip).
+                        g.DrawLine (_arcColor, xOf (_gestureBaseNorm), y,
+                                    xOf (_gestureBaseNorm + _gestureExtent), y, &this->mBlend, _arcThickness);
+                        return;
+                    }
                     if (_armDepth) {
                         IColor faint = _arcColor;
                         faint.A = _arcColor.A / 2;
@@ -442,6 +576,15 @@ namespace hvoya::midi_cc {
                     const double lo = _modBipolar ? base - std::abs (_modDepth) : base;
                     const double hi = _modBipolar ? base + std::abs (_modDepth) : base + _modDepth;
                     g.DrawLine (_arcColor, xOf (lo), y, xOf (hi), y, &this->mBlend, _arcThickness);
+                    // Live modulator dot on the strip — a slider has no contour, so use its font color
+                    // (exposed by the control; falls back to mText if it doesn't advertise one).
+                    if (!std::isnan (_modLiveNorm)) {
+                        IColor dc;
+                        if (_hasLiveDotColor) dc = _modLiveDotColor;
+                        else if constexpr (requires (const C& c) { c.labelColor(); }) dc = this->labelColor();
+                        else dc = this->mText.mFGColor;
+                        g.FillCircle (dc, xOf (_modLiveNorm), y, _arcThickness * 0.5f, &this->mBlend);
+                    }
                 }
             }
 
@@ -510,16 +653,22 @@ namespace hvoya::midi_cc {
                         }
                         action = MT::mtag_invert_range;
                         std::swap (_minDisplay, _maxDisplay);
+                        std::swap (_ccMin, _ccMax);                    // keep the range ticks in sync
+                        this->SetDirty (false);
                         break;
-                    
-                    case mtag_setMin: 
-                        action = MT::mtag_set_min; 
+
+                    case mtag_setMin:
+                        action = MT::mtag_set_min;
                         updateDisplay (_minDisplay);
+                        _ccMin = getParam()->GetNormalized();          // Set Min captures the current value →
+                        this->SetDirty (false);                        // redraw the range tick immediately
                         break;
-                    
+
                     case mtag_setMax:
                         action = MT::mtag_set_max;
                         updateDisplay (_maxDisplay);
+                        _ccMax = getParam()->GetNormalized();
+                        this->SetDirty (false);
                         break;
 
                     case mtag_absolute:

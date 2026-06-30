@@ -59,6 +59,9 @@ namespace hvoya::midi_cc {
             // Abort an armed learn (no CC arrived) without binding anything.
             void cancelLearning() { _isLearning = false; }
             bool isLearning() const { return _isLearning; }
+            // The param currently armed for learn, or uninit::pid when not learning — lets the UI
+            // blink that control's presence dot as an "I'm listening" signal.
+            PId_t learningParamId() const { return _isLearning ? _listeningPId : uninit::pid; }
 
             // True once a CC was bound on the audio thread (learn completed). The UI thread
             // consumes this to refresh control CC# indicators — the audio thread must never

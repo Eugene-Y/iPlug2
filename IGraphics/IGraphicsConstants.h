@@ -25,6 +25,7 @@ static constexpr int DEFAULT_ANIMATION_DURATION = 100;
 
 #ifndef CONTROL_BOUNDS_COLOR
 #define CONTROL_BOUNDS_COLOR COLOR_GREEN
+#define CONTROL_BOUNDS_TARGET_RECT_COLOR COLOR_BLUE
 #endif
 
 static constexpr float PARAM_EDIT_W = 40.f; // TODO: remove?

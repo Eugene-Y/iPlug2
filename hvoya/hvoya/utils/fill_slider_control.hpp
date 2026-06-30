@@ -119,6 +119,9 @@ public:
         _track = track; _fill = fill; _activeFill = activeFill; SetDirty (false);
     }
     void setLabelText (const IText& t)     { _labelText = t; SetDirty (false); }
+    // The on-track label font color — used e.g. by the CC decorator as the live-modulator dot color
+    // (a slider has no contour to borrow, unlike a knob).
+    const IColor& labelColor() const       { return _labelText.mFGColor; }
     void setLabel     (std::string label)  { _label = std::move (label); SetDirty (false); }
     // When true, appends the current integer value (in the param's real unit) to the label.
     // If a suffix was set via setValueSuffix, the format is "value suffix" instead of "label value".
