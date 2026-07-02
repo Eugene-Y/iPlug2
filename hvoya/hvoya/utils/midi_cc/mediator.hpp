@@ -78,7 +78,12 @@ namespace hvoya::midi_cc {
                         _mapper.setLearningForParam (pId);
                         refreshUI();   // start the learn-target dot blink (moves it off any prior target)
                         return true;
-                        
+
+                    case mtag_cancel_learn:
+                        _mapper.cancelLearning();
+                        refreshUI();   // stop the learn-target dot blink
+                        return true;
+
                     case mtag_clear_cc:
                         _mapper.clearMappingForParam (pId);
                         return true;

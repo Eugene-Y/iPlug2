@@ -397,7 +397,7 @@ namespace hvoya::midi_cc {
                 
                 const bool mapped = _cc != uninit::cc;
 
-                subMenu->AddItem ("Learn");
+                subMenu->AddItem (_learning ? "Learning" : "Learn");   // reads "Learning" while this control is armed
                 
                 std::string s = "Clear";
                 if (mapped) s += " (" + std::to_string (_cc) + ")";
@@ -636,6 +636,18 @@ namespace hvoya::midi_cc {
                 typedef midi_cc::MessageTags MT;
                 MT action;
 
+                // Learn arms this control as the MIDI-learn target; re-selecting while armed (the item
+                // reads "Learning") disarms it. The mediator's refreshUI drives the _learning flag/blink.
+                if (itemSelected == mtag_learn) {
+                    if (_learning) {
+                        sendMidiCCAction (MT::mtag_cancel_learn);
+                        return true;
+                    }
+                    clearCC();
+                    sendMidiCCAction (MT::mtag_learn_cc);
+                    return true;
+                }
+
                 // Set Depth arms a one-shot UI gesture (no processor message yet) — the captured
                 // drag commits the depth on mouse-up. Re-selecting while armed cancels.
                 if (itemSelected == mtag_setDepth) {
@@ -653,12 +665,7 @@ namespace hvoya::midi_cc {
                 }
 
                 switch (itemSelected) {
-                    case mtag_learn:  
-                        action = MT::mtag_learn_cc;  
-                        clearCC();
-                        break;
-                        
-                    case mtag_clear:  
+                    case mtag_clear:
                         action = MT::mtag_clear_cc;  
                         clearCC();
                         break;
