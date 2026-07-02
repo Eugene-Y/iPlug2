@@ -169,40 +169,39 @@ public:
         return { save, load };
     }
 
-    // Lays out the whole CC row inside `rowR`: a non-highlightable `prefix` label of
-    // width `labelW`, then four equal-width buttons (copy / paste / save / load).
-    // All start hidden (matches the collapsed preset strip default). Caller attaches
-    // copy/paste with kTagCopy/kTagPaste and the rest with kTagSave/kTagLoad, and
-    // toggles visibility of `row.all()`.
-    Row makeRow (const IRECT& rowR, hvoya::ui::GlyphLabel prefix, float labelW) {
-        const float btnW = (rowR.W() - labelW) / 4.f;
+    // Lays out the whole CC row inside `rowR`: a non-highlightable `prefix` label of width `labelW`,
+    // then the buttons. With `withClipboard` (default): copy / paste / save / load (four equal-width).
+    // Without it: just save / load, each twice as wide to fill the row, and Row.copy/paste are null.
+    // All start hidden. Caller attaches copy/paste with kTagCopy/kTagPaste (only when present) and the
+    // rest with kTagSave/kTagLoad, and toggles visibility of `row.all()` (skipping nulls).
+    Row makeRow (const IRECT& rowR, hvoya::ui::GlyphLabel prefix, float labelW, bool withClipboard = true) {
+        const float btnW = (rowR.W() - labelW) / (withClipboard ? 4.f : 2.f);
         float x = rowR.L;
         auto slice = [&](float w) -> IRECT { IRECT s (x, rowR.T, x + w, rowR.B); x += w; return s; };
 
-        const IRECT labelR = slice (labelW);
-        const IRECT copyR  = slice (btnW);
-        const IRECT pasteR = slice (btnW);
-        const IRECT saveR  = slice (btnW);
-        const IRECT loadR  = slice (btnW);
-
-        auto* label = new hvoya::ui::GlyphLabelControl (labelR, std::move (prefix), _style);
+        auto* label = new hvoya::ui::GlyphLabelControl (slice (labelW), std::move (prefix), _style);
         label->setRunGap (_labelRunGap);
         label->setBackgroundColor (COLOR_TRANSPARENT);
 
-        auto copyClick  = [this](IControl* pC) { pC->SetDirty (false); _copy  (*pC->GetUI()); };
-        auto pasteClick = [this](IControl* pC) { pC->SetDirty (false); _paste (*pC->GetUI()); };
-
-        IControl* copy  = makeButton (copyR,  _copyLabel,  "copy cc",  std::move (copyClick));
-        IControl* paste = makeButton (pasteR, _pasteLabel, "paste cc", std::move (pasteClick));
-        Buttons   fileBtns = makeFileButtons (saveR, loadR);
-
-        // Gate paste on the clipboard actually holding a CC map (cheap section probe,
-        // throttled by the button). Only glyph-labelled buttons carry the predicate.
-        if (auto* gb = dynamic_cast<hvoya::ui::GlyphButtonControl*> (paste))
-            gb->setEnabledFn ([gb]() -> bool { return clipboardHasCC (*gb); });
+        IControl* copy  = nullptr;
+        IControl* paste = nullptr;
+        if (withClipboard) {
+            const IRECT copyR  = slice (btnW);
+            const IRECT pasteR = slice (btnW);
+            auto copyClick  = [this](IControl* pC) { pC->SetDirty (false); _copy  (*pC->GetUI()); };
+            auto pasteClick = [this](IControl* pC) { pC->SetDirty (false); _paste (*pC->GetUI()); };
+            copy  = makeButton (copyR,  _copyLabel,  "copy cc",  std::move (copyClick));
+            paste = makeButton (pasteR, _pasteLabel, "paste cc", std::move (pasteClick));
+            // Gate paste on the clipboard actually holding a CC map (cheap section probe, throttled).
+            if (auto* gb = dynamic_cast<hvoya::ui::GlyphButtonControl*> (paste))
+                gb->setEnabledFn ([gb]() -> bool { return clipboardHasCC (*gb); });
+        }
+        const IRECT saveR = slice (btnW);
+        const IRECT loadR = slice (btnW);
+        Buttons fileBtns = makeFileButtons (saveR, loadR);
 
         Row row { label, copy, paste, fileBtns.save, fileBtns.load };
-        for (IControl* c : row.all()) c->Hide (true);
+        for (IControl* c : row.all()) if (c) c->Hide (true);
         return row;
     }
 

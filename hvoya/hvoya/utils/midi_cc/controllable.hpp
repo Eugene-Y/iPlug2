@@ -23,6 +23,10 @@ namespace hvoya::midi_cc {
             // Authoritative combine mode pushed by the host (0 = Absolute, 1 = Modulate) so the
             // control's display stays in sync across preset load / clear / external changes.
             virtual void setModeDisplay (int /*mode*/) {}
+            // Pushed by the host: this param's combine mode is LOCKED to Modulate (e.g. a cutoff under
+            // MIDI note control, where an Absolute CC would fight the glider). The decorator greys the
+            // "Absolute" choice and refuses to toggle to it. Default no-op. Off unless the host locks it.
+            virtual void setModeLocked (bool /*locked*/) {}
             // True while a set-depth drag is in progress on this control, so an external per-idle value
             // writer (e.g. a note-mode glider push) can skip it and not fight the gesture.
             virtual bool isAuthoringDepth() const { return false; }

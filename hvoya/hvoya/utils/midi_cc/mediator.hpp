@@ -177,9 +177,12 @@ namespace hvoya::midi_cc {
 
             // Arm learning for a param that has no on-screen control (e.g. the morph
             // pad's X/Y): the next CC routed through ProcessMidiCC binds to it.
-            void learnForParam (PId_t paramId) { _mapper.setLearningForParam (paramId); }
+            void learnForParam (PId_t paramId, bool mostMoved = false) { _mapper.setLearningForParam (paramId, mostMoved); }
             void cancelLearning() { _mapper.cancelLearning(); }
             bool isLearning() const { return _mapper.isLearning(); }
+
+            // Swap which CC drives each of two params (e.g. morph pad X/Y reversed). Refreshes the UI.
+            void swapParamMappings (PId_t a, PId_t b) { _mapper.swapParamMappings (a, b); refreshUI(); }
 
             // Drop the CC mapping for a param (e.g. to clear a learned X/Y).
             void clearMappingForParam (PId_t paramId) { _mapper.clearMappingForParam (paramId); }
@@ -231,6 +234,12 @@ namespace hvoya::midi_cc {
                     if (auto* ctrl = dynamic_cast <IControllable*> (c))
                         ctrl->setLearning (learnPid != uninit::pid && c->GetParamIdx() == learnPid);
                 });
+
+                // Opt-in: let the plugin repaint non-IControllable controls that read the map live (e.g.
+                // Gneiss's morph-pad X/Y readout). Every map change funnels through refreshUI — learn,
+                // clear, swap, file/preset load — so this is the single point that covers them all.
+                if constexpr (requires { _plugin->onCCMapRefreshed(); })
+                    _plugin->onCCMapRefreshed();
             }
             
             

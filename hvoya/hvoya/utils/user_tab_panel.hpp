@@ -183,6 +183,9 @@ public:
     // single-icon labels it can be squeezed to ~kEditHeaderH so the menu barely narrows
     // the editable area — the unlocked layout then previews the locked one closely.
     UserTabPanel& setMenuButtonWidth  (float px)     { _menuBtnW         = px;           return *this; }
+    // Show the clipboard copy/paste buttons in the edit menu (default). Off → only file save/load
+    // (the remaining buttons move up to fill the gap). Lets a host gate clipboard behind an edition.
+    UserTabPanel& setClipboardEnabled (bool e)       { _clipboardEnabled = e;            return *this; }
 
     // In edit mode the panel grows UPWARD by `px` and the per-column edit chrome (slot-swap + add
     // buttons) moves into that gained band, sitting ABOVE the control cells instead of overlapping
@@ -289,6 +292,7 @@ private:
                _saveLabel, _loadLabel, _copyLabel, _pasteLabel, _clearLabel, _undoLabel;
     float      _labelRunGap = 0.f;
     float      _menuBtnW    = kLockBtnW;    // right-edge menu column width (see setMenuButtonWidth)
+    bool       _clipboardEnabled = true;    // show copy/paste in the edit menu (see setClipboardEnabled)
     float      _editExpandTop = 0.f;        // upward growth in edit mode (see setEditExpandTop)
     IRECT      _baseRECT;                   // attach bounds (the content area); edit mode grows upward from here
 

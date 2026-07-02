@@ -4,6 +4,7 @@
 
 #include <map>
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <atomic>
 
@@ -54,7 +55,15 @@ namespace hvoya::midi_cc {
             };
             
             void setListeningParamId (PId_t i) { _listeningPId = i; }
-            void setLearningForParam (PId_t);
+            // Arm learn for a param. mostMoved=false (default, unchanged for existing callers): the FIRST
+            // incoming CC binds. mostMoved=true: bind the first CC that MOVES past a threshold — so a 2D
+            // pad (which emits both axis CCs on any touch) binds the axis you actually sweep, not whichever
+            // message arrived first. Used for the morph pad's per-axis X/Y learn.
+            void setLearningForParam (PId_t, bool mostMoved = false);
+
+            // Swap which CC drives each of two params (their bindings' paramId), keeping each binding's
+            // cc/range/channel. For the morph pad's "Swap X/Y" when a pad's axes come out reversed.
+            void swapParamMappings (PId_t, PId_t);
 
             // Abort an armed learn (no CC arrived) without binding anything.
             void cancelLearning() { _isLearning = false; }
@@ -93,6 +102,16 @@ namespace hvoya::midi_cc {
             std::atomic<bool> _isLearning { false };       // armed on the message thread, cleared on audio
             std::atomic<bool> _ccMapDirtyForUI { false };  // set on audio when a CC binds; UI thread refreshes
             CCtoParamMap_t _ccToParamMap;
+
+            // "Most-moved" learn state (mostMoved=true). Fixed POD arrays (no alloc) indexed by CC: the
+            // first value seen per CC this learn window, so we can bind the CC that moves past the
+            // threshold. Cleared on arm (message thread) / touched on the audio drain — a benign POD race
+            // (same tolerance as _listeningPId), no structural mutation → no crash.
+            static constexpr int    kNumCCs          = 128;
+            static constexpr double kLearnMoveThresh = 0.12;   // ~15/127 of the CC range
+            bool   _learnMostMoved = false;
+            std::array<double, kNumCCs> _learnFirstVal {};
+            std::array<bool,   kNumCCs> _learnSeen {};
         
             void addMapping (CC_t, PId_t);
             ParamCCMapping* findMappingForPId (PId_t);

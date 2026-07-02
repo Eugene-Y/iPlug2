@@ -658,14 +658,16 @@ void UserTabPanel::rebuild() {
     AddChildControl(makeLockBtn(lockR));
 
     // Buttons below the lock button, grouped with half-button gaps between groups:
-    //   lock  |  save / load  |  copy / paste  |  clear  |  undo
+    //   lock  |  save / load  |  [copy / paste]  |  clear  |  undo   (copy/paste gated by _clipboardEnabled)
     if (_unlocked) {
         const float kHGap = 0.5f * kEditHeaderH;
         float y = kEditHeaderH + kHGap;       // gap after lock
         AddChildControl(makeSaveBtn (lockR.GetVShifted(y))); y += kEditHeaderH;
         AddChildControl(makeLoadBtn (lockR.GetVShifted(y))); y += kEditHeaderH + kHGap;
-        AddChildControl(makeCopyBtn (lockR.GetVShifted(y))); y += kEditHeaderH;
-        AddChildControl(makePasteBtn(lockR.GetVShifted(y))); y += kEditHeaderH + kHGap;
+        if (_clipboardEnabled) {   // clipboard copy/paste gated (paid); file save/load stay free
+            AddChildControl(makeCopyBtn (lockR.GetVShifted(y))); y += kEditHeaderH;
+            AddChildControl(makePasteBtn(lockR.GetVShifted(y))); y += kEditHeaderH + kHGap;
+        }
         AddChildControl(makeClearBtn(lockR.GetVShifted(y))); y += kEditHeaderH + kHGap;
         AddChildControl(makeUndoBtn (lockR.GetVShifted(y)));
     }

@@ -49,6 +49,7 @@ namespace hvoya::midi_cc {
             int         _midiBaseTag = 0; // VST3: flat tag of the first MIDI CC submenu item
             bool        _combineModeMenu = false; // opt-in (modulatable params only)
             int         _combineMode = 0;         // 0 = Absolute, 1 = Modulate (display stash)
+            bool        _modeLocked  = false;     // mode forced to Modulate (Absolute greyed) — host-pushed
 
             // Presence dot: a small constant indicator that a CC is bound to this control
             // (opt-in per plugin via enablePresenceDot). Visual properties are explicit/named
@@ -201,6 +202,12 @@ namespace hvoya::midi_cc {
                     this->SetDirty (false);
                 }
             }
+            void setModeLocked (bool locked) override {
+                if (_modeLocked != locked) {
+                    _modeLocked = locked;
+                    this->SetDirty (false);
+                }
+            }
             bool isAuthoringDepth() const override { return _gestureActive; }
 
             void clearCCNumber() override {
@@ -303,6 +310,7 @@ namespace hvoya::midi_cc {
                 }
                 if (_presenceDot && _combineModeMenu && _cc != uninit::cc && !mod.R && hitPresenceDot (x, y)) {
                     _dotDown = true;                       // accent fill until release
+                    if (_modeLocked) return;               // locked to Modulate → dot-click can't flip it
                     _combineMode = (_combineMode == 0) ? 1 : 0;
                     sendMidiCCAction (_combineMode == 0 ? MessageTags::mtag_set_cc_absolute
                                                        : MessageTags::mtag_set_cc_modulate);
@@ -419,7 +427,11 @@ namespace hvoya::midi_cc {
                     bip->SetChecked (_modBipolar);
                     bip->SetEnabled (modulate);
                     subMenu->AddSeparator();
-                    subMenu->AddItem ("Absolute")->SetChecked (_combineMode == 0);
+                    // Absolute is greyed when the mode is locked to Modulate (e.g. a note-controlled
+                    // cutoff — an Absolute CC would fight the glider).
+                    auto* absItem = subMenu->AddItem ("Absolute");
+                    absItem->SetChecked (_combineMode == 0);
+                    absItem->SetEnabled (!_modeLocked);
                     subMenu->AddItem ("Modulate")->SetChecked (_combineMode == 1);
                 }
 
