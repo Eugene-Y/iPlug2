@@ -1,4 +1,5 @@
 #include "mapper.hpp"
+#include <cmath>
 #include <hvoya/utils/log/logger.hpp>
 
 
@@ -18,12 +19,25 @@ namespace hvoya::midi_cc {
     }
             
     
-    void Mapper::setLearningForParam (PId_t i, IControllable* p) {
-        _pListeningControllable = p;
+    void Mapper::setLearningForParam (PId_t i, bool mostMoved) {
         clearMappingForParam (i);
         MCCM_LOGD << "learning param " << i;
-        _listeningPId = i;
+        _listeningPId   = i;
+        _learnMostMoved = mostMoved;
+        _learnSeen.fill (false);   // fresh movement window
         _isLearning = true;
+    }
+
+
+    void Mapper::swapParamMappings (PId_t a, PId_t b) {
+        // Only reassigns paramId inside existing bindings (no insert/erase) → no iterator invalidation for
+        // a concurrent audio read; worst case one block drives the pre-swap param. Message-thread only.
+        for (auto& [cc, params] : _ccToParamMap)
+            for (auto& pm : params) {
+                if      (pm.paramId == a) pm.paramId = b;
+                else if (pm.paramId == b) pm.paramId = a;
+            }
+        _ccMapDirtyForUI.store (true, std::memory_order_relaxed);
     }
             
             
@@ -56,7 +70,6 @@ namespace hvoya::midi_cc {
     void Mapper::clearAllMappings () {
         _ccToParamMap.clear();
         _listeningPId = -1;
-        _pListeningControllable = nullptr;
         MCCM_LOGD << "clear all mappings";
     }
             
@@ -79,8 +92,18 @@ namespace hvoya::midi_cc {
     std::vector <Mapper::ResolvedParam> Mapper::processMidiCC (CC_t cc, double normVal, int midiChannel) {
         //MCCM_LOGD << "process midi cc " << cc;
         if (_isLearning) {
-            addMapping (cc, _listeningPId);
-            _isLearning = false;
+            if (!_learnMostMoved) {
+                addMapping (cc, _listeningPId);
+                _isLearning = false;
+            } else if (cc >= 0 && cc < kNumCCs) {
+                // Bind the first CC that MOVES past the threshold from its first-seen value. A 2D pad emits
+                // both axis CCs on touch; sweeping one axis makes it cross first → that axis binds.
+                if (!_learnSeen[cc]) { _learnSeen[cc] = true; _learnFirstVal[cc] = normVal; }
+                else if (std::abs (normVal - _learnFirstVal[cc]) >= kLearnMoveThresh) {
+                    addMapping (cc, _listeningPId);
+                    _isLearning = false;
+                }
+            }
         }
 
         auto it = _ccToParamMap.find (cc);
@@ -115,15 +138,15 @@ namespace hvoya::midi_cc {
         
     void Mapper::addMapping (CC_t cc, PId_t i) {
         MCCM_LOGD << "add mapping CC " << cc << " -> param " << i;
-        if (_pListeningControllable) {
-            _pListeningControllable->setCCNumber (cc);
-            _pListeningControllable = nullptr;
-        }
         auto& params = _ccToParamMap [cc];
         auto it = findMappingIteratorForPId (params, i);
         if (it == params.end()) {
             params.emplace_back (ParamCCMapping (i, cc));
         }
+        // Don't touch UI controls here — addMapping runs on the audio thread and the
+        // control may have been destroyed by a layout rebuild while learn was armed
+        // (that dangling setCCNumber() was a crash). Flag for the UI thread to refresh.
+        _ccMapDirtyForUI.store (true, std::memory_order_relaxed);
     }
             
             

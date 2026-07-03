@@ -107,6 +107,7 @@
 #include <set>
 #include <IControl.h>
 #include "control_registry.hpp"
+#include "glyph_label.hpp"
 
 namespace hvoya::ui {
 
@@ -157,6 +158,51 @@ public:
     const std::vector<Slot>& slots()      const { return _slots; }
     bool                     isUnlocked() const { return _unlocked; }
 
+    // ── Button labels (declarative, opt-in) ──────────────────────────────────────
+    // Every menu button defaults to plain text (the IVButtonControl look other plugins
+    // get). Pass a GlyphLabel (build with hvoya::ui::icon(glyph, font) + operator+) and
+    // that button is drawn as a mixed-font GlyphButtonControl instead — same behaviour,
+    // icon look. The lock button has one label per state (edit ↔ lock). runGap spaces
+    // the runs of a mixed word+icon label.
+    UserTabPanel& setEditLabel        (GlyphLabel l) { _editLabel        = std::move(l); return *this; }  // shown when locked (click → edit)
+    UserTabPanel& setLockLabel        (GlyphLabel l) { _lockLabel        = std::move(l); return *this; }  // shown when unlocked (click → lock)
+    UserTabPanel& setPlusLabel        (GlyphLabel l) { _plusLabel        = std::move(l); return *this; }  // add control / add slot
+    UserTabPanel& setRemoveLabel      (GlyphLabel l) { _removeLabel      = std::move(l); return *this; }  // ✕ on an entry
+    UserTabPanel& setSwapSlotsLabel   (GlyphLabel l) { _swapSlotsLabel   = std::move(l); return *this; }  // ◄► move column
+    UserTabPanel& setSwapEntriesLabel (GlyphLabel l) { _swapEntriesLabel = std::move(l); return *this; }  // ▲▼ reorder in slot
+    UserTabPanel& setSaveLabel        (GlyphLabel l) { _saveLabel        = std::move(l); return *this; }
+    UserTabPanel& setLoadLabel        (GlyphLabel l) { _loadLabel        = std::move(l); return *this; }
+    UserTabPanel& setCopyLabel        (GlyphLabel l) { _copyLabel        = std::move(l); return *this; }
+    UserTabPanel& setPasteLabel       (GlyphLabel l) { _pasteLabel       = std::move(l); return *this; }
+    UserTabPanel& setClearLabel       (GlyphLabel l) { _clearLabel       = std::move(l); return *this; }
+    UserTabPanel& setUndoLabel        (GlyphLabel l) { _undoLabel        = std::move(l); return *this; }
+    UserTabPanel& setLabelRunGap      (float px)     { _labelRunGap      = px;           return *this; }
+
+    // Width of the right-edge menu column (lock/edit + save/load/copy/paste/clear/undo)
+    // and the new-slot "+" reservation. Defaults to kLockBtnW (fits text labels). With
+    // single-icon labels it can be squeezed to ~kEditHeaderH so the menu barely narrows
+    // the editable area — the unlocked layout then previews the locked one closely.
+    UserTabPanel& setMenuButtonWidth  (float px)     { _menuBtnW         = px;           return *this; }
+    // Show the clipboard copy/paste buttons in the edit menu (default). Off → only file save/load
+    // (the remaining buttons move up to fill the gap). Lets a host gate clipboard behind an edition.
+    UserTabPanel& setClipboardEnabled (bool e)       { _clipboardEnabled = e;            return *this; }
+
+    // In edit mode the panel grows UPWARD by `px` and the per-column edit chrome (slot-swap + add
+    // buttons) moves into that gained band, sitting ABOVE the control cells instead of overlapping
+    // them. Content keeps the original bounds (so it matches a sibling layout of that rect); the
+    // lock/menu column stays anchored to the content, not the gained band. 0 (default) = no growth,
+    // chrome overlays the content top. The host frees the space above (e.g. collapses a strip there).
+    UserTabPanel& setEditExpandTop    (float px)     { _editExpandTop    = px;           return *this; }
+
+    // Hover color of the edit-mode action glyphs (+ / ✕ / swap ◄► / swap ▲▼). At rest the
+    // glyphs draw in editColor (the accent); on mouse-over they recolor to `c` — the glyph
+    // itself, not a background rectangle (the rect highlight is suppressed for these buttons).
+    UserTabPanel& setHighlightColor (IColor c) {
+        _highlightColor    = c;
+        _hasHighlightColor = true;
+        return *this;
+    }
+
     // Toggle edit mode programmatically — e.g. bind to a keyboard shortcut.
     // Entering edit mode (unlocked = true) resets the undo history.
     void setUnlocked(bool unlocked) {
@@ -202,7 +248,9 @@ public:
     static constexpr float kEditHeaderH   = 18.f;   // height of the header row (lock/edit btn + slot headers)
     static constexpr float kEntryGap      = 2.f;    // px gap between entries within a slot (vertical)
     static constexpr float kSlotGap       = 0.f;    // px gap between slot columns (horizontal)
-    static constexpr float kSwapBtnW      = 60.f;   // width of slot-swap and entry-swap buttons
+    static constexpr float kSwapBtnW      = 40.f;   // width of slot-swap (horizontal ◄►) button
+    static constexpr float kSwapEntryBtnW = 40.f;   // width of entry-swap (vertical ▲▼) button — narrower for the upright glyph
+    static constexpr float kSwapEntryBtnH = 24.f;   // height of entry-swap button — taller so the upright glyph isn't clipped
     static constexpr float kPlusBtnMaxW   = 80.f;   // max width of "+" button (clamped to available space)
     static constexpr float kPlusBtnMaxH   = 40.f;   // max height of "+" button
 
@@ -238,6 +286,19 @@ private:
     std::string                    _pluginVersion;
     std::string                    _fileExt;
 
+    // Opt-in icon / mixed-font button labels (empty → plain-text IVButtonControl).
+    GlyphLabel _editLabel, _lockLabel, _plusLabel, _removeLabel,
+               _swapSlotsLabel, _swapEntriesLabel,
+               _saveLabel, _loadLabel, _copyLabel, _pasteLabel, _clearLabel, _undoLabel;
+    float      _labelRunGap = 0.f;
+    float      _menuBtnW    = kLockBtnW;    // right-edge menu column width (see setMenuButtonWidth)
+    bool       _clipboardEnabled = true;    // show copy/paste in the edit menu (see setClipboardEnabled)
+    float      _editExpandTop = 0.f;        // upward growth in edit mode (see setEditExpandTop)
+    IRECT      _baseRECT;                   // attach bounds (the content area); edit mode grows upward from here
+
+    IColor _highlightColor;                // hover color for action glyphs (see setHighlightColor)
+    bool   _hasHighlightColor = false;
+
     int        _pendingPickerSlotIdx = -1;
     IPopupMenu _pickerMenu;  // must outlive CreatePopupMenu (async on macOS)
 
@@ -260,6 +321,19 @@ private:
     // Padding entries (isPad) are skipped — the caller appends them manually.
     void buildPickerMenu(IPopupMenu& menu, const ControlRegistry::Node& node,
                          int slotIdx, const std::set<int>& usedInSlot) const;
+
+    // Builds a button: a mixed-font GlyphButtonControl when `label` is non-empty,
+    // else the plain-text IVButtonControl (fallback text + style). `onClick` runs on
+    // release for both paths. Caller may SetDisabled() on the returned control.
+    //
+    // `bgHighlight` picks the hover/press look of glyph buttons:
+    //   false → the edit-mode action-glyph look: no background rect, the glyph itself
+    //           recolors to the highlight color on hover (set via setHighlightColor).
+    //   true  → the menu look: glyph stays light, the background fills with the style's
+    //           kHL (hover) / kPR (press) — a highlight behind the glyph.
+    IControl* makeButton(const IRECT& r, const GlyphLabel& label, const char* fallbackText,
+                         const IVStyle& style, std::function<void(IControl*)> onClick,
+                         bool bgHighlight = false);
 
     IControl* makeLockBtn   (const IRECT& r);
     IControl* makePlusBtn   (const IRECT& r, int slotIdx);  // r = available area; button centred inside

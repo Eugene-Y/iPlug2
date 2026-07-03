@@ -10,6 +10,7 @@
 
 #include "IGraphicsMac.h"
 #import "IGraphicsMac_view.h"
+#import <QuartzCore/QuartzCore.h>
 
 #if defined IGRAPHICS_GLES2 || defined IGRAPHICS_GLES3
 #import <libEGL/libEGL.h>
@@ -165,16 +166,58 @@ void IGraphicsMac::PlatformResize(bool parentHasResized)
 {
   if (mView)
   {
+    IGRAPHICS_VIEW* view = (IGRAPHICS_VIEW*)mView;
     NSSize size = { static_cast<CGFloat>(WindowWidth()), static_cast<CGFloat>(WindowHeight()) };
-
-    [NSAnimationContext beginGrouping]; // Prevent animated resizing
+    // NSAnimationContext suppresses AppKit-driven layer-geometry animations;
+    // CATransaction suppresses raw CA implicit animations on layer-backed views.
+    // Both are needed: wantsLayer=YES views are managed by AppKit's animation context.
+    [NSAnimationContext beginGrouping];
     [[NSAnimationContext currentContext] setDuration:0.0];
-    [(IGRAPHICS_VIEW*) mView setFrameSize: size ];
-    
+    [[NSAnimationContext currentContext] setAllowsImplicitAnimation:NO];
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    [view setFrameSize: size];
+#if defined IGRAPHICS_METAL || defined IGRAPHICS_GLES2 || defined IGRAPHICS_GLES3
+    {
+      CGFloat scale = static_cast<CGFloat>(GetScreenScale());
+      [(CAMetalLayer*)[view layer]
+          setDrawableSize:CGSizeMake(size.width * scale, size.height * scale)];
+    }
+#endif
+    [CATransaction commit];
     [NSAnimationContext endGrouping];
   }
-    
+
   UpdateTooltips();
+}
+
+void IGraphicsMac::DrawNow()
+{
+  if (!mView)
+    return;
+
+  IGRAPHICS_VIEW* view = (IGRAPHICS_VIEW*)mView;
+
+#if defined IGRAPHICS_METAL
+  // presentsWithTransaction binds the drawable's present to the CATransaction commit below
+  // (the MetalNanoVG backend honours this: it waitsUntilScheduled then [drawable present]),
+  // so the new content lands together with the layer geometry rather than a frame later.
+  CAMetalLayer* metalLayer = (CAMetalLayer*)[view layer];
+  const BOOL prevPWT = metalLayer.presentsWithTransaction;
+  metalLayer.presentsWithTransaction = YES;
+  [CATransaction begin];
+  [CATransaction setDisableActions:YES];
+#endif
+
+  // Force a full repaint this turn instead of waiting for the next display-link tick, which
+  // would otherwise leave the grown layer showing the previous (smaller) drawable scaled up.
+  SetAllControlsDirty();
+  [view render];
+
+#if defined IGRAPHICS_METAL
+  [CATransaction commit];
+  metalLayer.presentsWithTransaction = prevPWT;
+#endif
 }
 
 void IGraphicsMac::PointToScreen(float& x, float& y) const

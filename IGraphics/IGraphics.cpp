@@ -942,7 +942,11 @@ void IGraphics::DrawControl(IControl* pControl, const IRECT& bounds, float scale
     if (mShowControlBounds)
     {
       PrepareRegion(clipBounds);
-      DrawRect(CONTROL_BOUNDS_COLOR, pControl->GetRECT());
+	  const auto r = pControl->GetRECT();
+	  const auto tr = pControl->GetTargetRECT();
+      DrawRect(CONTROL_BOUNDS_COLOR, r);
+	  DrawDottedRect(CONTROL_BOUNDS_TARGET_RECT_COLOR, tr);
+	  DrawDottedLine(CONTROL_BOUNDS_COLOR, r.L, r.T, tr.L, tr.T);
     }
 #endif
     

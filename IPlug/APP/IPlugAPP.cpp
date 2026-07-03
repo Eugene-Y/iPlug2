@@ -13,7 +13,14 @@
 
 #if defined OS_MAC || defined OS_LINUX
 #include <IPlugSWELL.h>
-#else
+#endif
+
+#ifdef OS_MAC
+#import <Cocoa/Cocoa.h>
+#import <QuartzCore/QuartzCore.h>
+#endif
+
+#ifdef OS_WIN
 extern float GetScaleForHWND(HWND hWnd);
 #endif
 
@@ -43,31 +50,48 @@ bool IPlugAPP::EditorResize(int viewWidth, int viewHeight)
   
   if (viewWidth != GetEditorWidth() || viewHeight != GetEditorHeight())
   {
-    #if defined OS_MAC || defined NO_IGRAPHICS 
-    RECT rcClient, rcWindow;
-    POINT ptDiff;
-    
-    GetClientRect(gHWND, &rcClient);
-    GetWindowRect(gHWND, &rcWindow);
-    
-    ptDiff.x = (rcWindow.right - rcWindow.left) - rcClient.right;
-    ptDiff.y = (rcWindow.bottom - rcWindow.top) - rcClient.bottom;
-    
-    int flags = 0;
-    
-    #ifdef OS_WIN
-    flags = SWP_NOMOVE;
-    float ss = GetScaleForHWND(gHWND);
-    #else
-    float ss = 1.f;
-    #endif
-    
-    SetWindowPos(gHWND, 0,
-                 static_cast<LONG>(rcWindow.left * ss),
-                 static_cast<LONG>((rcWindow.bottom - viewHeight - ptDiff.y) * ss),
-                 static_cast<LONG>((viewWidth + ptDiff.x) * ss),
-                 static_cast<LONG>((viewHeight + ptDiff.y) * ss), flags);
-    parentResized = true;
+    #ifdef OS_MAC
+    {
+      NSView* view = (NSView*)gHWND;
+      NSWindow* window = [view window];
+      if (window)
+      {
+        NSRect oldFrame = [window frame];
+        // frameRectForContentRect: accounts for title bar and any toolbars
+        NSRect newFrame = [window frameRectForContentRect:NSMakeRect(0.0, 0.0,
+                                                                     (CGFloat)viewWidth,
+                                                                     (CGFloat)viewHeight)];
+        // Anchor from the top: keep the visual top-left fixed
+        newFrame.origin.x = oldFrame.origin.x;
+        newFrame.origin.y = NSMaxY(oldFrame) - newFrame.size.height;
+        // display:NO — defer compositing so PlatformResize can update the Metal
+        // layer before the window server shows anything at the new size.
+        [NSAnimationContext beginGrouping];
+        [[NSAnimationContext currentContext] setDuration:0.0];
+        [[NSAnimationContext currentContext] setAllowsImplicitAnimation:NO];
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        [window setFrame:newFrame display:NO];
+        [CATransaction commit];
+        [NSAnimationContext endGrouping];
+        parentResized = true;
+      }
+    }
+    #elif defined NO_IGRAPHICS
+    {
+      RECT rcClient, rcWindow;
+      POINT ptDiff;
+      GetClientRect(gHWND, &rcClient);
+      GetWindowRect(gHWND, &rcWindow);
+      ptDiff.x = (rcWindow.right - rcWindow.left) - rcClient.right;
+      ptDiff.y = (rcWindow.bottom - rcWindow.top) - rcClient.bottom;
+      SetWindowPos(gHWND, 0,
+                   static_cast<LONG>(rcWindow.left),
+                   static_cast<LONG>(rcWindow.bottom - viewHeight - ptDiff.y),
+                   static_cast<LONG>(viewWidth + ptDiff.x),
+                   static_cast<LONG>(viewHeight + ptDiff.y), 0);
+      parentResized = true;
+    }
     #endif
     
     SetEditorSize(viewWidth, viewHeight);

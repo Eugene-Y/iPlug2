@@ -182,6 +182,16 @@ public:
         _currentNode  = parent;
     }
 
+    // Replace the factory of an already-registered id, keeping its heightFrac / displayName /
+    // group-tree placement. Handy for a per-tab registry copy that needs the same controls
+    // built differently (e.g. fit-in-bounds sizing in a clipped slot panel).
+    void replaceFactory(int id, ControlFactory f) {
+        auto it = std::find_if(_entries.begin(), _entries.end(),
+            [id](const Entry& e) { return e.id == id; });
+        assert(it != _entries.end() && "replaceFactory: key not found in ControlRegistry");
+        it->desc.factory = std::move(f);
+    }
+
     // ── Queries ───────────────────────────────────────────────────────────────
 
     bool has(int id) const {

@@ -653,9 +653,9 @@ void IVKnobControl::DrawWidget(IGraphics& g)
   const float cx = mWidgetBounds.MW(), cy = mWidgetBounds.MH();
   IRECT knobHandleBounds = mWidgetBounds.GetCentredInside((widgetRadius - mTrackToHandleDistance) * 2.f );
   const float angle = mAngle1 + (static_cast<float>(GetValue()) * (mAngle2 - mAngle1));
-  DrawIndicatorTrack(g, angle, cx, cy, widgetRadius);
   DrawHandle(g, knobHandleBounds);
   DrawPointer(g, angle, cx, cy, knobHandleBounds.W() / 2.f);
+  DrawIndicatorTrack(g, angle, cx, cy, widgetRadius);
 }
 
 void IVKnobControl::DrawHandle(IGraphics& g, const IRECT& bounds)
@@ -667,13 +667,19 @@ void IVKnobControl::DrawIndicatorTrack(IGraphics& g, float angle, float cx, floa
 {
   if (mTrackSize > 0.f)
   {
-    g.DrawArc(GetColor(kX1), cx, cy, radius, angle >= mAnchorAngle ? mAnchorAngle : mAnchorAngle - (mAnchorAngle - angle), angle >= mAnchorAngle ? angle : mAnchorAngle, &mBlend, mTrackSize);
+    g.DrawArc(GetColor(kX1), cx, cy, radius,
+			  angle >= mAnchorAngle ? mAnchorAngle : mAnchorAngle - (mAnchorAngle - angle),
+			  angle >= mAnchorAngle ? angle : mAnchorAngle,
+			  &mBlend, mTrackSize);
   }
 }
 
 void IVKnobControl::DrawPointer(IGraphics& g, float angle, float cx, float cy, float radius)
 {
-  g.DrawRadialLine(GetColor(kFR), cx, cy, angle, mInnerPointerFrac * radius, mOuterPointerFrac * radius, &mBlend, mPointerThickness);
+  g.DrawRadialLine(GetColor(kFR), cx, cy, angle, 
+    mInnerPointerFrac * radius, 
+    mOuterPointerFrac * radius + mTrackToHandleDistance + 0.4 * mPointerThickness, 
+    &mBlend, mPointerThickness);
 }
 
 void IVKnobControl::OnMouseDown(float x, float y, const IMouseMod& mod)

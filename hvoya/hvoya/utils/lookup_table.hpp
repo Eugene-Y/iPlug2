@@ -69,6 +69,13 @@ namespace hvoya {
         static_assert ((N > 0 && ((N & (N - 1)) == 0)), "use power of 2 size");
 
         std::array <sample_t, N> values;
+
+        // Value-domain (non-normalized) state for getClamped*: the table spans the symmetric
+        // domain [-_halfRange, +_halfRange], with index N/2 mapped to *exactly* v = 0. Default
+        // leaves a [-1, 1] domain; generateClamped() bakes the real domain + curve.
+        sample_t _halfRange = 1;
+        sample_t _scale     = sample_t (N) / sample_t (2);   // index units per input unit = N / (2*_halfRange)
+
         public:
 
             constexpr LUT () : values() {}
@@ -81,6 +88,22 @@ namespace hvoya {
 
             void constexpr generate (lut_gen_func_t gen) override {
                 gen (N, values.data());
+                check();
+            }
+
+            // Bake a value-domain table over the symmetric domain [-halfRange, +halfRange] for
+            // use with getClampedLinear / getClampedQuadratic. The generator is handed the *input
+            // value* at each sample (not an index). Index N/2 lands on exactly v = 0, so an odd
+            // function (tanh, asinh, …) is bit-exact 0 there — getClamped* then return exactly 0
+            // at v = 0 with no special-case branch.
+            void generateClamped (sample_t halfRange, const std::function <sample_t (sample_t)>& fnOfValue) {
+                assert (halfRange > 0);
+                _halfRange = halfRange;
+                _scale     = sample_t (N) / (sample_t (2) * halfRange);
+                const sample_t step = (sample_t (2) * halfRange) / sample_t (N);   // exact: N is pow2
+                constexpr int center = N / 2;
+                for (uint_fast16_t i = 0; i < N; ++i)
+                    values [i] = fnOfValue ((int (i) - center) * step);
                 check();
             }
 
@@ -135,6 +158,33 @@ namespace hvoya {
                 }
                 p *= 2;
                 return sign * getByNormalizedPhase (p);
+            }
+
+            // Clamped linear lookup over [-_halfRange, +_halfRange]. Inputs outside the domain
+            // return the boundary sample (no wrap). v = 0 is bit-exact (index N/2, fraction 0).
+            inline sample_t getClampedLinear (sample_t v) const {
+                const sample_t idx = sample_t (N) * sample_t (0.5) + v * _scale;
+                if (idx <= 0)         return values [0];
+                if (idx >= N - 1)     return values [N - 1];
+                const uint_fast16_t i = uint_fast16_t (idx);
+                const sample_t f = idx - i;
+                return values [i] + f * (values [i + 1] - values [i]);
+            }
+
+            // Clamped 3-point quadratic lookup. Interpolating (passes through samples), so v = 0
+            // stays bit-exact. Inputs outside the domain return the boundary sample; the lowest
+            // cell (no left neighbour) falls back to linear.
+            inline sample_t getClampedQuadratic (sample_t v) const {
+                const sample_t idx = sample_t (N) * sample_t (0.5) + v * _scale;
+                if (idx <= 0)         return values [0];
+                if (idx >= N - 1)     return values [N - 1];
+                const uint_fast16_t i = uint_fast16_t (idx);
+                const sample_t f = idx - i;
+                if (i == 0)           return values [0] + f * (values [1] - values [0]);
+                const sample_t y0 = values [i - 1], y1 = values [i], y2 = values [i + 1];
+                const sample_t a1 = sample_t (0.5) * (y2 - y0);
+                const sample_t a2 = sample_t (0.5) * (y2 - sample_t (2) * y1 + y0);
+                return y1 + f * (a1 + f * a2);
             }
     };
 

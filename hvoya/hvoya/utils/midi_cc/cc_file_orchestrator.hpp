@@ -25,13 +25,17 @@
  *   });
  */
 
-#include "mapper_hvoya_adapter.hpp"
-#include <hvoya/utils/hvoya_file.hpp>
+#include <array>
+#include <functional>
+#include <string>
 
 #include <IControls.h>
 
-#include <functional>
-#include <string>
+#include <hvoya/utils/hvoya_file.hpp>
+#include <hvoya/utils/glyph_label.hpp>
+#include "mapper_hvoya_adapter.hpp"
+
+
 
 
 namespace hvoya::midi_cc {
@@ -46,8 +50,11 @@ public:
     // Unique control tags — use these when calling AttachControl and
     // GetControlWithTag so the caller never hard-codes magic numbers.
 
-    static constexpr int kTagSave = 1050;
-    static constexpr int kTagLoad = 1051;
+    static constexpr int kTagSave  = 1050;
+    static constexpr int kTagLoad  = 1051;
+    static constexpr int kTagCopy  = 1052;
+    static constexpr int kTagPaste = 1053;
+    static constexpr int kTagLabel = 1054;   // non-highlightable row prefix label
 
 
     // ── Button factory result ─────────────────────────────────────────────────
@@ -55,6 +62,19 @@ public:
     struct Buttons {
         IControl* save;
         IControl* load;
+    };
+
+    // Full CC row: a non-highlightable prefix label followed by four equal-width
+    // single-icon buttons (clipboard copy/paste + file save/load). `all` is handy
+    // for show/hide toggling.
+    struct Row {
+        IControl* label;
+        IControl* copy;
+        IControl* paste;
+        IControl* save;
+        IControl* load;
+
+        std::array<IControl*, 5> all() const { return { label, copy, paste, save, load }; }
     };
 
 
@@ -87,6 +107,28 @@ public:
     // Default filename pre-filled in the Save dialog (e.g. "ccmap.hvoya").
     CCFileOrchestrator& setDefaultFilename (const char* name)  { _defaultFilename = name;           return *this; }
 
+    // Opt-in: let the plugin add/read extra sections in the CC file/clipboard (e.g. Gneiss's per-param
+    // combine mode, which isn't in the shared mapper). No-op for plugins that don't set it.
+    CCFileOrchestrator& setExtraSectionIO (std::function<void(HvoyaFile&)>       build,
+                                           std::function<void(const HvoyaFile&)> apply) {
+        _onBuildExtra = std::move (build);
+        _onApplyExtra = std::move (apply);
+        return *this;
+    }
+
+    // Opt-in: called right BEFORE an incoming CC map (file or clipboard) overwrites the live one, so
+    // the plugin can record an undo step. No-op for plugins that don't set it.
+    CCFileOrchestrator& setBeforeApply (std::function<void()> fn) { _onBeforeApply = std::move (fn); return *this; }
+
+    // Opt-in icon / mixed-font labels. When set, the button is drawn as a
+    // GlyphButtonControl with that label instead of the default "save cc"/"load cc"
+    // text button. `runGap` spaces the glyphs within a mixed label.
+    CCFileOrchestrator& setSaveLabel   (hvoya::ui::GlyphLabel l) { _saveLabel  = std::move (l); return *this; }
+    CCFileOrchestrator& setLoadLabel   (hvoya::ui::GlyphLabel l) { _loadLabel  = std::move (l); return *this; }
+    CCFileOrchestrator& setCopyLabel   (hvoya::ui::GlyphLabel l) { _copyLabel  = std::move (l); return *this; }
+    CCFileOrchestrator& setPasteLabel  (hvoya::ui::GlyphLabel l) { _pasteLabel = std::move (l); return *this; }
+    CCFileOrchestrator& setLabelRunGap (float px)               { _labelRunGap = px;          return *this; }
+
 
     // ── Button factory ────────────────────────────────────────────────────────
     // Creates save/load buttons using the style set via setStyle() / color setters.
@@ -94,33 +136,82 @@ public:
     // Caller attaches them with kTagSave / kTagLoad and manages their visibility.
 
     Buttons makeButtons (const IRECT& saveR, const IRECT& loadR) {
-        auto* save = new IVButtonControl (saveR,
-            [this](IControl* pC) {
-                pC->SetValue (0.0); pC->SetDirty (false); // clear pressed highlight
-                WDL_String fn, path;
-                fn.Set (_defaultFilename.c_str());
-                path.Set (_browseDir().c_str());
-                pC->GetUI()->PromptForFile (fn, path, EFileAction::Save, "hvoya",
-                    [this](const WDL_String& chosen, const WDL_String&) {
-                        if (chosen.GetLength()) _save (chosen.Get());
-                    });
-            }, "save cc", _style);
+        Buttons b = makeFileButtons (saveR, loadR);
+        b.save->Hide (true);
+        b.load->Hide (true);
+        return b;
+    }
 
-        auto* load = new IVButtonControl (loadR,
-            [this](IControl* pC) {
-                pC->SetValue (0.0); pC->SetDirty (false); // clear pressed highlight
-                WDL_String fn, path;
-                path.Set (_browseDir().c_str());
-                pC->GetUI()->PromptForFile (fn, path, EFileAction::Open, "hvoya",
-                    [this](const WDL_String& chosen, const WDL_String&) {
-                        if (chosen.GetLength()) _load (chosen.Get());
-                    });
-            }, "load cc", _style);
+    // Creates the save/load file buttons (not hidden — caller manages visibility).
+    Buttons makeFileButtons (const IRECT& saveR, const IRECT& loadR) {
+        auto saveClick = [this](IControl* pC) {
+            pC->SetValue (0.0); pC->SetDirty (false); // clear pressed highlight
+            WDL_String fn, path;
+            fn.Set (_defaultFilename.c_str());
+            path.Set (_browseDir().c_str());
+            pC->GetUI()->PromptForFile (fn, path, EFileAction::Save, "hvoya",
+                [this](const WDL_String& chosen, const WDL_String&) {
+                    if (chosen.GetLength()) _save (chosen.Get());
+                });
+        };
+        auto loadClick = [this](IControl* pC) {
+            pC->SetValue (0.0); pC->SetDirty (false); // clear pressed highlight
+            WDL_String fn, path;
+            path.Set (_browseDir().c_str());
+            pC->GetUI()->PromptForFile (fn, path, EFileAction::Open, "hvoya",
+                [this](const WDL_String& chosen, const WDL_String&) {
+                    if (chosen.GetLength()) _load (chosen.Get());
+                });
+        };
 
-        save->Hide (true);
-        load->Hide (true);
-
+        IControl* save = makeButton (saveR, _saveLabel, "save cc", std::move (saveClick));
+        IControl* load = makeButton (loadR, _loadLabel, "load cc", std::move (loadClick));
         return { save, load };
+    }
+
+    // Lays out the whole CC row inside `rowR`: a non-highlightable `prefix` label of width `labelW`,
+    // then the buttons. With `withClipboard` (default): copy / paste / save / load (four equal-width).
+    // Without it: just save / load, each twice as wide to fill the row, and Row.copy/paste are null.
+    // All start hidden. Caller attaches copy/paste with kTagCopy/kTagPaste (only when present) and the
+    // rest with kTagSave/kTagLoad, and toggles visibility of `row.all()` (skipping nulls).
+    Row makeRow (const IRECT& rowR, hvoya::ui::GlyphLabel prefix, float labelW, bool withClipboard = true) {
+        const float btnW = (rowR.W() - labelW) / (withClipboard ? 4.f : 2.f);
+        float x = rowR.L;
+        auto slice = [&](float w) -> IRECT { IRECT s (x, rowR.T, x + w, rowR.B); x += w; return s; };
+
+        auto* label = new hvoya::ui::GlyphLabelControl (slice (labelW), std::move (prefix), _style);
+        label->setRunGap (_labelRunGap);
+        label->setBackgroundColor (COLOR_TRANSPARENT);
+
+        IControl* copy  = nullptr;
+        IControl* paste = nullptr;
+        if (withClipboard) {
+            const IRECT copyR  = slice (btnW);
+            const IRECT pasteR = slice (btnW);
+            auto copyClick  = [this](IControl* pC) { pC->SetDirty (false); _copy  (*pC->GetUI()); };
+            auto pasteClick = [this](IControl* pC) { pC->SetDirty (false); _paste (*pC->GetUI()); };
+            copy  = makeButton (copyR,  _copyLabel,  "copy cc",  std::move (copyClick));
+            paste = makeButton (pasteR, _pasteLabel, "paste cc", std::move (pasteClick));
+            // Gate paste on the clipboard actually holding a CC map (cheap section probe, throttled).
+            if (auto* gb = dynamic_cast<hvoya::ui::GlyphButtonControl*> (paste))
+                gb->setEnabledFn ([gb]() -> bool { return clipboardHasCC (*gb); });
+        }
+        const IRECT saveR = slice (btnW);
+        const IRECT loadR = slice (btnW);
+        Buttons fileBtns = makeFileButtons (saveR, loadR);
+
+        Row row { label, copy, paste, fileBtns.save, fileBtns.load };
+        for (IControl* c : row.all()) if (c) c->Hide (true);
+        return row;
+    }
+
+    IControl* makeButton (const IRECT& r, const hvoya::ui::GlyphLabel& label,
+                          const char* fallbackText, std::function<void(IControl*)> onClick) {
+        if (label.empty())
+            return new IVButtonControl (r, std::move (onClick), fallbackText, _style);
+        auto* b = new hvoya::ui::GlyphButtonControl (r, label, std::move (onClick), _style);
+        b->setRunGap (_labelRunGap);
+        return b;
     }
 
 
@@ -128,19 +219,48 @@ private:
 
     // ── File I/O ──────────────────────────────────────────────────────────────
 
-    void _save (const std::string& path) const {
+    HvoyaFile _buildFile () const {
         HvoyaFile f (_pluginName, _pluginVersion);
         MapperHvoyaAdapter::writeSection (_mediator.getCCtoParamMap(), f);
-        f.toFile (path);
+        if (_onBuildExtra) _onBuildExtra (f);
+        return f;
     }
+
+    void _applyFile (const HvoyaFile& f) {
+        auto map = MapperHvoyaAdapter::readSection (f);
+        if (!map) return;
+        if (_onBeforeApply) _onBeforeApply();   // record an undo step before the map is overwritten
+        _mediator.setCCtoParamMap (std::move (*map));
+        if (_onApplyExtra) _onApplyExtra (f);
+        if (_onLoaded) _onLoaded();
+    }
+
+    void _save (const std::string& path) const { _buildFile().toFile (path); }
 
     void _load (const std::string& path) {
         auto f = HvoyaFile::fromFile (path);
-        if (!f) return;
-        auto map = MapperHvoyaAdapter::readSection (*f);
-        if (!map) return;
-        _mediator.setCCtoParamMap (std::move (*map));
-        if (_onLoaded) _onLoaded();
+        if (f) _applyFile (*f);
+    }
+
+    void _copy (IGraphics& g) const {
+        g.SetTextInClipboard (_buildFile().toString().c_str());
+    }
+
+    void _paste (IGraphics& g) {
+        WDL_String text;
+        if (!g.GetTextFromClipboard (text) || !text.GetLength()) return;
+        auto f = HvoyaFile::fromText (text.Get());
+        if (f) _applyFile (*f);
+    }
+
+    // Cheap predicate: does the system clipboard hold a CC map? (section probe, no full parse)
+    static bool clipboardHasCC (IControl& c) {
+        auto* g = c.GetUI();
+        if (!g) return false;
+        WDL_String text;
+        if (!g->GetTextFromClipboard (text) || !text.GetLength()) return false;
+        auto f = HvoyaFile::fromText (text.Get());
+        return f && f->hasSection (MapperHvoyaAdapter::kSectionName);
     }
 
 
@@ -151,8 +271,16 @@ private:
     std::string                  _pluginVersion;
     std::function<std::string()> _browseDir;
     std::function<void()>        _onLoaded;
+    std::function<void(HvoyaFile&)>       _onBuildExtra;
+    std::function<void(const HvoyaFile&)> _onApplyExtra;
+    std::function<void()>                 _onBeforeApply;
     IVStyle                      _style;
     std::string                  _defaultFilename = "ccmap.hvoya";
+    hvoya::ui::GlyphLabel        _saveLabel;   // empty → default "save cc" text button
+    hvoya::ui::GlyphLabel        _loadLabel;
+    hvoya::ui::GlyphLabel        _copyLabel;
+    hvoya::ui::GlyphLabel        _pasteLabel;
+    float                        _labelRunGap = 0.f;
 };
 
 } // namespace hvoya::midi_cc

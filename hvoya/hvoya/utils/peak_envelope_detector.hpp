@@ -43,6 +43,9 @@ namespace hvoya {
 		inline T processRectified (T rect) noexcept {
 			const T diff = rect - _state;
 			_state += (diff > T (0) ? _attackCoeff : _releaseCoeff) * diff;
+			// _state is always >= 0 and decays geometrically toward 0 in release; flush the tail
+			// to 0 well above the denormal range so long silence can't stall on denormal arithmetic.
+			if (_state < kDenormFloor) _state = T (0);
 			return _state;
 		}
 
@@ -55,6 +58,7 @@ namespace hvoya {
 		T state() const noexcept { return _state; }
 
 	private:
+		static constexpr T kDenormFloor = T (1e-15);  // ~-300 dB: below any usable level, above denormals
 		T _sampleRate   { T (48000) };
 		T _attackMs     { T (1) };
 		T _releaseMs    { T (100) };

@@ -10,8 +10,19 @@ namespace hvoya::midi_cc {
             mtag_invert_range,
             mtag_set_min,
             mtag_set_max,
+            // CC combine-mode (Gneiss-only; other plugins never send these). Appended so the
+            // enum stays additive — the shared mapper/serializer is untouched.
+            mtag_set_cc_absolute,
+            mtag_set_cc_modulate,
+            mtag_set_cc_depth,    // payload: SetDepthMsg (set-depth gesture commit)
+            mtag_invert_cc_depth, // payload: PId_t (flip a relative-CC depth's direction)
+            mtag_set_cc_bipolar,  // payload: PId_t (toggle ±: CC center = base, swings both ways)
+            mtag_cancel_learn,    // payload: PId_t (disarm learning; re-selecting "Learning" toggles it off)
         msg_tags_end,
         num_msg_tags = msg_tags_end - msg_tags_begin
     };
-    
+
+    // Payload for mtag_set_cc_depth: the captured signed depth (normalized delta from base).
+    struct SetDepthMsg { int pid; float delta; };
+
 }

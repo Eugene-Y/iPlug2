@@ -58,6 +58,8 @@ UserTabPanel::UserTabPanel(const IRECT& bounds,
     , _pluginVersion(std::move(pluginVersion))
     , _fileExt(std::move(fileExt))
 {
+    _baseRECT = bounds;   // content area; edit mode grows the panel upward from here
+
     _editBtnStyle = _btnStyle;
     _editBtnStyle.labelText.mSize    = _btnStyle.labelText.mSize * 2.f;
     _editBtnStyle.labelText.mVAlign  = EVAlign::Middle;
@@ -367,78 +369,96 @@ void UserTabPanel::buildPickerMenu(IPopupMenu& menu, const ControlRegistry::Node
 // ──────────────────────────────────────────────
 //  Child control factories
 
+IControl* UserTabPanel::makeButton(const IRECT& r, const GlyphLabel& label, const char* fallbackText,
+                                   const IVStyle& style, std::function<void(IControl*)> onClick,
+                                   bool bgHighlight) {
+    if (label.empty())
+        return (new IVButtonControl(r, DefaultClickActionFunc, fallbackText, style))
+            ->SetAnimationEndActionFunction(std::move(onClick));
+
+    // GlyphButtonControl draws its text through style.valueText; the IVButton styles
+    // configure labelText (the button caption), so mirror it across.
+    IVStyle gstyle = style;
+    gstyle.valueText = style.labelText;
+    auto* b = new GlyphButtonControl(r, label, std::move(onClick), gstyle);
+    b->setRunGap(_labelRunGap);
+    if (_hasHighlightColor && !bgHighlight) {
+        // Action-glyph look: no background-rect highlight; the glyph itself recolors on hover.
+        b->setMouseOverColor(COLOR_TRANSPARENT);
+        b->setPressedColor(COLOR_TRANSPARENT);
+        b->setMouseOverTextColor(_highlightColor);
+    }
+    // bgHighlight → keep the style's kHL/kPR background fills, glyph stays light (default).
+    return b;
+}
+
 IControl* UserTabPanel::makeLockBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, _unlocked ? "lock" : "edit", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { toggleLock(); });
+    return makeButton(r, _unlocked ? _lockLabel : _editLabel, _unlocked ? "lock" : "edit", _btnStyle,
+        [this](IControl*) { toggleLock(); }, /*bgHighlight*/ true);
 }
 
 IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
     const IRECT btnR = r.GetCentredInside(std::min(r.W(), kPlusBtnMaxW), std::min(r.H(), kPlusBtnMaxH));
-    return (new IVButtonControl(btnR, DefaultClickActionFunc, "+", _editBtnStyle))
-        ->SetAnimationEndActionFunction([this, slotIdx, btnR](IControl*) {
-            showParamPicker(slotIdx, btnR);
-        });
+    // _entryBtnStyle (same size as the ✕ remove glyph) — the ×2 _editBtnStyle "+" was oversized.
+    return makeButton(btnR, _plusLabel, "+", _entryBtnStyle,
+        [this, slotIdx, btnR](IControl*) { showParamPicker(slotIdx, btnR); });
 }
 
 IControl* UserTabPanel::makeRemoveBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "✕", _entryBtnStyle))
-        ->SetAnimationEndActionFunction([this, slotIdx, entryIdx](IControl*) {
-            removeEntry(slotIdx, entryIdx);
-        });
+    return makeButton(r, _removeLabel, "✕", _entryBtnStyle,
+        [this, slotIdx, entryIdx](IControl*) { removeEntry(slotIdx, entryIdx); });
 }
 
 IControl* UserTabPanel::makeSwapSlotsBtn(const IRECT& r, int slotIdx) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "◄►", _swapBtnStyle))
-        ->SetAnimationEndActionFunction([this, slotIdx](IControl*) { swapSlots(slotIdx); });
+    return makeButton(r, _swapSlotsLabel, "◄►", _swapBtnStyle,
+        [this, slotIdx](IControl*) { swapSlots(slotIdx); });
 }
 
 IControl* UserTabPanel::makeSwapEntriesBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "▲▼", _swapBtnStyle))
-        ->SetAnimationEndActionFunction([this, slotIdx, entryIdx](IControl*) { swapEntries(slotIdx, entryIdx); });
+    return makeButton(r, _swapEntriesLabel, "▲▼", _swapBtnStyle,
+        [this, slotIdx, entryIdx](IControl*) { swapEntries(slotIdx, entryIdx); });
 }
 
 IControl* UserTabPanel::makeSaveBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "save", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) {
-            WDL_String fileName("layout"), path;
-            GetUI()->PromptForFile(fileName, path, EFileAction::Save, _fileExt.c_str(),
-                [this](const WDL_String& fn, const WDL_String&) {
-                    if (fn.GetLength()) saveLayout(fn.Get());
-                });
-        });
+    return makeButton(r, _saveLabel, "save", _btnStyle, [this](IControl*) {
+        WDL_String fileName("layout"), path;
+        GetUI()->PromptForFile(fileName, path, EFileAction::Save, _fileExt.c_str(),
+            [this](const WDL_String& fn, const WDL_String&) {
+                if (fn.GetLength()) saveLayout(fn.Get());
+            });
+    }, /*bgHighlight*/ true);
 }
 
 IControl* UserTabPanel::makeLoadBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "load", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) {
-            WDL_String fileName, path;
-            GetUI()->PromptForFile(fileName, path, EFileAction::Open, _fileExt.c_str(),
-                [this](const WDL_String& fn, const WDL_String&) {
-                    if (fn.GetLength()) loadLayout(fn.Get());
-                });
-        });
+    return makeButton(r, _loadLabel, "load", _btnStyle, [this](IControl*) {
+        WDL_String fileName, path;
+        GetUI()->PromptForFile(fileName, path, EFileAction::Open, _fileExt.c_str(),
+            [this](const WDL_String& fn, const WDL_String&) {
+                if (fn.GetLength()) loadLayout(fn.Get());
+            });
+    }, /*bgHighlight*/ true);
 }
 
 IControl* UserTabPanel::makeCopyBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "copy", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { copyToClipboard(); });
+    return makeButton(r, _copyLabel, "copy", _btnStyle, [this](IControl*) { copyToClipboard(); },
+        /*bgHighlight*/ true);
 }
 
 IControl* UserTabPanel::makePasteBtn(const IRECT& r) {
-    return (new IVButtonControl(r, DefaultClickActionFunc, "paste", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { pasteFromClipboard(); });
+    return makeButton(r, _pasteLabel, "paste", _btnStyle, [this](IControl*) { pasteFromClipboard(); },
+        /*bgHighlight*/ true);
 }
 
 IControl* UserTabPanel::makeClearBtn(const IRECT& r) {
-    auto* btn = (new IVButtonControl(r, DefaultClickActionFunc, "clear", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { clearSlots(); });
+    auto* btn = makeButton(r, _clearLabel, "clear", _btnStyle, [this](IControl*) { clearSlots(); },
+        /*bgHighlight*/ true);
     if (_slots.empty()) btn->SetDisabled(true);
     return btn;
 }
 
 IControl* UserTabPanel::makeUndoBtn(const IRECT& r) {
-    auto* btn = (new IVButtonControl(r, DefaultClickActionFunc, "undo", _btnStyle))
-        ->SetAnimationEndActionFunction([this](IControl*) { undo(); });
+    auto* btn = makeButton(r, _undoLabel, "undo", _btnStyle, [this](IControl*) { undo(); },
+        /*bgHighlight*/ true);
     if (_history.empty()) btn->SetDisabled(true);
     return btn;
 }
@@ -468,27 +488,44 @@ void UserTabPanel::rebuild() {
     auto* pG = GetUI();
     if (!pG) return;
 
-    const IRECT b = GetRECT();
+    // Content always fills the attach bounds (so it matches a sibling themed-tab layout of the same
+    // rect — no lost vertical space in either mode). In edit mode the panel grows UPWARD by
+    // _editExpandTop; that gained band hosts the per-column edit chrome (swap / +) ABOVE the cells.
+    // The lock/menu column is anchored to the content, so it does not move into the gained band.
+    const bool  expandUp = _unlocked && _editExpandTop > 0.f;
+    const IRECT content  = _baseRECT;
+    const IRECT b        = expandUp
+        ? IRECT(_baseRECT.L, _baseRECT.T - _editExpandTop, _baseRECT.R, _baseRECT.B)
+        : _baseRECT;
+    SetTargetAndDrawRECTs(b);   // mRECT covers the gained band so the chrome there hit-tests
+    // Header band for the per-column edit chrome: the gained band when expanded, else the content top.
+    const IRECT chromeBand = expandUp ? b.GetFromTop(_editExpandTop) : content.GetFromTop(kEditHeaderH);
 
     if (_slots.empty() && !_unlocked) {
-        // Placeholder hint centred in the content area.
+        // Placeholder hint centred in the content area. The "edit" token mirrors the
+        // lock/edit button: its icon label when set (so the hint reads "tap [🔒] to …"),
+        // else the plain word for text-button plugins.
         // Derive font from btnStyle so NanoVG is guaranteed to have it loaded.
-        const IRECT contentR = b.GetReducedFromTop(kEditHeaderH);
-        IText hintText = _btnStyle.labelText;
-        hintText.mSize    = 22;
-        hintText.mFGColor = IColor(80, 255, 255, 255);
-        hintText.mAlign   = EAlign::Center;
-        hintText.mVAlign  = EVAlign::Middle;
-        AddChildControl(new ITextControl(contentR, "tap 'edit' to add your controls", hintText));
-        // Lock button on top.
-        AddChildControl(makeLockBtn(b.GetFromTRHC(kLockBtnW, kEditHeaderH)));
+        const IRECT contentR = content;
+        IVStyle hintStyle = _btnStyle;
+        hintStyle.valueText          = _btnStyle.labelText;
+        hintStyle.valueText.mSize    = 22;
+        hintStyle.valueText.mFGColor = IColor(80, 255, 255, 255);
+        const GlyphLabel editToken = _editLabel.empty() ? GlyphLabel("'edit'") : _editLabel;
+        const GlyphLabel hint = GlyphLabel("tap ") + editToken + GlyphLabel(" to add your controls");
+        auto* hintCtl = new GlyphLabelControl(contentR, hint, hintStyle);
+        hintCtl->setRunGap(_labelRunGap).setBackgroundColor(COLOR_TRANSPARENT);
+        AddChildControl(hintCtl);
+        // Lock button anchored to the content's top-right corner.
+        AddChildControl(makeLockBtn(content.GetFromTRHC(_menuBtnW, kEditHeaderH)));
         pG->SetAllControlsDirty();
         return;
     }
 
-    // Header row is always reserved (lock button lives there); edit controls shown when unlocked.
-    const IRECT headerRow = b.GetFromTop(kEditHeaderH);
-    const IRECT contentR  = b.GetReducedFromTop(kEditHeaderH);
+    // Per-column edit chrome (swap / +) lives in chromeBand (the gained band above the content when
+    // expanded). Content fills the attach bounds. The lock/menu column anchors to the content top-right.
+    const IRECT headerRow = chromeBand;
+    const IRECT contentR  = content;
 
     // Total columns: one per slot + optional "new slot" column in edit mode
     const int nCols = (int)_slots.size() + (_unlocked ? 1 : 0);
@@ -599,8 +636,8 @@ void UserTabPanel::rebuild() {
             if (_unlocked && e < (int)slot.params.size() - 1) {
                 const float cx = sliceContent.L + sliceContent.W() * kSwapEntryOffX;
                 const float cy = sliceContent.T + yPx - kEntryGap / 2.f;
-                const IRECT swapR { cx - kSwapBtnW / 2.f, cy - kEditHeaderH / 2.f,
-                                    cx + kSwapBtnW / 2.f, cy + kEditHeaderH / 2.f };
+                const IRECT swapR { cx - kSwapEntryBtnW / 2.f, cy - kSwapEntryBtnH / 2.f,
+                                    cx + kSwapEntryBtnW / 2.f, cy + kSwapEntryBtnH / 2.f };
                 AddChildControl(makeSwapEntriesBtn(swapR, s, e));
             }
         }
@@ -609,24 +646,28 @@ void UserTabPanel::rebuild() {
             AddChildControl(new BorderOverlay(sliceContent, kSlotOutlineColor));
     }
 
-    // Global "new slot" column — rightmost, edit mode only; "+" centred in full column
+    // Global "new slot" column — rightmost, edit mode only. The right-edge menu column
+    // (lock/save/…) overlays this column, so reserve its width before centring the "+"
+    // (shifts the glyph half the menu width left, into the visible area).
     if (_unlocked) {
-        AddChildControl(makePlusBtn(colRect(nCols - 1, contentR), -1));
+        AddChildControl(makePlusBtn(colRect(nCols - 1, contentR).GetReducedFromRight(_menuBtnW), -1));
     }
 
     // Lock button added last → always on top of content controls in z-order.
-    const IRECT lockR = b.GetFromTRHC(kLockBtnW, kEditHeaderH);
+    const IRECT lockR = content.GetFromTRHC(_menuBtnW, kEditHeaderH);
     AddChildControl(makeLockBtn(lockR));
 
     // Buttons below the lock button, grouped with half-button gaps between groups:
-    //   lock  |  save / load  |  copy / paste  |  clear  |  undo
+    //   lock  |  save / load  |  [copy / paste]  |  clear  |  undo   (copy/paste gated by _clipboardEnabled)
     if (_unlocked) {
         const float kHGap = 0.5f * kEditHeaderH;
         float y = kEditHeaderH + kHGap;       // gap after lock
         AddChildControl(makeSaveBtn (lockR.GetVShifted(y))); y += kEditHeaderH;
         AddChildControl(makeLoadBtn (lockR.GetVShifted(y))); y += kEditHeaderH + kHGap;
-        AddChildControl(makeCopyBtn (lockR.GetVShifted(y))); y += kEditHeaderH;
-        AddChildControl(makePasteBtn(lockR.GetVShifted(y))); y += kEditHeaderH + kHGap;
+        if (_clipboardEnabled) {   // clipboard copy/paste gated (paid); file save/load stay free
+            AddChildControl(makeCopyBtn (lockR.GetVShifted(y))); y += kEditHeaderH;
+            AddChildControl(makePasteBtn(lockR.GetVShifted(y))); y += kEditHeaderH + kHGap;
+        }
         AddChildControl(makeClearBtn(lockR.GetVShifted(y))); y += kEditHeaderH + kHGap;
         AddChildControl(makeUndoBtn (lockR.GetVShifted(y)));
     }

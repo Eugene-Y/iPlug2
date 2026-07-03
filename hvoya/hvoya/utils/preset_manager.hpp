@@ -42,7 +42,18 @@
  *   Every navigation or load call pushes the current serialized state AND
  *   preset index onto a ring buffer (depth = constructor's undoDepth, default
  *   kDefaultUndoDepth). undo() restores both.
- *   Individual parameter tweaks are NOT tracked — that is the host's job.
+ *   A single on-screen edit gesture is committed as ONE undo step via
+ *   commitDirtyEdit() (call it at the end of a knob gesture); host automation of a
+ *   single param is still the host's job. An uncommitted dirty edit (e.g. one made
+ *   outside a gesture bracket) is reverted in one shot by undo()'s dirty branch.
+ *
+ *   Sub-session floor: a host can bracket a sub-session (e.g. a morph session) with
+ *   setUndoFloor(undoMark()) on enter / clearUndoFloor() on exit, so undo()/canUndo()
+ *   stay WITHIN the session and never walk into the history beneath it; the session is
+ *   then committed as one outer step via commitFromState() on exit. NB undo()'s dirty
+ *   branch reverts to _baselineChunk REGARDLESS of the floor, so a sub-session whose
+ *   state differs from the surrounding history (e.g. morph on vs off) should rebaseline()
+ *   on enter, else a dirty-revert escapes the session. See squashUndoTo/commitFromState.
  *
  *   Only deliberate on-screen edits (EParamSource::kUI) mark a preset dirty.
  *   Host automation (kHost) and MIDI CC (kDelegate) are live, host/performer-
@@ -89,6 +100,74 @@ public:
         _ccUnserialize = std::move(unserializeFn);
     }
 
+    // Workspace callbacks — optional. "Workspace" is state that should SURVIVE a
+    // preset swap (not be overwritten by the loaded preset): e.g. a morph rig, custom
+    // UI layout. Like the CC map, the manager snapshots it before every state load
+    // and restores it afterwards. A host PROJECT load goes through the plugin
+    // directly (not the manager), so it restores the workspace from the chunk as
+    // normal — only preset-strip swaps / undo preserve it.
+    using WorkspaceSerializeFn   = std::function<void(iplug::IByteChunk&)>;
+    using WorkspaceUnserializeFn = std::function<void(const iplug::IByteChunk&)>;
+
+    void setWorkspaceCallbacks(WorkspaceSerializeFn serializeFn, WorkspaceUnserializeFn unserializeFn) {
+        _wsSerialize   = std::move(serializeFn);
+        _wsUnserialize = std::move(unserializeFn);
+    }
+
+    using NavGateFn = std::function<bool()>;
+    void setNavigationGate(NavGateFn fn) { _navGate = std::move(fn); }
+
+    // Optional predicates for the strip UI: when set and returns true, the corresponding
+    // button is shown disabled. Separate from the redirect (which has side effects on
+    // Handled) — these are pure queries called every frame by PresetStripControl.
+    using BlockedFn = std::function<bool()>;
+    void setNavBlockedWhen  (BlockedFn fn) { _navBlocked  = std::move(fn); }
+    void setLoadBlockedWhen (BlockedFn fn) { _loadBlocked = std::move(fn); }
+
+    bool isNavEnabled()  const { return !_navBlocked  || !_navBlocked();  }
+    bool isLoadEnabled() const { return !_loadBlocked || !_loadBlocked(); }
+
+    // ── Context-sensitive preset application (redirect) ─────────────────────────
+    //
+    // Normally choosing a preset (strip nav OR an explicit file load) swaps the whole patch.
+    // A host may want it to mean something else IN A GIVEN CONTEXT — e.g. while editing a morph
+    // point, load only its SOUND into that point; or, while morphing, forbid a whole-patch swap
+    // altogether. The manager doesn't know the host's context, so it offers each preset to an
+    // optional redirect and obeys its verdict.
+
+    // Where a preset comes from (an explicit Kind, not an int sentinel → clear + extensible).
+    struct PresetSource {
+        enum class Kind { BrowseList, File };
+        Kind        kind      = Kind::BrowseList;
+        int         listIndex = -1;     // valid when kind == BrowseList (factory or user)
+        std::string filePath;           // valid when kind == File (an .fxp opened outside the list)
+        bool fromList() const { return kind == Kind::BrowseList; }
+        static PresetSource list(int idx)        { return { Kind::BrowseList, idx, {} }; }
+        static PresetSource file(std::string p)  { return { Kind::File, -1, std::move(p) }; }
+    };
+
+    // The redirect's verdict for a source (consulted BEFORE normal application / the nav gate):
+    //   PassThrough — not claimed; apply normally (swap the whole patch).
+    //   Handled     — the host applied it to its own destination (e.g. the selected morph point);
+    //                 the manager does nothing else (list nav still moves the displayed index so
+    //                 the strip name follows; a claimed file does NOT enter the list).
+    //   Block       — do nothing at all (e.g. forbid a whole-patch swap while morphing) — a no-op.
+    enum class PresetApply { PassThrough, Handled, Block };
+    using PresetRedirectFn = std::function<PresetApply(const PresetSource&)>;
+    void setPresetRedirect(PresetRedirectFn fn) { _redirect = std::move(fn); }
+
+    // Resolve a browse-list index to a peekable origin (so a redirect can READ a preset without
+    // applying it): factoryPluginIdx() >= 0 for a factory preset (index into the plugin's own
+    // preset list), else userPresetPath() gives the .fxp path.
+    int factoryPluginIdx(int navIdx) const {
+        return isFactory(navIdx) ? _factoryIdxMap[static_cast<size_t>(navIdx)] : -1;
+    }
+    std::string userPresetPath(int navIdx) const {
+        const int ui = navIdx - factoryCount();
+        return (ui >= 0 && ui < userCount()) ? _userPresets[static_cast<size_t>(ui)].path
+                                             : std::string{};
+    }
+
     // ── Construction ──────────────────────────────────────────────────────────
 
     PresetManager(iplug::IPluginBase* plugin,
@@ -128,52 +207,60 @@ public:
 
     void next() {
         if (totalCount() == 0) return;
-        pushUndo();
-        applyIdx(_currentIdx < 0 ? 0 : (_currentIdx + 1) % totalCount());
+        navigateTo(_currentIdx < 0 ? 0 : (_currentIdx + 1) % totalCount());
     }
 
     void prev() {
         if (totalCount() == 0) return;
-        pushUndo();
-        applyIdx(_currentIdx < 0 ? totalCount() - 1 : (_currentIdx - 1 + totalCount()) % totalCount());
+        navigateTo(_currentIdx < 0 ? totalCount() - 1 : (_currentIdx - 1 + totalCount()) % totalCount());
     }
 
     void goTo(int idx) {
-        if (idx == _currentIdx || idx < 0 || idx >= totalCount()) return;
-        pushUndo();
-        applyIdx(idx);
+        if (idx < 0 || idx >= totalCount()) return;
+        navigateTo(idx);
     }
 
     void undo() {
+        InternalRestoreScope guard(_restoringInternally);
         auto cc = snapshotCCMap();
+        auto ws = snapshotWorkspace();
 
         if (_modified.load(std::memory_order_relaxed)) {
             // First undo while dirty: revert to the baseline of the current
-            // preset without consuming the navigation stack.
+            // preset without consuming the navigation stack. The current (dirty)
+            // state goes onto the redo stack so redo can bring it back.
+            pushBounded(_redoStack, captureEntry());
             int pos = 0;
             _plugin->UnserializeState(_baselineChunk, pos);
             _plugin->OnRestoreState();
             restoreCCMap(cc);
+            restoreWorkspace(ws);
             captureBaseline();   // _modified → false, _baselineChunk stays same
             return;
         }
 
-        if (_undoStack.empty()) return;
-        const auto& entry = _undoStack.front();
-        int pos = 0;
-        _plugin->UnserializeState(entry.chunk, pos);
-        _plugin->OnRestoreState();
-        restoreCCMap(cc);
-        _currentIdx = std::clamp(entry.presetIdx, -1, std::max(-1, totalCount() - 1));
-        // Restore the dirty flag that was in effect when this entry was pushed.
-        // If it was modified, update baseline to match (so a further undo works).
-        if (entry.modified) {
-            _modified.store(true, std::memory_order_relaxed);
-            _baselineChunk = entry.baselineChunk;  // original clean state before tweaks
-        } else {
-            captureBaseline();
-        }
+        // Floored at _undoFloor while a morph session is open → in-morph undo stays within the
+        // session and never walks into the pre-morph normal history (0 = no floor / normal mode).
+        if (_undoStack.size() <= _undoFloor) return;
+        const bool ccStep = _undoStack.front().ccInChunk;   // the redo of a CC step is also a CC step
+        pushBounded(_redoStack, captureEntry(ccStep));       // current state → redo
+        UndoEntry entry = _undoStack.front();
         _undoStack.pop_front();
+        restoreEntry(entry, cc, ws);
+    }
+
+    // Step forward again through states undone away from. The current state is pushed
+    // back onto the undo stack (so undo returns here) WITHOUT clearing redo.
+    void redo() {
+        if (_redoStack.empty()) return;
+        InternalRestoreScope guard(_restoringInternally);
+        auto cc = snapshotCCMap();
+        auto ws = snapshotWorkspace();
+        const bool ccStep = _redoStack.front().ccInChunk;
+        pushUndoBounded(captureEntry(ccStep));
+        UndoEntry entry = _redoStack.front();
+        _redoStack.pop_front();
+        restoreEntry(entry, cc, ws);
     }
 
     // Wraps a wholesale programmatic patch change (randomize / mutate) as one
@@ -188,6 +275,105 @@ public:
         captureBaseline();
     }
 
+    // Make the current live state the clean baseline WITHOUT recording an undo step (and without
+    // clearing redo). For a host action that changes state but must not be undoable on its own —
+    // e.g. selecting a morph point to edit (navigation, not a patch edit). Subsequent dirty edits
+    // revert to here; the previous undo entry (the last real change) stays poppable.
+    void rebaseline() { captureBaseline(); }
+
+    // ── Sub-session squash / commit ─────────────────────────────────────────────
+    //
+    // A "sub-session" (e.g. a morph session) is driven directly on the live params
+    // rather than through changePatch, and may push several intermediate undo steps
+    // (point selects). Mark the position when it begins, then on exit squash those
+    // steps and optionally record ONE outer step — so the host-level history sees
+    // the whole session as a single transaction.
+
+    using UndoMark = std::size_t;
+
+    // Current undo-stack depth — pass to commitFromState / squashUndoTo on exit.
+    UndoMark undoMark() const { return _undoStack.size(); }
+
+    // ── In-session undo floor (for a morph session) ─────────────────────────────
+    //
+    // While a sub-session is open, "floor" the undo line at the engage point so undo/redo stay
+    // WITHIN the session: undo() / canUndo() won't pop below `floor`, so the pre-session normal
+    // history isn't reachable until the session is committed as one step on exit. (Redo is
+    // naturally bounded — the first in-session commit clears it.) Set on engage, clear on EVERY
+    // session-exit path. The floor auto-tracks ring eviction (see pushUndoBounded).
+    void setUndoFloor(UndoMark floor) { _undoFloor = std::min(floor, _undoStack.size()); }
+    void clearUndoFloor()             { _undoFloor = 0; }
+
+    // Drop undo entries pushed since `mark`. Baseline / dirty flag are untouched —
+    // for an exit that must not rebaseline (a no-op session). If the depth ring
+    // dropped pre-session entries during the session, this conservatively keeps
+    // whatever remains (never over-truncates older history).
+    void squashUndoTo(UndoMark mark) {
+        while (_undoStack.size() > mark) _undoStack.pop_front();
+    }
+
+    // Close a sub-session as one atomic step: squash its intermediate entries, push
+    // `preState` (the state from before the session) as the single undo step if
+    // non-empty, and make the current live state the new clean baseline. Empty
+    // preState → just squash + rebaseline (no back-step).
+    void commitFromState(const iplug::IByteChunk& preState, UndoMark mark) {
+        squashUndoTo(mark);
+        if (preState.Size() > 0)
+            pushUndoBounded({ preState, iplug::IByteChunk{}, _currentIdx, false, false });
+        _redoStack.clear();      // a committed forward result invalidates redo
+        _currentIdx = -1;        // a baked / programmatic result is a custom patch
+        _divergedFromIndex = false;
+        captureBaseline();
+    }
+
+    // Commit the current uncommitted dirty edit (the param tweaks made since the last
+    // clean baseline) as ONE undo step, then rebaseline. The pre-edit state is the clean
+    // baseline; the preset INDEX is KEPT (the live patch now diverges from that preset —
+    // next/prev still cycle from it, the strip shows "user preset"). No-op if not dirty.
+    //
+    // Call at the end of a normal (non-morph) param-knob gesture so several separate edits
+    // after a preset load each undo individually, instead of collapsing into a single
+    // revert-to-baseline. (Differs from commitFromState, which forgets the index because a
+    // morph bake / set-all yields a brand-new custom patch. Differs from undo()'s dirty
+    // branch, which travels BACKWARD to the baseline; this commits the edit going forward.)
+    void commitDirtyEdit() {
+        if (!_modified.load(std::memory_order_relaxed)) return;
+        // Push the pre-edit clean state, carrying the index + diverged flag as they were
+        // BEFORE this edit, so undo lands exactly on the prior (pristine-or-diverged) state.
+        pushUndoBounded({ _baselineChunk, iplug::IByteChunk{}, _currentIdx, false, _divergedFromIndex });
+        _redoStack.clear();              // a fresh forward edit invalidates redo
+        if (_currentIdx >= 0)
+            _divergedFromIndex = true;   // the live patch no longer matches the stored preset
+        captureBaseline();               // post-edit state becomes the new clean baseline
+    }
+
+    // Record a CC-map edit (learn / clear / paste / file) as ONE undo step. The CC map is workspace,
+    // normally preserved across patch undos; but here the map IS the change, so the entry is flagged
+    // ccInChunk and undo/redo restore it from the entry's chunk. Call BEFORE applying the edit.
+    void recordCCUndoStep() {
+        pushUndoBounded(captureEntry(/*ccInChunk*/ true));
+        _redoStack.clear();   // a fresh forward action invalidates the redo history
+    }
+
+    // Call from the plugin's OnRestoreState(). On a genuine EXTERNAL restore (host
+    // project load, host-level undo) the manager's baseline must follow the new
+    // state and stale undo history is dropped. The manager's OWN restores
+    // (undo()/navigation, which also reach OnRestoreState) must NOT do this — the
+    // reentrancy guard suppresses them.
+    void onHostStateRestored() {
+        if (_restoringInternally) return;
+        _undoStack.clear();
+        _redoStack.clear();
+        _undoFloor = 0;          // fresh history; any morph session re-floors via reconcileSession
+        captureBaseline();
+    }
+
+    // True while the manager itself is driving a state restore (undo/redo/navigation),
+    // as opposed to an external host load. Lets the plugin's OnRestoreState() honor the
+    // restored chunk's transient UI selection (e.g. a morph point) during undo/redo,
+    // while still clearing a stray selection on a genuine host load. See onHostStateRestored().
+    bool isRestoringInternally() const { return _restoringInternally; }
+
     // ── File I/O ──────────────────────────────────────────────────────────────
 
     void saveToFile(const std::string& path) {
@@ -198,12 +384,23 @@ public:
         LOGD << "[PresetManager] saved: " << path;
         _lastUsedDir = std::filesystem::path(path).parent_path().string();
         _currentIdx  = factoryCount() + ensureInList(path);
+        _divergedFromIndex = false;
         captureBaseline();
     }
 
     bool loadFromFile(const std::string& path) {
+        // The redirect may claim the file (e.g. load only its sound into the selected morph
+        // point → Handled; a claimed file is NOT entered into the list) or forbid the whole-patch
+        // load in this context (e.g. while morphing → Block, a no-op).
+        const PresetApply v = _redirect ? _redirect(PresetSource::file(path)) : PresetApply::PassThrough;
+        if (v == PresetApply::Handled) return true;
+        if (v == PresetApply::Block)   return false;
+        InternalRestoreScope guard(_restoringInternally);
         pushUndo();
         auto cc = snapshotCCMap();
+        // NB: workspace is NOT snapshotted here — an explicit file load opens the
+        // COMPLETE patch (sound + workspace), unlike strip navigation (next/prev/goTo),
+        // which preserves the current workspace. (CC stays snapshotted for now.)
         if (!_plugin->LoadStateFromFXP(path.c_str())) {
             LOGE << "[PresetManager] load FAILED: " << path;
             _undoStack.pop_front();
@@ -213,6 +410,7 @@ public:
         LOGD << "[PresetManager] loaded: " << path;
         _lastUsedDir = std::filesystem::path(path).parent_path().string();
         _currentIdx  = factoryCount() + ensureInList(path);
+        _divergedFromIndex = false;
         captureBaseline();
         return true;
     }
@@ -313,9 +511,16 @@ public:
     }
 
     // True when the live patch is not a pristine stored preset — edited,
-    // randomized, mutated, or never loaded from one. The strip shows it as
-    // "user preset" instead of a preset name.
-    bool isCustomPatch() const { return _currentIdx < 0 || isModified(); }
+    // randomized, mutated, never loaded from one, or explicitly marked diverged
+    // (see markPatchCustom). The strip shows it as "user preset" instead of a name.
+    bool isCustomPatch() const { return _currentIdx < 0 || isModified() || _divergedFromIndex; }
+
+    // Mark the live patch as no longer matching the preset at the remembered index, WITHOUT
+    // discarding that index. The strip then shows "user preset", but next/prev keep cycling
+    // from the last preset position. Use when the host changes the sound to something that
+    // isn't the indexed preset yet the navigation position should be preserved (e.g. switching
+    // between morph points). Cleared automatically the next time a preset is actually applied.
+    void markPatchCustom() { _divergedFromIndex = true; }
 
     // Directory to open file dialogs in: last-used dir, or _presetDir if none.
     const std::string& browseDir() const {
@@ -331,13 +536,20 @@ public:
     // dirty would (a) light the "*" spuriously and (b) trap undo in an infinite
     // baseline-revert while a continuous LFO / recorded CC lane keeps re-dirtying.
     void onParamChanged(iplug::EParamSource source) {
-        if (source == iplug::kUI)
+        if (source == iplug::kUI) {
             _modified.store(true, std::memory_order_relaxed);
+            // A genuine on-screen edit branches history → redo no longer applies.
+            // (The manager's own restores broadcast as kPresetRecall/kDelegate, not
+            // kUI, so they don't reach here.)
+            if (!_restoringInternally && !_redoStack.empty())
+                _redoStack.clear();
+        }
     }
 
     const std::string& presetDir()   const { return _presetDir; }
 
-    bool canUndo()      const { return _modified.load(std::memory_order_relaxed) || !_undoStack.empty(); }
+    bool canUndo()      const { return _modified.load(std::memory_order_relaxed) || _undoStack.size() > _undoFloor; }
+    bool canRedo()      const { return !_redoStack.empty(); }
     int  currentIdx()   const { return _currentIdx; }
     int  factoryCount() const { return static_cast<int>(_factoryIdxMap.size()); }
     int  userCount()    const { return static_cast<int>(_userPresets.size()); }
@@ -353,6 +565,17 @@ private:
         iplug::IByteChunk baselineChunk;  // clean baseline at push time
         int               presetIdx;
         bool              modified;
+        bool              diverged;       // patch diverged from presetIdx (see _divergedFromIndex)
+        bool              ccInChunk = false; // CC-map step: restore the map FROM chunk, don't overlay live
+    };
+
+    // RAII flag set while the manager itself drives a state restore, so the plugin's
+    // OnRestoreState → onHostStateRestored() can tell our restores from a host load.
+    bool _restoringInternally = false;
+    struct InternalRestoreScope {
+        bool& flag; bool prev;
+        explicit InternalRestoreScope(bool& f) : flag(f), prev(f) { flag = true; }
+        ~InternalRestoreScope() { flag = prev; }
     };
 
     // ── Members ───────────────────────────────────────────────────────────────
@@ -366,12 +589,22 @@ private:
     std::vector<UserPreset> _userPresets;
 
     std::deque<UndoEntry>       _undoStack;
+    std::deque<UndoEntry>       _redoStack;       // states undone away from; cleared on any new forward edit
     int                         _undoDepth;       // max entries kept on the undo ring buffer
+    UndoMark                    _undoFloor = 0;    // in-session undo floor (0 = none); see setUndoFloor
     mutable std::atomic<bool>   _modified { false };
+    bool                        _divergedFromIndex = false;  // patch no longer matches preset @ _currentIdx (index kept)
     iplug::IByteChunk           _baselineChunk;  // clean state of the current preset
 
     CCSerializeFn   _ccSerialize;
     CCUnserializeFn _ccUnserialize;
+
+    WorkspaceSerializeFn   _wsSerialize;
+    WorkspaceUnserializeFn _wsUnserialize;
+    NavGateFn              _navGate;
+    PresetRedirectFn       _redirect;
+    BlockedFn              _navBlocked;
+    BlockedFn              _loadBlocked;
 
     bool isFactory(int idx) const { return idx >= 0 && idx < factoryCount(); }
 
@@ -385,26 +618,95 @@ private:
         if (_ccUnserialize && c.Size() > 0) _ccUnserialize(c);
     }
 
-    void pushUndo() {
-        if (static_cast<int>(_undoStack.size()) >= _undoDepth)
-            _undoStack.pop_back();
+    iplug::IByteChunk snapshotWorkspace() const {
+        iplug::IByteChunk c;
+        if (_wsSerialize) _wsSerialize(c);
+        return c;
+    }
+
+    void restoreWorkspace(const iplug::IByteChunk& c) const {
+        if (_wsUnserialize && c.Size() > 0) _wsUnserialize(c);
+    }
+
+    bool navAllowed() const { return !_navGate || _navGate(); }
+
+    // Shared core of next/prev/goTo. The redirect (if any) runs first and may claim the target
+    // without touching the patch; we then just move the displayed index so the strip name
+    // follows. Otherwise normal, gated navigation.
+    void navigateTo(int target) {
+        const PresetApply v = _redirect ? _redirect(PresetSource::list(target)) : PresetApply::PassThrough;
+        if (v == PresetApply::Handled) { _currentIdx = target; _divergedFromIndex = false; return; }   // host took it; name follows
+        if (v == PresetApply::Block)   return;                             // forbidden in this context
+        if (!navAllowed() || target == _currentIdx) return;               // legacy gate / already there
+        pushUndo();
+        applyIdx(target);
+    }
+
+    // Snapshot the live state as an undo/redo entry (baselineChunk only when dirty). ccInChunk marks
+    // a CC-map step, so restoreEntry restores the map from the chunk instead of overlaying the live one.
+    UndoEntry captureEntry(bool ccInChunk = false) const {
         const bool dirty = _modified.load(std::memory_order_relaxed);
-        // baselineChunk is only needed when dirty — skip the copy otherwise.
-        _undoStack.push_front({ serializeCurrent(),
-                                dirty ? _baselineChunk : iplug::IByteChunk{},
-                                _currentIdx, dirty });
+        return { serializeCurrent(),
+                 dirty ? _baselineChunk : iplug::IByteChunk{},
+                 _currentIdx, dirty, _divergedFromIndex, ccInChunk };
+    }
+
+    void pushBounded(std::deque<UndoEntry>& stack, UndoEntry e) {
+        if (static_cast<int>(stack.size()) >= _undoDepth)
+            stack.pop_back();
+        stack.push_front(std::move(e));
+    }
+
+    // Push onto the UNDO stack with ring bounding, keeping the in-morph floor correct: if the ring
+    // is full we drop the OLDEST (bottom) entry — which sits at/below the floor — so the floor index
+    // (counted from the bottom) must shift down by one to keep pointing at the same engage boundary.
+    void pushUndoBounded(UndoEntry e) {
+        if (static_cast<int>(_undoStack.size()) >= _undoDepth) {
+            _undoStack.pop_back();
+            if (_undoFloor > 0) --_undoFloor;
+        }
+        _undoStack.push_front(std::move(e));
+    }
+
+    // Apply a previously captured entry (used by both undo and redo). The caller
+    // has already snapshotted/needs to restore CC + workspace around it.
+    void restoreEntry(const UndoEntry& e, const iplug::IByteChunk& cc, const iplug::IByteChunk& ws) {
+        int pos = 0;
+        _plugin->UnserializeState(e.chunk, pos);
+        _plugin->OnRestoreState();
+        // A CC-map step's chunk already carries the map to restore (UnserializeState applied it);
+        // overlaying the live snapshot would un-revert it. Patch steps preserve the live workspace map.
+        if (!e.ccInChunk) restoreCCMap(cc);
+        restoreWorkspace(ws);
+        _currentIdx = std::clamp(e.presetIdx, -1, std::max(-1, totalCount() - 1));
+        _divergedFromIndex = e.diverged;
+        if (e.modified) {
+            _modified.store(true, std::memory_order_relaxed);
+            _baselineChunk = e.baselineChunk;   // original clean state before tweaks
+        } else {
+            captureBaseline();
+        }
+    }
+
+    void pushUndo() {
+        pushUndoBounded(captureEntry());
+        _redoStack.clear();   // a fresh forward action invalidates the redo history
     }
 
     // Navigate to idx. If the target user preset file is missing, removes it
     // from the list and clamps _currentIdx without changing DSP state.
     void applyIdx(int idx) {
+        InternalRestoreScope guard(_restoringInternally);
         _currentIdx = idx;
+        _divergedFromIndex = false;   // the live patch now IS this preset → strip shows its name
         auto cc = snapshotCCMap();
+        auto ws = snapshotWorkspace();
         if (isFactory(idx)) {
             const int pi = _factoryIdxMap[idx];
             LOGD << "[PresetManager] factory preset: " << _plugin->GetPresetName(pi);
             _plugin->RestorePreset(pi);
             restoreCCMap(cc);
+            restoreWorkspace(ws);
         } else {
             const int ui = idx - factoryCount();
             if (ui >= 0 && ui < userCount()) {
@@ -418,6 +720,7 @@ private:
                     return;
                 }
                 restoreCCMap(cc);
+                restoreWorkspace(ws);
                 LOGD << "[PresetManager] navigated to: " << p.name
                      << (p.group.empty() ? "" : " [" + p.group + "]");
             }

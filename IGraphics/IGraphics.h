@@ -1084,7 +1084,13 @@ public:
    * @param needsPlatformResize Set true for manual resize from plug-in UI, false when called from
    * IEditorDelegate::OnParentWindowResize() to avoid feedback loops */
   void Resize(int w, int h, float scale, bool needsPlatformResize = true);
-  
+
+  /** Synchronously redraw and present any dirty content immediately, in the calling thread's
+   * turn, instead of waiting for the next vsync/display-link tick. Call this right after a
+   * programmatic Resize() (once the new layout is in place) so the window never composites the
+   * previous frame scaled into the grown bounds. Platform-specific; no-op where unsupported. */
+  virtual void DrawNow() {}
+
   /** Enables strict drawing mode. When enabled, only dirty controls are redrawn.
    * When disabled, all controls are redrawn on each frame.
    * @param strict Set /c true to enable strict drawing mode */

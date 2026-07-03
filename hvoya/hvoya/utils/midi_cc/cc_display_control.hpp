@@ -21,6 +21,10 @@ public:
         SetDirty(false);
     }
 
+    // The control keeps its colour in _style (it draws from that, not IControl::mText). Advertise it so
+    // the CC decorator's live-modulator dot uses this text colour instead of the default-black mText.
+    IColor labelColor() const { return _style.mFGColor; }
+
 private:
     IText _style;
     WDL_String _str;

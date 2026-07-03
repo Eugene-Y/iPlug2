@@ -4,6 +4,7 @@
 #include <cassert>
 #include <numeric>
 #include <span>
+#include <string>
 
 #include "audio_buffer.hpp"
 
@@ -38,8 +39,32 @@ namespace hvoya::utils {
 
     template <typename T>
     T freqToNote (T f, T A4 = 440) { return T (69) + T (12) * std::log2 (f / A4); }
-    
-	
+
+    // Note name for a MIDI note number (sharps), e.g. 69 → "A4", 18 → "F#0",
+    // -6 → "F#-2". MIDI 69 = A4 (matches noteToFreq's A4=440 anchor), so the
+    // octave is floor(n/12) - 1. Notes are unbounded — n may be negative or huge.
+    inline std::string midiNoteName (int n) {
+        static constexpr const char* kNames[12] =
+            { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+        const int pc  = ((n % 12) + 12) % 12;                      // pitch class, floor-mod
+        const int oct = (n - pc) / 12 - 1;                         // exact, since n-pc is a multiple of 12
+        return std::string (kNames[pc]) + std::to_string (oct);
+    }
+
+    // Label for a frequency as its nearest note, with a '+'/'-' suffix when the
+    // frequency sits above/below the exact note by more than centsEps cents,
+    // e.g. 440 → "A4", 445 → "A4+". A4=440 anchor.
+    inline std::string freqToNoteLabel (double hz, double centsEps = 1.0) {
+        const double fn      = freqToNote (hz);
+        const int    nearest = int (std::lround (fn));
+        const double cents   = (fn - nearest) * 100.0;
+        std::string  label   = midiNoteName (nearest);
+        if (cents >  centsEps) label += '+';
+        else if (cents < -centsEps) label += '-';
+        return label;
+    }
+
+
 	template <typename T>
 	inline bool smoothValue (T& smoothVal, T exactVal, T a, T eps) {
 		assert (a <= 1);
