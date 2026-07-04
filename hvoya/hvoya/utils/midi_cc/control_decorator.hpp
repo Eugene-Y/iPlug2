@@ -94,7 +94,7 @@ namespace hvoya::midi_cc {
             static constexpr double kRangeEps    = 1e-4;  // Absolute range counts as "restricted" beyond this
 
             // Freq depth readout: opt-in for params whose depth is musical pitch (cutoffs). During the
-            // set-depth drag the live oct/semi/cent delta floats near the cursor in the shared
+            // set-depth drag the live oct/semi/cent delta floats over the knob's center in the shared
             // IBubbleControl (attached top-of-stack by the plugin), so it isn't clipped to mRECT.
             bool        _freqDepthReadout = false;
 
@@ -328,8 +328,10 @@ namespace hvoya::midi_cc {
                     _gestureExtent  = std::clamp (_gestureExtent, -1.0, 1.0);
                     this->SetValue (std::clamp (_gestureBaseNorm + _gestureExtent, 0.0, 1.0)); // visual only
                     this->SetDirty (false);
-                    if (_freqDepthReadout)   // float the live oct/semi/cent delta in the bubble overlay
-                        this->GetUI()->ShowBubbleControl (this, x, y, formatPitchDepth (gestureOctaves()).c_str());
+                    if (_freqDepthReadout)   // float the live oct/semi/cent delta in the bubble overlay,
+                        // anchored to the knob's center so it stays put instead of chasing the cursor
+                        this->GetUI()->ShowBubbleControl (this, this->mRECT.MW(), this->mRECT.MH(),
+                                                          formatPitchDepth (gestureOctaves()).c_str());
                     return;
                 }
                 C::OnMouseDrag (x, y, dX, dY, mod);
