@@ -7,11 +7,12 @@
  * UserTabPanel is an iPlug2 IContainerBase that lets the user build a personal
  * set of controls from any parameters available in a ControlRegistry.
  *
- * Layout: the panel area is divided into vertical columns (slots). Normal slots
- * share width equally; a pad-only slot (a single padding spacer) gets a narrower
- * column proportional to its heightFrac. Each slot is divided vertically by the
- * heightFrac of its entries: real controls share remaining height proportionally,
- * padding entries take an absolute fraction of slot height.
+ * Layout: the panel area is divided into vertical columns (slots). A column is unit
+ * width unless it carries a column-width modifier (a "vertical" spacer), which shrinks
+ * it to a fraction of a unit column; all column widths are then shared proportionally.
+ * Each column is divided vertically by the heightFrac of its entries: real controls
+ * share the remaining height proportionally, horizontal spacers take an absolute
+ * fraction of column height, and the width modifier takes no height.
  *
  *   locked view:     [ Cutoff knob | Drive knob | Sat switch ]  [edit]
  *                                                                  ↑ always visible
@@ -51,7 +52,8 @@
  *   slot 12 5
  *   slot 7 -2
  *
- * Each "slot" line lists param IDs left-to-right (negative IDs = padding spacers).
+ * Each "slot" line lists param IDs left-to-right (negative IDs = spacers: horizontal
+ * height bands and column-width modifiers — see the kPad* / kColWidth* constants).
  * loadLayout / pasteFromClipboard read only the [user-tab] section and silently
  * skip unknown param IDs. Other sections (e.g. [midi-cc]) are ignored, making the
  * format safe to extend without breaking existing loaders.
@@ -105,6 +107,8 @@
 #include <vector>
 #include <functional>
 #include <set>
+#include <array>
+#include <string_view>
 #include <IControl.h>
 #include "control_registry.hpp"
 #include "glyph_label.hpp"
@@ -176,6 +180,10 @@ public:
     UserTabPanel& setPasteLabel       (GlyphLabel l) { _pasteLabel       = std::move(l); return *this; }
     UserTabPanel& setClearLabel       (GlyphLabel l) { _clearLabel       = std::move(l); return *this; }
     UserTabPanel& setUndoLabel        (GlyphLabel l) { _undoLabel        = std::move(l); return *this; }
+    // Marker drawn in a column that carries a column-width modifier (a "vertical" spacer). It is
+    // distinct from the ✕ entry-remove glyph on purpose — it reads as "this column has a width
+    // spacer" and clicking it removes the modifier. Default is a plain rectangle fallback.
+    UserTabPanel& setSpacerMarkerLabel(GlyphLabel l) { _spacerMarkerLabel = std::move(l); return *this; }
     UserTabPanel& setLabelRunGap      (float px)     { _labelRunGap      = px;           return *this; }
 
     // Width of the right-edge menu column (lock/edit + save/load/copy/paste/clear/undo)
@@ -193,6 +201,11 @@ public:
     // lock/menu column stays anchored to the content, not the gained band. 0 (default) = no growth,
     // chrome overlays the content top. The host frees the space above (e.g. collapses a strip there).
     UserTabPanel& setEditExpandTop    (float px)     { _editExpandTop    = px;           return *this; }
+    // In edit mode the panel grows DOWNWARD by `px` into a thin band below the control cells, where
+    // each column's column-width-spacer marker is drawn — so the marker sits just UNDER its column
+    // instead of overlapping the bottom control. 0 (default) = no band, the marker falls back inside
+    // the column. The host grants only space it knows is free below the panel (e.g. a layout margin).
+    UserTabPanel& setEditExpandBottom (float px)     { _editExpandBottom = px;           return *this; }
 
     // Hover color of the edit-mode action glyphs (+ / ✕ / swap ◄► / swap ▲▼). At rest the
     // glyphs draw in editColor (the accent); on mouse-over they recolor to `c` — the glyph
@@ -254,20 +267,70 @@ public:
     static constexpr float kPlusBtnMaxW   = 80.f;   // max width of "+" button (clamped to available space)
     static constexpr float kPlusBtnMaxH   = 40.f;   // max height of "+" button
 
-    // Padding pseudo-param IDs (negative — never conflict with real plugin params >= 0).
-    // Added to an existing slot  → vertical spacer (fraction of slot height).
-    // Added as a brand-new slot  → column spacer   (fraction of normal column width).
-    static constexpr int kPad1_8 = -1;
-    static constexpr int kPad1_4 = -2;
-    static constexpr int kPad1_2 = -3;
+    // Spacer pseudo-param IDs (negative — never collide with real params ≥ 0). Two kinds:
+    //   • Horizontal — an empty band INSIDE a column (a fraction of the column HEIGHT), pushing the
+    //     controls below it down.
+    //   • Vertical  — a column-WIDTH modifier: narrows the whole column to a fraction of a unit
+    //     column, proportionally (4 unit columns + one ½ ⇒ the ½ is 0.5/4.5 = 1/9 of the width). It
+    //     consumes no height and doesn't change how the controls lay out. A column with no modifier
+    //     is unit width. At most one per column; alone in a slot it is an empty column.
+    //
+    // kSpacerDefs is the ONE source of truth: registry, picker, width maths and the tag offset all
+    // read from it. To add a spacer, add an id constant and a row below — nothing else changes.
+    static constexpr int kPad1_8 = -1, kPad1_4 = -2, kPad1_2 = -3;                   // horizontal
+    static constexpr int kColWidth1_1 = -4, kColWidth3_4 = -5, kColWidth2_3 = -6,    // vertical
+                         kColWidth1_2 = -7, kColWidth1_4 = -8, kColWidth1_8 = -9;
 
-    static bool isPad(int id) { return id < 0; }
+    enum class SpacerKind { Horizontal, Vertical };
+    struct SpacerDef {
+        int              id;
+        float            frac;   // Horizontal → fraction of column height; Vertical → fraction of column width
+        SpacerKind       kind;
+        std::string_view name;   // picker label
+    };
+    static constexpr std::array<SpacerDef, 9> kSpacerDefs { {
+        { kPad1_8,      0.125f, SpacerKind::Horizontal, "horizontal  1/8" },
+        { kPad1_4,      0.25f,  SpacerKind::Horizontal, "horizontal  1/4" },
+        { kPad1_2,      0.5f,   SpacerKind::Horizontal, "horizontal  1/2" },
+        { kColWidth1_1, 1.0f,   SpacerKind::Vertical,   "vertical  1"     },
+        { kColWidth3_4, 0.75f,  SpacerKind::Vertical,   "vertical  3/4"   },
+        { kColWidth2_3, 0.66f,  SpacerKind::Vertical,   "vertical  2/3"   },
+        { kColWidth1_2, 0.5f,   SpacerKind::Vertical,   "vertical  1/2"   },
+        { kColWidth1_4, 0.25f,  SpacerKind::Vertical,   "vertical  1/4"   },
+        { kColWidth1_8, 0.125f, SpacerKind::Vertical,   "vertical  1/8"   },
+    } };
+
+    // Every spacer id must be negative and unique (else the id/tag maths breaks silently).
+    static_assert([] {
+        for (std::size_t i = 0; i < kSpacerDefs.size(); ++i) {
+            if (kSpacerDefs[i].id >= 0) return false;
+            for (std::size_t j = i + 1; j < kSpacerDefs.size(); ++j)
+                if (kSpacerDefs[i].id == kSpacerDefs[j].id) return false;
+        }
+        return true;
+    }(), "UserTabPanel spacer ids must be negative and unique");
+
+    // Most-negative spacer id — derived, so a more-negative spacer needs no other edit.
+    static constexpr int kSpacerIdMin = [] {
+        int m = 0;
+        for (const auto& d : kSpacerDefs) if (d.id < m) m = d.id;
+        return m;
+    }();
+
+    static constexpr const SpacerDef* spacerDef(int id) {
+        for (const auto& d : kSpacerDefs) if (d.id == id) return &d;
+        return nullptr;
+    }
+    static bool  isPad     (int id) { return id < 0; }   // any spacer id (real params are ≥ 0)
+    static bool  isColWidth(int id) { auto* d = spacerDef(id); return d && d->kind == SpacerKind::Vertical; }
+    // Fraction of a unit column a width modifier occupies (1 for non-modifiers / no modifier).
+    static float columnWidthFrac(int id) { auto* d = spacerDef(id); return (d && d->kind == SpacerKind::Vertical) ? d->frac : 1.f; }
 
 private:
-    // Tags on IPopupMenu::Item encode the control ID: tag = id + kPickerTagOffset.
-    // kPickerTagOffset = -kPad1_2 = 3, so the most-negative valid ID (kPad1_2 = -3)
-    // maps to tag 0. All valid tags are >= 0; iPlug2's default "no tag" sentinel is -1.
-    static constexpr int   kPickerTagOffset = 3;
+    // Menu-item tag encodes the control id: tag = id + kPickerTagOffset. Offsetting by the most-
+    // negative spacer id lifts every tag to ≥ 0 (iPlug's "no tag" sentinel is -1). Derived, so it
+    // tracks kSpacerDefs automatically — never hand-tune it.
+    static constexpr int   kPickerTagOffset = -kSpacerIdMin;
     static constexpr float kSwapEntryOffX   = 0.125f; // horizontal position of entry-swap btn (fraction of slot width)
     static constexpr float kSmallBtnW       = 20.f;   // width of ✕ remove button
     static constexpr float kLockBtnW        = 40.f;   // width of lock/edit button
@@ -289,11 +352,13 @@ private:
     // Opt-in icon / mixed-font button labels (empty → plain-text IVButtonControl).
     GlyphLabel _editLabel, _lockLabel, _plusLabel, _removeLabel,
                _swapSlotsLabel, _swapEntriesLabel,
-               _saveLabel, _loadLabel, _copyLabel, _pasteLabel, _clearLabel, _undoLabel;
+               _saveLabel, _loadLabel, _copyLabel, _pasteLabel, _clearLabel, _undoLabel,
+               _spacerMarkerLabel;
     float      _labelRunGap = 0.f;
     float      _menuBtnW    = kLockBtnW;    // right-edge menu column width (see setMenuButtonWidth)
     bool       _clipboardEnabled = true;    // show copy/paste in the edit menu (see setClipboardEnabled)
     float      _editExpandTop = 0.f;        // upward growth in edit mode (see setEditExpandTop)
+    float      _editExpandBottom = 0.f;     // downward growth in edit mode for width-spacer markers (see setEditExpandBottom)
     IRECT      _baseRECT;                   // attach bounds (the content area); edit mode grows upward from here
 
     IColor _highlightColor;                // hover color for action glyphs (see setHighlightColor)
@@ -306,11 +371,19 @@ private:
     void clearChildren();  // removes children from IGraphics and clears mChildren
     void notifyChanged();
 
+    // ── Slot queries (spacer/width-modifier aware) ───────────────────────────────
+    bool  slotHasWidthMod    (const Slot& s) const;   // does the slot carry a column-width modifier?
+    bool  slotHasRealControl (const Slot& s) const;   // any registered non-spacer entry?
+    int   widthModIndex      (const Slot& s) const;   // params index of the width modifier, or -1
+    float slotWidthWeight    (const Slot& s) const;   // column-width weight (1 unless a modifier narrows it)
+    bool  normalizeSlots     ();                      // pin the width modifier first, drop extra ones; true if changed
+
     void pushHistory();  // snapshot _slots onto _history before a mutation
     void toggleLock();
     void addSlot(int paramId);
     void addToSlot(int slotIdx, int paramId);
     void removeEntry(int slotIdx, int entryIdx);
+    void resetColumnWidth(int slotIdx);  // drop the column-width modifier → unit width; deletes the column if it empties
     void swapSlots  (int slotIdx);              // swap slot[slotIdx] ↔ slot[slotIdx+1]
     void swapEntries(int slotIdx, int entryIdx); // swap entry[entryIdx] ↔ entry[entryIdx+1] within slot
 
@@ -338,6 +411,7 @@ private:
     IControl* makeLockBtn   (const IRECT& r);
     IControl* makePlusBtn   (const IRECT& r, int slotIdx);  // r = available area; button centred inside
     IControl* makeRemoveBtn (const IRECT& r, int slotIdx, int entryIdx);
+    IControl* makeWidthModBtn(const IRECT& r, int slotIdx);  // column-width spacer marker (resets the width)
     IControl* makeSwapSlotsBtn  (const IRECT& r, int slotIdx);
     IControl* makeSwapEntriesBtn(const IRECT& r, int slotIdx, int entryIdx);
     IControl* makeSaveBtn   (const IRECT& r);

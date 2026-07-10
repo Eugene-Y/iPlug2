@@ -76,15 +76,13 @@ UserTabPanel::UserTabPanel(const IRECT& bounds,
     if (removeFontName)
         strncpy(_entryBtnStyle.labelText.mFont, removeFontName, sizeof(_entryBtnStyle.labelText.mFont) - 1);
 
-    // Register built-in padding spacers. Negative IDs never conflict with real params.
-    // heightFrac doubles as widthFrac when the entry is the sole occupant of a slot.
-    auto addPad = [this](int id, float frac, const char* name) {
-        _factories.add(id, { [](const IRECT& r) -> IControl* { return new PaddingControl(r); },
-                             frac, name });
-    };
-    addPad(kPad1_8, 0.125f, "space  1/8");
-    addPad(kPad1_4, 0.25f,  "space  1/4");
-    addPad(kPad1_2, 0.5f,   "space  1/2");
+    // Register every spacer from the single kSpacerDefs table (see the header). A horizontal spacer
+    // takes its frac as the entry height; a width modifier consumes no height (its frac is a column
+    // width, read via columnWidthFrac).
+    for (const auto& d : kSpacerDefs)
+        _factories.add(d.id, { [](const IRECT& r) -> IControl* { return new PaddingControl(r); },
+                               d.kind == SpacerKind::Horizontal ? d.frac : 0.f,
+                               std::string(d.name) });
 
     // Prune any param IDs from loaded slots that aren't in this registry
     // (e.g., params removed between plugin versions, or entries from a different preset).
@@ -104,7 +102,52 @@ UserTabPanel::UserTabPanel(const IRECT& bounds,
             [](const Slot& s) { return s.params.empty(); }),
         _slots.end());
     if (_slots.size() != slotsBefore) pruned = true;
+    if (normalizeSlots()) pruned = true;
     if (pruned) notifyChanged();
+}
+
+
+// ──────────────────────────────────────────────
+//  Slot queries (spacer / width-modifier aware)
+
+bool UserTabPanel::slotHasWidthMod(const Slot& s) const {
+    for (int p : s.params) if (isColWidth(p)) return true;
+    return false;
+}
+
+bool UserTabPanel::slotHasRealControl(const Slot& s) const {
+    for (int p : s.params) if (!isPad(p) && _factories.has(p)) return true;
+    return false;
+}
+
+int UserTabPanel::widthModIndex(const Slot& s) const {
+    for (int i = 0; i < (int)s.params.size(); ++i) if (isColWidth(s.params[i])) return i;
+    return -1;
+}
+
+float UserTabPanel::slotWidthWeight(const Slot& s) const {
+    const int i = widthModIndex(s);
+    return i >= 0 ? columnWidthFrac(s.params[i]) : 1.f;
+}
+
+bool UserTabPanel::normalizeSlots() {
+    bool changed = false;
+    for (auto& s : _slots) {
+        const int firstW = widthModIndex(s);
+        if (firstW < 0) continue;
+        // Drop any extra width modifiers after the first (at most one per column).
+        for (int i = (int)s.params.size() - 1; i > firstW; --i)
+            if (isColWidth(s.params[i])) { s.params.erase(s.params.begin() + i); changed = true; }
+        // Pin the width modifier to the front so real-control entries stay contiguous
+        // (keeps the vertical layout and entry-swap indices simple).
+        if (firstW > 0) {
+            const int id = s.params[firstW];
+            s.params.erase(s.params.begin() + firstW);
+            s.params.insert(s.params.begin(), id);
+            changed = true;
+        }
+    }
+    return changed;
 }
 
 
@@ -161,7 +204,11 @@ void UserTabPanel::addSlot(int paramId) {
 void UserTabPanel::addToSlot(int slotIdx, int paramId) {
     assert(slotIdx >= 0 && slotIdx < (int)_slots.size());
     pushHistory();
-    _slots[slotIdx].params.push_back(paramId);
+    auto& params = _slots[slotIdx].params;
+    if (isColWidth(paramId))
+        params.insert(params.begin(), paramId);   // width modifier pinned to the front
+    else
+        params.push_back(paramId);
     notifyChanged();
     rebuild();
 }
@@ -174,6 +221,19 @@ void UserTabPanel::removeEntry(int slotIdx, int entryIdx) {
     slot.params.erase(slot.params.begin() + entryIdx);
     if (slot.params.empty())
         _slots.erase(_slots.begin() + slotIdx);
+    notifyChanged();
+    rebuild();
+}
+
+void UserTabPanel::resetColumnWidth(int slotIdx) {
+    if (slotIdx < 0 || slotIdx >= (int)_slots.size()) return;
+    const int i = widthModIndex(_slots[slotIdx]);
+    if (i < 0) return;
+    pushHistory();
+    auto& params = _slots[slotIdx].params;
+    params.erase(params.begin() + i);          // back to unit width; controls (if any) stay
+    if (params.empty())
+        _slots.erase(_slots.begin() + slotIdx);  // a pure spacer column disappears
     notifyChanged();
     rebuild();
 }
@@ -267,6 +327,7 @@ bool UserTabPanel::applySection(const std::vector<std::string>& lines) {
 
     pushHistory();
     _slots = std::move(newSlots);
+    normalizeSlots();
     notifyChanged();
     rebuild();
     return true;
@@ -323,22 +384,36 @@ void UserTabPanel::showParamPicker(int slotIdx, IRECT fromRect) {
     // Padding entries are skipped here and appended manually below.
     buildPickerMenu(_pickerMenu, _factories.root(), slotIdx, usedInTargetSlot);
 
-    // Padding spacers at the bottom, separated.
-    // Items are created with an explicit tag so selection is identified via GetTag(),
-    // not by menu index (which is fragile in the presence of separators and submenus).
-    _pickerMenu.AddSeparator();
-    for (int padId : { kPad1_8, kPad1_4, kPad1_2 }) {
-        const auto& desc = _factories.at(padId);
+    // Spacers gathered into one "spacers" submenu: horizontal height-bands, then a separator,
+    // then vertical column-width modifiers. Items carry an explicit tag so selection is identified
+    // via GetTag(), not menu index (fragile with separators/submenus).
+    auto* spacers = new IPopupMenu("spacers");
+    const bool haveTarget   = slotIdx >= 0 && slotIdx < (int)_slots.size();
+    const bool targetHasReal  = haveTarget && slotHasRealControl(_slots[slotIdx]);
+    const bool targetHasWidth = haveTarget && slotHasWidthMod   (_slots[slotIdx]);
+
+    // Horizontal spacers — a band inside a column; only meaningful in a column that holds controls.
+    for (const auto& d : kSpacerDefs) {
+        if (d.kind != SpacerKind::Horizontal) continue;
+        const auto& desc = _factories.at(d.id);
         int flags = IPopupMenu::Item::kNoFlags;
-        if (slotIdx >= 0) {
-            // Inside an existing slot: disable if no room or the slot is already pad-only.
-            bool padOnly = _slots[slotIdx].params.size() == 1 && isPad(_slots[slotIdx].params[0]);
-            bool noRoom  = !_slots[slotIdx].hasRoom(_factories, desc.heightFrac);
-            if (padOnly || noRoom) flags = IPopupMenu::Item::kDisabled;
-        }
-        // slotIdx == -1 (new slot): padding creates a narrow column spacer — always enabled.
-        _pickerMenu.AddItem(new IPopupMenu::Item(desc.displayName.c_str(), flags, padId + kPickerTagOffset));
+        if (!haveTarget || !targetHasReal || !_slots[slotIdx].hasRoom(_factories, desc.heightFrac))
+            flags = IPopupMenu::Item::kDisabled;
+        spacers->AddItem(new IPopupMenu::Item(desc.displayName.c_str(), flags, d.id + kPickerTagOffset));
     }
+
+    // Vertical spacers — column-width modifiers. As a new slot they make an empty column; in an
+    // existing column they narrow it (one per column). They consume no height, so no room check.
+    spacers->AddSeparator();
+    for (const auto& d : kSpacerDefs) {
+        if (d.kind != SpacerKind::Vertical) continue;
+        const auto& desc = _factories.at(d.id);
+        const int flags = targetHasWidth ? IPopupMenu::Item::kDisabled : IPopupMenu::Item::kNoFlags;
+        spacers->AddItem(new IPopupMenu::Item(desc.displayName.c_str(), flags, d.id + kPickerTagOffset));
+    }
+
+    _pickerMenu.AddSeparator();
+    _pickerMenu.AddItem(new IPopupMenu::Item("spacers", spacers));   // Item owns the submenu
 
     GetUI()->CreatePopupMenu(*this, _pickerMenu, fromRect);
 }
@@ -398,8 +473,10 @@ IControl* UserTabPanel::makeLockBtn(const IRECT& r) {
 }
 
 IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
-    const IRECT btnR = r.GetCentredInside(std::min(r.W(), kPlusBtnMaxW), std::min(r.H(), kPlusBtnMaxH));
-    // _entryBtnStyle (same size as the ✕ remove glyph) — the ×2 _editBtnStyle "+" was oversized.
+    // Target area = the drawn glyph box, not the whole header/column cell — a snug square the size of
+    // the glyph (its font size), centred in r. So the click area matches what the user sees.
+    const float side = std::min({ _entryBtnStyle.labelText.mSize, r.W(), r.H() });
+    const IRECT btnR = r.GetCentredInside(side, side);
     return makeButton(btnR, _plusLabel, "+", _entryBtnStyle,
         [this, slotIdx, btnR](IControl*) { showParamPicker(slotIdx, btnR); });
 }
@@ -407,6 +484,15 @@ IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
 IControl* UserTabPanel::makeRemoveBtn(const IRECT& r, int slotIdx, int entryIdx) {
     return makeButton(r, _removeLabel, "✕", _entryBtnStyle,
         [this, slotIdx, entryIdx](IControl*) { removeEntry(slotIdx, entryIdx); });
+}
+
+IControl* UserTabPanel::makeWidthModBtn(const IRECT& r, int slotIdx) {
+    // Marks a column-width spacer — a distinct glyph from the ✕ entry-remove. Centred inside r like
+    // the "+". Clicking resets the column to unit width (keeping its controls); on a pure spacer
+    // column that reset empties it, so the column disappears.
+    const IRECT btnR = r.GetCentredInside(std::min(r.W(), kPlusBtnMaxW), std::min(r.H(), kPlusBtnMaxH));
+    return makeButton(btnR, _spacerMarkerLabel, "▭", _entryBtnStyle,
+        [this, slotIdx](IControl*) { resetColumnWidth(slotIdx); });
 }
 
 IControl* UserTabPanel::makeSwapSlotsBtn(const IRECT& r, int slotIdx) {
@@ -490,14 +576,20 @@ void UserTabPanel::rebuild() {
 
     // Content always fills the attach bounds (so it matches a sibling themed-tab layout of the same
     // rect — no lost vertical space in either mode). In edit mode the panel grows UPWARD by
-    // _editExpandTop; that gained band hosts the per-column edit chrome (swap / +) ABOVE the cells.
-    // The lock/menu column is anchored to the content, so it does not move into the gained band.
-    const bool  expandUp = _unlocked && _editExpandTop > 0.f;
-    const IRECT content  = _baseRECT;
-    const IRECT b        = expandUp
-        ? IRECT(_baseRECT.L, _baseRECT.T - _editExpandTop, _baseRECT.R, _baseRECT.B)
-        : _baseRECT;
-    SetTargetAndDrawRECTs(b);   // mRECT covers the gained band so the chrome there hit-tests
+    // _editExpandTop (that gained band hosts the per-column swap / + chrome ABOVE the cells) and
+    // DOWNWARD by _editExpandBottom (a thin band BELOW the cells that holds each column's width-spacer
+    // marker, out of the column so it never overlaps a control). The lock/menu column is anchored to
+    // the content, so it stays put.
+    const bool  expandUp   = _unlocked && _editExpandTop    > 0.f;
+    const bool  expandDown = _unlocked && _editExpandBottom > 0.f;
+    const IRECT content    = _baseRECT;
+    const IRECT b {
+        _baseRECT.L,
+        _baseRECT.T - (expandUp   ? _editExpandTop    : 0.f),
+        _baseRECT.R,
+        _baseRECT.B + (expandDown ? _editExpandBottom : 0.f)
+    };
+    SetTargetAndDrawRECTs(b);   // mRECT covers the gained bands so their chrome hit-tests
     // Header band for the per-column edit chrome: the gained band when expanded, else the content top.
     const IRECT chromeBand = expandUp ? b.GetFromTop(_editExpandTop) : content.GetFromTop(kEditHeaderH);
 
@@ -531,13 +623,10 @@ void UserTabPanel::rebuild() {
     const int nCols = (int)_slots.size() + (_unlocked ? 1 : 0);
     if (nCols == 0) { pG->SetAllControlsDirty(); return; }
 
-    // Column width weights: normal slot = 1.0; pad-only slot = its heightFrac (e.g. 0.25).
+    // Column width weights: unit (1.0) unless a column-width modifier narrows the column.
     std::vector<float> slotWeights(_slots.size(), 1.f);
-    for (int s = 0; s < (int)_slots.size(); ++s) {
-        const auto& ps = _slots[s].params;
-        if (ps.size() == 1 && isPad(ps[0]) && _factories.has(ps[0]))
-            slotWeights[s] = _factories.at(ps[0]).heightFrac;
-    }
+    for (int s = 0; s < (int)_slots.size(); ++s)
+        slotWeights[s] = slotWidthWeight(_slots[s]);
     float totalWeight = 0.f;
     for (float w : slotWeights) totalWeight += w;
     if (_unlocked) totalWeight += 1.f;  // new-slot column has weight 1
@@ -577,25 +666,29 @@ void UserTabPanel::rebuild() {
     for (int s = 0; s < (int)_slots.size(); ++s) {
         const IRECT sliceContent = colRect(s, contentR);
         const auto& slot = _slots[s];
-        const bool padOnly = slot.params.size() == 1 && isPad(slot.params[0]);
+        const bool emptyColumn = !slotHasRealControl(slot);   // only spacers → a blank column
+        const int  wIdx        = widthModIndex(slot);
 
-        // Header: "+" to add another entry to this slot (centred in the header cell).
-        // Show the button if at least one registered (non-pad) item fits — don't use a
-        // hardcoded threshold because the smallest item may be smaller than any fixed value.
+        // Header "+": add a control OR a width modifier to this column. Shown whenever something can
+        // be added — a control (there is room) or a width modifier (the column has none yet). So a
+        // full column still shows it (for the width modifier), and a fresh empty spacer column still
+        // shows it (so controls can be dropped in). The width-spacer marker is NOT here — it sits at
+        // the bottom of the column (below), to keep the header uncluttered.
+        const bool hasWidthMod = wIdx >= 0;
         const bool canAddMore = std::any_of(
             _factories.begin(), _factories.end(),
             [&](const ControlRegistry::Entry& e) {
                 return !isPad(e.id) && slot.hasRoom(_factories, e.desc.heightFrac);
             });
-        if (_unlocked && !padOnly && canAddMore)
+        if (_unlocked && (canAddMore || !hasWidthMod))
             AddChildControl(makePlusBtn(colRect(s, headerRow), s));
 
-        // Count valid entries and split frac totals.
+        // Count valid, laid-out entries and split frac totals (the width modifier takes no height).
         int   nValid     = 0;
         float spacerFrac = 0.f;
         float realFrac   = 0.f;
         for (int p : slot.params) {
-            if (!_factories.has(p)) continue;
+            if (!_factories.has(p) || isColWidth(p)) continue;
             ++nValid;
             if (isPad(p)) spacerFrac += _factories.at(p).heightFrac;
             else          realFrac   += _factories.at(p).heightFrac;
@@ -610,11 +703,11 @@ void UserTabPanel::rebuild() {
         float yPx = 0.f;
         for (int e = 0; e < (int)slot.params.size(); ++e) {
             const int paramId = slot.params[e];
-            if (!_factories.has(paramId)) continue;
+            if (!_factories.has(paramId) || isColWidth(paramId)) continue;  // width mod: no cell, no height
 
             const auto& desc   = _factories.at(paramId);
             const float entryH = isPad(paramId)
-                ? (padOnly ? slotH : desc.heightFrac * slotH)
+                ? (emptyColumn ? slotH : desc.heightFrac * slotH)
                 : (desc.heightFrac / realFrac) * availForReal;
             const IRECT entryR {
                 sliceContent.L, sliceContent.T + yPx,
@@ -624,22 +717,34 @@ void UserTabPanel::rebuild() {
             AddChildControl(desc.factory(entryR));
 
             if (_unlocked) {
-                if (!padOnly)
+                if (!isPad(paramId))
                     AddChildControl(new BorderOverlay(entryR, kEntryOutlineColor));
                 AddChildControl(makeRemoveBtn(entryR.GetFromTRHC(kSmallBtnW, kEditHeaderH), s, e));
             }
 
             yPx += entryH + kEntryGap;
 
-            // Swap-entries button: same width as the slot swap button, centred horizontally
-            // in the slot column and vertically on the gap — overlaps neighbours slightly.
-            if (_unlocked && e < (int)slot.params.size() - 1) {
+            // Swap-entries button: same width as the slot swap button, centred horizontally in the
+            // column and vertically on the gap. Skip when the next entry is the width modifier
+            // (it is not laid out here, so there is nothing to swap with).
+            if (_unlocked && e < (int)slot.params.size() - 1 && !isColWidth(slot.params[e + 1])) {
                 const float cx = sliceContent.L + sliceContent.W() * kSwapEntryOffX;
                 const float cy = sliceContent.T + yPx - kEntryGap / 2.f;
                 const IRECT swapR { cx - kSwapEntryBtnW / 2.f, cy - kSwapEntryBtnH / 2.f,
                                     cx + kSwapEntryBtnW / 2.f, cy + kSwapEntryBtnH / 2.f };
                 AddChildControl(makeSwapEntriesBtn(swapR, s, e));
             }
+        }
+
+        // Column-width spacer marker: centred just BELOW the column (mirroring the top "+"), in the
+        // gained bottom band so it never overlaps a control. Without a bottom band (host didn't grant
+        // one) it falls back to the bottom edge inside the column.
+        if (_unlocked && hasWidthMod) {
+            const IRECT markerBand = expandDown
+                ? IRECT(sliceContent.L, content.B, sliceContent.R, content.B + _editExpandBottom)
+                : IRECT(sliceContent.L, sliceContent.B - std::min(sliceContent.H(), kPlusBtnMaxH),
+                        sliceContent.R, sliceContent.B);
+            AddChildControl(makeWidthModBtn(markerBand, s));
         }
 
         if (_unlocked)
