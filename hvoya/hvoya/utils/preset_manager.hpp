@@ -555,6 +555,24 @@ public:
     int  userCount()    const { return static_cast<int>(_userPresets.size()); }
     int  totalCount()   const { return factoryCount() + userCount(); }
 
+    // Preset identity for host-project serialization. Returns the current preset's FACTORY index
+    // (stable across sessions — factory presets have a fixed order), or -1 when the live patch is
+    // custom/modified or a user (.fxp) preset (whose combined index is session-relative, so it isn't
+    // safe to persist). The host stores this in its project chunk; setRestoredPresetIdx reads it back.
+    int  serializablePresetIdx() const {
+        return (!isCustomPatch() && isFactory(_currentIdx)) ? _currentIdx : -1;
+    }
+
+    // Restore the preset identity read from a host-project chunk (see serializablePresetIdx). Only a
+    // valid factory index selects a preset; anything else → -1 (custom, "user preset"). No DSP side
+    // effects — UnserializeState already restored the params; this only fixes the strip label. Call
+    // ONLY on a genuine external restore, never during the manager's own preset nav / undo (those set
+    // _currentIdx themselves; a stored -1 would wrongly blank a just-navigated factory preset's name).
+    void setRestoredPresetIdx(int idx) {
+        _currentIdx        = (idx >= 0 && idx < factoryCount()) ? idx : -1;
+        _divergedFromIndex = false;
+    }
+
     const std::vector<UserPreset>& userPresets() const { return _userPresets; }
 
 private:
