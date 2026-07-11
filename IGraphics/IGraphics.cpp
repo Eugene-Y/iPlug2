@@ -80,7 +80,9 @@ void IGraphics::SetScreenScale(float scale)
   
   assert(windowWidth > 0 && windowHeight > 0 && "Window dimensions invalid");
 
-  bool parentResized = GetDelegate()->EditorResizeFromUI(windowWidth, windowHeight, true);
+  // While opening, don't notify the host of a resize (see mInOpenWindow) — the view is sized
+  // by PlatformResize regardless; the host learns the final size the normal way after we return.
+  bool parentResized = mInOpenWindow ? false : GetDelegate()->EditorResizeFromUI(windowWidth, windowHeight, true);
   PlatformResize(parentResized);
   ForAllControls(&IControl::OnRescale);
   SetAllControlsDirty();
@@ -108,7 +110,9 @@ void IGraphics::Resize(int w, int h, float scale, bool needsPlatformResize)
   int windowWidth = WindowWidth() * GetPlatformWindowScale();
   int windowHeight = WindowHeight() * GetPlatformWindowScale();
 
-  bool parentResized = GetDelegate()->EditorResizeFromUI(windowWidth, windowHeight, needsPlatformResize);
+  // See mInOpenWindow: suppress the host resize notification while opening (avoids a re-entrant
+  // teardown in hosts that service it synchronously); the view is still sized by PlatformResize.
+  bool parentResized = mInOpenWindow ? false : GetDelegate()->EditorResizeFromUI(windowWidth, windowHeight, needsPlatformResize);
   PlatformResize(parentResized);
   ForAllControls(&IControl::OnResize);
   SetAllControlsDirty();

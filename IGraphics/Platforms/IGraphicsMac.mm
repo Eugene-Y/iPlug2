@@ -60,9 +60,11 @@ IGraphicsMac::IGraphicsMac(IGEditorDelegate& dlg, int w, int h, int fps, float s
 
 IGraphicsMac::~IGraphicsMac()
 {
+  *mAlive = false;   // any main-queue block still pending must not touch this object
+
   StaticStorage<CoreTextFontDescriptor>::Accessor storage(sFontDescriptorCache);
   storage.Release();
-  
+
   CloseWindow();
 }
 
@@ -97,14 +99,16 @@ void* IGraphicsMac::OpenWindow(void* pParent)
   CloseWindow();
   IGRAPHICS_VIEW* pView = [[IGRAPHICS_VIEW alloc] initWithIGraphics: this];
   mView = (void*) pView;
-    
+
+  mInOpenWindow = true;   // suppress host resize notifications until the window is fully open
   ActivateGLContext();
   OnViewInitialized([pView layer]);
   SetScreenScale([[NSScreen mainScreen] backingScaleFactor]);
   GetDelegate()->LayoutUI(this);
   UpdateTooltips();
   GetDelegate()->OnUIOpen();
-  
+  mInOpenWindow = false;
+
   if (pParent)
   {
     [(NSView*) pParent addSubview: pView];
@@ -423,8 +427,12 @@ void IGraphicsMac::UpdateTooltips()
 
   IGraphicsMac* pThis = this;
   void* capturedView = mView;
+  auto alive = mAlive;   // outlives `this`; guards against the object being destroyed while queued
 
   dispatch_async(dispatch_get_main_queue(), ^{
+    if (!*alive)   // object destroyed since we were queued — touch nothing on pThis
+      return;
+
     pThis->mTooltipUpdatePending.store(false);
 
     // Bail if view was closed or replaced since we were queued
@@ -654,8 +662,13 @@ bool IGraphicsMac::PromptForColor(IColor& color, const char* str, IColorPickerHa
 IPopupMenu* IGraphicsMac::CreatePlatformPopupMenu(IPopupMenu& menu, const IRECT bounds, bool& isAsync)
 {
   isAsync = true;
-  
+
+  auto alive = mAlive;   // outlives `this`; guards against the object being destroyed while queued
+
   dispatch_async(dispatch_get_main_queue(), ^{
+    if (!*alive)   // object destroyed since we were queued — touch nothing
+      return;
+
     IPopupMenu* pReturnMenu = nullptr;
 
     if (mView)

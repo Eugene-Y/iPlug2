@@ -1723,6 +1723,10 @@ public:
   void ClearGestureRegions();
 
 protected:
+  bool mInOpenWindow = false; // true while the platform OpenWindow runs — suppresses the synchronous
+                              // host resize notification, which some hosts (REAPER on cold-start
+                              // project restore) service by re-entrantly closing the editor mid-open
+
   /** Drawing API method to load a bitmap, called internally
    * @param fileNameOrResID A CString absolute path or resource ID
    * @param scale Integer to identify the scale of the resource, for multi-scale bitmaps

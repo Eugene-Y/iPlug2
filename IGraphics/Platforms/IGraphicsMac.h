@@ -11,6 +11,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 
 #include <CoreGraphics/CoreGraphics.h>
 
@@ -99,6 +100,10 @@ private:
   
   void* mView = nullptr;
   std::atomic<bool> mTooltipUpdatePending { false };
+  // Liveness token for blocks queued on the main thread (UpdateTooltips /
+  // CreatePlatformPopupMenu). Captured by the block so the flag outlives `this`;
+  // the destructor clears it, so a block that runs after we're gone touches nothing.
+  std::shared_ptr<bool> mAlive { std::make_shared<bool>(true) };
   CGPoint mCursorLockPosition;
   WDL_String mBundleID, mAppGroupID;
   friend int GetMouseOver(IGraphicsMac* pGraphics);

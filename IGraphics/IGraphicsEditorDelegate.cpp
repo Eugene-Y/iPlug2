@@ -32,15 +32,32 @@ void* IGEditorDelegate::OpenWindow(void* pParent)
     if (mLastWidth && mLastHeight && mLastScale)
       GetUI()->Resize(mLastWidth, mLastHeight, mLastScale);
   }
-  
+
   if(mGraphics)
-    return mGraphics->OpenWindow(pParent);
+  {
+    // Some hosts re-enter this delegate's CloseWindow() synchronously from inside the platform
+    // OpenWindow — e.g. REAPER, restoring FX-chain windows on cold-start project load, requests
+    // the AU view more than once and disposes the previously handed-out view while we are still
+    // building the next one. That CloseWindow() would reset mGraphics, deleting the very object
+    // whose OpenWindow is on the stack (→ pure-virtual / bad-access as the open continues on
+    // freed memory). Guard the platform open and swallow any close that lands during it: it is
+    // host view churn, not a genuine teardown — honoring it would also hand the host a null view
+    // (generic-slider fallback). A real close arrives again later, outside the open.
+    mOpening = true;
+    void* pView = mGraphics->OpenWindow(pParent);
+    mOpening = false;
+
+    return pView;
+  }
   else
     return nullptr;
 }
 
 void IGEditorDelegate::CloseWindow()
 {
+  if (mOpening)   // re-entrant close during OpenWindow — swallow it (see OpenWindow)
+    return;
+
   if (!mClosing)
   {
     mClosing = true;

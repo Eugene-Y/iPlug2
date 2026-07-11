@@ -99,6 +99,8 @@ private:
   int mLastHeight = 0;
   float mLastScale = 0.f;
   bool mClosing = false; // used to prevent re-entrancy on closing
+  bool mOpening = false; // set while the platform OpenWindow runs; a CloseWindow arriving during
+                         // it is host view churn and is swallowed (see OpenWindow/CloseWindow)
 };
 
 END_IGRAPHICS_NAMESPACE
