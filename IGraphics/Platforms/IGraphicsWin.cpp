@@ -2091,12 +2091,39 @@ typedef NTSTATUS(WINAPI* D3DKMTWaitForVerticalBlankEvent)(const D3DKMT_WAITFORVE
 
 DWORD IGraphicsWin::OnVBlankRun()
 {
-  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+  // A UI-redraw notifier does not need the highest non-realtime priority. TIME_CRITICAL here
+  // competes directly with the host's audio thread; HIGHEST keeps the vblank timing tight
+  // without that risk. Paired with the anti-spin floor below, this keeps a wedged vblank wait
+  // from starving audio - the failure mode reported when two plugin editors are open at once.
+  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
   // TODO: get expected vsync value.  For now we will use a fallback
   // of 60Hz
   float rateFallback = 60.0f;
   int rateMS = (int)(1000.0f / rateFallback);
+
+  // Anti-spin floor. D3DKMTWaitForVerticalBlankEvent below is meant to block until the next
+  // vblank, but on hybrid GPUs, occluded/background windows, or some drivers it returns
+  // immediately. Without a floor the loop then spins this thread flat-out on a core; with two
+  // editors open (two threads) that starves the host audio thread. Time each pass with a
+  // high-res clock and, when one comes back well short of a frame, sleep the remainder so the
+  // loop can never exceed the intended rate. When the wait genuinely blocks (interval ~= a
+  // frame) the floor is a no-op, so real vsync is untouched. On >60Hz displays this caps the
+  // notify rate at the plugin's declared 60 FPS, which is the intent of taking this path.
+  LARGE_INTEGER qpcFreq, qpcLast;
+  QueryPerformanceFrequency(&qpcFreq);
+  QueryPerformanceCounter(&qpcLast);
+  const double frameMS = 1000.0 / rateFallback;
+  auto paceFrame = [&]()
+  {
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    const double elapsedMS = 1000.0 * double(now.QuadPart - qpcLast.QuadPart) / double(qpcFreq.QuadPart);
+    const double deficitMS = frameMS - elapsedMS;
+    if (deficitMS >= 2.0) // came back well short of a frame -> the wait didn't block; pace it
+      ::Sleep((DWORD)(deficitMS + 0.5));
+    QueryPerformanceCounter(&qpcLast);
+  };
 
   // We need to try to load the module and entry points to wait on v blank.
   // if anything fails, we try to gracefully fallback to sleeping for some
@@ -2180,11 +2207,9 @@ DWORD IGraphicsWin::OnVBlankRun()
         }
       }
 
-      // Temporary fallback for lost adapter or failed call.
-      if (!adapterIsOpen)
-      {
-        ::Sleep(rateMS);
-      }
+      // Floor the loop rate (see paceFrame): paces a lost/failed adapter and, crucially,
+      // stops a fast-returning vblank wait from spinning this thread on a core.
+      paceFrame();
 
       // notify logic
       VBlankNotify();
