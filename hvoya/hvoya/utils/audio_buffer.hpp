@@ -148,6 +148,12 @@ namespace hvoya {
 
 			inline void fillWithSmoothStep (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
 				assert(c < _numChans);
+				// A single-sample block has no room to ramp — land on the endpoint
+				// (and dodge the div-by-zero in the t = i / (_numFrames - 1) below).
+				if (_numFrames < 2) {
+					if (_numFrames == 1) _channels [c][0] = b;
+					return;
+				}
 				for (n_frames_t i = 0; i < _numFrames; ++i) {
 					sample_t t = sample_t (i) / (_numFrames - 1);
 					sample_t curve = t * t * (3 - 2 * t);
@@ -160,6 +166,13 @@ namespace hvoya {
 
 			inline void fillWithCosineStep (sample_t a, sample_t b, n_chan_t c = 0) noexcept {
 				assert (c < _numChans);
+				// A single-sample block has no room to ramp — land on the endpoint
+				// (and dodge the div-by-zero in piOverN = pi / (_numFrames - 1) below,
+				// which otherwise yields cos(NaN) = NaN and poisons the whole buffer).
+				if (_numFrames < 2) {
+					if (_numFrames == 1) _channels [c][0] = b;
+					return;
+				}
 				const sample_t d = b - a;
                 const sample_t piOverN = std::numbers::pi / (_numFrames - 1);
 				for (n_frames_t i = 0; i < _numFrames; ++i) {
