@@ -444,6 +444,12 @@ void UserTabPanel::buildPickerMenu(IPopupMenu& menu, const ControlRegistry::Node
 // ──────────────────────────────────────────────
 //  Child control factories
 
+// Apply an opt-in hover tooltip (no-op when empty) and pass the control through for chaining.
+static IControl* withTip(IControl* c, const std::string& t) {
+    if (c && !t.empty()) c->SetTooltip(t.c_str());
+    return c;
+}
+
 IControl* UserTabPanel::makeButton(const IRECT& r, const GlyphLabel& label, const char* fallbackText,
                                    const IVStyle& style, std::function<void(IControl*)> onClick,
                                    bool bgHighlight) {
@@ -468,8 +474,9 @@ IControl* UserTabPanel::makeButton(const IRECT& r, const GlyphLabel& label, cons
 }
 
 IControl* UserTabPanel::makeLockBtn(const IRECT& r) {
-    return makeButton(r, _unlocked ? _lockLabel : _editLabel, _unlocked ? "lock" : "edit", _btnStyle,
-        [this](IControl*) { toggleLock(); }, /*bgHighlight*/ true);
+    return withTip(makeButton(r, _unlocked ? _lockLabel : _editLabel, _unlocked ? "lock" : "edit", _btnStyle,
+        [this](IControl*) { toggleLock(); }, /*bgHighlight*/ true),
+        _unlocked ? _tipLock : _tipEdit);
 }
 
 IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
@@ -477,13 +484,15 @@ IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
     // the glyph (its font size), centred in r. So the click area matches what the user sees.
     const float side = std::min({ _entryBtnStyle.labelText.mSize, r.W(), r.H() });
     const IRECT btnR = r.GetCentredInside(side, side);
-    return makeButton(btnR, _plusLabel, "+", _entryBtnStyle,
-        [this, slotIdx, btnR](IControl*) { showParamPicker(slotIdx, btnR); });
+    return withTip(makeButton(btnR, _plusLabel, "+", _entryBtnStyle,
+        [this, slotIdx, btnR](IControl*) { showParamPicker(slotIdx, btnR); }),
+        slotIdx < 0 ? _tipAddCol : _tipAddCtrl);
 }
 
 IControl* UserTabPanel::makeRemoveBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return makeButton(r, _removeLabel, "✕", _entryBtnStyle,
-        [this, slotIdx, entryIdx](IControl*) { removeEntry(slotIdx, entryIdx); });
+    return withTip(makeButton(r, _removeLabel, "✕", _entryBtnStyle,
+        [this, slotIdx, entryIdx](IControl*) { removeEntry(slotIdx, entryIdx); }),
+        _tipRemove);
 }
 
 IControl* UserTabPanel::makeWidthModBtn(const IRECT& r, int slotIdx) {
@@ -496,57 +505,57 @@ IControl* UserTabPanel::makeWidthModBtn(const IRECT& r, int slotIdx) {
 }
 
 IControl* UserTabPanel::makeSwapSlotsBtn(const IRECT& r, int slotIdx) {
-    return makeButton(r, _swapSlotsLabel, "◄►", _swapBtnStyle,
-        [this, slotIdx](IControl*) { swapSlots(slotIdx); });
+    return withTip(makeButton(r, _swapSlotsLabel, "◄►", _swapBtnStyle,
+        [this, slotIdx](IControl*) { swapSlots(slotIdx); }), _tipSwapCol);
 }
 
 IControl* UserTabPanel::makeSwapEntriesBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return makeButton(r, _swapEntriesLabel, "▲▼", _swapBtnStyle,
-        [this, slotIdx, entryIdx](IControl*) { swapEntries(slotIdx, entryIdx); });
+    return withTip(makeButton(r, _swapEntriesLabel, "▲▼", _swapBtnStyle,
+        [this, slotIdx, entryIdx](IControl*) { swapEntries(slotIdx, entryIdx); }), _tipReorder);
 }
 
 IControl* UserTabPanel::makeSaveBtn(const IRECT& r) {
-    return makeButton(r, _saveLabel, "save", _btnStyle, [this](IControl*) {
+    return withTip(makeButton(r, _saveLabel, "save", _btnStyle, [this](IControl*) {
         WDL_String fileName("layout"), path;
         GetUI()->PromptForFile(fileName, path, EFileAction::Save, _fileExt.c_str(),
             [this](const WDL_String& fn, const WDL_String&) {
                 if (fn.GetLength()) saveLayout(fn.Get());
             });
-    }, /*bgHighlight*/ true);
+    }, /*bgHighlight*/ true), _tipSave);
 }
 
 IControl* UserTabPanel::makeLoadBtn(const IRECT& r) {
-    return makeButton(r, _loadLabel, "load", _btnStyle, [this](IControl*) {
+    return withTip(makeButton(r, _loadLabel, "load", _btnStyle, [this](IControl*) {
         WDL_String fileName, path;
         GetUI()->PromptForFile(fileName, path, EFileAction::Open, _fileExt.c_str(),
             [this](const WDL_String& fn, const WDL_String&) {
                 if (fn.GetLength()) loadLayout(fn.Get());
             });
-    }, /*bgHighlight*/ true);
+    }, /*bgHighlight*/ true), _tipLoad);
 }
 
 IControl* UserTabPanel::makeCopyBtn(const IRECT& r) {
-    return makeButton(r, _copyLabel, "copy", _btnStyle, [this](IControl*) { copyToClipboard(); },
-        /*bgHighlight*/ true);
+    return withTip(makeButton(r, _copyLabel, "copy", _btnStyle, [this](IControl*) { copyToClipboard(); },
+        /*bgHighlight*/ true), _tipCopy);
 }
 
 IControl* UserTabPanel::makePasteBtn(const IRECT& r) {
-    return makeButton(r, _pasteLabel, "paste", _btnStyle, [this](IControl*) { pasteFromClipboard(); },
-        /*bgHighlight*/ true);
+    return withTip(makeButton(r, _pasteLabel, "paste", _btnStyle, [this](IControl*) { pasteFromClipboard(); },
+        /*bgHighlight*/ true), _tipPaste);
 }
 
 IControl* UserTabPanel::makeClearBtn(const IRECT& r) {
     auto* btn = makeButton(r, _clearLabel, "clear", _btnStyle, [this](IControl*) { clearSlots(); },
         /*bgHighlight*/ true);
     if (_slots.empty()) btn->SetDisabled(true);
-    return btn;
+    return withTip(btn, _tipClear);
 }
 
 IControl* UserTabPanel::makeUndoBtn(const IRECT& r) {
     auto* btn = makeButton(r, _undoLabel, "undo", _btnStyle, [this](IControl*) { undo(); },
         /*bgHighlight*/ true);
     if (_history.empty()) btn->SetDisabled(true);
-    return btn;
+    return withTip(btn, _tipUndo);
 }
 
 

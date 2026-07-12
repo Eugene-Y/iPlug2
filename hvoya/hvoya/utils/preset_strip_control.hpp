@@ -38,12 +38,14 @@
 #include <IControls.h>
 #include <filesystem>
 #include <functional>
+#include <string>
 #include <hvoya/utils/glyph_label.hpp>
 #include <hvoya/utils/preset_manager.hpp>
+#include <hvoya/utils/tooltip_host.hpp>
 
 namespace hvoya::ui {
 
-class PresetStripControl : public IControl, public IVectorBase {
+class PresetStripControl : public IControl, public IVectorBase, public ITooltipHost {
 public:
     PresetStripControl(const IRECT&    bounds,
                        PresetManager&  manager,
@@ -79,6 +81,49 @@ public:
     PresetStripControl& setDirLabel  (GlyphLabel l) { _dirLabel  = std::move (l); return *this; }
     PresetStripControl& setScanLabel (GlyphLabel l) { _scanLabel = std::move (l); return *this; }
     PresetStripControl& setRunGap    (float px)     { _runGap    = px;            return *this; }
+
+    // Per-button hover tooltips (empty = none). Reported per zone via ITooltipHost so a hover-help
+    // layer can show the right one anchored to the hovered button (see hoveredTooltip below).
+    PresetStripControl& setToggleTooltip (std::string s) { _tipToggle = std::move (s); return *this; }
+    PresetStripControl& setPrevTooltip   (std::string s) { _tipPrev   = std::move (s); return *this; }
+    PresetStripControl& setNextTooltip   (std::string s) { _tipNext   = std::move (s); return *this; }
+    PresetStripControl& setUndoTooltip   (std::string s) { _tipUndo   = std::move (s); return *this; }
+    PresetStripControl& setRedoTooltip   (std::string s) { _tipRedo   = std::move (s); return *this; }
+    PresetStripControl& setSaveTooltip   (std::string s) { _tipSave   = std::move (s); return *this; }
+    PresetStripControl& setLoadTooltip   (std::string s) { _tipLoad   = std::move (s); return *this; }
+    PresetStripControl& setDirTooltip    (std::string s) { _tipDir    = std::move (s); return *this; }
+    PresetStripControl& setScanTooltip   (std::string s) { _tipScan   = std::move (s); return *this; }
+
+    // ── ITooltipHost: per-zone tooltip + anchor for the currently hovered button ──
+    const char* hoveredTooltip() const override {
+        switch (_hoverZone) {
+            case Zone::Toggle: return _tipToggle.c_str();
+            case Zone::Prev:   return _tipPrev.c_str();
+            case Zone::Next:   return _tipNext.c_str();
+            case Zone::Undo:   return _tipUndo.c_str();
+            case Zone::Redo:   return _tipRedo.c_str();
+            case Zone::Save:   return _tipSave.c_str();
+            case Zone::Load:   return _tipLoad.c_str();
+            case Zone::Folder: return _tipDir.c_str();
+            case Zone::Scan:   return _tipScan.c_str();
+            default:           return "";
+        }
+    }
+    IRECT hoveredTooltipRect() const override {
+        const auto z = computeZones();
+        switch (_hoverZone) {
+            case Zone::Toggle: return z.toggle;
+            case Zone::Prev:   return z.prev;
+            case Zone::Next:   return z.next;
+            case Zone::Undo:   return z.undo;
+            case Zone::Redo:   return z.redo;
+            case Zone::Save:   return z.save;
+            case Zone::Load:   return z.load;
+            case Zone::Folder: return z.folder;
+            case Zone::Scan:   return z.scan;
+            default:           return mRECT;
+        }
+    }
 
     // Scales the width of the action buttons (undo/redo/save/load/dir/scan) — handy
     // when they carry narrow icon glyphs instead of words. 1.0 = default; <1 narrows.
@@ -343,6 +388,9 @@ private:
     bool           _showScan        = true;
     float          _collapsedToggleW = 0;   // 0 = auto
     float          _expandedToggleW  = 0;   // 0 = auto
+
+    // Per-zone hover tooltips (empty = none) — see the set*Tooltip setters + hoveredTooltip().
+    std::string    _tipToggle, _tipPrev, _tipNext, _tipUndo, _tipRedo, _tipSave, _tipLoad, _tipDir, _tipScan;
 };
 
 } // namespace hvoya::ui

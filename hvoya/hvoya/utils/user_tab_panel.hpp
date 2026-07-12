@@ -195,6 +195,23 @@ public:
     // (the remaining buttons move up to fill the gap). Lets a host gate clipboard behind an edition.
     UserTabPanel& setClipboardEnabled (bool e)       { _clipboardEnabled = e;            return *this; }
 
+    // ── Opt-in hover tooltips for the edit-menu / column-chrome buttons (empty = none) ──
+    // Applied inside the make*Btn factories, so they survive every rebuild. Other plugins that
+    // don't set them get no tooltip. The edit/lock toggle takes two texts (locked vs unlocked).
+    UserTabPanel& setEditTooltip     (std::string s) { _tipEdit     = std::move (s); return *this; }  // shown when locked (click → edit)
+    UserTabPanel& setLockTooltip     (std::string s) { _tipLock     = std::move (s); return *this; }  // shown when unlocked (click → lock)
+    UserTabPanel& setSaveTooltip     (std::string s) { _tipSave     = std::move (s); return *this; }
+    UserTabPanel& setLoadTooltip     (std::string s) { _tipLoad     = std::move (s); return *this; }
+    UserTabPanel& setCopyTooltip     (std::string s) { _tipCopy     = std::move (s); return *this; }
+    UserTabPanel& setPasteTooltip    (std::string s) { _tipPaste    = std::move (s); return *this; }
+    UserTabPanel& setClearTooltip    (std::string s) { _tipClear    = std::move (s); return *this; }
+    UserTabPanel& setUndoTooltip     (std::string s) { _tipUndo     = std::move (s); return *this; }
+    UserTabPanel& setAddControlTooltip (std::string s) { _tipAddCtrl = std::move (s); return *this; }  // "+" inside a column
+    UserTabPanel& setAddColumnTooltip  (std::string s) { _tipAddCol  = std::move (s); return *this; }  // "+" that adds a column
+    UserTabPanel& setRemoveTooltip   (std::string s) { _tipRemove   = std::move (s); return *this; }  // ✕ on an entry
+    UserTabPanel& setSwapColumnTooltip (std::string s) { _tipSwapCol = std::move (s); return *this; }  // ◄► move column
+    UserTabPanel& setReorderTooltip    (std::string s) { _tipReorder = std::move (s); return *this; }  // ▲▼ reorder in slot
+
     // In edit mode the panel grows UPWARD by `px` and the per-column edit chrome (slot-swap + add
     // buttons) moves into that gained band, sitting ABOVE the control cells instead of overlapping
     // them. Content keeps the original bounds (so it matches a sibling layout of that rect); the
@@ -355,6 +372,9 @@ private:
                _saveLabel, _loadLabel, _copyLabel, _pasteLabel, _clearLabel, _undoLabel,
                _spacerMarkerLabel;
     float      _labelRunGap = 0.f;
+    // Opt-in hover tooltips (empty = none) — see the set*Tooltip setters, applied in make*Btn.
+    std::string _tipEdit, _tipLock, _tipSave, _tipLoad, _tipCopy, _tipPaste, _tipClear, _tipUndo,
+                _tipAddCtrl, _tipAddCol, _tipRemove, _tipSwapCol, _tipReorder;
     float      _menuBtnW    = kLockBtnW;    // right-edge menu column width (see setMenuButtonWidth)
     bool       _clipboardEnabled = true;    // show copy/paste in the edit menu (see setClipboardEnabled)
     float      _editExpandTop = 0.f;        // upward growth in edit mode (see setEditExpandTop)
