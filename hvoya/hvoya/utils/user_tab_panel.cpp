@@ -6,6 +6,7 @@
 #include <set>
 #include <algorithm>
 #include <sstream>
+#include <charconv>
 
 namespace hvoya::ui {
 
@@ -287,8 +288,11 @@ std::vector<std::string> UserTabPanel::serializeSlots() const {
     for (const auto& slot : _slots) {
         std::ostringstream os;
         os << "slot";
-        for (int p : slot.params)
-            os << ' ' << p;
+        for (int p : slot.params) {
+            std::string tok = _idToToken ? _idToToken(p) : std::string{};
+            if (!tok.empty()) os << ' ' << tok;   // stable token (param / alt-control)
+            else              os << ' ' << p;      // no codec / spacer → raw integer id
+        }
         lines.push_back(os.str());
     }
     return lines;
@@ -307,9 +311,19 @@ bool UserTabPanel::applySection(const std::vector<std::string>& lines) {
         std::string key;
         if (!(ss >> key) || key != "slot") continue;
         Slot slot;
-        int p;
-        while (ss >> p)
-            slot.params.push_back(p);
+        std::string field;
+        while (ss >> field) {
+            int id = 0;
+            const char* begin = field.data();
+            const char* end   = begin + field.size();
+            auto [ptr, ec] = std::from_chars(begin, end, id);
+            if (ec == std::errc{} && ptr == end) {
+                slot.params.push_back(id);          // legacy numeric field (positional / alt id)
+            } else if (_tokenToId) {
+                const int resolved = _tokenToId(field);
+                if (resolved != -1) slot.params.push_back(resolved);  // named token; skip if unknown
+            }
+        }
         if (!slot.params.empty())
             newSlots.push_back(std::move(slot));
     }

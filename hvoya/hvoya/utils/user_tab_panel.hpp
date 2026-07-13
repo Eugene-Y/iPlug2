@@ -52,11 +52,21 @@
  *   slot 12 5
  *   slot 7 -2
  *
- * Each "slot" line lists param IDs left-to-right (negative IDs = spacers: horizontal
- * height bands and column-width modifiers — see the kPad* / kColWidth* constants).
- * loadLayout / pasteFromClipboard read only the [user-tab] section and silently
- * skip unknown param IDs. Other sections (e.g. [midi-cc]) are ignored, making the
- * format safe to extend without breaking existing loaders.
+ * Each "slot" line lists controls left-to-right. A control is written either as a raw
+ * integer ID or, when a name codec is supplied (setLayoutTokenCodec), as a stable string
+ * TOKEN:
+ *
+ *   slot par_main_cutoff_hz par_drive
+ *   slot kAlt_BreakXY -2
+ *
+ * Tokens make the layout independent of the plugin's EParams enum order (a raw ID is
+ * positional and breaks if params are reordered between versions); a control the codec
+ * has no token for (e.g. structural spacers, negative IDs) falls back to its integer.
+ * On read, a NUMERIC field is a legacy positional/alt ID and a STRING field is resolved
+ * through the codec — so old integer-only files still load unchanged. loadLayout /
+ * pasteFromClipboard read only the [user-tab] section and silently skip unknown controls.
+ * Other sections (e.g. [midi-cc]) are ignored, making the format safe to extend without
+ * breaking existing loaders.
  *
  * UNDO HISTORY
  * ------------
@@ -194,6 +204,22 @@ public:
     // Show the clipboard copy/paste buttons in the edit menu (default). Off → only file save/load
     // (the remaining buttons move up to fill the gap). Lets a host gate clipboard behind an edition.
     UserTabPanel& setClipboardEnabled (bool e)       { _clipboardEnabled = e;            return *this; }
+
+    // ── Opt-in name codec for the .hvoya layout (order-independent tokens) ────────
+    // Without a codec, slots serialize control IDs as raw integers — positional param IDs
+    // that break if the plugin reorders its EParams enum between versions. Supply a codec
+    // and each control writes its stable TOKEN instead ("par_main_drive", "kAlt_BreakXY");
+    // on read a token resolves back to this build's ID, so layouts survive enum reordering.
+    //   idToToken(id)  → the token to write, or "" to fall back to the integer (spacers, etc.)
+    //   tokenToId(tok) → the control ID for a token, or -1 if this build doesn't have it (skip)
+    // Old integer-only files always load: a numeric field is read as a legacy integer ID.
+    using IdToTokenFn = std::function<std::string(int id)>;
+    using TokenToIdFn = std::function<int(std::string_view token)>;
+    UserTabPanel& setLayoutTokenCodec (IdToTokenFn idToToken, TokenToIdFn tokenToId) {
+        _idToToken = std::move (idToToken);
+        _tokenToId = std::move (tokenToId);
+        return *this;
+    }
 
     // ── Opt-in hover tooltips for the edit-menu / column-chrome buttons (empty = none) ──
     // Applied inside the make*Btn factories, so they survive every rebuild. Other plugins that
@@ -365,6 +391,8 @@ private:
     std::string                    _pluginName;
     std::string                    _pluginVersion;
     std::string                    _fileExt;
+    IdToTokenFn                    _idToToken;   // layout codec: control ID → stable token ("" = write int)
+    TokenToIdFn                    _tokenToId;   // layout codec: token → control ID (-1 = unknown, skip)
 
     // Opt-in icon / mixed-font button labels (empty → plain-text IVButtonControl).
     GlyphLabel _editLabel, _lockLabel, _plusLabel, _removeLabel,
