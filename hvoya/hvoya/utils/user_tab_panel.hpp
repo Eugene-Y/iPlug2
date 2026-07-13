@@ -182,8 +182,14 @@ public:
     UserTabPanel& setLockLabel        (GlyphLabel l) { _lockLabel        = std::move(l); return *this; }  // shown when unlocked (click → lock)
     UserTabPanel& setPlusLabel        (GlyphLabel l) { _plusLabel        = std::move(l); return *this; }  // add control / add slot
     UserTabPanel& setRemoveLabel      (GlyphLabel l) { _removeLabel      = std::move(l); return *this; }  // ✕ on an entry
-    UserTabPanel& setSwapSlotsLabel   (GlyphLabel l) { _swapSlotsLabel   = std::move(l); return *this; }  // ◄► swap columns
-    UserTabPanel& setSwapEntriesLabel (GlyphLabel l) { _swapEntriesLabel = std::move(l); return *this; }  // ▲▼ swap rows in slot
+    UserTabPanel& setMoveGlyph        (GlyphLabel l) { _moveLabel        = std::move(l); return *this; }  // ✥ drawn centred on a cell while hovered (drag-to-reorder affordance)
+    // White hint shown under the cells in edit mode, e.g. "hold shift to move whole column" (empty = none).
+    UserTabPanel& setColumnMoveHint   (std::string s) { _moveHint         = std::move(s); return *this; }
+    // Called at the END of every rebuild(), after the recreated control clones have been re-synced to
+    // the current param values. A host that layers effective values on top of the base (e.g. an active
+    // morph blend) uses this to push those over the freshly-created controls in the same frame, so a
+    // reorg/add/remove shows no transient. Optional (default: nothing extra runs).
+    UserTabPanel& setOnRebuilt        (std::function<void()> fn) { _onRebuilt = std::move(fn); return *this; }
     UserTabPanel& setSaveLabel        (GlyphLabel l) { _saveLabel        = std::move(l); return *this; }
     UserTabPanel& setLoadLabel        (GlyphLabel l) { _loadLabel        = std::move(l); return *this; }
     UserTabPanel& setCopyLabel        (GlyphLabel l) { _copyLabel        = std::move(l); return *this; }
@@ -235,8 +241,6 @@ public:
     UserTabPanel& setAddControlTooltip (std::string s) { _tipAddCtrl = std::move (s); return *this; }  // "+" inside a column
     UserTabPanel& setAddColumnTooltip  (std::string s) { _tipAddCol  = std::move (s); return *this; }  // "+" that adds a column
     UserTabPanel& setRemoveTooltip   (std::string s) { _tipRemove   = std::move (s); return *this; }  // ✕ on an entry
-    UserTabPanel& setSwapColumnTooltip (std::string s) { _tipSwapCol = std::move (s); return *this; }  // ◄► swap columns
-    UserTabPanel& setReorderTooltip    (std::string s) { _tipReorder = std::move (s); return *this; }  // ▲▼ swap rows in slot
 
     // In edit mode the panel grows UPWARD by `px` and the per-column edit chrome (slot-swap + add
     // buttons) moves into that gained band, sitting ABOVE the control cells instead of overlapping
@@ -255,8 +259,8 @@ public:
     // across the actual columns by their weights.
     UserTabPanel& setAddColumnWidth   (float px)     { _addColumnWidth   = px;           return *this; }
 
-    // Hover color of the edit-mode action glyphs (+ / ✕ / swap ◄► / swap ▲▼). At rest the
-    // glyphs draw in editColor (the accent); on mouse-over they recolor to `c` — the glyph
+    // Hover color of the edit-mode action glyphs (+ / ✕) and the cell hover outline + move glyph.
+    // At rest the glyphs draw in editColor (the accent); on mouse-over they recolor to `c` — the glyph
     // itself, not a background rectangle (the rect highlight is suppressed for these buttons).
     UserTabPanel& setHighlightColor (IColor c) {
         _highlightColor    = c;
@@ -309,9 +313,6 @@ public:
     static constexpr float kEditHeaderH   = 18.f;   // height of the header row (lock/edit btn + slot headers)
     static constexpr float kEntryGap      = 2.f;    // px gap between entries within a slot (vertical)
     static constexpr float kSlotGap       = 0.f;    // px gap between slot columns (horizontal)
-    static constexpr float kSwapBtnW      = 40.f;   // width of slot-swap (horizontal ◄►) button
-    static constexpr float kSwapEntryBtnW = 40.f;   // width of entry-swap (vertical ▲▼) button — narrower for the upright glyph
-    static constexpr float kSwapEntryBtnH = 24.f;   // height of entry-swap button — taller so the upright glyph isn't clipped
     static constexpr float kPlusBtnMaxW   = 80.f;   // max width of "+" button (clamped to available space)
     static constexpr float kPlusBtnMaxH   = 40.f;   // max height of "+" button
 
@@ -379,9 +380,11 @@ private:
     // negative spacer id lifts every tag to ≥ 0 (iPlug's "no tag" sentinel is -1). Derived, so it
     // tracks kSpacerDefs automatically — never hand-tune it.
     static constexpr int   kPickerTagOffset = -kSpacerIdMin;
-    static constexpr float kSwapEntryOffX   = 0.125f; // horizontal position of entry-swap btn (fraction of slot width)
     static constexpr float kSmallBtnW       = 20.f;   // width of ✕ remove button
     static constexpr float kLockBtnW        = 40.f;   // width of lock/edit button
+    static constexpr float kDragStartThreshold = 6.f; // px the pointer must travel before a press becomes a drag
+    static constexpr float kInsertionStroke    = 2.f; // px width of the (white) drag insertion line (thick)
+    // Source/hover frames are the thin outline width (kBorderStroke); only the insertion line is thick.
 
     ControlRegistry                _factories;  // owned — lambdas inside capture mediator by ref (stable)
     std::vector<Slot>              _slots;
@@ -390,7 +393,7 @@ private:
     IVStyle                        _btnStyle;
     IVStyle                        _editBtnStyle;       // bigger, centered, accent-colored — used for +
     IVStyle                        _entryBtnStyle;      // same as _editBtnStyle but 0.75× font — used for x on entries
-    IVStyle                        _swapBtnStyle;       // icon font variant of _editBtnStyle — used for <-> and ^v swap buttons
+    IVStyle                        _moveGlyphStyle;     // icon font variant of _editBtnStyle — used for the ✥ move glyph on a hovered cell
     IColor                         _editColor;          // accent color for edit-mode overlays and buttons
     OnChangedFn                    _onChanged;
     std::string                    _pluginName;
@@ -400,14 +403,15 @@ private:
     TokenToIdFn                    _tokenToId;   // layout codec: token → control ID (-1 = unknown, skip)
 
     // Opt-in icon / mixed-font button labels (empty → plain-text IVButtonControl).
-    GlyphLabel _editLabel, _lockLabel, _plusLabel, _removeLabel,
-               _swapSlotsLabel, _swapEntriesLabel,
+    GlyphLabel _editLabel, _lockLabel, _plusLabel, _removeLabel, _moveLabel,
                _saveLabel, _loadLabel, _copyLabel, _pasteLabel, _clearLabel, _undoLabel,
                _spacerMarkerLabel;
     float      _labelRunGap = 0.f;
+    std::string _moveHint;   // edit-mode hint under the cells (see setColumnMoveHint)
+    std::function<void()> _onRebuilt;   // post-rebuild value re-sync hook (see setOnRebuilt)
     // Opt-in hover tooltips (empty = none) — see the set*Tooltip setters, applied in make*Btn.
     std::string _tipEdit, _tipLock, _tipSave, _tipLoad, _tipCopy, _tipPaste, _tipClear, _tipUndo,
-                _tipAddCtrl, _tipAddCol, _tipRemove, _tipSwapCol, _tipReorder;
+                _tipAddCtrl, _tipAddCol, _tipRemove;
     float      _menuBtnW    = kLockBtnW;    // right-edge menu column width (see setMenuButtonWidth)
     bool       _clipboardEnabled = true;    // show copy/paste in the edit menu (see setClipboardEnabled)
     float      _editExpandTop = 0.f;        // upward growth in edit mode (see setEditExpandTop)
@@ -417,6 +421,43 @@ private:
 
     IColor _highlightColor;                // hover color for action glyphs (see setHighlightColor)
     bool   _hasHighlightColor = false;
+
+    // ── Drag-to-reorder (edit mode) ──────────────────────────────────────────────
+    // A CellOverlay covers each laid-out control cell; dragging it reorders. **Shift** decides WHAT
+    // moves (live — press/release mid-drag): no Shift → move THIS one control to any column + row under
+    // the pointer (needs room in the target column); Shift → move the WHOLE column to a column gap. It
+    // is a MOVE (splice out + insert at a gap), never a swap. The mutation is deferred to mouse-up
+    // (rebuild() mid-gesture would destroy the dragged overlay and drop the capture); during the drag
+    // only the topmost DragIndicator redraws (it owns ALL the white chrome — hover, drag frames,
+    // insertion line — so nothing beneath can overpaint it).
+    class CellOverlay;      // the per-cell interaction surface (defined in the .cpp)
+    class DragIndicator;    // topmost, non-hit; draws hover + drag chrome (defined in the .cpp)
+
+    struct DragSession {
+        bool  active      = false;
+        bool  columnMode  = false;  // true → moving a whole column; false → moving one control
+        bool  forceColumn = false;  // a spacer/empty-column handle: always column mode, ignore Shift
+        bool  newColumn   = false;  // control mode past the left/right edge → drop into a fresh column
+        int   srcSlot     = -1;
+        int   srcEntry    = -1;     // params index of the dragged cell within its slot
+        IRECT srcRect;              // the dragged cell's rect (for the single-control move frame)
+        int   targetSlot  = -1;     // control mode (in-column): destination column (-1 = none / invalid)
+        int   targetGap   = -1;     // column/new-column: column gap; in-column: laid-cell gap in targetSlot
+        bool  valid       = false;  // resolves to a real, allowed move
+    };
+    DragSession _drag;
+    const void* _hoverKey  = nullptr;  // which CellOverlay is hovered (identity, survives out/over order)
+    IRECT       _hoverRect;            // its rect — the DragIndicator paints the white hover frame on top
+
+    // Cell geometry captured each rebuild(), consumed by the drag hit-testing + the indicator.
+    std::vector<IRECT>                            _colContentRects;  // per slot → its content slice
+    std::vector<std::vector<std::pair<int,IRECT>>> _cellRects;       // per slot → [(paramsIdx, rect)] top→bottom
+
+    // Drag lifecycle, driven by CellOverlay.
+    void beginCellDrag (int slot, int entry, const IRECT& srcRect, bool forceColumn);
+    void updateCellDrag(float x, float y, const iplug::igraphics::IMouseMod& mod);
+    void endCellDrag   (float x, float y, const iplug::igraphics::IMouseMod& mod);
+    int  columnAtX     (float x) const;   // slot whose content rect spans x, or -1
 
     int        _pendingPickerSlotIdx = -1;
     IPopupMenu _pickerMenu;  // must outlive CreatePopupMenu (async on macOS)
@@ -438,8 +479,17 @@ private:
     void addToSlot(int slotIdx, int paramId);
     void removeEntry(int slotIdx, int entryIdx);
     void resetColumnWidth(int slotIdx);  // drop the column-width modifier → unit width; deletes the column if it empties
-    void swapSlots  (int slotIdx);              // swap slot[slotIdx] ↔ slot[slotIdx+1]
-    void swapEntries(int slotIdx, int entryIdx); // swap entry[entryIdx] ↔ entry[entryIdx+1] within slot
+    // Reorder mutations (pure — mutate _slots only; caller does pushHistory / normalize / rebuild).
+    // "Move, not swap": pull one item out and re-insert it at a gap, leaving the relative order of the
+    // rest intact. `toGap`/`laidGap` are insertion gaps in [0, N] (before each item, plus one past the
+    // end), NOT item indices.
+    void moveColumnTo       (int from, int toGap);                 // move whole column `from` to column gap `toGap`
+    void moveEntryWithinSlot(int slot, int fromEntry, int laidGap); // move entry to laid-out-cell gap `laidGap` in its column
+    // Move one entry to another column's laid-cell gap (drops an emptied source column). fromSlot ==
+    // toSlot delegates to moveEntryWithinSlot.
+    void moveEntryAcross    (int fromSlot, int fromEntry, int toSlot, int laidGap);
+    // Move one entry OUT into a brand-new single-control column inserted at column gap `toGap`.
+    void moveEntryToNewColumn(int fromSlot, int fromEntry, int toGap);
 
     void showParamPicker(int slotIdx, IRECT fromRect);  // fromRect positions the popup
 
@@ -464,11 +514,14 @@ private:
 
     IControl* makeLockBtn   (const IRECT& r);
     IControl* makePlusBtn   (const IRECT& r, int slotIdx);  // r = available area; button centred inside
-    IControl* makeRemoveBtn (const IRECT& r, int slotIdx, int entryIdx);
     IControl* makeWidthModBtn(const IRECT& r, int slotIdx);  // column-width spacer marker (resets the width)
     static std::string colWidthTip(int id);                 // short hover label, e.g. "1/4 width"
-    IControl* makeSwapSlotsBtn  (const IRECT& r, int slotIdx);
-    IControl* makeSwapEntriesBtn(const IRECT& r, int slotIdx, int entryIdx);
+    // The one interactive surface over a control cell in edit mode: intercepts the mouse (so the real
+    // control beneath is inert), draws the hover outline + ✥ move glyph + ✕ remove, and drives the
+    // drag-to-reorder gesture. `entryIdx` is the params index of the cell within its slot.
+    // `columnHandle` = a whole-column grab for a spacer/empty column that has no laid-out cell of its
+    // own (drag-to-reorder only; no ✕, no vertical reorder).
+    IControl* makeCellOverlay(const IRECT& r, int slotIdx, int entryIdx, bool columnHandle = false);
     IControl* makeSaveBtn   (const IRECT& r);
     IControl* makeLoadBtn   (const IRECT& r);
     IControl* makeCopyBtn   (const IRECT& r);

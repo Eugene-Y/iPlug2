@@ -70,9 +70,9 @@ UserTabPanel::UserTabPanel(const IRECT& bounds,
     _entryBtnStyle = _editBtnStyle;
     _entryBtnStyle.labelText.mSize   = _editBtnStyle.labelText.mSize * 0.75f;
 
-    _swapBtnStyle = _editBtnStyle;
+    _moveGlyphStyle = _editBtnStyle;
     if (iconFontName)
-        strncpy(_swapBtnStyle.labelText.mFont, iconFontName, sizeof(_swapBtnStyle.labelText.mFont) - 1);
+        strncpy(_moveGlyphStyle.labelText.mFont, iconFontName, sizeof(_moveGlyphStyle.labelText.mFont) - 1);
 
     if (removeFontName)
         strncpy(_entryBtnStyle.labelText.mFont, removeFontName, sizeof(_entryBtnStyle.labelText.mFont) - 1);
@@ -239,22 +239,158 @@ void UserTabPanel::resetColumnWidth(int slotIdx) {
     rebuild();
 }
 
-void UserTabPanel::swapSlots(int slotIdx) {
-    if (slotIdx < 0 || slotIdx + 1 >= (int)_slots.size()) return;
-    pushHistory();
-    std::swap(_slots[slotIdx], _slots[slotIdx + 1]);
-    notifyChanged();
-    rebuild();
+void UserTabPanel::moveColumnTo(int from, int toGap) {
+    const int n = (int)_slots.size();
+    if (from < 0 || from >= n) return;
+    toGap = std::clamp(toGap, 0, n);
+    Slot s = std::move(_slots[from]);
+    _slots.erase(_slots.begin() + from);
+    if (toGap > from) --toGap;                       // the erase shifted everything past `from` left
+    toGap = std::clamp(toGap, 0, (int)_slots.size());
+    _slots.insert(_slots.begin() + toGap, std::move(s));
 }
 
-void UserTabPanel::swapEntries(int slotIdx, int entryIdx) {
-    assert(slotIdx >= 0 && slotIdx < (int)_slots.size());
-    auto& slot = _slots[slotIdx];
-    if (entryIdx < 0 || entryIdx + 1 >= (int)slot.params.size()) return;
-    pushHistory();
-    std::swap(slot.params[entryIdx], slot.params[entryIdx + 1]);
-    notifyChanged();
-    rebuild();
+void UserTabPanel::moveEntryWithinSlot(int slot, int fromEntry, int laidGap) {
+    if (slot < 0 || slot >= (int)_slots.size() || slot >= (int)_cellRects.size()) return;
+    auto& params = _slots[slot].params;
+    if (fromEntry < 0 || fromEntry >= (int)params.size()) return;
+
+    // laidGap is a gap in laid-out-cell space; map it to a params index (the params index of the cell
+    // now occupying that gap, or one-past-the-end). Inserting among laid cells never lands before a
+    // pinned width modifier (index 0), so the modifier stays put; normalizeSlots() re-pins regardless.
+    const auto& cells = _cellRects[slot];
+    laidGap = std::clamp(laidGap, 0, (int)cells.size());
+    int toIdx = (laidGap < (int)cells.size()) ? cells[laidGap].first : (int)params.size();
+
+    const int v = params[fromEntry];
+    params.erase(params.begin() + fromEntry);
+    if (toIdx > fromEntry) --toIdx;
+    toIdx = std::clamp(toIdx, 0, (int)params.size());
+    params.insert(params.begin() + toIdx, v);
+}
+
+void UserTabPanel::moveEntryAcross(int fromSlot, int fromEntry, int toSlot, int laidGap) {
+    if (fromSlot == toSlot) { moveEntryWithinSlot(fromSlot, fromEntry, laidGap); return; }
+    if (fromSlot < 0 || fromSlot >= (int)_slots.size()) return;
+    if (toSlot   < 0 || toSlot   >= (int)_slots.size() || toSlot >= (int)_cellRects.size()) return;
+    auto& from = _slots[fromSlot].params;
+    if (fromEntry < 0 || fromEntry >= (int)from.size()) return;
+
+    // Target insertion index in the destination column's params (from its pre-move laid-cell geometry).
+    const auto& cells = _cellRects[toSlot];
+    laidGap = std::clamp(laidGap, 0, (int)cells.size());
+    const int toIdx = (laidGap < (int)cells.size()) ? cells[laidGap].first : (int)_slots[toSlot].params.size();
+
+    const int v = from[fromEntry];
+    from.erase(from.begin() + fromEntry);
+    // Insert into the destination BEFORE erasing an emptied source slot (toSlot index still valid; the
+    // two params vectors are distinct, so the source erase above didn't touch the destination's).
+    auto& to = _slots[toSlot].params;
+    to.insert(to.begin() + std::clamp(toIdx, 0, (int)to.size()), v);
+    if (_slots[fromSlot].params.empty())
+        _slots.erase(_slots.begin() + fromSlot);   // a column emptied by the move disappears
+}
+
+void UserTabPanel::moveEntryToNewColumn(int fromSlot, int fromEntry, int toGap) {
+    if (fromSlot < 0 || fromSlot >= (int)_slots.size()) return;
+    auto& from = _slots[fromSlot].params;
+    if (fromEntry < 0 || fromEntry >= (int)from.size()) return;
+
+    const int v = from[fromEntry];
+    from.erase(from.begin() + fromEntry);
+    const bool srcEmptied = from.empty();
+
+    const int insAt = std::clamp(toGap, 0, (int)_slots.size());
+    _slots.insert(_slots.begin() + insAt, Slot{ { v } });   // a fresh unit-width column holding just it
+
+    if (srcEmptied) {
+        // The insert shifted the (now-empty) source right by one when it landed at/before it.
+        const int srcIdx = fromSlot + (insAt <= fromSlot ? 1 : 0);
+        _slots.erase(_slots.begin() + srcIdx);
+    }
+}
+
+// ── Drag-to-reorder lifecycle (called by CellOverlay) ────────────────────────
+int UserTabPanel::columnAtX(float x) const {
+    for (int s = 0; s < (int)_colContentRects.size(); ++s)
+        if (x >= _colContentRects[s].L && x <= _colContentRects[s].R) return s;
+    return -1;
+}
+
+void UserTabPanel::beginCellDrag(int slot, int entry, const IRECT& srcRect, bool forceColumn) {
+    _drag = DragSession{};
+    _drag.active      = true;
+    _drag.srcSlot     = slot;
+    _drag.srcEntry    = entry;
+    _drag.srcRect     = srcRect;
+    _drag.forceColumn = forceColumn;
+}
+
+void UserTabPanel::updateCellDrag(float x, float y, const IMouseMod& mod) {
+    if (!_drag.active) return;
+    _drag.columnMode = _drag.forceColumn || mod.S;   // Shift → move the whole column (live)
+    _drag.newColumn  = false;
+
+    if (_drag.columnMode) {
+        // Whole-column move: insertion gap among the columns (how many column centres are left of x).
+        int gap = 0;
+        for (const auto& r : _colContentRects)
+            if (r.MW() <= x) ++gap;
+        gap = std::clamp(gap, 0, (int)_colContentRects.size());
+        _drag.targetSlot = -1;
+        _drag.targetGap  = gap;
+        _drag.valid      = gap != _drag.srcSlot && gap != _drag.srcSlot + 1;  // not a drop back in place
+    } else if (const int col = columnAtX(x); col < 0 || col >= (int)_cellRects.size()) {
+        // Past the left/right edge (or over the add-column strip) → drop into a fresh column there.
+        _drag.targetSlot = -1;
+        if (_colContentRects.empty()) { _drag.valid = false; return; }
+        const int gap = (x < _colContentRects.front().L) ? 0 : (int)_slots.size();
+        _drag.newColumn = true;
+        _drag.targetGap = gap;
+        // No-op if the source is already a lone column landing back beside itself.
+        const bool srcAlone = _drag.srcSlot < (int)_cellRects.size() && _cellRects[_drag.srcSlot].size() == 1;
+        _drag.valid = !(srcAlone && (gap == _drag.srcSlot || gap == _drag.srcSlot + 1));
+        if (auto* pG = GetUI()) pG->SetAllControlsDirty();
+        return;
+    } else {
+        // Single-control move: destination = the column under the pointer, at the row gap under y.
+        const auto& cells = _cellRects[col];
+        int gap = 0;
+        for (const auto& c : cells)
+            if (c.second.MH() <= y) ++gap;
+        gap = std::clamp(gap, 0, (int)cells.size());
+        _drag.targetSlot = col;
+        _drag.targetGap  = gap;
+        if (col == _drag.srcSlot) {                       // reorder within the source column
+            int srcPos = 0;
+            for (int i = 0; i < (int)cells.size(); ++i)
+                if (cells[i].first == _drag.srcEntry) { srcPos = i; break; }
+            _drag.valid = gap != srcPos && gap != srcPos + 1;
+        } else {                                          // move into another column → needs room
+            const int   pid  = _slots[_drag.srcSlot].params[_drag.srcEntry];
+            const float need = _factories.has(pid) ? _factories.at(pid).heightFrac : 1.f;
+            _drag.valid = _slots[col].hasRoom(_factories, need);
+        }
+    }
+    if (auto* pG = GetUI()) pG->SetAllControlsDirty();
+}
+
+void UserTabPanel::endCellDrag(float x, float y, const IMouseMod& mod) {
+    updateCellDrag(x, y, mod);                          // resolve the final target
+    const bool doMove = _drag.active && _drag.valid;
+    const DragSession d = _drag;
+    _drag = DragSession{};
+    if (doMove) {
+        pushHistory();
+        if      (d.columnMode) moveColumnTo(d.srcSlot, d.targetGap);
+        else if (d.newColumn)  moveEntryToNewColumn(d.srcSlot, d.srcEntry, d.targetGap);
+        else                   moveEntryAcross(d.srcSlot, d.srcEntry, d.targetSlot, d.targetGap);
+        normalizeSlots();
+        notifyChanged();
+        rebuild();
+    } else if (auto* pG = GetUI()) {
+        pG->SetAllControlsDirty();
+    }
 }
 
 void UserTabPanel::clearSlots() {
@@ -503,12 +639,6 @@ IControl* UserTabPanel::makePlusBtn(const IRECT& r, int slotIdx) {
         slotIdx < 0 ? _tipAddCol : _tipAddCtrl);
 }
 
-IControl* UserTabPanel::makeRemoveBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return withTip(makeButton(r, _removeLabel, "✕", _entryBtnStyle,
-        [this, slotIdx, entryIdx](IControl*) { removeEntry(slotIdx, entryIdx); }),
-        _tipRemove);
-}
-
 IControl* UserTabPanel::makeWidthModBtn(const IRECT& r, int slotIdx) {
     // Marks a column-width spacer — a distinct glyph from the ✕ entry-remove. Centred inside r like
     // the "+". Clicking resets the column to unit width (keeping its controls); on a pure spacer
@@ -530,14 +660,161 @@ std::string UserTabPanel::colWidthTip(int id) {
     return frac + " width. tap to remove";
 }
 
-IControl* UserTabPanel::makeSwapSlotsBtn(const IRECT& r, int slotIdx) {
-    return withTip(makeButton(r, _swapSlotsLabel, "◄►", _swapBtnStyle,
-        [this, slotIdx](IControl*) { swapSlots(slotIdx); }), _tipSwapCol);
-}
+// The single interaction surface over a control cell in edit mode. It intercepts the mouse (IsHit is
+// the default true), so the real control beneath is inert while editing. It draws the subtle rest
+// outline, the ✥ move glyph centred while hovered, and the ✕ remove glyph in the top-right corner
+// (light only when the pointer is directly over it). ALL the white chrome (hover frame, drag frames,
+// insertion line) is drawn by the topmost DragIndicator, so a neighbour column's outline can never
+// overpaint it. Down + drag past the threshold hands off to the panel's drag lifecycle (Shift decides
+// column-vs-single); a click on the ✕ corner (no drag) removes the entry.
+class UserTabPanel::CellOverlay : public IControl {
+public:
+    CellOverlay(UserTabPanel* panel, const IRECT& r, int slot, int entry, bool columnHandle)
+        : IControl(r), _panel(panel), _slot(slot), _entry(entry), _isColumnHandle(columnHandle) {}
 
-IControl* UserTabPanel::makeSwapEntriesBtn(const IRECT& r, int slotIdx, int entryIdx) {
-    return withTip(makeButton(r, _swapEntriesLabel, "▲▼", _swapBtnStyle,
-        [this, slotIdx, entryIdx](IControl*) { swapEntries(slotIdx, entryIdx); }), _tipReorder);
+    void Draw(IGraphics& g) override {
+        const IColor accent   = _panel->_editColor;
+        const IColor glyphHi  = _panel->_hasHighlightColor ? _panel->_highlightColor : accent;
+        const IColor entryCol { 80, accent.R, accent.G, accent.B };  // subtle "here's a cell" marker at rest
+
+        g.DrawRect(entryCol, mRECT, &mBlend, kBorderStroke);   // white hover/drag frames come from the top
+
+        // ✥ move glyph — only while hovered on the body (not when targeting the ✕), and only if the
+        // cell is roomy enough to show it without colliding with the ✕ corner.
+        if (_hover && !_overCross && !_panel->_moveLabel.empty()
+            && mRECT.W() > kSmallBtnW * 2.f && mRECT.H() > kSmallBtnW * 2.f) {
+            IText t = _panel->_moveGlyphStyle.labelText;   // icon font lives on labelText (see makeButton)
+            t.mFGColor = glyphHi;
+            drawGlyphLabel(g, _panel->_moveLabel, mRECT, t, &mBlend, _panel->_labelRunGap);
+        }
+
+        // ✕ remove — top-right corner; accent at rest, highlight only when directly hovered. A column
+        // handle (pure spacer column) has no own entry to remove, so it shows no ✕.
+        if (!_isColumnHandle && !_panel->_removeLabel.empty()) {
+            IText t = _panel->_entryBtnStyle.labelText;
+            t.mFGColor = _overCross ? glyphHi : accent;
+            drawGlyphLabel(g, _panel->_removeLabel, crossRect(), t, &mBlend, _panel->_labelRunGap);
+        }
+    }
+
+    void OnMouseOver(float x, float y, const IMouseMod&) override {
+        _hover     = true;
+        _overCross = !_isColumnHandle && crossRect().Contains(x, y);
+        _panel->_hoverKey  = this;             // the top indicator paints the white hover frame here
+        _panel->_hoverRect = mRECT;
+        if (auto* pG = GetUI()) { pG->SetMouseCursor(_overCross ? ECursor::HAND : ECursor::SIZEALL); pG->SetAllControlsDirty(); }
+    }
+    void OnMouseOut() override {
+        _hover = _overCross = false;
+        if (_panel->_hoverKey == this) _panel->_hoverKey = nullptr;
+        if (auto* pG = GetUI()) { pG->SetMouseCursor(ECursor::ARROW); pG->SetAllControlsDirty(); }
+    }
+    void OnMouseDown(float x, float y, const IMouseMod&) override {
+        _downX = x; _downY = y;
+        _dragging      = false;
+        _pendingRemove = !_isColumnHandle && crossRect().Contains(x, y);
+    }
+    void OnMouseDrag(float x, float y, float, float, const IMouseMod& mod) override {
+        if (_pendingRemove) return;                 // a press on the ✕ corner is a click, not a drag
+        if (!_dragging) {
+            if (std::hypot(x - _downX, y - _downY) < kDragStartThreshold) return;
+            _dragging = true;
+            _panel->beginCellDrag(_slot, _entry, mRECT, _isColumnHandle);
+        }
+        _panel->updateCellDrag(x, y, mod);
+    }
+    void OnMouseUp(float x, float y, const IMouseMod& mod) override {
+        if (auto* pG = GetUI()) pG->SetMouseCursor(ECursor::ARROW);
+        if (_dragging) {
+            _panel->endCellDrag(x, y, mod);         // commits + rebuild() → this overlay is destroyed
+        } else if (_pendingRemove && crossRect().Contains(x, y)) {
+            _panel->removeEntry(_slot, _entry);     // rebuild() → this overlay is destroyed
+        }
+    }
+
+private:
+    IRECT crossRect() const { return mRECT.GetFromTRHC(kSmallBtnW, kEditHeaderH); }
+
+    UserTabPanel* _panel;
+    int  _slot, _entry;
+    bool _hover        = false;
+    bool _overCross    = false;
+    bool _dragging     = false;
+    bool _pendingRemove= false;
+    bool _isColumnHandle;
+    float _downX = 0.f, _downY = 0.f;
+};
+
+// Topmost, non-interactive: owns ALL the white edit-mode chrome — the hover frame, the drag frames,
+// and the insertion line — so nothing beneath (a neighbour column outline, a real control) can
+// overpaint it. Full-panel bounds; IsHit false so it never blocks the cells.
+class UserTabPanel::DragIndicator : public IControl {
+public:
+    DragIndicator(UserTabPanel* panel, const IRECT& r) : IControl(r), _panel(panel) {}
+    bool IsHit(float, float) const override { return false; }
+
+    void Draw(IGraphics& g) override {
+        const auto& d = _panel->_drag;
+        if (d.active && d.valid) {
+            if (d.columnMode) {
+                const auto& cols = _panel->_colContentRects;
+                if (cols.empty()) return;
+                // The whole source column moves → frame it (thin); the insertion gap is a vertical line.
+                if (d.srcSlot >= 0 && d.srcSlot < (int)cols.size())
+                    g.DrawRect(COLOR_WHITE, cols[d.srcSlot], &mBlend, kBorderStroke);
+                const float x = d.targetGap <= 0                 ? cols.front().L
+                              : d.targetGap >= (int)cols.size()  ? cols.back().R
+                              : 0.5f * (cols[d.targetGap - 1].R + cols[d.targetGap].L);
+                g.DrawLine(COLOR_WHITE, x, cols.front().T, x, cols.front().B, &mBlend, kInsertionStroke);
+            } else if (d.newColumn) {
+                // One control breaks out into a fresh column at an edge → frame it (thin) + a vertical
+                // insertion line at that edge, same as a column insert.
+                const auto& cols = _panel->_colContentRects;
+                if (cols.empty()) return;
+                g.DrawRect(COLOR_WHITE, d.srcRect, &mBlend, kBorderStroke);
+                const float x = d.targetGap <= 0 ? cols.front().L : cols.back().R;
+                g.DrawLine(COLOR_WHITE, x, cols.front().T, x, cols.front().B, &mBlend, kInsertionStroke);
+            } else {
+                // One control moves into a column → frame it (thin); the destination row gap is a
+                // horizontal line spanning the target column.
+                g.DrawRect(COLOR_WHITE, d.srcRect, &mBlend, kBorderStroke);
+                if (d.targetSlot < 0 || d.targetSlot >= (int)_panel->_cellRects.size()) return;
+                const auto& cells = _panel->_cellRects[d.targetSlot];
+                const IRECT& col  = _panel->_colContentRects[d.targetSlot];
+                const float y = cells.empty()                        ? col.T
+                              : d.targetGap <= 0                     ? cells.front().second.T
+                              : d.targetGap >= (int)cells.size()     ? cells.back().second.B
+                              : 0.5f * (cells[d.targetGap - 1].second.B + cells[d.targetGap].second.T);
+                g.DrawLine(COLOR_WHITE, col.L, y, col.R, y, &mBlend, kInsertionStroke);
+            }
+        } else if (_panel->_hoverKey) {
+            g.DrawRect(COLOR_WHITE, _panel->_hoverRect, &mBlend, kBorderStroke);   // hover frame on top
+        }
+
+        // White instruction hint in the gained bottom band (drawn here so it neither intercepts clicks
+        // nor is overpainted). Centred on the WHOLE UI width (like the morph "editing …" caption), not
+        // just the panel's tab rect.
+        if (!_panel->_moveHint.empty() && _panel->_editExpandBottom > 0.f) {
+            IText t = _panel->_btnStyle.labelText;
+            t.mFGColor = COLOR_WHITE;
+            const IRECT band = mRECT.GetFromBottom(_panel->_editExpandBottom);
+            const IRECT ui   = g.GetBounds();
+            drawGlyphLabel(g, GlyphLabel(_panel->_moveHint),
+                           IRECT(ui.L, band.T, ui.R, band.B), t, &mBlend, _panel->_labelRunGap);
+        }
+    }
+
+    // Repaint continuously while a drag or hover is live (so the chrome tracks the pointer); otherwise
+    // defer to the base flag, so an explicit SetAllControlsDirty (drag end / rebuild) clears it.
+    bool IsDirty() override { return _panel->_drag.active || _panel->_hoverKey != nullptr || IControl::IsDirty(); }
+
+private:
+    UserTabPanel* _panel;
+};
+
+IControl* UserTabPanel::makeCellOverlay(const IRECT& r, int slotIdx, int entryIdx, bool columnHandle) {
+    auto* c = new CellOverlay(this, r, slotIdx, entryIdx, columnHandle);
+    return columnHandle ? c : withTip(c, _tipRemove);   // a spacer-column handle has nothing to "remove"
 }
 
 IControl* UserTabPanel::makeSaveBtn(const IRECT& r) {
@@ -611,7 +888,7 @@ void UserTabPanel::rebuild() {
 
     // Content always fills the attach bounds (so it matches a sibling themed-tab layout of the same
     // rect — no lost vertical space in either mode). In edit mode the panel grows UPWARD by
-    // _editExpandTop (that gained band hosts the per-column swap / + chrome ABOVE the cells) and
+    // _editExpandTop (that gained band hosts the per-column "+" chrome ABOVE the cells) and
     // DOWNWARD by _editExpandBottom (a thin band BELOW the cells that holds each column's width-spacer
     // marker, out of the column so it never overlaps a control). The lock/menu column is anchored to
     // the content, so it stays put.
@@ -649,7 +926,7 @@ void UserTabPanel::rebuild() {
         return;
     }
 
-    // Per-column edit chrome (swap / +) lives in chromeBand (the gained band above the content when
+    // Per-column edit chrome (the "+") lives in chromeBand (the gained band above the content when
     // expanded). Content fills the attach bounds. The lock/menu column anchors to the content top-right.
     const IRECT headerRow = chromeBand;
     const IRECT contentR  = content;
@@ -687,25 +964,18 @@ void UserTabPanel::rebuild() {
         return { colLefts[col], row.T, colLefts[col] + colWidths[col], row.B };
     };
 
-    // Outlines in the accent color at reduced opacity.
-    const IColor kSlotOutlineColor  { 140, _editColor.R, _editColor.G, _editColor.B };
-    const IColor kEntryOutlineColor {  80, _editColor.R, _editColor.G, _editColor.B };
+    // Slot-column outline in the accent color at reduced opacity (cell outlines are drawn by the
+    // per-cell CellOverlay, which also carries the drag / remove interaction).
+    const IColor kSlotOutlineColor { 140, _editColor.R, _editColor.G, _editColor.B };
 
-    // Swap-slots buttons: one per inter-slot gap, drawn in the header row.
-    // The button is wider than kEntryGap and overlaps both adjacent column headers;
-    // it is centred on the gap line so it doesn't obstruct the "+" buttons which are
-    // centred inside their own (wider) columns.
-    if (_unlocked) {
-        for (int s = 0; s < (int)_slots.size() - 1; ++s) {
-            const float cx = colLefts[s] + colWidths[s] + kSlotGap / 2.f;
-            const IRECT swapR { cx - kSwapBtnW / 2.f, headerRow.T,
-                                cx + kSwapBtnW / 2.f, headerRow.B };
-            AddChildControl(makeSwapSlotsBtn(swapR, s));
-        }
-    }
+    // Cell geometry for drag-to-reorder hit-testing + the insertion indicator; refilled every rebuild.
+    _colContentRects.assign(_slots.size(), IRECT{});
+    _cellRects.assign(_slots.size(), {});
+    _hoverKey = nullptr;   // the overlays it pointed at are being recreated
 
     for (int s = 0; s < (int)_slots.size(); ++s) {
         const IRECT sliceContent = colRect(s, contentR);
+        _colContentRects[s] = sliceContent;
         const auto& slot = _slots[s];
         const bool emptyColumn = !slotHasRealControl(slot);   // only spacers → a blank column
         const int  wIdx        = widthModIndex(slot);
@@ -723,6 +993,11 @@ void UserTabPanel::rebuild() {
             });
         if (_unlocked && (canAddMore || !hasWidthMod))
             AddChildControl(makePlusBtn(colRect(s, headerRow), s));
+
+        // Column outline UNDER the cells (added before them → cells draw on top), so a cell's white
+        // hover outline is never overpainted by the accent column frame at a shared edge.
+        if (_unlocked)
+            AddChildControl(new BorderOverlay(sliceContent, kSlotOutlineColor));
 
         // Count valid, laid-out entries and split frac totals (the width modifier takes no height).
         int   nValid     = 0;
@@ -757,25 +1032,22 @@ void UserTabPanel::rebuild() {
 
             AddChildControl(desc.factory(entryR));
 
+            // One CellOverlay per laid-out cell (real controls AND visible spacers alike, so the reorg
+            // gesture is uniform): it outlines the cell, hosts the ✕ remove + ✥ move affordances, and
+            // drives drag-to-reorder. Record the cell rect for the drag hit-testing / indicator.
             if (_unlocked) {
-                if (!isPad(paramId))
-                    AddChildControl(new BorderOverlay(entryR, kEntryOutlineColor));
-                AddChildControl(makeRemoveBtn(entryR.GetFromTRHC(kSmallBtnW, kEditHeaderH), s, e));
+                _cellRects[s].push_back({ e, entryR });
+                AddChildControl(makeCellOverlay(entryR, s, e));
             }
 
             yPx += entryH + kEntryGap;
-
-            // Swap-entries button: same width as the slot swap button, centred horizontally in the
-            // column and vertically on the gap. Skip when the next entry is the width modifier
-            // (it is not laid out here, so there is nothing to swap with).
-            if (_unlocked && e < (int)slot.params.size() - 1 && !isColWidth(slot.params[e + 1])) {
-                const float cx = sliceContent.L + sliceContent.W() * kSwapEntryOffX;
-                const float cy = sliceContent.T + yPx - kEntryGap / 2.f;
-                const IRECT swapR { cx - kSwapEntryBtnW / 2.f, cy - kSwapEntryBtnH / 2.f,
-                                    cx + kSwapEntryBtnW / 2.f, cy + kSwapEntryBtnH / 2.f };
-                AddChildControl(makeSwapEntriesBtn(swapR, s, e));
-            }
         }
+
+        // A spacer / empty column has no laid-out cell of its own, so nothing would carry the reorder
+        // gesture. Give it a whole-column drag handle so it moves like any other column. Added BEFORE
+        // the width-mod marker below, so that marker stays on top and clickable.
+        if (_unlocked && _cellRects[s].empty())
+            AddChildControl(makeCellOverlay(sliceContent, s, wIdx, /*columnHandle*/ true));
 
         // Column-width spacer marker: centred just BELOW the column (mirroring the top "+"), in the
         // gained bottom band so it never overlaps a control. Without a bottom band (host didn't grant
@@ -787,16 +1059,18 @@ void UserTabPanel::rebuild() {
                         sliceContent.R, sliceContent.B);
             AddChildControl(makeWidthModBtn(markerBand, s));
         }
-
-        if (_unlocked)
-            AddChildControl(new BorderOverlay(sliceContent, kSlotOutlineColor));
     }
 
-    // Global "new slot" column — rightmost, edit mode only. The right-edge menu column
-    // (lock/save/…) overlays this column, so reserve its width before centring the "+"
-    // (shifts the glyph half the menu width left, into the visible area).
+    // Global "new slot" "+" — edit mode only. With columns present it sits in the trailing add-column
+    // strip (rightmost); the right-edge menu column (lock/save/…) overlays that strip, so reserve its
+    // width first (shifts the glyph half the menu width left, into the visible area). With NO columns
+    // yet, that strip would be a narrow band pinned at the left edge — instead centre the "+" in the
+    // whole content area so an empty layout reads as "tap here to start".
     if (_unlocked) {
-        AddChildControl(makePlusBtn(colRect(nCols - 1, contentR).GetReducedFromRight(_menuBtnW), -1));
+        const IRECT addArea = _slots.empty()
+            ? contentR
+            : colRect(nCols - 1, contentR).GetReducedFromRight(_menuBtnW);
+        AddChildControl(makePlusBtn(addArea, -1));
     }
 
     // Lock button added last → always on top of content controls in z-order.
@@ -817,6 +1091,19 @@ void UserTabPanel::rebuild() {
         AddChildControl(makeClearBtn(lockR.GetVShifted(y))); y += kEditHeaderH + kHGap;
         AddChildControl(makeUndoBtn (lockR.GetVShifted(y)));
     }
+
+    // Topmost: all the white drag/hover chrome + the "hold shift…" hint (non-interactive, so it never
+    // blocks the cells or menu, nor a width-spacer marker sharing the bottom band).
+    if (_unlocked)
+        AddChildControl(new DragIndicator(this, b));
+
+    // The control clones were just recreated → they start at 0. Push the current param values into them
+    // (as OnUIOpen does) so a reorg/add/remove doesn't flash a control to zero — most visible under an
+    // active morph, where a selected point's values live only in the base params until this re-sync.
+    if (auto* dg = GetDelegate())
+        dg->SendCurrentParamValuesFromDelegate();
+    if (_onRebuilt)
+        _onRebuilt();   // host layers effective values (e.g. morph blend) over the base just pushed
 
     pG->SetAllControlsDirty();
 }
