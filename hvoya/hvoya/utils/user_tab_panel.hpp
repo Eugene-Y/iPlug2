@@ -182,8 +182,8 @@ public:
     UserTabPanel& setLockLabel        (GlyphLabel l) { _lockLabel        = std::move(l); return *this; }  // shown when unlocked (click → lock)
     UserTabPanel& setPlusLabel        (GlyphLabel l) { _plusLabel        = std::move(l); return *this; }  // add control / add slot
     UserTabPanel& setRemoveLabel      (GlyphLabel l) { _removeLabel      = std::move(l); return *this; }  // ✕ on an entry
-    UserTabPanel& setSwapSlotsLabel   (GlyphLabel l) { _swapSlotsLabel   = std::move(l); return *this; }  // ◄► move column
-    UserTabPanel& setSwapEntriesLabel (GlyphLabel l) { _swapEntriesLabel = std::move(l); return *this; }  // ▲▼ reorder in slot
+    UserTabPanel& setSwapSlotsLabel   (GlyphLabel l) { _swapSlotsLabel   = std::move(l); return *this; }  // ◄► swap columns
+    UserTabPanel& setSwapEntriesLabel (GlyphLabel l) { _swapEntriesLabel = std::move(l); return *this; }  // ▲▼ swap rows in slot
     UserTabPanel& setSaveLabel        (GlyphLabel l) { _saveLabel        = std::move(l); return *this; }
     UserTabPanel& setLoadLabel        (GlyphLabel l) { _loadLabel        = std::move(l); return *this; }
     UserTabPanel& setCopyLabel        (GlyphLabel l) { _copyLabel        = std::move(l); return *this; }
@@ -235,8 +235,8 @@ public:
     UserTabPanel& setAddControlTooltip (std::string s) { _tipAddCtrl = std::move (s); return *this; }  // "+" inside a column
     UserTabPanel& setAddColumnTooltip  (std::string s) { _tipAddCol  = std::move (s); return *this; }  // "+" that adds a column
     UserTabPanel& setRemoveTooltip   (std::string s) { _tipRemove   = std::move (s); return *this; }  // ✕ on an entry
-    UserTabPanel& setSwapColumnTooltip (std::string s) { _tipSwapCol = std::move (s); return *this; }  // ◄► move column
-    UserTabPanel& setReorderTooltip    (std::string s) { _tipReorder = std::move (s); return *this; }  // ▲▼ reorder in slot
+    UserTabPanel& setSwapColumnTooltip (std::string s) { _tipSwapCol = std::move (s); return *this; }  // ◄► swap columns
+    UserTabPanel& setReorderTooltip    (std::string s) { _tipReorder = std::move (s); return *this; }  // ▲▼ swap rows in slot
 
     // In edit mode the panel grows UPWARD by `px` and the per-column edit chrome (slot-swap + add
     // buttons) moves into that gained band, sitting ABOVE the control cells instead of overlapping
@@ -249,6 +249,11 @@ public:
     // instead of overlapping the bottom control. 0 (default) = no band, the marker falls back inside
     // the column. The host grants only space it knows is free below the panel (e.g. a layout margin).
     UserTabPanel& setEditExpandBottom (float px)     { _editExpandBottom = px;           return *this; }
+    // Visible width (px) of the trailing "add a column" strip shown in edit mode — the room the "+"
+    // sits in, left of the right-edge menu column. It is a fixed strip rather than a full unit-width
+    // column, so it doesn't steal layout room from the real columns; the freed space is redistributed
+    // across the actual columns by their weights.
+    UserTabPanel& setAddColumnWidth   (float px)     { _addColumnWidth   = px;           return *this; }
 
     // Hover color of the edit-mode action glyphs (+ / ✕ / swap ◄► / swap ▲▼). At rest the
     // glyphs draw in editColor (the accent); on mouse-over they recolor to `c` — the glyph
@@ -407,6 +412,7 @@ private:
     bool       _clipboardEnabled = true;    // show copy/paste in the edit menu (see setClipboardEnabled)
     float      _editExpandTop = 0.f;        // upward growth in edit mode (see setEditExpandTop)
     float      _editExpandBottom = 0.f;     // downward growth in edit mode for width-spacer markers (see setEditExpandBottom)
+    float      _addColumnWidth = 20.f;      // visible width (px) of the trailing "add a column" strip in edit mode (see setAddColumnWidth)
     IRECT      _baseRECT;                   // attach bounds (the content area); edit mode grows upward from here
 
     IColor _highlightColor;                // hover color for action glyphs (see setHighlightColor)
@@ -460,6 +466,7 @@ private:
     IControl* makePlusBtn   (const IRECT& r, int slotIdx);  // r = available area; button centred inside
     IControl* makeRemoveBtn (const IRECT& r, int slotIdx, int entryIdx);
     IControl* makeWidthModBtn(const IRECT& r, int slotIdx);  // column-width spacer marker (resets the width)
+    static std::string colWidthTip(int id);                 // short hover label, e.g. "1/4 width"
     IControl* makeSwapSlotsBtn  (const IRECT& r, int slotIdx);
     IControl* makeSwapEntriesBtn(const IRECT& r, int slotIdx, int entryIdx);
     IControl* makeSaveBtn   (const IRECT& r);

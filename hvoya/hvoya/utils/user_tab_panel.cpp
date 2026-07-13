@@ -514,8 +514,20 @@ IControl* UserTabPanel::makeWidthModBtn(const IRECT& r, int slotIdx) {
     // the "+". Clicking resets the column to unit width (keeping its controls); on a pure spacer
     // column that reset empties it, so the column disappears.
     const IRECT btnR = r.GetCentredInside(std::min(r.W(), kPlusBtnMaxW), std::min(r.H(), kPlusBtnMaxH));
-    return makeButton(btnR, _spacerMarkerLabel, "▭", _entryBtnStyle,
-        [this, slotIdx](IControl*) { resetColumnWidth(slotIdx); });
+    return withTip(makeButton(btnR, _spacerMarkerLabel, "▭", _entryBtnStyle,
+        [this, slotIdx](IControl*) { resetColumnWidth(slotIdx); }),
+        colWidthTip(_slots[slotIdx].params[widthModIndex(_slots[slotIdx])]));
+}
+
+// Short hover label for a column-width modifier, e.g. "1/4 width. tap to remove" (the marker resets
+// the column to unit width on click); "full width. tap to remove" for a unit-width modifier.
+std::string UserTabPanel::colWidthTip(int id) {
+    const SpacerDef* d = spacerDef(id);
+    if (!d || d->kind != SpacerKind::Vertical) return {};
+    const std::string_view n = d->name;                 // "vertical  <frac>", e.g. "vertical  3/4"
+    const std::string frac = d->frac >= 1.f - 1e-4f ? "full"
+                                                    : std::string(n.substr(n.find_last_of(' ') + 1));
+    return frac + " width. tap to remove";
 }
 
 IControl* UserTabPanel::makeSwapSlotsBtn(const IRECT& r, int slotIdx) {
@@ -652,16 +664,22 @@ void UserTabPanel::rebuild() {
         slotWeights[s] = slotWidthWeight(_slots[s]);
     float totalWeight = 0.f;
     for (float w : slotWeights) totalWeight += w;
-    if (_unlocked) totalWeight += 1.f;  // new-slot column has weight 1
+
+    // The trailing "add a column" slot is a fixed-width strip (setAddColumnWidth), not a full weighted
+    // column — the real columns share all the remaining width by weight. The strip reserves the menu
+    // column it sits under, so _addColumnWidth is the VISIBLE width left of the menu (where the "+"
+    // is centred, see the makePlusBtn call below).
+    const float availW  = contentR.W() - kSlotGap * (nCols - 1);
+    const float addColW = _unlocked ? std::min(_addColumnWidth + _menuBtnW, availW) : 0.f;
+    const float slotsW  = availW - addColW;
 
     // Pre-compute column left edges and widths proportional to weight.
-    const float availW = contentR.W() - kSlotGap * (nCols - 1);
     std::vector<float> colWidths(nCols), colLefts(nCols);
     colLefts[0] = contentR.L;
     for (int s = 0; s < (int)_slots.size(); ++s)
-        colWidths[s] = availW * slotWeights[s] / totalWeight;
+        colWidths[s] = totalWeight > 0.f ? slotsW * slotWeights[s] / totalWeight : slotsW;
     if (_unlocked)
-        colWidths[nCols - 1] = availW * 1.f / totalWeight;
+        colWidths[nCols - 1] = addColW;
     for (int i = 1; i < nCols; ++i)
         colLefts[i] = colLefts[i-1] + colWidths[i-1] + kSlotGap;
 
