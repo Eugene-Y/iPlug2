@@ -649,15 +649,15 @@ IControl* UserTabPanel::makeWidthModBtn(const IRECT& r, int slotIdx) {
         colWidthTip(_slots[slotIdx].params[widthModIndex(_slots[slotIdx])]));
 }
 
-// Short hover label for a column-width modifier, e.g. "1/4 width. tap to remove" (the marker resets
-// the column to unit width on click); "full width. tap to remove" for a unit-width modifier.
+// Short hover label for a column-width modifier, e.g. "1/4 width. click to remove" (the marker resets
+// the column to unit width on click); "full width. click to remove" for a unit-width modifier.
 std::string UserTabPanel::colWidthTip(int id) {
     const SpacerDef* d = spacerDef(id);
     if (!d || d->kind != SpacerKind::Vertical) return {};
     const std::string_view n = d->name;                 // "vertical  <frac>", e.g. "vertical  3/4"
     const std::string frac = d->frac >= 1.f - 1e-4f ? "full"
                                                     : std::string(n.substr(n.find_last_of(' ') + 1));
-    return frac + " width. tap to remove";
+    return frac + " width. click to remove";
 }
 
 // The single interaction surface over a control cell in edit mode. It intercepts the mouse (IsHit is
