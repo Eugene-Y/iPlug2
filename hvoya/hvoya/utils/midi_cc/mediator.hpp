@@ -46,6 +46,12 @@ namespace hvoya::midi_cc {
                     if (_plugin->ccUsesDepthGesture (dec->GetParamIdx()))
                         dec->enableDepthGesture (true);
                 }
+                // Opt-in: the plugin wants to hear about clicks on DISABLED controls (a grayed knob is
+                // inert, and silence is a bad answer — the plugin can point at what must be un-disabled
+                // first). Plugins without the hook keep the default: disabled controls take no events.
+                if constexpr (requires { _plugin->onDisabledControlInteraction (PId_t {}); }) {
+                    dec->setDisabledInteractionFn ([p = _plugin] (PId_t pid) { p->onDisabledControlInteraction (pid); });
+                }
                 // Freq params show a live oct/semi/cent readout during the set-depth drag.
                 if constexpr (requires { _plugin->ccDepthIsFreq (PId_t {}); }) {
                     if (_plugin->ccDepthIsFreq (dec->GetParamIdx()))

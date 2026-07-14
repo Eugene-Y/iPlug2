@@ -98,6 +98,10 @@ namespace hvoya::midi_cc {
             // IBubbleControl (attached top-of-stack by the plugin), so it isn't clipped to mRECT.
             bool        _freqDepthReadout = false;
 
+            // Set → this control takes mouse events while DISABLED, swallows them, and reports them here
+            // (see setDisabledInteractionFn). Unset (every other plugin) → disabled behaves as before.
+            std::function <void (PId_t)> _onDisabledInteraction;
+
             // not safe if the Delegate params are not yet initialized
             auto getParam() {
                 assert (_paramId != uninit::pid);
@@ -143,6 +147,16 @@ namespace hvoya::midi_cc {
                 _cc = cc;
                 setMinMaxDisplaysToFullRange();
                 this->SetDirty (false); // dot appears once a CC binds
+            }
+
+            // Opt-in (the mediator wires this only for plugins that expose the hook): a mouse press /
+            // drag / wheel on a DISABLED control, which the framework would otherwise drop on the floor
+            // — IGraphics doesn't even route it unless the control asks for events while disabled. We
+            // ask, swallow the interaction (a disabled control must still never change its value), and
+            // report it, so the plugin can say WHY nothing happened instead of failing silently.
+            void setDisabledInteractionFn (std::function <void (PId_t)> fn) {
+                _onDisabledInteraction = std::move (fn);
+                this->SetMouseEventsWhenDisabled (true);
             }
 
             // Opt-in (driven by the mediator for modulatable params): adds an
@@ -293,9 +307,30 @@ namespace hvoya::midi_cc {
                 }
             }
 
+            // True when the control is disabled — every mouse path bails on it, so a control that takes
+            // events while disabled (setDisabledInteractionFn) still cannot be moved by them. `report`
+            // marks the paths that START an interaction (press, wheel, double-click); the follow-up
+            // drag/up ticks stay silent so the plugin hears one event per attempt, not a stream.
+            bool blockedWhileDisabled (bool report) {
+                if (!this->IsDisabled()) return false;
+                if (report && _onDisabledInteraction) _onDisabledInteraction (_paramId);
+                return true;
+            }
+
+            void OnMouseWheel (float x, float y, const iplug::igraphics::IMouseMod& mod, float d) override {
+                if (blockedWhileDisabled (true)) return;
+                C::OnMouseWheel (x, y, mod, d);
+            }
+
+            void OnMouseDblClick (float x, float y, const iplug::igraphics::IMouseMod& mod) override {
+                if (blockedWhileDisabled (true)) return;
+                C::OnMouseDblClick (x, y, mod);
+            }
+
             // A left-click on the presence dot toggles Absolute/Modulate (modulatable + mapped only),
             // a shortcut for the right-click menu's radio pair. Also drives the set-depth gesture.
             void OnMouseDown (float x, float y, const iplug::igraphics::IMouseMod& mod) override {
+                if (blockedWhileDisabled (true)) return;
                 if (_armDepth && !mod.R) {
                     if (hitPresenceDot (x, y)) {           // dot-click while armed → cancel
                         _dotDown = true;
@@ -321,6 +356,7 @@ namespace hvoya::midi_cc {
             }
 
             void OnMouseDrag (float x, float y, float dX, float dY, const iplug::igraphics::IMouseMod& mod) override {
+                if (blockedWhileDisabled (false)) return;   // the press already spoke — don't repeat per drag tick
                 if (_gestureActive) {
                     // Accumulate the extent from drag deltas (up = increase). Shift = fine, and toggling
                     // it mid-drag stays continuous because we never re-derive from absolute Y.
@@ -338,6 +374,7 @@ namespace hvoya::midi_cc {
             }
 
             void OnMouseUp (float x, float y, const iplug::igraphics::IMouseMod& mod) override {
+                if (blockedWhileDisabled (false)) return;
                 if (_dotDown) { _dotDown = false; this->SetDirty (false); } // release the press accent
                 if (_gestureActive) {
                     // Commit the accumulated extent (held in our own member, immune to a per-idle
@@ -395,8 +432,14 @@ namespace hvoya::midi_cc {
 
             
             void CreateContextMenu (IPopupMenu& contextMenu) override {
+                // A disabled control offers no CC menu. IGraphics builds the context menu BEFORE it
+                // dispatches the press, so the mouse guards below can't cover this path — and a control
+                // that takes events while disabled (setDisabledInteractionFn) would otherwise regain a
+                // menu it never had. Inert stays inert; only the reachability of the CC config changes,
+                // never a value.
+                if (this->IsDisabled()) return;
                 IPopupMenu* subMenu = new IPopupMenu ("MIDI CC");
-                
+
                 const bool mapped = _cc != uninit::cc;
 
                 subMenu->AddItem (_learning ? "Learning" : "Learn");   // reads "Learning" while this control is armed
