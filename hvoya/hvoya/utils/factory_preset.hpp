@@ -41,7 +41,7 @@
 
 #include <cassert>
 #include <cmath>
-#include <format>
+#include <hvoya/utils/format_compat.hpp>
 #include <functional>
 #include <initializer_list>
 #include <string>
@@ -96,7 +96,7 @@ namespace hvoya {
             case iplug::IParam::kTypeInt:
             case iplug::IParam::kTypeEnum:                  return std::to_string (p->Int());
             case iplug::IParam::kTypeDouble:
-            default:                                        return std::format ("{:.6f}", p->Value());
+            default:                                        return hvoya::format ("{:.6f}", p->Value());
         }
     }
 
@@ -108,12 +108,12 @@ namespace hvoya {
     std::string makeChunkPresetSrc (const PluginT& plugin,
                                     std::function<std::string_view(int)> paramName,
                                     std::string_view presetName = "TODO: name me") {
-        std::string s = std::format ("makeChunkPreset(*this, \"{}\", {{\n", presetName);
+        std::string s = hvoya::format ("makeChunkPreset(*this, \"{}\", {{\n", presetName);
         const int n = plugin.NParams();
         for (int i = 0; i < n; ++i) {
             const auto* p = plugin.GetParam (i);
             if (std::abs (p->Value() - p->GetDefault()) <= 1e-9) continue;   // skip defaults
-            s += std::format ("    {{ {}, {} }},\n", paramName (i), formatPresetParamValue (p));
+            s += hvoya::format ("    {{ {}, {} }},\n", paramName (i), formatPresetParamValue (p));
         }
         s += "});\n";
         return s;

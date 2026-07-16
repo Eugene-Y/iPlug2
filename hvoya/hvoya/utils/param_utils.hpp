@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <hvoya/utils/format_compat.hpp>
 #include <IPlugParameter.h>
 
 
@@ -45,7 +46,7 @@ namespace hvoya::params {
 
 
     // Wraps a std::string-returning function as an IParam::DisplayFunc.
-    // Lets you write display logic in modern C++ (std::format etc.) without touching WDL_String.
+    // Lets you write display logic in modern C++ (hvoya::format etc.) without touching WDL_String.
     inline IParam::DisplayFunc makeDisplayFunc (std::function <std::string (double)> fn)
     {
         return [fn = std::move (fn)](double v, WDL_String& str) {

@@ -3,7 +3,7 @@
 #include <IControls.h>
 #include <algorithm>
 #include <cmath>
-#include <format>
+#include <hvoya/utils/format_compat.hpp>
 #include <string>
 #include <utility>
 
@@ -73,7 +73,7 @@ public:
             if (const IParam* p = GetParam()) {
                 const double v = p->FromNormalized (GetValue());
                 const std::string valStr = _valueDecimalPlaces > 0
-                    ? std::format ("{:.{}f}", v, _valueDecimalPlaces)
+                    ? hvoya::format ("{:.{}f}", v, _valueDecimalPlaces)
                     : std::to_string (static_cast<int> (std::round (v)));
                 if (_valueSuffix.empty()) {
                     if (!label.empty()) label += ' ';

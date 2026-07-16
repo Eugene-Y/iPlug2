@@ -2,6 +2,7 @@
 
 #include <string>
 #include <cassert>
+#include "format_compat.hpp"
 #include <IControl.h>
 #include "host_info_UI_tags.hpp"
 #include "host_time_info.hpp"
@@ -63,7 +64,7 @@ namespace hvoya {
 					return true;
 
 				auto pTC = pC-> template As <iplug::igraphics::ITextControl>();
-				std::string str = std::format ("sr {} buf size {}", _lastSampleRate, _lastBufSize);
+				std::string str = hvoya::format ("sr {} buf size {}", _lastSampleRate, _lastBufSize);
 				pTC->SetStr (str.c_str());
 				pTC->SetDirty();
 				return true;
