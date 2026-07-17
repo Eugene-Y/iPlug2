@@ -71,7 +71,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <deque>
-#include <filesystem>
+#include <hvoya/utils/filesystem_compat.hpp>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -382,7 +382,7 @@ public:
             return;
         }
         LOGD << "[PresetManager] saved: " << path;
-        _lastUsedDir = std::filesystem::path(path).parent_path().string();
+        _lastUsedDir = hvoya::fs::path(path).parent_path().string();
         _currentIdx  = factoryCount() + ensureInList(path);
         _divergedFromIndex = false;
         captureBaseline();
@@ -408,7 +408,7 @@ public:
         }
         restoreCCMap(cc);
         LOGD << "[PresetManager] loaded: " << path;
-        _lastUsedDir = std::filesystem::path(path).parent_path().string();
+        _lastUsedDir = hvoya::fs::path(path).parent_path().string();
         _currentIdx  = factoryCount() + ensureInList(path);
         _divergedFromIndex = false;
         captureBaseline();
@@ -424,7 +424,7 @@ public:
     //   one-level subdir → group = subdir name
     //   deeper levels are not scanned
     int addFolder(const std::string& folderPath) {
-        namespace fs = std::filesystem;
+        namespace fs = hvoya::fs;
         const fs::path dir(folderPath);
         if (!fs::exists(dir) || !fs::is_directory(dir)) return 0;
 
@@ -464,7 +464,7 @@ public:
 
     // Opens _lastUsedDir in Finder / Explorer (falls back to _presetDir).
     void openFolder() const {
-        namespace fs = std::filesystem;
+        namespace fs = hvoya::fs;
         const std::string& target = _lastUsedDir.empty() ? _presetDir : _lastUsedDir;
         fs::create_directories(target);
 #if defined(OS_MAC)
@@ -753,7 +753,7 @@ private:
 
     // Append .fxp files in dir (and immediate subdirs) not already in the list.
     void scanFromDisk(const std::string& dirPath) {
-        namespace fs = std::filesystem;
+        namespace fs = hvoya::fs;
         const fs::path dir(dirPath);
         if (!fs::exists(dir) || !fs::is_directory(dir)) return;
 
@@ -785,7 +785,7 @@ private:
         if (it != _userPresets.end())
             return static_cast<int>(it - _userPresets.begin());
 
-        namespace fs = std::filesystem;
+        namespace fs = hvoya::fs;
         std::string group = "";
         const fs::path p(path);
         if (p.parent_path() != fs::path(_presetDir))
