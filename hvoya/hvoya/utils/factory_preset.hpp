@@ -89,14 +89,20 @@ namespace hvoya {
     }
 
     // Format a param's current value for the makeChunkPreset source: bool/int/enum as an
-    // integer, double with 6 decimals (matching the readable dump style).
+    // integer, double with up to 6 decimals and trailing zeros trimmed (0.500000 -> 0.5,
+    // 1.000000 -> 1.0), keeping one decimal digit so the literal still reads as a double.
     inline std::string formatPresetParamValue (const iplug::IParam* p) {
         switch (p->Type()) {
             case iplug::IParam::kTypeBool:                  return p->Bool() ? "1" : "0";
             case iplug::IParam::kTypeInt:
             case iplug::IParam::kTypeEnum:                  return std::to_string (p->Int());
             case iplug::IParam::kTypeDouble:
-            default:                                        return hvoya::format ("{:.6f}", p->Value());
+            default: {
+                std::string v = hvoya::format ("{:.6f}", p->Value());
+                v.erase (v.find_last_not_of ('0') + 1);
+                if (v.back() == '.') v += '0';
+                return v;
+            }
         }
     }
 
