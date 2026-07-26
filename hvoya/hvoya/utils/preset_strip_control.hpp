@@ -39,6 +39,7 @@
 #include <hvoya/utils/filesystem_compat.hpp>
 #include <functional>
 #include <string>
+#include <vector>
 #include <hvoya/utils/glyph_label.hpp>
 #include <hvoya/utils/preset_manager.hpp>
 #include <hvoya/utils/tooltip_host.hpp>
@@ -146,6 +147,21 @@ public:
         _onToggle = std::move(fn); return *this;
     }
 
+    // Called when the current-preset NAME label is clicked (nav must be enabled — the label is
+    // inert/dimmed otherwise). Host uses it to open a preset browser dropdown. Unset = the name is
+    // display-only (nav still works via prev/next). See PresetBrowserControl.
+    PresetStripControl& setOnNameClick (std::function<void()> fn) {
+        _onNameClick = std::move(fn); return *this;
+    }
+
+    // The rect a preset-browser dropdown should anchor to: spans from the PREV button's left edge
+    // to the NEXT button's right edge (i.e. brackets the name label between the nav arrows), at the
+    // strip's height. Only meaningful while expanded (the nav zones are zero-width when collapsed).
+    IRECT browserAnchorRect() const {
+        const auto z = computeZones();
+        return IRECT(z.prev.L, mRECT.T, z.next.R, mRECT.B);
+    }
+
     // Enables/disables the collapse/expand toggle button. When disabled the button is
     // drawn dimmed and clicks are ignored — the strip stays in its current state. (The
     // host can hold the strip collapsed during a mode where the row is repurposed.)
@@ -190,12 +206,14 @@ public:
         }
         if (!navOff && _hoverZone == Zone::Name)
             g.FillRect(GetColor(kHL), zones.name, &mBlend);
-        const float nameTxtOpacity = navOff ? 0.35f : 1.f;
-        g.DrawText(mStyle.valueText
-                       .WithAlign(EAlign::Center)
-                       .WithVAlign(EVAlign::Middle)
-                       .WithFGColor(mStyle.valueText.mFGColor.WithOpacity(nameTxtOpacity)),
-                   label.c_str(), zones.name, &mBlend);
+        const IText nameTxt = mStyle.valueText
+                                  .WithAlign(EAlign::Center)
+                                  .WithVAlign(EVAlign::Middle)
+                                  .WithFGColor(mStyle.valueText.mFGColor.WithOpacity(navOff ? 0.35f : 1.f));
+        // A deep folder path can be far wider than the name zone; collapse leading segments to ".../"
+        // so it fits (keeping the preset's own name), instead of spilling over the nav buttons.
+        const std::string shown = fitPathLabel(g, nameTxt, label, zones.name.W() - 2.f * kNamePad);
+        g.DrawText(nameTxt, shown.c_str(), zones.name, &mBlend);
     }
 
     // ── Mouse ─────────────────────────────────────────────────────────────────
@@ -218,6 +236,9 @@ public:
             case Zone::Load:   promptLoad();                              break;
             case Zone::Folder: _manager.openFolder();                     break;
             case Zone::Scan:   promptScanFolder();                        break;
+            case Zone::Name:
+                if (_onNameClick && _manager.isNavEnabled()) _onNameClick();
+                break;
             default: break;
         }
     }
@@ -308,6 +329,37 @@ private:
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    static constexpr float kNamePad = 6.f;   // inset of the name text from the nav buttons
+
+    // Shrink a "a/b/c/leaf" path label to fit `maxW`: if it overflows, drop whole leading segments,
+    // replacing them with a single ".../", until it fits (the preset's own leaf name is always kept).
+    // If even ".../leaf" is too wide, the leaf itself is trimmed from the left behind "..." (on a UTF-8
+    // char boundary). Short/plain labels ("SLAG", "user preset") are returned unchanged.
+    static std::string fitPathLabel(IGraphics& g, const IText& txt, const std::string& full, float maxW) {
+        auto width = [&](const std::string& s) { IRECT r; return g.MeasureText(txt, s.c_str(), r); };
+        if (full.empty() || width(full) <= maxW) return full;
+
+        std::vector<std::string> segs;
+        for (size_t start = 0, i = 0; i <= full.size(); ++i)
+            if (i == full.size() || full[i] == '/') { segs.push_back(full.substr(start, i - start)); start = i + 1; }
+
+        for (size_t drop = 1; drop < segs.size(); ++drop) {
+            std::string cand = ".../";
+            for (size_t i = drop; i < segs.size(); ++i) { cand += segs[i]; if (i + 1 < segs.size()) cand += '/'; }
+            if (width(cand) <= maxW) return cand;
+        }
+
+        // Only the leaf remains and ".../leaf" is still too wide → trim the leaf from the left.
+        const std::string& leaf = segs.back();
+        for (size_t cut = 1; cut < leaf.size(); ++cut) {
+            while (cut < leaf.size() && (static_cast<unsigned char>(leaf[cut]) & 0xC0) == 0x80) ++cut;   // don't split a UTF-8 char
+            if (cut >= leaf.size()) break;
+            std::string cand = "..." + leaf.substr(cut);
+            if (width(cand) <= maxW) return cand;
+        }
+        return "...";
+    }
+
     void drawBtn(IGraphics& g, const IRECT& r, const GlyphLabel& label,
                  bool hover, bool disabled = false, bool pressed = false) const {
         if (!disabled) {
@@ -364,6 +416,7 @@ private:
 
     PresetManager&                  _manager;
     std::function<void(bool)>       _onToggle;
+    std::function<void()>           _onNameClick;
     Zone                            _hoverZone      = Zone::None;
     Zone                            _pressedZone    = Zone::None;
     bool           _collapsed      = true;
