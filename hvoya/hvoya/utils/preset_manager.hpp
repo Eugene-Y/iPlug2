@@ -75,6 +75,7 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace hvoya {
@@ -195,9 +196,10 @@ public:
                 _factoryIdxMap.push_back(i);
         }
 
-        // Initial scan — sorted alphabetically so the starting order is clean.
-        // Subsequent calls to rescanUserPresets() only append new entries.
-        scanFromDisk(_presetDir);
+        // Initial scan — the home dir is the first (always-present) source, scanned recursively.
+        // Sorted alphabetically so the starting order is clean.
+        _sources.push_back({ _presetDir, "", /*verify*/ false });
+        scanSource(_sources.front());
         std::sort(_userPresets.begin(), _userPresets.end(),
             [](const UserPreset& a, const UserPreset& b) {
                 if (a.group != b.group) {
@@ -423,49 +425,28 @@ public:
         return true;
     }
 
-    // Scan folderPath for .fxp files belonging to this plugin and append any
-    // that aren't already in the list. Returns the number of presets added.
+    // Register folderPath as a preset source and scan it RECURSIVELY (any depth), appending .fxp
+    // files belonging to this plugin that aren't already known. Returns the number added.
     //
-    // Group assignment (mirrors _presetDir convention, but unambiguous):
-    //   root-level files → group = folder name  (not "", to stay distinct from
-    //                                             native presets whose group = "")
-    //   one-level subdir → group = subdir name
-    //   deeper levels are not scanned
+    // Group assignment: the folder's own name is the base group, extended by each file's path
+    // relative to it — so `dir/a/b/x.fxp` gets group "dir/a/b" and the browser nests it accordingly.
+    // (A root-level file gets the folder name, staying distinct from native presets whose group = "".)
+    // The source is remembered so refreshUserPresets() re-walks it on later opens.
     int addFolder(const std::string& folderPath) {
         namespace fs = hvoya::fs;
-        const fs::path dir(folderPath);
+        fs::path dir(folderPath);
+        if (dir.filename().empty()) dir = dir.parent_path();   // drop a trailing separator
         if (!fs::exists(dir) || !fs::is_directory(dir)) return 0;
 
         noteLastUsedDir(folderPath);
-        const std::string rootGroup = dir.filename().string();
-        int added = 0;
+        const std::string root      = dir.string();
+        const std::string baseGroup = dir.filename().string();
 
-        auto tryAdd = [&](const fs::path& p, const std::string& group) {
-            if (p.extension() != ".fxp") return;
-            if (!isOurFXP(p.string())) {
-                LOGD << "[PresetManager] scan skip (wrong plugin): " << p.string();
-                return;
-            }
-            const std::string s = p.string();
-            const bool known = std::any_of(_userPresets.begin(), _userPresets.end(),
-                [&](const UserPreset& u) { return u.path == s; });
-            if (!known) {
-                _userPresets.push_back({ s, p.stem().string(), group });
-                LOGD << "[PresetManager] scan added [" << group << "] " << p.stem().string();
-                ++added;
-            }
-        };
+        if (std::none_of(_sources.begin(), _sources.end(),
+                         [&](const SourceFolder& s) { return s.root == root; }))
+            _sources.push_back({ root, baseGroup, /*verify*/ true });
 
-        for (const auto& e : fs::directory_iterator(dir)) {
-            if (e.is_regular_file())
-                tryAdd(e.path(), rootGroup);
-            else if (e.is_directory()) {
-                const std::string subGroup = e.path().filename().string();
-                for (const auto& sub : fs::directory_iterator(e))
-                    if (sub.is_regular_file())
-                        tryAdd(sub.path(), subGroup);
-            }
-        }
+        const int added = scanSource({ root, baseGroup, /*verify*/ true });
         LOGD << "[PresetManager] addFolder done: " << added << " added from " << folderPath;
         return added;
     }
@@ -482,8 +463,43 @@ public:
 #endif
     }
 
-    // Append any new .fxp files found in _presetDir that aren't already known.
-    void rescanUserPresets() { scanFromDisk(_presetDir); }
+    // Append any new .fxp files found under the known sources (home + scanned folders) that aren't
+    // already known. Existing entries are left untouched (use refreshUserPresets to also drop stale).
+    void rescanUserPresets() { for (const auto& s : _sources) scanSource(s); }
+
+    // Reconcile the whole user-preset list with disk: pick up added files, drop deleted ones, and
+    // reflect renames (a rename reads as delete-old + add-new). Re-walks every known source (the home
+    // dir + each externally scanned folder), recursively, so nested subfolders and scanned collections
+    // are all refreshed. Preserves the current selection by PATH (indices shift on rebuild); if the
+    // selected file vanished, the strip falls back to "user preset" with the live sound untouched — no
+    // DSP side effects. Meant to be called on a user action (e.g. opening the preset browser), not
+    // per-block. Factory selection is left untouched.
+    void refreshUserPresets() {
+        std::string curPath;
+        if (_currentIdx >= factoryCount() && _currentIdx < totalCount())
+            curPath = _userPresets[static_cast<size_t>(_currentIdx - factoryCount())].path;
+
+        _userPresets.clear();
+        for (const auto& src : _sources) scanSource(src);
+
+        std::sort(_userPresets.begin(), _userPresets.end(),
+            [](const UserPreset& a, const UserPreset& b) {
+                if (a.group != b.group) {
+                    if (a.group.empty()) return true;
+                    if (b.group.empty()) return false;
+                    return a.group < b.group;
+                }
+                return a.name < b.name;
+            });
+
+        if (!curPath.empty()) {
+            const auto it = std::find_if(_userPresets.begin(), _userPresets.end(),
+                [&](const UserPreset& u) { return u.path == curPath; });
+            _currentIdx = (it != _userPresets.end())
+                        ? factoryCount() + static_cast<int>(it - _userPresets.begin())
+                        : -1;   // the selected file is gone (renamed/deleted) → custom "user preset"
+        }
+    }
 
     // ── Queries (UI thread) ───────────────────────────────────────────────────
 
@@ -583,6 +599,38 @@ public:
 
     const std::vector<UserPreset>& userPresets() const { return _userPresets; }
 
+    // One flat, ordered enumeration of every selectable preset — factory first (in call order),
+    // then user (in list order) — each carrying the nav index goTo() expects plus its parsed
+    // (group, name). A browser UI groups these into sections; factory group comes from the
+    // "group/name" slash convention (empty when the name has no slash), user group from the
+    // preset's parent-folder name. Read-only; safe on the UI thread.
+    struct BrowseEntry {
+        int         navIdx;   // index for goTo() / currentIdx()
+        std::string group;    // "" when ungrouped (a browser folds these into a FACTORY / USER section)
+        std::string name;
+        bool        factory;
+    };
+
+    std::vector<BrowseEntry> browseEntries() const {
+        std::vector<BrowseEntry> out;
+        out.reserve(static_cast<size_t>(totalCount()));
+        for (int i = 0; i < factoryCount(); ++i) {
+            const char* n = _plugin->GetPresetName(_factoryIdxMap[static_cast<size_t>(i)]);
+            // Split on the LAST slash so a multi-level authored name ("A/B/name") yields the full
+            // folder path as the group ("A/B") for a nested browser tree; the leaf is the name.
+            const std::string_view full = n ? n : "";
+            const auto slash = full.rfind('/');
+            std::string group = slash == std::string_view::npos ? std::string{} : std::string(full.substr(0, slash));
+            std::string name  = slash == std::string_view::npos ? std::string(full) : std::string(full.substr(slash + 1));
+            out.push_back({ i, std::move(group), std::move(name), true });
+        }
+        for (int u = 0; u < userCount(); ++u) {
+            const auto& p = _userPresets[static_cast<size_t>(u)];
+            out.push_back({ factoryCount() + u, p.group, p.name, false });
+        }
+        return out;
+    }
+
 private:
     // Record the directory a user file action landed in, firing the persistence callback on a real
     // change (save / load / addFolder go through here; the startup seed does not).
@@ -614,13 +662,23 @@ private:
 
     // ── Members ───────────────────────────────────────────────────────────────
 
-    iplug::IPluginBase*     _plugin;
-    std::string             _pluginName;
-    std::string             _presetDir;
-    std::string             _lastUsedDir;     // last dir from save / load / addFolder
-    int                     _currentIdx = -1;  // -1 = no preset selected yet
-    std::vector<int>        _factoryIdxMap;   // our factory idx → iPlug2 preset idx
-    std::vector<UserPreset> _userPresets;
+    // A recursively-scanned preset root. The home dir is the first, always-present source (base
+    // group ""); each addFolder() registers another (base group = folder name). Session-only —
+    // scanned folders are not persisted, so a reopened instance starts with just the home source.
+    struct SourceFolder {
+        std::string root;        // absolute path of the scan root
+        std::string baseGroup;   // "" for the home dir; the folder's own name for a scanned folder
+        bool        verify;      // gate .fxp files through isOurFXP (external scans yes, home no)
+    };
+
+    iplug::IPluginBase*       _plugin;
+    std::string               _pluginName;
+    std::string               _presetDir;
+    std::string               _lastUsedDir;     // last dir from save / load / addFolder
+    int                       _currentIdx = -1;  // -1 = no preset selected yet
+    std::vector<int>          _factoryIdxMap;   // our factory idx → iPlug2 preset idx
+    std::vector<UserPreset>   _userPresets;
+    std::vector<SourceFolder> _sources;         // home + scanned folders, re-walked on refresh
 
     std::deque<UndoEntry>       _undoStack;
     std::deque<UndoEntry>       _redoStack;       // states undone away from; cleared on any new forward edit
@@ -768,31 +826,41 @@ private:
         _baselineChunk = serializeCurrent();
     }
 
-    // Append .fxp files in dir (and immediate subdirs) not already in the list.
-    void scanFromDisk(const std::string& dirPath) {
+    // Recursively add .fxp files under src.root (any depth) not already known, tagging each with a
+    // group = base group joined by '/' to the file's directory RELATIVE to the root. So the home dir
+    // (base "") yields "", "sub", "sub/deep"; a scanned folder (base = its name) yields "Folder",
+    // "Folder/sub", … — which the browser tree splits into nested nodes. `verify` gates isOurFXP
+    // (on for external scans, off for the home dir). Returns the number added. Directory symlinks are
+    // not followed (no cycles) and unreadable subtrees are skipped.
+    int scanSource(const SourceFolder& src) {
         namespace fs = hvoya::fs;
-        const fs::path dir(dirPath);
-        if (!fs::exists(dir) || !fs::is_directory(dir)) return;
+        const fs::path root(src.root);
+        if (!fs::exists(root) || !fs::is_directory(root)) return 0;
 
-        auto addIfNew = [&](const fs::path& p, const std::string& group) {
+        int added = 0;
+        std::error_code ec;
+        for (fs::recursive_directory_iterator it(root, fs::directory_options::skip_permission_denied, ec), end;
+             it != end; it.increment(ec)) {
+            if (ec) break;
+            const fs::path p = it->path();
+            if (!it->is_regular_file(ec) || p.extension() != ".fxp") continue;
+            if (src.verify && !isOurFXP(p.string())) {
+                LOGD << "[PresetManager] scan skip (wrong plugin): " << p.string();
+                continue;
+            }
             const std::string s = p.string();
             const bool known = std::any_of(_userPresets.begin(), _userPresets.end(),
                 [&](const UserPreset& u) { return u.path == s; });
-            if (!known)
-                _userPresets.push_back({ s, p.stem().string(), group });
-        };
+            if (known) continue;
 
-        for (const auto& e : fs::directory_iterator(dir))
-            if (e.is_regular_file() && e.path().extension() == ".fxp")
-                addIfNew(e.path(), "");
-
-        for (const auto& gd : fs::directory_iterator(dir)) {
-            if (!gd.is_directory()) continue;
-            const std::string group = gd.path().filename().string();
-            for (const auto& e : fs::directory_iterator(gd))
-                if (e.is_regular_file() && e.path().extension() == ".fxp")
-                    addIfNew(e.path(), group);
+            const std::string rel = fs::relative(p.parent_path(), root, ec).generic_string();
+            std::string group = src.baseGroup;
+            if (!rel.empty() && rel != ".")
+                group = group.empty() ? rel : group + "/" + rel;
+            _userPresets.push_back({ s, p.stem().string(), group });
+            ++added;
         }
+        return added;
     }
 
     // Returns index in _userPresets for path, appending at the end if not found.
