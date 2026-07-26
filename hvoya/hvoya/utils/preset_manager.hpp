@@ -156,6 +156,14 @@ public:
     using PresetRedirectFn = std::function<PresetApply(const PresetSource&)>;
     void setPresetRedirect(PresetRedirectFn fn) { _redirect = std::move(fn); }
 
+    // Last-used-directory persistence (so file dialogs reopen where the user left off, across
+    // sessions). The manager tracks the dir in-memory (save / load / addFolder); a host that wants
+    // it to survive restarts seeds it once at startup via setLastUsedDir and persists changes via
+    // the callback. Seeding does NOT fire the callback (it's a restore, not a user action).
+    using DirChangedFn = std::function<void(const std::string&)>;
+    void setLastUsedDir(std::string dir)          { _lastUsedDir = std::move(dir); }
+    void setLastUsedDirCallback(DirChangedFn fn)  { _dirChanged  = std::move(fn); }
+
     // Resolve a browse-list index to a peekable origin (so a redirect can READ a preset without
     // applying it): factoryPluginIdx() >= 0 for a factory preset (index into the plugin's own
     // preset list), else userPresetPath() gives the .fxp path.
@@ -382,7 +390,7 @@ public:
             return;
         }
         LOGD << "[PresetManager] saved: " << path;
-        _lastUsedDir = hvoya::fs::path(path).parent_path().string();
+        noteLastUsedDir(hvoya::fs::path(path).parent_path().string());
         _currentIdx  = factoryCount() + ensureInList(path);
         _divergedFromIndex = false;
         captureBaseline();
@@ -408,7 +416,7 @@ public:
         }
         restoreCCMap(cc);
         LOGD << "[PresetManager] loaded: " << path;
-        _lastUsedDir = hvoya::fs::path(path).parent_path().string();
+        noteLastUsedDir(hvoya::fs::path(path).parent_path().string());
         _currentIdx  = factoryCount() + ensureInList(path);
         _divergedFromIndex = false;
         captureBaseline();
@@ -428,7 +436,7 @@ public:
         const fs::path dir(folderPath);
         if (!fs::exists(dir) || !fs::is_directory(dir)) return 0;
 
-        _lastUsedDir = folderPath;
+        noteLastUsedDir(folderPath);
         const std::string rootGroup = dir.filename().string();
         int added = 0;
 
@@ -576,6 +584,14 @@ public:
     const std::vector<UserPreset>& userPresets() const { return _userPresets; }
 
 private:
+    // Record the directory a user file action landed in, firing the persistence callback on a real
+    // change (save / load / addFolder go through here; the startup seed does not).
+    void noteLastUsedDir(std::string dir) {
+        if (dir == _lastUsedDir) return;
+        _lastUsedDir = std::move(dir);
+        if (_dirChanged) _dirChanged(_lastUsedDir);
+    }
+
     // ── Undo entry ────────────────────────────────────────────────────────────
 
     struct UndoEntry {
@@ -623,6 +639,7 @@ private:
     PresetRedirectFn       _redirect;
     BlockedFn              _navBlocked;
     BlockedFn              _loadBlocked;
+    DirChangedFn           _dirChanged;   // fired when _lastUsedDir changes (host persists it)
 
     bool isFactory(int idx) const { return idx >= 0 && idx < factoryCount(); }
 

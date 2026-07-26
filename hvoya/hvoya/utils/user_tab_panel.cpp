@@ -418,20 +418,54 @@ void UserTabPanel::notifyChanged() {
 // ──────────────────────────────────────────────
 //  Layout file save / load
 
-std::vector<std::string> UserTabPanel::serializeSlots() const {
+std::vector<std::string> UserTabPanel::serializeSlotIds(
+        const std::vector<std::vector<int>>& slots, const IdToTokenFn& idToToken) {
     std::vector<std::string> lines;
-    lines.reserve(_slots.size());
-    for (const auto& slot : _slots) {
+    lines.reserve(slots.size());
+    for (const auto& params : slots) {
         std::ostringstream os;
         os << "slot";
-        for (int p : slot.params) {
-            std::string tok = _idToToken ? _idToToken(p) : std::string{};
+        for (int p : params) {
+            std::string tok = idToToken ? idToToken(p) : std::string{};
             if (!tok.empty()) os << ' ' << tok;   // stable token (param / alt-control)
             else              os << ' ' << p;      // no codec / spacer → raw integer id
         }
         lines.push_back(os.str());
     }
     return lines;
+}
+
+std::vector<std::vector<int>> UserTabPanel::parseSlotLines(
+        const std::vector<std::string>& lines, const TokenToIdFn& tokenToId) {
+    std::vector<std::vector<int>> out;
+    for (const auto& line : lines) {
+        std::istringstream ss(line);
+        std::string key;
+        if (!(ss >> key) || key != "slot") continue;
+        std::vector<int> params;
+        std::string field;
+        while (ss >> field) {
+            int id = 0;
+            const char* begin = field.data();
+            const char* end   = begin + field.size();
+            auto [ptr, ec] = std::from_chars(begin, end, id);
+            if (ec == std::errc{} && ptr == end) {
+                params.push_back(id);                 // legacy numeric field (positional / alt id)
+            } else if (tokenToId) {
+                const int resolved = tokenToId(field);
+                if (resolved != -1) params.push_back(resolved);   // named token; skip if unknown
+            }
+        }
+        if (!params.empty()) out.push_back(std::move(params));
+    }
+    return out;
+}
+
+std::vector<std::string> UserTabPanel::serializeSlots() const {
+    std::vector<std::vector<int>> ids;
+    ids.reserve(_slots.size());
+    for (const auto& slot : _slots) ids.push_back(slot.params);
+    return serializeSlotIds(ids, _idToToken);
 }
 
 std::string UserTabPanel::serializeLayout() const {
@@ -442,26 +476,10 @@ std::string UserTabPanel::serializeLayout() const {
 
 bool UserTabPanel::applySection(const std::vector<std::string>& lines) {
     std::vector<Slot> newSlots;
-    for (const auto& line : lines) {
-        std::istringstream ss(line);
-        std::string key;
-        if (!(ss >> key) || key != "slot") continue;
+    for (auto& params : parseSlotLines(lines, _tokenToId)) {
         Slot slot;
-        std::string field;
-        while (ss >> field) {
-            int id = 0;
-            const char* begin = field.data();
-            const char* end   = begin + field.size();
-            auto [ptr, ec] = std::from_chars(begin, end, id);
-            if (ec == std::errc{} && ptr == end) {
-                slot.params.push_back(id);          // legacy numeric field (positional / alt id)
-            } else if (_tokenToId) {
-                const int resolved = _tokenToId(field);
-                if (resolved != -1) slot.params.push_back(resolved);  // named token; skip if unknown
-            }
-        }
-        if (!slot.params.empty())
-            newSlots.push_back(std::move(slot));
+        slot.params = std::move(params);
+        newSlots.push_back(std::move(slot));
     }
 
     // Prune any param IDs this instance doesn't know about.

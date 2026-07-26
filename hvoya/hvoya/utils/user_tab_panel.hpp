@@ -285,6 +285,16 @@ public:
     // No-op if the history is empty.
     void undo();
 
+    // Panel-independent layout grammar (single source, shared with serializeSlots/applySection),
+    // so a host can seed/persist a layout without a live panel (e.g. a machine-local default).
+    //   serializeSlotIds: slot id-vectors → "slot <tok|int> ..." lines (idToToken as in the codec).
+    //   parseSlotLines:   the "[user-tab]" lines → slot id-vectors (numeric = legacy int; named via
+    //                     tokenToId, unknown tokens dropped; empty slots skipped). No factory prune.
+    static std::vector<std::string>   serializeSlotIds (const std::vector<std::vector<int>>& slots,
+                                                        const IdToTokenFn& idToToken);
+    static std::vector<std::vector<int>> parseSlotLines (const std::vector<std::string>& lines,
+                                                        const TokenToIdFn& tokenToId);
+
     // Write the current layout to a .hvoya file (header + [user-tab] section).
     // Returns false on I/O error; panel state is unchanged.
     bool saveLayout(const char* path) const;
