@@ -26,16 +26,17 @@
  *
  * PRESET ORDER
  * ------------
- *   Factory presets always come first (in MakePreset() call order).
- *   User presets follow; the initial list is sorted alphabetically.
- *   Any new preset added during the session is appended at the end —
- *   existing positions never shift.
+ *   Factory presets always come first (in MakePreset() call order). User presets follow,
+ *   sorted by (group, name). Appends (rescanUserPresets / addFolder) add at the end;
+ *   refreshUserPresets() rebuilds and re-sorts, so user positions can shift there — safe,
+ *   since a user preset's combined index is session-relative and never persisted (only a
+ *   factory index is, and factory order is fixed).
  *
  * DELETION
  * --------
- *   Deleted files are not tracked proactively. If navigation lands on a
- *   missing file, it is removed from the in-memory list and navigation stops
- *   at the nearest valid position.
+ *   refreshUserPresets() reconciles the list with disk on demand (adds / renames / deletes).
+ *   Between refreshes, navigation that lands on a missing file removes it from the in-memory
+ *   list and stops at the nearest valid position.
  *
  * UNDO
  * ----
