@@ -411,11 +411,27 @@ bool IPlugCLAP::renderSetMode(clap_plugin_render_mode mode) noexcept
 bool IPlugCLAP::stateSave(const clap_ostream* pStream) noexcept
 {
   IByteChunk chunk;
-  
+
   if (!SerializeState(chunk))
     return false;
-  
-  return pStream->write(pStream, chunk.GetData(), chunk.Size()) == chunk.Size();
+
+  // The host may accept fewer bytes than requested per call, so loop until the whole chunk is
+  // written (CLAP stream contract). A single write truncates large state (e.g. a full morph rig).
+  const uint8_t* pData = chunk.GetData();
+  int64_t remaining = chunk.Size();
+
+  while (remaining > 0)
+  {
+    const int64_t written = pStream->write(pStream, pData, static_cast<uint64_t>(remaining));
+
+    if (written <= 0) // -1 is a write error; 0 would mean no progress
+      return false;
+
+    pData += written;
+    remaining -= written;
+  }
+
+  return true;
 }
 
 bool IPlugCLAP::stateLoad(const clap_istream* pStream) noexcept
