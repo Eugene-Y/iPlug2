@@ -798,12 +798,12 @@ bool IPlugCLAP::audioPortsGetConfig(uint32_t index, clap_audio_ports_config* pCo
   pConfig->input_port_count = static_cast<uint32_t>(NBuses(kInput, index));
   pConfig->output_port_count = static_cast<uint32_t>(NBuses(kOutput, index));
 
-  pConfig->has_main_input = pConfig->input_port_count > 1;
+  pConfig->has_main_input = pConfig->input_port_count >= 1;
   pConfig->main_input_channel_count = pConfig->has_main_input ? getNChans(kInput, 0) : 0;
   pConfig->main_input_port_type = ClapPortType(pConfig->main_input_channel_count);
-  
-  pConfig->has_main_output = pConfig->output_port_count > 1;
-  pConfig->main_output_channel_count = pConfig->has_main_input ? getNChans(kOutput, 0) : 0;
+
+  pConfig->has_main_output = pConfig->output_port_count >= 1;
+  pConfig->main_output_channel_count = pConfig->has_main_output ? getNChans(kOutput, 0) : 0;
   pConfig->main_output_port_type = ClapPortType(pConfig->main_output_channel_count);
 
   return true;
@@ -1049,16 +1049,20 @@ void IPlugCLAP::SetDefaultConfig()
   
   mConfigIdx = 0;
   
-  // If there is track info available try to match
+  // If there is track info available try to match. audio_channel_count is only meaningful when the
+  // host sets CLAP_TRACK_INFO_HAS_AUDIO_CHANNEL — reading it otherwise is an uninitialised/garbage
+  // read that can pin the config to the wrong (e.g. mono) layout.
   if (GetClapHost().canUseTrackInfo())
   {
-    clap_track_info info;
-    GetClapHost().trackInfoGet(&info);
+    clap_track_info info {};
 
-    if (testMatches(info.audio_channel_count) || info.audio_channel_count == 2)
-      return;
+    if (GetClapHost().trackInfoGet(&info) && (info.flags & CLAP_TRACK_INFO_HAS_AUDIO_CHANNEL))
+    {
+      if (testMatches(info.audio_channel_count) || info.audio_channel_count == 2)
+        return;
+    }
   }
-  
+
   // Default to stereo if nothing else has succeeded
   testMatches(2);
 }
