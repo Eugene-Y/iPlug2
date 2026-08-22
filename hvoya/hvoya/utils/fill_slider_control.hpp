@@ -14,10 +14,10 @@ namespace hvoya::ui {
 using namespace iplug;
 using namespace iplug::igraphics;
 
-// A standalone, parameter-bound horizontal slider drawn with SliderWidget: a flat track,
-// a fill growing from the left by the parameter's normalized value, and a fixed centered
-// label (no numeric readout). ISliderControlBase supplies drag / wheel / fine control; this
-// only swaps the look to the flat-fill SliderWidget style.
+// A standalone, parameter-bound slider drawn with SliderWidget: a flat track, a fill growing by
+// the parameter's normalized value (left→right when horizontal, bottom→top when vertical), and a
+// fixed centered label (no numeric readout). ISliderControlBase supplies drag / wheel / fine
+// control; this only swaps the look to the flat-fill SliderWidget style.
 //
 // Two visual states, switched by hover/drag (mouseOver OR mouseDown):
 //   idle   — background = track,  fill = fill         (e.g. transparent track, light-gray fill)
@@ -39,12 +39,13 @@ public:
     FillSliderControl (const IRECT& bounds, int paramIdx,
                        const IColor& track, const IColor& fill, const IColor& activeFill,
                        const IText& labelText, std::string label,
-                       double gearing = DEFAULT_GEARING)
-        : ISliderControlBase (bounds, paramIdx, EDirection::Horizontal, gearing, 0.f)
+                       double gearing = DEFAULT_GEARING,
+                       EDirection dir = EDirection::Horizontal)
+        : ISliderControlBase (bounds, paramIdx, dir, gearing, 0.f)
         , _track (track), _fill (fill), _activeFill (activeFill), _labelText (labelText)
         , _label (std::move (label))
     {
-        mHideCursorOnDrag = false;   // thin horizontal bar — keep the cursor visible while dragging
+        mHideCursorOnDrag = false;   // thin bar — keep the cursor visible while dragging
     }
 
     void Draw (IGraphics& g) override {
@@ -53,6 +54,7 @@ public:
                           active ? _activeFill : _fill,     // active: accent fill;      idle: light-gray
                           _labelText);
         _widget.setAnchor (_anchor);
+        _widget.setDirection (mDirection);
 
         // With a top label the track shrinks to the lower half and the label sits above it;
         // otherwise the track fills the whole control (label-on-track look).
@@ -101,12 +103,12 @@ public:
     }
 
     // Gearing is applied here rather than by the base class so it works with mHideCursorOnDrag = false.
-    // The reference span is the track width in both modes, so the feel is identical: JumpToClick
-    // accumulates horizontal motion (track the cursor), RelativeDrag projects the displacement from
-    // the click point onto the "more" axis.
-    void OnMouseDrag (float x, float y, float dX, float, const IMouseMod& mod) override {
-        const double trackW = mTrackBounds.W();
-        if (trackW == 0.) return;
+    // The reference span is the track's LONG axis, so a drag across the track is a full-range move
+    // whichever way it points — the short axis would make a narrow strip wildly oversensitive.
+    void OnMouseDrag (float x, float y, float dX, float dY, const IMouseMod& mod) override {
+        const bool   horizontal = mDirection == EDirection::Horizontal;
+        const double span       = horizontal ? mTrackBounds.W() : mTrackBounds.H();
+        if (span == 0.) return;
 
         const bool fine = IsFineControl (mod, false);
         if (fine != _dragFine)                 // re-anchor so toggling Shift mid-drag doesn't jump the value
@@ -114,7 +116,8 @@ public:
         const double gear = fine ? mGearing * 10. : mGearing;
 
         if (_mouseMode == MouseMode::JumpToClick) {
-            mMouseDragValue = std::clamp (mMouseDragValue + dX / trackW / gear, 0., 1.);
+            const double along = horizontal ? dX : -dY;   // screen y grows downward
+            mMouseDragValue = std::clamp (mMouseDragValue + along / span / gear, 0., 1.);
             SetValue (mMouseDragValue);
             SetDirty();
             return;
@@ -124,7 +127,7 @@ public:
         const double vy = _dragOriginY - y;    // screen y grows downward; vy is up-positive
         const double travel = vy + kHorizontalDragWeight * vx;
 
-        SetValue (std::clamp (mMouseDragValue + travel / trackW / gear, 0., 1.));
+        SetValue (std::clamp (mMouseDragValue + travel / span / gear, 0., 1.));
         SetDirty();
     }
 
@@ -155,19 +158,17 @@ public:
     void setTopLabel (std::string label, const IText& text) {
         _topLabel = std::move (label); _topLabelText = text; SetDirty (false);
     }
-    // The normalized fraction the fill grows from (0 = left edge, 0.5 = track centre). See SliderWidget.
+    // The normalized fraction the fill grows from (0 = the track's start edge, 0.5 = its centre).
+    // See SliderWidget.
     void setAnchor (float frac) { _anchor = std::clamp (frac, 0.f, 1.f); SetDirty (false); }
     // Mouse-interaction mode (see the class comment). Defaults to RelativeDrag.
     void setMouseMode (MouseMode mode) { _mouseMode = mode; }
 
 private:
-    // How much sideways drag counts next to vertical drag ("right = more", a bit weaker so a wobble
-    // costs less than a deliberate pull; 1.0 would be full parity, 0.0 strictly vertical). The
-    // value is a *projection* of the drag vector, not its length signed by a direction wedge: a
-    // projection is continuous in every direction, so a stray sideways nudge before a decisive pull
-    // can no longer freeze the drag or invert it — it only shaves a little off the travel. It also
-    // keeps the value a pure function of where the cursor is, so wandering out and back returns it
-    // exactly where it started.
+    // Sideways drag counts a little less than vertical ("right = more"; 1.0 = parity, 0 = strictly
+    // vertical). Projecting the drag vector rather than signing its length by a direction wedge is
+    // what keeps the response continuous: a stray sideways nudge before a decisive pull shaves a
+    // little off the travel instead of freezing or inverting it.
     static constexpr double kHorizontalDragWeight = 0.75;
 
     void beginDrag (float x, float y, const IMouseMod& mod) {

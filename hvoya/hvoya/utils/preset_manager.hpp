@@ -702,10 +702,9 @@ public:
     }
 
 private:
-    // Every directory the manager stores is kept in the platform's own separator style. A path with
-    // '/' works for std::filesystem on Windows but not for the shell: the Win32 file dialog silently
-    // ignores an initial dir with forward slashes (it opens the host's last-visited folder instead),
-    // and ShellExecute "explore" fails the same way.
+    // Native separators, because the Windows shell needs them where std::filesystem does not: the
+    // file dialog silently ignores an initial dir containing '/' (it opens the host's last-visited
+    // folder instead), and ShellExecute "explore" fails the same way.
     static std::string nativeDir(std::string_view dir) {
         return dir.empty() ? std::string{} : hvoya::fs::path(dir).make_preferred().string();
     }
