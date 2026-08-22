@@ -3,7 +3,6 @@
 #include <IControls.h>
 #include <algorithm>
 #include <cmath>
-#include <numbers>
 #include <hvoya/utils/format_compat.hpp>
 #include <string>
 #include <utility>
@@ -28,14 +27,11 @@ using namespace iplug::igraphics;
 //
 // Two mouse-interaction modes, switched by setMouseMode():
 //   RelativeDrag (default) — a click does NOT change the value; the value then follows the cursor's
-//                            *distance* from the click point, signed by the drag direction (see the
-//                            wedge geometry below), so pulling back toward the click point undoes it.
+//                            displacement from the click point, projected onto the "more" axis (up
+//                            raises it, right raises it at kHorizontalDragWeight of that), so pulling
+//                            back toward the click point undoes the change exactly.
 //   JumpToClick            — a click jumps the value to the clicked position, then horizontal
 //                            dragging tracks the cursor (also gearing-scaled).
-//
-// RelativeDrag direction wedges: one wedge around up → right → down-right raises the value (the
-// directions where "up = more" and "right = more" agree), its exact antipode lowers it, and the two
-// gaps between them are dead — the value holds while the cursor sits in one. Angles: kDragWedge*Deg.
 class FillSliderControl : public ISliderControlBase {
 public:
     enum class MouseMode { RelativeDrag, JumpToClick };
@@ -106,8 +102,8 @@ public:
 
     // Gearing is applied here rather than by the base class so it works with mHideCursorOnDrag = false.
     // The reference span is the track width in both modes, so the feel is identical: JumpToClick
-    // accumulates horizontal motion (track the cursor), RelativeDrag reads the signed distance from
-    // the click point.
+    // accumulates horizontal motion (track the cursor), RelativeDrag projects the displacement from
+    // the click point onto the "more" axis.
     void OnMouseDrag (float x, float y, float dX, float, const IMouseMod& mod) override {
         const double trackW = mTrackBounds.W();
         if (trackW == 0.) return;
@@ -126,10 +122,9 @@ public:
 
         const double vx = x - _dragOriginX;
         const double vy = _dragOriginY - y;    // screen y grows downward; vy is up-positive
-        const int    dir = dragDirection (vx, vy);
-        if (dir == 0) return;                  // dead wedge — hold the value
+        const double travel = vy + kHorizontalDragWeight * vx;
 
-        SetValue (std::clamp (mMouseDragValue + dir * std::hypot (vx, vy) / trackW / gear, 0., 1.));
+        SetValue (std::clamp (mMouseDragValue + travel / trackW / gear, 0., 1.));
         SetDirty();
     }
 
@@ -166,22 +161,14 @@ public:
     void setMouseMode (MouseMode mode) { _mouseMode = mode; }
 
 private:
-    // The raising wedge, in degrees clockwise from straight up; the lowering one is its antipode,
-    // and whatever is left over becomes the two dead gaps.
-    static constexpr double kDragWedgeStartDeg = -10.0;
-    static constexpr double kDragWedgeDeg      = 145.0;
-
-    static bool inRaisingWedge (double deg) {
-        return deg >= kDragWedgeStartDeg && deg <= kDragWedgeStartDeg + kDragWedgeDeg;
-    }
-
-    // +1 raise / -1 lower / 0 dead, for a drag vector in pixels with vy pointing up.
-    static int dragDirection (double vx, double vy) {
-        const double deg = std::atan2 (vx, vy) * (180.0 / std::numbers::pi);   // clockwise from up, (-180°, 180°]
-        if (inRaisingWedge (deg)) return +1;
-        if (inRaisingWedge (deg > 0.0 ? deg - 180.0 : deg + 180.0)) return -1;
-        return 0;
-    }
+    // How much sideways drag counts next to vertical drag ("right = more", a bit weaker so a wobble
+    // costs less than a deliberate pull; 1.0 would be full parity, 0.0 strictly vertical). The
+    // value is a *projection* of the drag vector, not its length signed by a direction wedge: a
+    // projection is continuous in every direction, so a stray sideways nudge before a decisive pull
+    // can no longer freeze the drag or invert it — it only shaves a little off the travel. It also
+    // keeps the value a pure function of where the cursor is, so wandering out and back returns it
+    // exactly where it started.
+    static constexpr double kHorizontalDragWeight = 0.75;
 
     void beginDrag (float x, float y, const IMouseMod& mod) {
         _dragOriginX = x;
