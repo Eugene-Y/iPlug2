@@ -409,7 +409,9 @@ private:
 
     void drawItem(IGraphics& g, const IRECT& r, int entryIdx, int rowIdx, int depth) {
         const auto& e       = _entries[static_cast<size_t>(entryIdx)];
-        const bool  current = e.navIdx == _manager.currentIdx() && !_manager.isCustomPatch();
+        // Highlight by index alone: editing the loaded preset must not un-highlight the row it
+        // came from — the strip's "*" is what reports the edits.
+        const bool  current = e.navIdx == _manager.currentIdx();
 
         if (current && _currentBg.A > 0)             g.FillRect(_currentBg,   r, &mBlend);
         else if (rowIdx == _hoverRow && _itemHoverBg.A > 0) g.FillRect(_itemHoverBg, r, &mBlend);

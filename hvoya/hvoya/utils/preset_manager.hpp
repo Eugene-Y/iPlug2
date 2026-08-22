@@ -29,8 +29,9 @@
  *   Factory presets always come first (in MakePreset() call order). User presets follow,
  *   sorted by (group, name). Appends (rescanUserPresets / addFolder) add at the end;
  *   refreshUserPresets() rebuilds and re-sorts, so user positions can shift there — safe,
- *   since a user preset's combined index is session-relative and never persisted (only a
- *   factory index is, and factory order is fixed).
+ *   since a user preset's combined index is session-relative and never persisted: a project
+ *   chunk stores a PatchIdentity instead (factory preset by authored name, user preset by
+ *   file path). See patchIdentity() / restorePatchIdentity().
  *
  * DELETION
  * --------
@@ -535,16 +536,21 @@ public:
         return (ui >= 0 && ui < userCount()) ? _userPresets[ui].group : "";
     }
 
-    // True when the live patch is not a pristine stored preset — edited,
-    // randomized, mutated, never loaded from one, or explicitly marked diverged
-    // (see markPatchCustom). The strip shows it as "user preset" instead of a name.
-    bool isCustomPatch() const { return _currentIdx < 0 || isModified() || _divergedFromIndex; }
+    // Two independent facts about the live patch, deliberately NOT merged into one "is custom"
+    // predicate: the NAME the strip shows comes from the identity, the "*" from the dirt.
+    //
+    //   identity — the patch came from a stored preset and still remembers which one. Dropped only
+    //              when the sound stops being that preset's descendant (randomize / mutate / a
+    //              morph bake), never by editing.
+    //   dirt     — it has been edited since that preset was applied (uncommitted tweaks and/or
+    //              committed ones). Editing keeps the name and lights the "*".
+    bool hasPresetIdentity() const { return _currentIdx >= 0; }
+    bool isPatchDirty()      const { return isModified() || _divergedFromIndex; }
 
-    // Mark the live patch as no longer matching the preset at the remembered index, WITHOUT
-    // discarding that index. The strip then shows "user preset", but next/prev keep cycling
-    // from the last preset position. Use when the host changes the sound to something that
-    // isn't the indexed preset yet the navigation position should be preserved (e.g. switching
-    // between morph points). Cleared automatically the next time a preset is actually applied.
+    // Mark the live patch as edited away from the preset at the remembered index, WITHOUT
+    // discarding that index (next/prev keep cycling from the last preset position). Use when the
+    // host changes the sound in a way the manager can't see as a param edit. Cleared automatically
+    // the next time a preset is actually applied.
     void markPatchCustom() { _divergedFromIndex = true; }
 
     // Directory to open file dialogs in: last-used dir, or _presetDir if none.
@@ -580,22 +586,96 @@ public:
     int  userCount()    const { return static_cast<int>(_userPresets.size()); }
     int  totalCount()   const { return factoryCount() + userCount(); }
 
-    // Preset identity for host-project serialization. Returns the current preset's FACTORY index
-    // (stable across sessions — factory presets have a fixed order), or -1 when the live patch is
-    // custom/modified or a user (.fxp) preset (whose combined index is session-relative, so it isn't
-    // safe to persist). The host stores this in its project chunk; setRestoredPresetIdx reads it back.
+    // Legacy preset identity for host-project serialization: the current preset's FACTORY index, or
+    // -1 for anything a plain index can't express. Superseded by patchIdentity() (which also carries
+    // user presets and the dirt flag) — still written so a chunk stays readable by builds that only
+    // know this field, and still read as the fallback when a chunk predates the identity block.
     int  serializablePresetIdx() const {
-        return (!isCustomPatch() && isFactory(_currentIdx)) ? _currentIdx : -1;
+        return (!isPatchDirty() && isFactory(_currentIdx)) ? _currentIdx : -1;
     }
 
-    // Restore the preset identity read from a host-project chunk (see serializablePresetIdx). Only a
-    // valid factory index selects a preset; anything else → -1 (custom, "user preset"). No DSP side
-    // effects — UnserializeState already restored the params; this only fixes the strip label. Call
-    // ONLY on a genuine external restore, never during the manager's own preset nav / undo (those set
+    // Restore the legacy factory-index identity (see serializablePresetIdx). No DSP side effects —
+    // UnserializeState already restored the params; this only fixes the strip label. Call ONLY on a
+    // genuine external restore, never during the manager's own preset nav / undo (those set
     // _currentIdx themselves; a stored -1 would wrongly blank a just-navigated factory preset's name).
     void setRestoredPresetIdx(int idx) {
         _currentIdx        = (idx >= 0 && idx < factoryCount()) ? idx : -1;
         _divergedFromIndex = false;
+    }
+
+    // ── Portable patch identity (host-project serialization) ──────────────────
+    //
+    // Which stored preset the live patch came from, in a form that survives a session: a factory
+    // preset by its authored name (the index is only a fallback hint, so re-ordering the factory
+    // bank doesn't rename someone's project), a user preset by its FILE PATH (its combined list
+    // index is session-relative — see PRESET ORDER above — so persisting the index would name the
+    // wrong preset after a rescan). `dirty` carries the "*": an edited patch keeps its name.
+    struct PatchIdentity {
+        enum class Kind { None, Factory, User };
+        Kind        kind    = Kind::None;
+        std::string key;              // Factory: authored name ("group/name"); User: full file path
+        int         idxHint = -1;     // Factory: the index it had when saved (used only if the name is gone)
+        bool        dirty   = false;
+    };
+
+    PatchIdentity patchIdentity() const {
+        PatchIdentity id;
+        id.dirty = isPatchDirty();
+        if (_currentIdx < 0) return id;
+        if (isFactory(_currentIdx)) {
+            const char* n = _plugin->GetPresetName(_factoryIdxMap[static_cast<size_t>(_currentIdx)]);
+            id.kind    = PatchIdentity::Kind::Factory;
+            id.key     = n ? n : "";
+            id.idxHint = _currentIdx;
+            return id;
+        }
+        const int ui = _currentIdx - factoryCount();
+        if (ui >= 0 && ui < userCount()) {
+            id.kind = PatchIdentity::Kind::User;
+            id.key  = _userPresets[static_cast<size_t>(ui)].path;
+        }
+        return id;
+    }
+
+    // The strip label for an identity — read straight off the identity itself (a factory preset's
+    // key IS its authored "group/name"; a user preset's is its path), so it also names a preset the
+    // current session never scanned. "" when there is no identity.
+    std::string displayName(const PatchIdentity& id) const {
+        if (id.kind == PatchIdentity::Kind::Factory) return id.key;
+        if (id.kind != PatchIdentity::Kind::User || id.key.empty()) return "";
+        const hvoya::fs::path p(id.key);
+        const std::string name  = p.stem().string();
+        const std::string group = p.parent_path() == hvoya::fs::path(_presetDir)
+                                ? std::string{} : p.parent_path().filename().string();
+        return group.empty() ? name : group + "/" + name;
+    }
+
+    // Identity of a browse-list entry / a file on disk, WITHOUT selecting it — for a host that
+    // loads a preset somewhere other than the live patch (Gneiss: into a morph point) and wants
+    // to remember which preset that was.
+    PatchIdentity identityForListIndex(int idx) const {
+        PatchIdentity id;
+        if (isFactory(idx)) {
+            const char* n = _plugin->GetPresetName(_factoryIdxMap[static_cast<size_t>(idx)]);
+            id.kind = PatchIdentity::Kind::Factory; id.key = n ? n : ""; id.idxHint = idx;
+        } else if (const int ui = idx - factoryCount(); ui >= 0 && ui < userCount()) {
+            id.kind = PatchIdentity::Kind::User;    id.key = _userPresets[static_cast<size_t>(ui)].path;
+        }
+        return id;
+    }
+
+    static PatchIdentity identityForFile(const std::string& path) {
+        PatchIdentity id;
+        if (!path.empty()) { id.kind = PatchIdentity::Kind::User; id.key = path; }
+        return id;
+    }
+
+    // Adopt an identity read back from a project chunk. A user preset whose file is gone, and a
+    // factory name this build no longer has (with no usable index hint), resolve to "no identity".
+    // Same call rule as setRestoredPresetIdx: genuine external restores only.
+    void restorePatchIdentity(const PatchIdentity& id) {
+        _currentIdx        = resolveIdentity(id);
+        _divergedFromIndex = _currentIdx >= 0 && id.dirty;
     }
 
     const std::vector<UserPreset>& userPresets() const { return _userPresets; }
@@ -865,6 +945,24 @@ private:
     }
 
     // Returns index in _userPresets for path, appending at the end if not found.
+    // Identity → a current combined index, or -1 when it can't be resolved in this session.
+    int resolveIdentity(const PatchIdentity& id) {
+        using Kind = PatchIdentity::Kind;
+        if (id.kind == Kind::Factory) {
+            for (int i = 0; i < factoryCount(); ++i) {
+                const char* n = _plugin->GetPresetName(_factoryIdxMap[static_cast<size_t>(i)]);
+                if (n && id.key == n) return i;
+            }
+            return (id.idxHint >= 0 && id.idxHint < factoryCount()) ? id.idxHint : -1;
+        }
+        if (id.kind == Kind::User) {
+            if (id.key.empty() || !hvoya::fs::exists(hvoya::fs::path(id.key))) return -1;
+            return factoryCount() + ensureInList(id.key);   // re-enters a file the session hasn't scanned
+        }
+        return -1;
+    }
+
+
     int ensureInList(const std::string& path) {
         auto it = std::find_if(_userPresets.begin(), _userPresets.end(),
             [&](const UserPreset& p) { return p.path == path; });
@@ -912,5 +1010,54 @@ private:
         return chunk;
     }
 };
+
+// PatchIdentity ⇄ byte chunk — ONE record format, shared by every block that persists an identity
+// (the host's patch-identity block, Gneiss's per-morph-point identities):
+//
+//     [nFields][kind][idxHint][dirty][key]
+//
+// The int fields are COUNT-PREFIXED, so a later field appends here and both directions still read
+// (older readers consume and ignore the extras; newer readers fall back to defaults). The trailing
+// string is the one part that isn't self-describing — a SECOND string would need the owning block's
+// version to gate it.
+inline bool putPatchIdentity(iplug::IByteChunk& chunk, const PresetManager::PatchIdentity& id) {
+    const int fields[] = { static_cast<int>(id.kind), id.idxHint, id.dirty ? 1 : 0 };
+    int nFields = static_cast<int>(std::size(fields));
+    bool ok = chunk.Put(&nFields) > 0;
+    for (int f : fields) ok &= chunk.Put(&f) > 0;
+    ok &= chunk.PutStr(id.key.c_str()) > 0;
+    return ok;
+}
+
+// Returns the new position, or the input `pos` unchanged if the record can't be read.
+inline int getPatchIdentity(const iplug::IByteChunk& chunk, int pos, PresetManager::PatchIdentity& out) {
+    using Kind = PresetManager::PatchIdentity::Kind;
+    int nFields = 0;
+    int p = chunk.Get(&nFields, pos);
+    if (p < 0 || nFields < 0 || nFields > 256) return pos;
+
+    int fields[] = { static_cast<int>(Kind::None), -1, 0 };
+    const int knownFields = static_cast<int>(std::size(fields));
+    for (int i = 0; i < nFields; ++i) {
+        int v = 0;
+        p = chunk.Get(&v, p);
+        if (p < 0) return pos;
+        if (i < knownFields) fields[i] = v;      // unknown trailing fields are skipped
+    }
+    // Byte-length-prefixed raw bytes (IByteChunk::PutStr/GetStr), so any UTF-8 name or path round-
+    // trips unchanged. GetStr reports the end position even when the stored length overruns the
+    // chunk, so check it: a corrupt record must leave `pos` where it was, not walk off the end.
+    WDL_String key;
+    const int keyEnd = chunk.GetStr(key, p);
+    if (keyEnd <= p || keyEnd > chunk.Size()) return pos;
+    p = keyEnd;
+    if (fields[0] < static_cast<int>(Kind::None) || fields[0] > static_cast<int>(Kind::User)) return pos;
+
+    out.kind    = static_cast<Kind>(fields[0]);
+    out.idxHint = fields[1];
+    out.dirty   = fields[2] != 0;
+    out.key     = key.Get() ? key.Get() : "";
+    return p;
+}
 
 } // namespace hvoya

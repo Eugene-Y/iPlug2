@@ -12,8 +12,8 @@
  *
  *   presets — collapse/expand toggle
  *   </>     — cycle through presets (factory + user)
- *   name    — current preset, or "user preset" when the patch is custom
- *             (edited, randomized or mutated)
+ *   name    — the preset the patch came from (+ " *" once edited), or "custom preset"
+ *             when it has no preset origin at all (fresh / randomized / baked)
  *   undo    — revert last preset switch (dimmed when unavailable)
  *   save    — PromptForFile(Save) → saveToFile
  *   load    — PromptForFile(Open) → loadFromFile
@@ -38,6 +38,7 @@
 #include <IControls.h>
 #include <hvoya/utils/filesystem_compat.hpp>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 #include <hvoya/utils/glyph_label.hpp>
@@ -78,6 +79,17 @@ public:
     PresetStripControl& setUndoLabel (GlyphLabel l) { _undoLabel = std::move (l); return *this; }
     PresetStripControl& setRedoLabel (GlyphLabel l) { _redoLabel = std::move (l); return *this; }
     PresetStripControl& setSaveLabel (GlyphLabel l) { _saveLabel = std::move (l); return *this; }
+    // Name-zone text for a patch with no preset origin, and the suffix marking unsaved edits.
+    PresetStripControl& setCustomPatchLabel (std::string s) { _customPatchLabel = std::move (s); return *this; }
+    PresetStripControl& setModifiedMark     (std::string s) { _modifiedMark     = std::move (s); return *this; }
+
+    // Optional: while this returns a value, the name zone shows THAT identity instead of the live
+    // patch's — for a host where the strip temporarily addresses something else (Gneiss: the morph
+    // point being edited, which has its own preset origin). An empty name draws the custom-patch
+    // label; `dirty` draws the modified mark, exactly as for the patch.
+    struct NameOverride { std::string name; bool dirty = false; };
+    using NameOverrideFn = std::function<std::optional<NameOverride>()>;
+    PresetStripControl& setNameOverride (NameOverrideFn fn) { _nameOverride = std::move (fn); return *this; }
     PresetStripControl& setLoadLabel (GlyphLabel l) { _loadLabel = std::move (l); return *this; }
     PresetStripControl& setDirLabel  (GlyphLabel l) { _dirLabel  = std::move (l); return *this; }
     PresetStripControl& setScanLabel (GlyphLabel l) { _scanLabel = std::move (l); return *this; }
@@ -194,15 +206,21 @@ public:
         if (_showDir)     drawBtn(g, zones.folder, _dirLabel,  hov(Zone::Folder), false, prs(Zone::Folder));
         if (_showScan)    drawBtn(g, zones.scan,   _scanLabel, hov(Zone::Scan),   false, prs(Zone::Scan));
 
-        // Name label — stretches between nav and action buttons. A custom patch
-        // (edited / randomized / mutated) shows as "user preset".
+        // Name label — stretches between nav and action buttons. A patch that came from a stored
+        // preset keeps that preset's name and marks unsaved edits with the modified mark ("*");
+        // a patch with no preset origin at all (fresh instance / randomized / baked morph) shows
+        // the custom-patch label.
         std::string label;
-        if (_manager.isCustomPatch()) {
-            label = "user preset";
-        } else {
+        if (auto ov = _nameOverride ? _nameOverride() : std::nullopt) {
+            label = ov->name.empty() ? _customPatchLabel : ov->name;
+            if (ov->dirty) label += _modifiedMark;
+        } else if (_manager.hasPresetIdentity()) {
             const std::string name  = _manager.currentName();
             const std::string group = _manager.currentGroup();
             label = group.empty() ? name : group + "/" + name;
+            if (_manager.isPatchDirty()) label += _modifiedMark;
+        } else {
+            label = _customPatchLabel;
         }
         if (!navOff && _hoverZone == Zone::Name)
             g.FillRect(GetColor(kHL), zones.name, &mBlend);
@@ -428,6 +446,9 @@ private:
     GlyphLabel     _undoLabel      = "undo";
     GlyphLabel     _redoLabel      = "redo";
     GlyphLabel     _saveLabel      = "save";
+    NameOverrideFn _nameOverride;
+    std::string    _customPatchLabel = "custom preset";
+    std::string    _modifiedMark     = " *";
     GlyphLabel     _loadLabel      = "load";
     GlyphLabel     _dirLabel       = "dir";
     GlyphLabel     _scanLabel      = "scan";
