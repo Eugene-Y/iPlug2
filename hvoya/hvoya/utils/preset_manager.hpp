@@ -536,14 +536,9 @@ public:
         return (ui >= 0 && ui < userCount()) ? _userPresets[ui].group : "";
     }
 
-    // Two independent facts about the live patch, deliberately NOT merged into one "is custom"
-    // predicate: the NAME the strip shows comes from the identity, the "*" from the dirt.
-    //
-    //   identity — the patch came from a stored preset and still remembers which one. Dropped only
-    //              when the sound stops being that preset's descendant (randomize / mutate / a
-    //              morph bake), never by editing.
-    //   dirt     — it has been edited since that preset was applied (uncommitted tweaks and/or
-    //              committed ones). Editing keeps the name and lights the "*".
+    // Two facts, deliberately NOT merged into one "is custom" predicate: the strip's NAME comes from
+    // the identity, its "*" from the dirt. Editing keeps the identity — only a sound that stops being
+    // that preset's descendant (randomize / a morph bake) drops it.
     bool hasPresetIdentity() const { return _currentIdx >= 0; }
     bool isPatchDirty()      const { return isModified() || _divergedFromIndex; }
 
@@ -586,10 +581,9 @@ public:
     int  userCount()    const { return static_cast<int>(_userPresets.size()); }
     int  totalCount()   const { return factoryCount() + userCount(); }
 
-    // Legacy preset identity for host-project serialization: the current preset's FACTORY index, or
-    // -1 for anything a plain index can't express. Superseded by patchIdentity() (which also carries
-    // user presets and the dirt flag) — still written so a chunk stays readable by builds that only
-    // know this field, and still read as the fallback when a chunk predates the identity block.
+    // Legacy identity: the FACTORY index, -1 for anything a plain index can't express. Superseded by
+    // patchIdentity(), but still written for builds that only know this field — and still the
+    // fallback when reading a chunk that predates the identity block.
     int  serializablePresetIdx() const {
         return (!isPatchDirty() && isFactory(_currentIdx)) ? _currentIdx : -1;
     }
@@ -605,11 +599,10 @@ public:
 
     // ── Portable patch identity (host-project serialization) ──────────────────
     //
-    // Which stored preset the live patch came from, in a form that survives a session: a factory
-    // preset by its authored name (the index is only a fallback hint, so re-ordering the factory
-    // bank doesn't rename someone's project), a user preset by its FILE PATH (its combined list
-    // index is session-relative — see PRESET ORDER above — so persisting the index would name the
-    // wrong preset after a rescan). `dirty` carries the "*": an edited patch keeps its name.
+    // Which stored preset the live patch came from, in a form that survives a session. Keyed by name
+    // / path rather than index: the factory bank can be re-ordered, and a user preset's combined
+    // index is session-relative (see PRESET ORDER above), so a stored index would name the wrong
+    // preset after a rescan.
     struct PatchIdentity {
         enum class Kind { None, Factory, User };
         Kind        kind    = Kind::None;
@@ -637,9 +630,7 @@ public:
         return id;
     }
 
-    // The strip label for an identity — read straight off the identity itself (a factory preset's
-    // key IS its authored "group/name"; a user preset's is its path), so it also names a preset the
-    // current session never scanned. "" when there is no identity.
+    // Read straight off the identity, so it also names a preset the current session never scanned.
     std::string displayName(const PatchIdentity& id) const {
         if (id.kind == PatchIdentity::Kind::Factory) return id.key;
         if (id.kind != PatchIdentity::Kind::User || id.key.empty()) return "";
@@ -650,9 +641,8 @@ public:
         return group.empty() ? name : group + "/" + name;
     }
 
-    // Identity of a browse-list entry / a file on disk, WITHOUT selecting it — for a host that
-    // loads a preset somewhere other than the live patch (Gneiss: into a morph point) and wants
-    // to remember which preset that was.
+    // Identity of a browse-list entry / a file WITHOUT selecting it — for a host that loads a preset
+    // somewhere other than the live patch (Gneiss: into a morph point).
     PatchIdentity identityForListIndex(int idx) const {
         PatchIdentity id;
         if (isFactory(idx)) {
@@ -670,9 +660,8 @@ public:
         return id;
     }
 
-    // Adopt an identity read back from a project chunk. A user preset whose file is gone, and a
-    // factory name this build no longer has (with no usable index hint), resolve to "no identity".
-    // Same call rule as setRestoredPresetIdx: genuine external restores only.
+    // Adopt an identity read back from a project chunk (unresolvable → no identity). Same call rule
+    // as setRestoredPresetIdx: genuine external restores only.
     void restorePatchIdentity(const PatchIdentity& id) {
         _currentIdx        = resolveIdentity(id);
         _divergedFromIndex = _currentIdx >= 0 && id.dirty;
@@ -1011,15 +1000,10 @@ private:
     }
 };
 
-// PatchIdentity ⇄ byte chunk — ONE record format, shared by every block that persists an identity
-// (the host's patch-identity block, Gneiss's per-morph-point identities):
-//
-//     [nFields][kind][idxHint][dirty][key]
-//
-// The int fields are COUNT-PREFIXED, so a later field appends here and both directions still read
-// (older readers consume and ignore the extras; newer readers fall back to defaults). The trailing
-// string is the one part that isn't self-describing — a SECOND string would need the owning block's
-// version to gate it.
+// PatchIdentity ⇄ byte chunk: [nFields][kind][idxHint][dirty][key]. ONE record format, shared by
+// every block that persists an identity. The int fields are count-prefixed, so a later one appends
+// here and both directions still read; the trailing string is the part that isn't self-describing —
+// a SECOND string would need the owning block's version to gate it.
 inline bool putPatchIdentity(iplug::IByteChunk& chunk, const PresetManager::PatchIdentity& id) {
     const int fields[] = { static_cast<int>(id.kind), id.idxHint, id.dirty ? 1 : 0 };
     int nFields = static_cast<int>(std::size(fields));
@@ -1044,9 +1028,8 @@ inline int getPatchIdentity(const iplug::IByteChunk& chunk, int pos, PresetManag
         if (p < 0) return pos;
         if (i < knownFields) fields[i] = v;      // unknown trailing fields are skipped
     }
-    // Byte-length-prefixed raw bytes (IByteChunk::PutStr/GetStr), so any UTF-8 name or path round-
-    // trips unchanged. GetStr reports the end position even when the stored length overruns the
-    // chunk, so check it: a corrupt record must leave `pos` where it was, not walk off the end.
+    // GetStr reports an end position even when the stored length overruns the chunk, so check it:
+    // a corrupt record must leave `pos` where it was, not walk off the end.
     WDL_String key;
     const int keyEnd = chunk.GetStr(key, p);
     if (keyEnd <= p || keyEnd > chunk.Size()) return pos;

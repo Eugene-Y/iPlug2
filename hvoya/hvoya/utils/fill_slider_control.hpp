@@ -33,11 +33,9 @@ using namespace iplug::igraphics;
 //   JumpToClick            — a click jumps the value to the clicked position, then horizontal
 //                            dragging tracks the cursor (also gearing-scaled).
 //
-// RelativeDrag direction wedges, in degrees measured clockwise from straight up:
-//   [-10°, +135°]  (up → right → down-right) raises the value — the directions where "up = more" and
-//                  "right = more" agree,
-//   [170°, 315°]   (down → left → up-left) lowers it — the exact antipode of the raising wedge,
-//   the two 35° gaps between them are dead: the value holds while the cursor sits in one.
+// RelativeDrag direction wedges: one wedge around up → right → down-right raises the value (the
+// directions where "up = more" and "right = more" agree), its exact antipode lowers it, and the two
+// gaps between them are dead — the value holds while the cursor sits in one. Angles: kDragWedge*Deg.
 class FillSliderControl : public ISliderControlBase {
 public:
     enum class MouseMode { RelativeDrag, JumpToClick };
@@ -168,8 +166,8 @@ public:
     void setMouseMode (MouseMode mode) { _mouseMode = mode; }
 
 private:
-    // The raising wedge, in degrees clockwise from straight up; the lowering one is its antipode.
-    // See the class comment.
+    // The raising wedge, in degrees clockwise from straight up; the lowering one is its antipode,
+    // and whatever is left over becomes the two dead gaps.
     static constexpr double kDragWedgeStartDeg = -10.0;
     static constexpr double kDragWedgeDeg      = 145.0;
 

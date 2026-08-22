@@ -409,8 +409,7 @@ private:
 
     void drawItem(IGraphics& g, const IRECT& r, int entryIdx, int rowIdx, int depth) {
         const auto& e       = _entries[static_cast<size_t>(entryIdx)];
-        // Highlight by index alone: editing the loaded preset must not un-highlight the row it
-        // came from — the strip's "*" is what reports the edits.
+        // By index alone: editing the preset must not un-highlight its row — the strip's "*" says that.
         const bool  current = e.navIdx == _manager.currentIdx();
 
         if (current && _currentBg.A > 0)             g.FillRect(_currentBg,   r, &mBlend);

@@ -85,8 +85,7 @@ public:
 
     // Optional: while this returns a value, the name zone shows THAT identity instead of the live
     // patch's — for a host where the strip temporarily addresses something else (Gneiss: the morph
-    // point being edited, which has its own preset origin). An empty name draws the custom-patch
-    // label; `dirty` draws the modified mark, exactly as for the patch.
+    // point being edited). An empty name draws the custom-patch label.
     struct NameOverride { std::string name; bool dirty = false; };
     using NameOverrideFn = std::function<std::optional<NameOverride>()>;
     PresetStripControl& setNameOverride (NameOverrideFn fn) { _nameOverride = std::move (fn); return *this; }
@@ -206,10 +205,7 @@ public:
         if (_showDir)     drawBtn(g, zones.folder, _dirLabel,  hov(Zone::Folder), false, prs(Zone::Folder));
         if (_showScan)    drawBtn(g, zones.scan,   _scanLabel, hov(Zone::Scan),   false, prs(Zone::Scan));
 
-        // Name label — stretches between nav and action buttons. A patch that came from a stored
-        // preset keeps that preset's name and marks unsaved edits with the modified mark ("*");
-        // a patch with no preset origin at all (fresh instance / randomized / baked morph) shows
-        // the custom-patch label.
+        // Name label — stretches between nav and action buttons.
         std::string label;
         if (auto ov = _nameOverride ? _nameOverride() : std::nullopt) {
             label = ov->name.empty() ? _customPatchLabel : ov->name;
