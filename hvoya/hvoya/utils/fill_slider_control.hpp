@@ -3,6 +3,7 @@
 #include <IControls.h>
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <hvoya/utils/format_compat.hpp>
 #include <string>
 #include <utility>
@@ -26,10 +27,17 @@ using namespace iplug::igraphics;
 // label are given explicitly and drawn exactly as given (no style-slot decoding).
 //
 // Two mouse-interaction modes, switched by setMouseMode():
-//   RelativeDrag (default) — a click does NOT change the value; dragging up/down adjusts it
-//                            incrementally per the gearing (drag up = increase).
+//   RelativeDrag (default) — a click does NOT change the value; the value then follows the cursor's
+//                            *distance* from the click point, signed by the drag direction (see the
+//                            wedge geometry below), so pulling back toward the click point undoes it.
 //   JumpToClick            — a click jumps the value to the clicked position, then horizontal
 //                            dragging tracks the cursor (also gearing-scaled).
+//
+// RelativeDrag direction wedges, in degrees measured clockwise from straight up:
+//   [-10°, +135°]  (up → right → down-right) raises the value — the directions where "up = more" and
+//                  "right = more" agree,
+//   [170°, 315°]   (down → left → up-left) lowers it — the exact antipode of the raising wedge,
+//   the two 35° gaps between them are dead: the value holds while the cursor sits in one.
 class FillSliderControl : public ISliderControlBase {
 public:
     enum class MouseMode { RelativeDrag, JumpToClick };
@@ -89,25 +97,41 @@ public:
     void OnMouseDown (float x, float y, const IMouseMod& mod) override {
         if (_mouseMode == MouseMode::JumpToClick) {
             ISliderControlBase::OnMouseDown (x, y, mod);   // base snaps the value to the click
+            beginDrag (x, y, mod);
             return;
         }
         // RelativeDrag: grab without changing the value — the drag does the work.
         mMouseDown = true;
-        mMouseDragValue = GetValue();
+        beginDrag (x, y, mod);
         IControl::OnMouseDown (x, y, mod);
     }
 
-    // Delta-based drag with gearing so Shift gives fine control (×10 slower); we apply incremental
-    // movement ourselves so gearing works with mHideCursorOnDrag = false. The reference span is the
-    // track width in both modes, so the gearing feel is identical: JumpToClick reads horizontal
-    // motion (track the cursor), RelativeDrag reads vertical motion (drag up = increase).
-    void OnMouseDrag (float, float, float dX, float dY, const IMouseMod& mod) override {
+    // Gearing is applied here rather than by the base class so it works with mHideCursorOnDrag = false.
+    // The reference span is the track width in both modes, so the feel is identical: JumpToClick
+    // accumulates horizontal motion (track the cursor), RelativeDrag reads the signed distance from
+    // the click point.
+    void OnMouseDrag (float x, float y, float dX, float, const IMouseMod& mod) override {
         const double trackW = mTrackBounds.W();
         if (trackW == 0.) return;
-        const double gear = IsFineControl (mod, false) ? mGearing * 10. : mGearing;
-        const double d = _mouseMode == MouseMode::JumpToClick ? dX : -dY;
-        mMouseDragValue = std::clamp (mMouseDragValue + d / trackW / gear, 0., 1.);
-        SetValue (mMouseDragValue);
+
+        const bool fine = IsFineControl (mod, false);
+        if (fine != _dragFine)                 // re-anchor so toggling Shift mid-drag doesn't jump the value
+            beginDrag (x, y, mod);
+        const double gear = fine ? mGearing * 10. : mGearing;
+
+        if (_mouseMode == MouseMode::JumpToClick) {
+            mMouseDragValue = std::clamp (mMouseDragValue + dX / trackW / gear, 0., 1.);
+            SetValue (mMouseDragValue);
+            SetDirty();
+            return;
+        }
+
+        const double vx = x - _dragOriginX;
+        const double vy = _dragOriginY - y;    // screen y grows downward; vy is up-positive
+        const int    dir = dragDirection (vx, vy);
+        if (dir == 0) return;                  // dead wedge — hold the value
+
+        SetValue (std::clamp (mMouseDragValue + dir * std::hypot (vx, vy) / trackW / gear, 0., 1.));
         SetDirty();
     }
 
@@ -144,6 +168,30 @@ public:
     void setMouseMode (MouseMode mode) { _mouseMode = mode; }
 
 private:
+    // The raising wedge, in degrees clockwise from straight up; the lowering one is its antipode.
+    // See the class comment.
+    static constexpr double kDragWedgeStartDeg = -10.0;
+    static constexpr double kDragWedgeDeg      = 145.0;
+
+    static bool inRaisingWedge (double deg) {
+        return deg >= kDragWedgeStartDeg && deg <= kDragWedgeStartDeg + kDragWedgeDeg;
+    }
+
+    // +1 raise / -1 lower / 0 dead, for a drag vector in pixels with vy pointing up.
+    static int dragDirection (double vx, double vy) {
+        const double deg = std::atan2 (vx, vy) * (180.0 / std::numbers::pi);   // clockwise from up, (-180°, 180°]
+        if (inRaisingWedge (deg)) return +1;
+        if (inRaisingWedge (deg > 0.0 ? deg - 180.0 : deg + 180.0)) return -1;
+        return 0;
+    }
+
+    void beginDrag (float x, float y, const IMouseMod& mod) {
+        _dragOriginX = x;
+        _dragOriginY = y;
+        _dragFine    = IsFineControl (mod, false);
+        mMouseDragValue = GetValue();
+    }
+
     SliderWidget _widget;
     IColor       _track, _fill, _activeFill;
     IText        _labelText;
@@ -156,6 +204,9 @@ private:
     IText        _topLabelText;
     float        _anchor            = 0.f;
     MouseMode    _mouseMode         = MouseMode::RelativeDrag;
+    float        _dragOriginX       = 0.f;
+    float        _dragOriginY       = 0.f;
+    bool         _dragFine          = false;
 };
 
 } // namespace hvoya::ui
