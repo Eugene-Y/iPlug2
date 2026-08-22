@@ -164,7 +164,7 @@ public:
     // it to survive restarts seeds it once at startup via setLastUsedDir and persists changes via
     // the callback. Seeding does NOT fire the callback (it's a restore, not a user action).
     using DirChangedFn = std::function<void(const std::string&)>;
-    void setLastUsedDir(std::string dir)          { _lastUsedDir = std::move(dir); }
+    void setLastUsedDir(std::string dir)          { _lastUsedDir = nativeDir(dir); }
     void setLastUsedDirCallback(DirChangedFn fn)  { _dirChanged  = std::move(fn); }
 
     // Resolve a browse-list index to a peekable origin (so a redirect can READ a preset without
@@ -187,7 +187,7 @@ public:
                   int                 undoDepth = kDefaultUndoDepth)
         : _plugin    (plugin)
         , _pluginName(pluginName)
-        , _presetDir (presetDir)
+        , _presetDir (nativeDir (presetDir))
         , _undoDepth (std::max(1, undoDepth))
     {
         // Build index map for factory presets, skipping uninitialized slots
@@ -702,9 +702,18 @@ public:
     }
 
 private:
+    // Every directory the manager stores is kept in the platform's own separator style. A path with
+    // '/' works for std::filesystem on Windows but not for the shell: the Win32 file dialog silently
+    // ignores an initial dir with forward slashes (it opens the host's last-visited folder instead),
+    // and ShellExecute "explore" fails the same way.
+    static std::string nativeDir(std::string_view dir) {
+        return dir.empty() ? std::string{} : hvoya::fs::path(dir).make_preferred().string();
+    }
+
     // Record the directory a user file action landed in, firing the persistence callback on a real
     // change (save / load / addFolder go through here; the startup seed does not).
     void noteLastUsedDir(std::string dir) {
+        dir = nativeDir(dir);
         if (dir == _lastUsedDir) return;
         _lastUsedDir = std::move(dir);
         if (_dirChanged) _dirChanged(_lastUsedDir);
