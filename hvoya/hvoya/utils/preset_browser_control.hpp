@@ -96,6 +96,13 @@ public:
     // Text of the bottom overflow indicator row (default "...").
     PresetBrowserControl& setEllipsisText    (std::string s){ _ellipsisText = std::move(s); return *this; }
 
+    // Prefix each row with the preset's 1-based position, e.g. "73 : FLEX" — FACTORY rows only. A user
+    // preset's position is factoryCount + its own index, so it shifts wholesale the moment a release
+    // adds a factory preset; a number there would read as an address and not be one. The separator
+    // carries its own spacing (" : ", " - ", ". "); nothing is padded for you.
+    PresetBrowserControl& setShowPresetNumbers     (bool on)       { _showPresetNumbers = on;            return *this; }
+    PresetBrowserControl& setPresetNumberSeparator (std::string s) { _presetNumberSep   = std::move(s); return *this; }
+
     PresetBrowserControl& setRowHeight       (float px) { _rowH       = px; return *this; }
     PresetBrowserControl& setHeaderHeight    (float px) { _headerH    = px; return *this; }
     PresetBrowserControl& setItemIndent      (float px) { _itemIndent = px; return *this; }
@@ -418,7 +425,7 @@ private:
         IText txt = _itemText;
         if (current) txt = txt.WithFGColor(_currentText);
         const IRECT txtR = r.GetReducedFromLeft(depth * _rowH + _textPad);
-        g.DrawText(txt, e.name.c_str(), txtR, &mBlend);
+        g.DrawText(txt, itemLabel(entryIdx).c_str(), txtR, &mBlend);
 
         if (current) {
             const IRECT markR = r.GetFromRight(_rowH).GetReducedFromRight(_scrollbarW);
@@ -451,7 +458,7 @@ private:
             const float indent = r.depth * _rowH;
             const float w = r.header
                 ? indent + _itemIndent + g.MeasureText(_headerText, _nodes[static_cast<size_t>(r.node)].label.c_str(), b) + _textPad
-                : indent + _textPad + g.MeasureText(_itemText, _entries[static_cast<size_t>(r.entryIdx)].name.c_str(), b) + _rowH;  // + marker gutter
+                : indent + _textPad + g.MeasureText(_itemText, itemLabel(r.entryIdx).c_str(), b) + _rowH;  // + marker gutter
             maxW = std::max(maxW, w);
         }
         _contentW      = maxW + _scrollbarW + _textPad;
@@ -483,6 +490,14 @@ private:
     float _headerH     = 22.f;
     float _itemIndent  = 18.f;
     float _textPad     = 4.f;
+
+    // A row's text. One helper so what is drawn and what the content width is measured from can never
+    // disagree — the number widens the row, and a list that scrolls by the un-numbered width clips it.
+    std::string itemLabel (int entryIdx) const {
+        const auto& e = _entries[static_cast<size_t>(entryIdx)];
+        if (!_showPresetNumbers || e.navIdx < 0 || e.navIdx >= _manager.factoryCount()) return e.name;
+        return std::to_string(e.navIdx + 1) + _presetNumberSep + e.name;
+    }
     float _pad         = 3.f;    // inset of the scrolling content from the panel frame
     float _scrollbarW  = 6.f;
     float _minThumbH   = 24.f;
@@ -503,6 +518,8 @@ private:
     IText       _itemText;
     GlyphLabel  _chevronOpen   = "v";
     GlyphLabel  _chevronClosed = ">";
+    bool        _showPresetNumbers = false;
+    std::string _presetNumberSep   = " : ";
     GlyphLabel  _currentGlyph  = "*";
     std::string _ellipsisText  = "...";
 };

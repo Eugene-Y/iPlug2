@@ -83,6 +83,13 @@ public:
     PresetStripControl& setCustomPatchLabel (std::string s) { _customPatchLabel = std::move (s); return *this; }
     PresetStripControl& setModifiedMark     (std::string s) { _modifiedMark     = std::move (s); return *this; }
 
+    // Prefix the name with the preset's 1-based position, e.g. "73 : FLEX" — FACTORY presets only.
+    // A user preset's position is factoryCount + its own index, so it shifts wholesale the moment a
+    // release adds a factory preset: a number there would read as an address and not be one.
+    // The separator carries its own spacing (" : ", " - ", ". "); nothing is padded for you.
+    PresetStripControl& setShowPresetNumbers     (bool on)       { _showPresetNumbers = on;            return *this; }
+    PresetStripControl& setPresetNumberSeparator (std::string s) { _presetNumberSep   = std::move (s); return *this; }
+
     // Optional: while this returns a value, the name zone shows THAT identity instead of the live
     // patch's — for a host where the strip temporarily addresses something else (Gneiss: the morph
     // point being edited). An empty name draws the custom-patch label.
@@ -206,7 +213,9 @@ public:
         if (_showScan)    drawBtn(g, zones.scan,   _scanLabel, hov(Zone::Scan),   false, prs(Zone::Scan));
 
         // Name label — stretches between nav and action buttons.
-        std::string label;
+        // The override path (the strip naming a morph point's preset) carries no position, so it is
+        // deliberately left unnumbered rather than numbered with the manager's unrelated current index.
+        std::string label, numberPrefix;
         if (auto ov = _nameOverride ? _nameOverride() : std::nullopt) {
             label = ov->name.empty() ? _customPatchLabel : ov->name;
             if (ov->dirty) label += _modifiedMark;
@@ -215,6 +224,7 @@ public:
             const std::string group = _manager.currentGroup();
             label = group.empty() ? name : group + "/" + name;
             if (_manager.isPatchDirty()) label += _modifiedMark;
+            numberPrefix = presetNumberPrefix (_manager.currentIdx());
         } else {
             label = _customPatchLabel;
         }
@@ -226,7 +236,13 @@ public:
                                   .WithFGColor(mStyle.valueText.mFGColor.WithOpacity(navOff ? 0.35f : 1.f));
         // A deep folder path can be far wider than the name zone; collapse leading segments to ".../"
         // so it fits (keeping the preset's own name), instead of spilling over the nav buttons.
-        const std::string shown = fitPathLabel(g, nameTxt, label, zones.name.W() - 2.f * kNamePad);
+        // The number is measured out of the budget and prepended AFTER the fit — inside it, it would
+        // be the first segment dropped, i.e. the one part that must never be what goes.
+        IRECT measureR;
+        const float prefixW = numberPrefix.empty()
+                            ? 0.f : g.MeasureText(nameTxt, numberPrefix.c_str(), measureR);
+        const std::string shown =
+            numberPrefix + fitPathLabel(g, nameTxt, label, zones.name.W() - 2.f * kNamePad - prefixW);
         g.DrawText(nameTxt, shown.c_str(), zones.name, &mBlend);
     }
 
@@ -345,6 +361,13 @@ private:
 
     static constexpr float kNamePad = 6.f;   // inset of the name text from the nav buttons
 
+    // "73 : " for a factory preset when numbering is on, else empty. Factory presets occupy the first
+    // factoryCount() nav slots, so the nav index IS the 1-based factory position minus one.
+    std::string presetNumberPrefix (int navIdx) const {
+        if (!_showPresetNumbers || navIdx < 0 || navIdx >= _manager.factoryCount()) return {};
+        return std::to_string (navIdx + 1) + _presetNumberSep;
+    }
+
     // Shrink a "a/b/c/leaf" path label to fit `maxW`: if it overflows, drop whole leading segments,
     // replacing them with a single ".../", until it fits (the preset's own leaf name is always kept).
     // If even ".../leaf" is too wide, the leaf itself is trimmed from the left behind "..." (on a UTF-8
@@ -443,6 +466,8 @@ private:
     GlyphLabel     _redoLabel      = "redo";
     GlyphLabel     _saveLabel      = "save";
     NameOverrideFn _nameOverride;
+    bool           _showPresetNumbers = false;
+    std::string    _presetNumberSep    = " : ";
     std::string    _customPatchLabel = "custom preset";
     std::string    _modifiedMark     = " *";
     GlyphLabel     _loadLabel      = "load";
