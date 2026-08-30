@@ -2827,6 +2827,12 @@ void IGraphics::DrawFittedBitmap(const IBitmap& bitmap, const IRECT& bounds, con
 
 void IGraphics::DrawSVG(const ISVG& svg, const IRECT& dest, const IBlend* pBlend, const IColor* pStrokeColor, const IColor* pFillColor)
 {
+  // LoadSVG hands back an invalid ISVG when the resource is missing (e.g. the bundle was replaced
+  // under a running host), and ISVG's asserts are gone in release — without this the next frame
+  // dereferences null and takes the host down over an image.
+  if (!svg.IsValid())
+    return;
+
   float xScale = dest.W() / svg.W();
   float yScale = dest.H() / svg.H();
   float scale = xScale < yScale ? xScale : yScale;
