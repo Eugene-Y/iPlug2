@@ -142,6 +142,10 @@ public:
         assert (src.numChans() == dst.numChans());
         assert (dst.numFrames() == src.numFrames() * _factor);
 
+        // HIIR's process_block is a do…while: given 0 samples it still processes one.
+        if (src.numFrames() == 0)
+            return;
+
         if (_factor == 1) {
             dst.fillFrom (src);
             return;
@@ -177,6 +181,9 @@ public:
     void downsample (const hvoya::AudioBuffer& src, hvoya::AudioBuffer& dst) {
         assert (src.numChans() == dst.numChans());
         assert (src.numFrames() == dst.numFrames() * _factor);
+
+        if (dst.numFrames() == 0)   // see upsample
+            return;
 
         if (_factor == 1) {
             dst.fillFrom (src);
