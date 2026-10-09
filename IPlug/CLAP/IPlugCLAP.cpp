@@ -112,21 +112,20 @@ void IPlugCLAP::SetTailSize(int samples)
 
 void IPlugCLAP::SetLatency(int samples)
 {
+  const bool changed = (samples != GetLatency());
+
   IPlugProcessor::SetLatency(samples);
-  
-  if (GetClapHost().canUseLatency())
-  {
-    // If active request restart on the main thread (or update the host)
-    if (isActive())
-    {
-      mLatencyUpdate = true;
-      runOnMainThread([&](){ if (!isBeingDestroyed()) GetClapHost().requestRestart(); });
-    }
-    else
-    {
-      runOnMainThread([&](){ if (!isBeingDestroyed()) GetClapHost().latencyChanged(); });
-    }
-  }
+
+  if (!changed || !GetClapHost().canUseLatency())
+    return;
+
+  // clap_host_latency.changed is only legal while being activated, so it is deferred to activate().
+  // Calling it from deactivate() made FL Studio re-enter activate() before clap-helpers had cleared
+  // its active flag -> "Plugin was activated twice" -> std::terminate.
+  mLatencyUpdate = true;
+
+  if (isActive())
+    runOnMainThread([&](){ if (!isBeingDestroyed()) GetClapHost().requestRestart(); });
 }
 
 bool IPlugCLAP::SendMidiMsg(const IMidiMsg& msg)
@@ -159,6 +158,12 @@ bool IPlugCLAP::activate(double sampleRate, uint32_t minFrameCount, uint32_t max
   OnParamReset(kReset);
   OnReset();
 
+  if (mLatencyUpdate)
+  {
+    mLatencyUpdate = false;
+    GetClapHost().latencyChanged();
+  }
+
   mHostHasTail = GetClapHost().canUseTail();
   mTailCount = 0;
 
@@ -168,12 +173,6 @@ bool IPlugCLAP::activate(double sampleRate, uint32_t minFrameCount, uint32_t max
 void IPlugCLAP::deactivate() noexcept
 {
   OnActivate(false);
-  
-  if (mLatencyUpdate)
-  {
-    GetClapHost().latencyChanged();
-    mLatencyUpdate = false;
-  }
 
   // TODO - should we clear mTailUpdate here or elsewhere?
 }
