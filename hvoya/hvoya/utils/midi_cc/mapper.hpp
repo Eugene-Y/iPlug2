@@ -48,12 +48,6 @@ namespace hvoya::midi_cc {
         
         public:
 
-            struct ResolvedParam {
-                const PId_t id;
-                const double mappedNormalizedVal;
-                ResolvedParam (PId_t id, double v) : id (id), mappedNormalizedVal (v) {}
-            };
-            
             void setListeningParamId (PId_t i) { _listeningPId = i; }
             // Arm learn for a param. mostMoved=false (default, unchanged for existing callers): the FIRST
             // incoming CC binds. mostMoved=true: bind the first CC that MOVES past a threshold — so a 2D
@@ -84,8 +78,19 @@ namespace hvoya::midi_cc {
             void clearAllMappings ();
             void clearMappingForParam (PId_t);
 
+            // Calls onMapped (paramId, mappedNormalizedVal) for every param the CC drives. A callback, not
+            // a returned list, so the audio thread doesn't allocate per CC message.
             // midiChannel: 1-indexed (1-16); pass 0 to skip channel filtering
-            std::vector <ResolvedParam> processMidiCC (CC_t, double normVal, int midiChannel = 0);
+            template <typename OnMapped>
+            void processMidiCC (CC_t cc, double normVal, int midiChannel, OnMapped&& onMapped) {
+                advanceLearning (cc, normVal);
+                const auto it = _ccToParamMap.find (cc);
+                if (it == _ccToParamMap.end())
+                    return;
+                for (const auto& pM : it->second)
+                    if (midiChannel == 0 || pM.channelMatches (midiChannel))
+                        onMapped (pM.paramId, pM.mapVal (normVal));
+            }
 
             // Returns the CC number mapped to the given param, or uninit::cc if none.
             int getCCForParam (PId_t) const;
@@ -114,6 +119,7 @@ namespace hvoya::midi_cc {
             std::array<bool,   kNumCCs> _learnSeen {};
         
             void addMapping (CC_t, PId_t);
+            void advanceLearning (CC_t, double normVal);
             ParamCCMapping* findMappingForPId (PId_t);
             
         };

@@ -16,8 +16,8 @@
 //   sandModule.process (_osBuffer);
 //   os.downsample (_osBuffer, output);
 //
-// Buffers and filters grow automatically to fit incoming data.
-// No prepare() call required — just setFactor() and go.
+// Buffers and filters grow automatically to fit incoming data — allocating on the block that
+// first needs them. Call prepare() off the hot path to keep the audio thread allocation-free.
 //
 
 // TODO: FIXME 16x does not work correctly
@@ -119,7 +119,14 @@ public:
         for (auto& f : _dn8x)  f.clear_buffers();
         for (auto& f : _dn16x) f.clear_buffers();
     }
-    
+
+
+    // Allocates the filters and scratches for every factor up front, so upsample/downsample never
+    // allocate for blocks up to maxFrames (they still grow on demand beyond it). Grow-only.
+    void prepare (n_frames_t maxFrames, n_chan_t nChans) {
+        ensureCapacity (maxFrames, nChans);
+    }
+
     
     static constexpr size_t latencyForFactor (size_t f) {
         switch (f) {

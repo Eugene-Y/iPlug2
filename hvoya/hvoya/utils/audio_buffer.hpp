@@ -118,6 +118,9 @@ namespace hvoya {
             
             void setNumChannels (n_chan_t);
             void setNumFrames   (n_frames_t);
+            // Preallocates storage so later setNumChannels/setNumFrames within this size never
+            // allocate (e.g. on the audio thread). Never shrinks; a no-op on a wrapper.
+            void reserve (n_chan_t, n_frames_t);
             
             inline n_frames_t numFrames() const noexcept { return _numFrames; }
             inline n_chan_t   numChans()  const noexcept { return _numChans; }

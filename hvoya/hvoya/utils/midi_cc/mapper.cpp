@@ -89,34 +89,21 @@ namespace hvoya::midi_cc {
     }
             
     
-    std::vector <Mapper::ResolvedParam> Mapper::processMidiCC (CC_t cc, double normVal, int midiChannel) {
-        //MCCM_LOGD << "process midi cc " << cc;
-        if (_isLearning) {
-            if (!_learnMostMoved) {
+    void Mapper::advanceLearning (CC_t cc, double normVal) {
+        if (!_isLearning)
+            return;
+        if (!_learnMostMoved) {
+            addMapping (cc, _listeningPId);
+            _isLearning = false;
+        } else if (cc >= 0 && cc < kNumCCs) {
+            // Bind the first CC that MOVES past the threshold from its first-seen value. A 2D pad emits
+            // both axis CCs on touch; sweeping one axis makes it cross first → that axis binds.
+            if (!_learnSeen[cc]) { _learnSeen[cc] = true; _learnFirstVal[cc] = normVal; }
+            else if (std::abs (normVal - _learnFirstVal[cc]) >= kLearnMoveThresh) {
                 addMapping (cc, _listeningPId);
                 _isLearning = false;
-            } else if (cc >= 0 && cc < kNumCCs) {
-                // Bind the first CC that MOVES past the threshold from its first-seen value. A 2D pad emits
-                // both axis CCs on touch; sweeping one axis makes it cross first → that axis binds.
-                if (!_learnSeen[cc]) { _learnSeen[cc] = true; _learnFirstVal[cc] = normVal; }
-                else if (std::abs (normVal - _learnFirstVal[cc]) >= kLearnMoveThresh) {
-                    addMapping (cc, _listeningPId);
-                    _isLearning = false;
-                }
             }
         }
-
-        auto it = _ccToParamMap.find (cc);
-        if (it != _ccToParamMap.end()) {
-            std::vector <ResolvedParam> mapped;
-            for (const auto& pM : it->second) {
-                if (midiChannel == 0 || pM.channelMatches (midiChannel))
-                    mapped.emplace_back (pM.paramId, pM.mapVal (normVal));
-            }
-            return mapped;
-        }
-
-        return {};
     }
 
 

@@ -199,12 +199,20 @@ void AudioBuffer::setNumFrames (n_frames_t s) {
 }
 
 
+void AudioBuffer::reserve (n_chan_t c, n_frames_t s) {
+    if (isWrapper())
+        return;
+    _data.reserve (static_cast<size_t> (validateAndClamp (c, "reserve")) * s);
+}
+
+
 void AudioBuffer::copyContentFrom (const AudioBuffer& other) noexcept {
     const auto [chansToCopy, framesToCopy] = validateAndClamp (
         _numChans, _numFrames, other._numChans, other._numFrames, "copyContentFrom");
     
     for (n_chan_t c = 0; c < chansToCopy; ++c)
-        std::copy (other._channels [c], other._channels [c] + framesToCopy, _channels [c]);
+        if (other._channels [c] != _channels [c])   // in-place host buffers: std::copy onto itself is UB
+            std::copy (other._channels [c], other._channels [c] + framesToCopy, _channels [c]);
 }
 
 

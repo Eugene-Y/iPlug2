@@ -126,25 +126,24 @@ namespace hvoya::midi_cc {
                 const double normValue = msg.ControlChange (cc);
                 const int channel1Idx = msg.Channel() + 1;  // IMidiMsg::Channel() is 0-indexed
                 //LOGD << "ProcessMidiCC " << cc << " val " << normValue << " ch " << channel1Idx;
-                const auto mappedParams = _mapper.processMidiCC (cc, normValue, channel1Idx);
-                for (auto& p : mappedParams) {
-                    if (skip (p.id)) continue;
+                _mapper.processMidiCC (cc, normValue, channel1Idx, [&] (PId_t id, double mappedNormalizedVal) {
+                    if (skip (id)) return;
                     // Relative-CC (Modulate) path — opt-in per plugin via these hooks. Plugins
                     // without them (Sand/Scape/DMT) always take the Absolute base-write below.
                     // The mapper's min/max are ignored in Modulate; the raw CC norm is handed off.
-                    if constexpr (requires { _plugin->isRelativeCC (p.id); _plugin->onRelativeCC (p.id, normValue); }) {
-                        if (_plugin->isRelativeCC (p.id)) {
-                            _plugin->onRelativeCC (p.id, normValue);
-                            continue;
+                    if constexpr (requires { _plugin->isRelativeCC (id); _plugin->onRelativeCC (id, normValue); }) {
+                        if (_plugin->isRelativeCC (id)) {
+                            _plugin->onRelativeCC (id, normValue);
+                            return;
                         }
                     }
-                    IParam* param = _plugin->GetParam (p.id);
-                    _plugin->BeginInformHostOfParamChange (p.id);
-                    param->SetNormalized (p.mappedNormalizedVal);
-                    _plugin->OnParamChange (p.id, EParamSource::kDelegate);
-                    _plugin->SendParameterValueFromDelegate (p.id, p.mappedNormalizedVal, true);
-                    _plugin->EndInformHostOfParamChange (p.id);
-                }
+                    IParam* param = _plugin->GetParam (id);
+                    _plugin->BeginInformHostOfParamChange (id);
+                    param->SetNormalized (mappedNormalizedVal);
+                    _plugin->OnParamChange (id, EParamSource::kDelegate);
+                    _plugin->SendParameterValueFromDelegate (id, mappedNormalizedVal, true);
+                    _plugin->EndInformHostOfParamChange (id);
+                });
             }
 
 
