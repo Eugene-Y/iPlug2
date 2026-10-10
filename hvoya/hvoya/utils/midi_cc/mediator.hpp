@@ -162,7 +162,7 @@ namespace hvoya::midi_cc {
 
             // ── CC map access (for external serialization) ───────────────────
 
-            const CCtoParamMap_t& getCCtoParamMap() const {
+            CCtoParamMap_t getCCtoParamMap() const {
                 return _mapper.getCCtoParamMap();
             }
 
