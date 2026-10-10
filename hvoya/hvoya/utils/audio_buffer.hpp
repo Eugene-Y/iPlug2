@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <cassert>
+#include <cmath>
 #include <vector>
 #include <span>
 #include <numbers>
