@@ -10,6 +10,7 @@ namespace hvoya::midi_cc::mapper_serializer {
 
     // plugVersion: the plugin's state version_hex (0 = unknown/old preset).
     // Channel field is read only when plugVersion >= 0x00000300.
-    int unserialize (Mapper&, const iplug::IByteChunk&, int startPos, int plugVersion = 0);
+    // numParams: the plugin's parameter count — bindings to an id outside it are dropped.
+    int unserialize (Mapper&, const iplug::IByteChunk&, int startPos, int plugVersion, int numParams);
 
 }

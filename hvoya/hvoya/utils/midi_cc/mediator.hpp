@@ -154,7 +154,7 @@ namespace hvoya::midi_cc {
 
             // plugVersion: the plugin's serialized version_hex (0 = old/unknown).
             int unserialize (const IByteChunk& bc, int startPos, int plugVersion = 0) {
-                startPos = mapper_serializer::unserialize (_mapper, bc, startPos, plugVersion);
+                startPos = mapper_serializer::unserialize (_mapper, bc, startPos, plugVersion, _plugin->NParams());
                 refreshUI();
                 return startPos;
             }

@@ -1036,11 +1036,11 @@ inline int getPatchIdentity(const iplug::IByteChunk& chunk, int pos, PresetManag
         if (p < 0) return pos;
         if (i < knownFields) fields[i] = v;      // unknown trailing fields are skipped
     }
-    // GetStr reports an end position even when the stored length overruns the chunk, so check it:
-    // a corrupt record must leave `pos` where it was, not walk off the end.
+    // GetStr reports an end position even when the stored length overruns the chunk (or is negative,
+    // stepping back), so check it: a corrupt record must leave `pos` where it was, not walk off the end.
     WDL_String key;
     const int keyEnd = chunk.GetStr(key, p);
-    if (keyEnd <= p || keyEnd > chunk.Size()) return pos;
+    if (keyEnd < p + static_cast<int>(sizeof(int)) || keyEnd > chunk.Size()) return pos;
     p = keyEnd;
     if (fields[0] < static_cast<int>(Kind::None) || fields[0] > static_cast<int>(Kind::User)) return pos;
 
