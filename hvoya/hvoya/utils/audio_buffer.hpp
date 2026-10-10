@@ -115,6 +115,8 @@ namespace hvoya {
 			}
 
             AudioBuffer subBuffer (n_frames_t begin, n_frames_t len = 0); // len 0 means full len
+            // The same frames, but only the first numChans channels (clamped to this buffer's count).
+            AudioBuffer subBuffer (n_frames_t begin, n_frames_t len, n_chan_t numChans);
             
             void setNumChannels (n_chan_t);
             void setNumFrames   (n_frames_t);

@@ -165,6 +165,14 @@ AudioBuffer AudioBuffer::subBuffer (n_frames_t begin, n_frames_t len) {
 }
 
 
+AudioBuffer AudioBuffer::subBuffer (n_frames_t begin, n_frames_t len, n_chan_t numChans) {
+    auto view = subBuffer (begin, len);
+    view._numChans = std::min (numChans, _numChans);
+    view.clearUnusedChanPtrs();
+    return view;
+}
+
+
 AudioBuffer::AudioBuffer (chan_ptr_t chans, n_chan_t nc, n_frames_t nf) :
     _isWrapper (true),
     _numChans (nc),
