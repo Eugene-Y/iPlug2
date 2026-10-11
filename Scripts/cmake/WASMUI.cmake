@@ -6,7 +6,7 @@
 #
 #  ==============================================================================
 
-# WasmUI.cmake - Wasm Web UI module configuration for iPlug2
+# WASMUI.cmake - Wasm Web UI module configuration for iPlug2
 # Creates the UI/IGraphics WASM module for the wasm split architecture
 #
 # The UI module runs on the main thread with:
@@ -15,6 +15,9 @@
 # - IndexedDB filesystem for persistent storage
 
 include(${CMAKE_CURRENT_LIST_DIR}/IPlug.cmake)
+
+set(IPLUG2_WASM_UI_OPTIMIZATION "-O3" CACHE STRING "Optimization flag for non-Debug CMake Wasm UI builds")
+set_property(CACHE IPLUG2_WASM_UI_OPTIMIZATION PROPERTY STRINGS -O0 -O1 -O2 -O3 -Os -Oz)
 
 if(NOT TARGET iPlug2::WasmUI)
   # Only create target when building with Emscripten
@@ -73,13 +76,22 @@ if(NOT TARGET iPlug2::WasmUI)
   )
 
   # UI module exported functions
-  set(WASM_UI_EXPORTS "'_malloc','_free','_main','_iplug_fsready','_iplug_syncfs'")
+  set(WASM_UI_EXPORTS "'_malloc','_free','_main','_iplug_fsready','_iplug_syncfs','_iplug_popup_menu_selected'")
+  if(IPLUG2_WASM_LIVE_EDIT)
+    string(APPEND WASM_UI_EXPORTS ",'_iplug_set_live_edit'")
+  endif()
+  set(WASM_UI_OPT)
+  if(IPLUG2_WASM_UI_OPTIMIZATION)
+    message(STATUS "iPlug2::WasmUI optimization: ${IPLUG2_WASM_UI_OPTIMIZATION}")
+    set(WASM_UI_OPT "$<$<NOT:$<CONFIG:Debug>>:${IPLUG2_WASM_UI_OPTIMIZATION}>")
+  endif()
 
   # Emscripten link flags for WasmUI
   # - BINARYEN_ASYNC_COMPILATION=1: Async compilation (can run on main thread)
   # - FORCE_FILESYSTEM=1: Enable IndexedDB filesystem
   # - USE_WEBGL2=0, FULL_ES3=1: WebGL/GLES configuration for NanoVG
   target_link_options(iPlug2::WasmUI INTERFACE
+    ${WASM_UI_OPT}
     "SHELL:-s ALLOW_MEMORY_GROWTH=1"
     "--bind"
     "SHELL:-s EXPORTED_FUNCTIONS=[${WASM_UI_EXPORTS}]"
@@ -96,11 +108,21 @@ if(NOT TARGET iPlug2::WasmUI)
   )
 
   target_compile_options(iPlug2::WasmUI INTERFACE
+    ${WASM_UI_OPT}
     -Wno-bitwise-op-parentheses
     -Wno-deprecated-declarations
     # Force-include GLES2 header so GL types are defined before NanoVG
     -include GLES2/gl2.h
   )
+
+  if(IPLUG2_WASM_LIVE_EDIT)
+    target_compile_definitions(iPlug2::WasmUI INTERFACE IPLUG_LIVE_EDIT=1)
+    if(IPLUG2_WASM_UI_OPTIMIZATION STREQUAL "-O0")
+      target_compile_definitions(iPlug2::WasmUI INTERFACE IPLUG_LIVE_EDIT_CLASS_NAME=1)
+    else()
+      target_compile_definitions(iPlug2::WasmUI INTERFACE "$<$<CONFIG:Debug>:IPLUG_LIVE_EDIT_CLASS_NAME=1>")
+    endif()
+  endif()
 
   target_link_libraries(iPlug2::WasmUI INTERFACE iPlug2::IPlug)
 endif()

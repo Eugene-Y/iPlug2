@@ -163,15 +163,24 @@
       }
     },
     {
-      "name": "wam",
-      "displayName": "WAM (Emscripten)",
-      "description": "Web Audio Module build with Emscripten/WebAssembly",
+      "name": "web",
+      "displayName": "Web (Emscripten)",
+      "description": "Web build with Emscripten/WebAssembly (WAM + WASM)",
       "inherits": "base",
       "generator": "Ninja",
       "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
       "cacheVariables": {
         "CMAKE_CROSSCOMPILING_EMULATOR": "$env{EMSDK_NODE}",
         "CMAKE_MODULE_PATH": "${sourceDir}/Scripts/cmake"
+      }
+    },
+    {
+      "name": "web-fast-ui",
+      "displayName": "Web Fast UI (Emscripten)",
+      "description": "Web build with Wasm UI at -O0 for faster local UI iteration; DSP remains Release",
+      "inherits": "web",
+      "cacheVariables": {
+        "IPLUG2_WASM_UI_OPTIMIZATION": "-O0"
       }
     }
   ],
@@ -242,8 +251,13 @@
       "configuration": "Release"
     },
     {
-      "name": "wam",
-      "configurePreset": "wam",
+      "name": "web",
+      "configurePreset": "web",
+      "configuration": "Release"
+    },
+    {
+      "name": "web-fast-ui",
+      "configurePreset": "web-fast-ui",
       "configuration": "Release"
     }
   ]

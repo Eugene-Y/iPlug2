@@ -71,17 +71,25 @@ For plugins without IGraphics (`PLUG_HAS_UI=0`), only the DSP module is built. T
 
 ## Building with CMake
 
+From the iPlug2 repository root:
+
 ```bash
-cd Examples/IPlugEffect
-mkdir build && cd build
-cmake .. -DTARGET_WASM=ON -G Ninja
-ninja
+cmake --preset web
+cmake --build --preset web --target IPlugEffect-wasm-dist
 ```
 
-Or with Xcode generator:
+For faster local UI iteration, use the fast UI preset. This keeps the build type
+at `Release` so the DSP module still uses the normal release optimization, but
+builds the Wasm UI module with `-O0`:
+
 ```bash
-cmake .. -DTARGET_WASM=ON -G Xcode
+cmake --preset web-fast-ui
+cmake --build --preset web-fast-ui --target IPlugEffect-wasm-ui
 ```
+
+By default the CMake Wasm UI uses `IPLUG2_WASM_UI_OPTIMIZATION=-O3` for release
+builds. Set `-DIPLUG2_WASM_UI_OPTIMIZATION=-O0` directly if you want the fastest
+compile/link path in a custom build directory.
 
 CMake targets:
 - `IPlugEffect-wasm-dsp` - DSP module
@@ -181,6 +189,37 @@ The build copies templates from `IPlug/WEB/TemplateWasm/`:
 | `styles/style.css` | Default styling |
 
 Placeholders like `NAME_PLACEHOLDER` are replaced with the plugin name during build.
+
+## IGraphics Popup Menu Styling
+
+When an IGraphics control opens a platform popup menu in a web build, iPlug2 renders it with the browser's HTML Popover API. The generated menu supports submenus, pointer input, Escape dismissal, and keyboard navigation with arrow keys and Enter/Space. A custom IGraphics popup menu control attached with `AttachPopupMenuControl()` still overrides the web platform menu.
+
+Add CSS custom properties to the template stylesheet, or to any stylesheet loaded by the host page:
+
+```css
+:root {
+  --iplug-popup-menu-background: #1e1e1e;
+  --iplug-popup-menu-color: #ddd;
+  --iplug-popup-menu-border: 1px solid #555;
+  --iplug-popup-menu-border-radius: 6px;
+  --iplug-popup-menu-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --iplug-popup-menu-font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --iplug-popup-menu-padding: 4px 0;
+  --iplug-popup-menu-max-height: 70vh;
+  --iplug-popup-menu-hover-background: #3b82f6;
+  --iplug-popup-menu-hover-color: #fff;
+  --iplug-popup-menu-item-padding: 5px 12px;
+  --iplug-popup-menu-disabled-opacity: 0.45;
+  --iplug-popup-menu-min-width: 160px;
+  --iplug-popup-menu-title-padding: 6px 12px 2px;
+  --iplug-popup-menu-title-color: #888;
+  --iplug-popup-menu-title-font-size: 11px;
+  --iplug-popup-menu-separator-margin: 4px 8px;
+  --iplug-popup-menu-separator-color: #444;
+}
+```
+
+For more specific styling, the DOM uses these class hooks: `.iplug-popup-menu`, `.iplug-popup-menu__panel`, `.iplug-popup-menu__item`, `.iplug-popup-menu__check`, `.iplug-popup-menu__submenu-indicator`, `.iplug-popup-menu__title`, and `.iplug-popup-menu__separator`.
 
 ## Debugging
 

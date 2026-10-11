@@ -40,12 +40,14 @@ endif()
 
 # Include WAM/Web/Wasm modules for Emscripten builds
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  option(IPLUG2_WASM_LIVE_EDIT "Enable IGraphics live edit in Wasm builds" OFF)
+
   include(${CMAKE_CURRENT_LIST_DIR}/WAM.cmake)
-  include(${CMAKE_CURRENT_LIST_DIR}/Web.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/WEB.cmake)
   include(${CMAKE_CURRENT_LIST_DIR}/WAMDist.cmake)
-  include(${CMAKE_CURRENT_LIST_DIR}/WasmDSP.cmake)
-  include(${CMAKE_CURRENT_LIST_DIR}/WasmUI.cmake)
-  include(${CMAKE_CURRENT_LIST_DIR}/WasmDist.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/WASMDSP.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/WASMUI.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/WASMDist.cmake)
 endif()
 
 # Include the plugin helper macro (iplug_add_plugin)
@@ -184,7 +186,7 @@ function(iplug_configure_target target target_type project_name)
     AUv3iOSAppex
     # Web/Emscripten targets
     WAM
-    Web
+    WEB
   )
 
   if(NOT ${target_type} IN_LIST SUPPORTED_TYPES)

@@ -37,7 +37,9 @@
 #ifndef SWELL_NO_METAL
 #undef min
 #undef max
+#ifdef __SSE__
 #include <simd/simd.h>
+#endif
 #import <QuartzCore/CAMetalLayer.h>
 #import <Metal/Metal.h>
 #include "../assocarray.h"
@@ -696,6 +698,11 @@ static id<MTLDevice> mtl_def_device()
   return m_wndproc ? m_wndproc((HWND)self,msg,wParam,lParam) : 0;
 }
 
+- (BOOL) clipsToBounds
+{
+  return YES;
+}
+
 - (BOOL) isEnabled
 {
   return m_enabled;
@@ -1102,14 +1109,11 @@ static id<MTLDevice> mtl_def_device()
     m_paintctx_used=1;
     ps->hdc = m_paintctx_hdc;
     ps->fErase=false;
-    NSRECT_TO_RECT(&ps->rcPaint,m_paintctx_rect);
 
-    // should NC_CALCSIZE to convert, but this will be good enough to fix this small scrollbar overdraw bug
-    RECT r;
+    RECT r,r2;
+    NSRECT_TO_RECT(&r2,m_paintctx_rect);
     GetClientRect((HWND)self,&r);
-    if (ps->rcPaint.right > r.right) ps->rcPaint.right = r.right;
-    if (ps->rcPaint.bottom > r.bottom) ps->rcPaint.bottom = r.bottom;
-    
+    IntersectRect(&ps->rcPaint, &r2, &r);
   }
 }
 
@@ -1214,11 +1218,18 @@ static id<MTLDevice> mtl_def_device()
 - (id)initChild:(SWELL_DialogResourceIndex *)resstate Parent:(NSView *)parent dlgProc:(DLGPROC)dlgproc Param:(LPARAM)par
 {
   NSRect contentRect=NSMakeRect(0,0,resstate ? resstate->width : 300,resstate ? resstate->height : 200);
+  const int dlg_dpi = SWELL_osx_dialog_scaling(NULL);
+  if (resstate && (resstate->windowTypeFlags & SWELL_DLG_WS_DEFAULT_SCALING))
+  {
+    contentRect.size.width = floor(dlg_dpi * SWELL_DLGSCALE_FACTOR * contentRect.size.width + 0.5);
+    contentRect.size.height = floor(dlg_dpi  * SWELL_DLGSCALE_FACTOR * contentRect.size.height + 0.5);
+  }
   if (!(self = [super initWithFrame:contentRect])) return self;
 
   m_classname=NULL;
   memset(m_access_cacheptrs,0,sizeof(m_access_cacheptrs));
   m_allow_nomiddleman=1;
+  m_dlg_dpi = dlg_dpi;
   m_isdirty=3;
   m_glctx=NULL;
   m_enabled=TRUE;
@@ -2587,6 +2598,11 @@ SWELLDIALOGCOMMONIMPLEMENTS_WND(0)
   
   int w = (resstate ? resstate->width : 10);
   int h = (resstate ? resstate->height : 10);
+  if (resstate && (resstate->windowTypeFlags & SWELL_DLG_WS_DEFAULT_SCALING))
+  {
+    w = (int)(SWELL_osx_dialog_scaling(NULL) * SWELL_DLGSCALE_FACTOR * w + 0.5);
+    h = (int)(SWELL_osx_dialog_scaling(NULL) * SWELL_DLGSCALE_FACTOR * h + 0.5);
+  }
   
   int wx, wy;
   GetInitialWndPos(parent, h, &wx, &wy);  
@@ -2702,6 +2718,12 @@ SWELLDIALOGCOMMONIMPLEMENTS_WND(1)
   INIT_COMMON_VARS
   
   NSRect contentRect=NSMakeRect(0,0,resstate->width,resstate->height);
+  if (resstate->windowTypeFlags & SWELL_DLG_WS_DEFAULT_SCALING)
+  {
+    contentRect.size.width = floor(SWELL_osx_dialog_scaling(NULL) * SWELL_DLGSCALE_FACTOR * contentRect.size.width + 0.5);
+    contentRect.size.height = floor(SWELL_osx_dialog_scaling(NULL) * SWELL_DLGSCALE_FACTOR * contentRect.size.height + 0.5);
+  }
+
   unsigned int sf=(NSTitledWindowMask|NSClosableWindowMask|((resstate->windowTypeFlags&SWELL_DLG_WS_RESIZABLE)? NSResizableWindowMask : 0));
   if (!(self = [super initWithContentRect:contentRect styleMask:sf backing:NSBackingStoreBuffered defer:NO])) return self;
 
@@ -4409,7 +4431,7 @@ int SWELL_EnableMetal(HWND hwnd, int mode)
 }
 
 
-void swell_updateAllMetalDirty() // run from a timer, or called by UpdateWindow()
+void swell_updateAllMetalDirty(HWND hForce) // run from a timer, or called by UpdateWindow()
 {
 #ifndef SWELL_NO_METAL
   if (s_mtl_in_update || !s_mtl_dirty_list.GetSize()) return;
@@ -4434,7 +4456,10 @@ void swell_updateAllMetalDirty() // run from a timer, or called by UpdateWindow(
       NSUInteger (*send_msg)(id, SEL) = (NSUInteger (*)(id, SEL))objc_msgSend;
       lw_occluded = w && !(send_msg(w, @selector(occlusionState))&2);
     }
-    if (lw_occluded) continue;
+    if (lw_occluded)
+    {
+      if ((HWND)slf != hForce) continue;
+    }
 
     const RECT tr = slf->m_metal_in_needref_rect;
     s_mtl_dirty_list.Delete(x);
