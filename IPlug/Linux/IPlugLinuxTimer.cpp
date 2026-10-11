@@ -24,11 +24,14 @@ Timer_impl::Timer_impl(ITimerFunction func, uint32_t intervalMs, HostLoop* pLoop
   if (!mLoop)
   {
     mOwnLoop = std::make_unique<HostLoop>("Timer::Create");
-    mOwnLoop->SetBackend(MakeFallbackHostLoopBackend(*mOwnLoop));
     mLoop = mOwnLoop.get();
   }
 
   mId = mLoop->AddTimer(intervalMs, [this]() { mTimerFunc(*this); });
+
+  // Only now: the thread may fire at once, and a Stop() inside that first callback needs mId.
+  if (mOwnLoop)
+    mOwnLoop->SetBackend(MakeFallbackHostLoopBackend(*mOwnLoop));
 }
 
 Timer_impl::~Timer_impl()
