@@ -156,6 +156,7 @@ public:
 
   void Initialize(Steinberg::FUnknown* pContext)
   {
+    mFactoryRefused = mContextRefused = false;
     mFactoryRunLoop = sFactoryRunLoop;
     Steinberg::FUnknownPtr<Steinberg::Linux::IRunLoop> contextRunLoop(pContext);
     mContextRunLoop = contextRunLoop.getInterface();
@@ -184,6 +185,7 @@ public:
   {
     Steinberg::FUnknownPtr<Steinberg::Linux::IRunLoop> frameRunLoop(pFrame);
     mFrameRunLoop = frameRunLoop.getInterface();
+    mFrameRefused = false;
     HostLoopTrace("%s: VST3 view %s: frame IRunLoop=%p", mLoop.GetOwnerName(), pFrame ? "attached" : "removed",
                   (void*) mFrameRunLoop.get());
     Update();
@@ -195,20 +197,31 @@ private:
     if (!mInitialized)
       return;
 
-    Steinberg::Linux::IRunLoop* pRunLoop = nullptr;
-    const char* source = nullptr;
-    if (mFactoryRunLoop) { pRunLoop = mFactoryRunLoop; source = "factory-context"; }
-    else if (mContextRunLoop) { pRunLoop = mContextRunLoop; source = "initialize-context"; }
-    else if (mFrameRunLoop) { pRunLoop = mFrameRunLoop; source = "frame"; }
+    struct Candidate { Steinberg::Linux::IRunLoop* pRunLoop; bool* pRefused; const char* source; };
+    const Candidate candidates[] = {
+      { mFactoryRunLoop, &mFactoryRefused, "factory-context" },
+      { mContextRunLoop, &mContextRefused, "initialize-context" },
+      { mFrameRunLoop, &mFrameRefused, "frame" },
+    };
 
-    if (mLoop.GetBackend() && pRunLoop == mActive.get())
+    for (const Candidate& candidate : candidates)
+    {
+      if (!candidate.pRunLoop || *candidate.pRefused)
+        continue;
+      if (mLoop.GetBackend() && candidate.pRunLoop == mActive.get())
+        return;
+      mActive = candidate.pRunLoop;
+      if (mLoop.SetBackend(std::make_unique<VST3HostLoopBackend>(mLoop, candidate.pRunLoop, candidate.source)))
+        return;
+      // Seen in the SDK validator: its IRunLoop exists but registerTimer fails, so nothing would ever fire.
+      HostLoopTrace("%s: the %s IRunLoop refuses timers, trying the next source", mLoop.GetOwnerName(), candidate.source);
+      *candidate.pRefused = true;
+    }
+
+    if (mLoop.GetBackend() && !mActive && !mLoop.IsHostDriven())
       return;
-
-    mActive = pRunLoop;
-    if (pRunLoop)
-      mLoop.SetBackend(std::make_unique<VST3HostLoopBackend>(mLoop, pRunLoop, source));
-    else
-      mLoop.SetBackend(MakeFallbackHostLoopBackend(mLoop));
+    mActive = nullptr;
+    mLoop.SetBackend(MakeFallbackHostLoopBackend(mLoop));
   }
 
   HostLoop& mLoop;
@@ -217,6 +230,9 @@ private:
   Steinberg::IPtr<Steinberg::Linux::IRunLoop> mFrameRunLoop;
   Steinberg::IPtr<Steinberg::Linux::IRunLoop> mActive;
   bool mInitialized = false;
+  bool mFactoryRefused = false;
+  bool mContextRefused = false;
+  bool mFrameRefused = false;
 
   static inline Steinberg::Linux::IRunLoop* sFactoryRunLoop = nullptr;
 };

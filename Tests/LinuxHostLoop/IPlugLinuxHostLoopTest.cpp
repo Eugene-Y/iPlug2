@@ -280,7 +280,14 @@ class FakeRunLoop final : public Linux::IRunLoop, public IPlugFrame
 public:
   tresult PLUGIN_API registerEventHandler(Linux::IEventHandler* pHandler, Linux::FileDescriptor) override { pHandler->addRef(); mEvents.push_back(pHandler); return kResultOk; }
   tresult PLUGIN_API unregisterEventHandler(Linux::IEventHandler* pHandler) override { return Drop(mEvents, pHandler); }
-  tresult PLUGIN_API registerTimer(Linux::ITimerHandler* pHandler, Linux::TimerInterval) override { pHandler->addRef(); mTimers.push_back(pHandler); return kResultOk; }
+  tresult PLUGIN_API registerTimer(Linux::ITimerHandler* pHandler, Linux::TimerInterval) override
+  {
+    if (mRefuseTimers)
+      return kResultFalse;
+    pHandler->addRef();
+    mTimers.push_back(pHandler);
+    return kResultOk;
+  }
   tresult PLUGIN_API unregisterTimer(Linux::ITimerHandler* pHandler) override { return Drop(mTimers, pHandler); }
   tresult PLUGIN_API resizeView(IPlugView*, ViewRect*) override { return kResultOk; }
 
@@ -310,6 +317,7 @@ public:
   std::vector<Linux::IEventHandler*> mEvents;
   std::vector<Linux::ITimerHandler*> mLate;
   std::atomic<uint32> mRefs { 1 };
+  bool mRefuseTimers = false;
 
 private:
   template <class T>
@@ -404,6 +412,32 @@ void TestVST3FactoryContextWins()
   EXPECT(frame.mRefs == 1);
 }
 
+void TestVST3RunLoopThatRefusesTimers()
+{
+  FakeRunLoop factory, frame;
+  factory.mRefuseTimers = true;
+  HostLoop loop("vst3-refusing");
+  std::atomic<int> calls { 0 };
+  loop.AddTimer(2, [&]() { calls++; });
+
+  VST3HostLoopSelector::SetFactoryHostContext(static_cast<Linux::IRunLoop*>(&factory));
+  VST3HostLoopSelector selector(loop);
+  selector.Initialize(nullptr);
+  EXPECT(!loop.IsHostDriven());
+  EXPECT(WaitFor([&]() { return calls.load() >= 2; }));
+
+  selector.SetFrame(&frame);
+  EXPECT(loop.IsHostDriven());
+  EXPECT(frame.mTimers.size() == 1);
+  selector.SetFrame(nullptr);
+  EXPECT(!loop.IsHostDriven());
+
+  selector.Terminate();
+  frame.FireAndReleaseLate();
+  VST3HostLoopSelector::ReleaseFactoryHostContext();
+  EXPECT(factory.mRefs == 1);
+}
+
 } // namespace
 
 int main()
@@ -419,6 +453,7 @@ int main()
   TestTimerImpl();
   TestVST3FrameOnlyHost();
   TestVST3FactoryContextWins();
+  TestVST3RunLoopThatRefusesTimers();
 
   if (gFailures)
   {

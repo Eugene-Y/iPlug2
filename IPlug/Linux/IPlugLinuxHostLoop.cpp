@@ -146,7 +146,7 @@ bool HostLoop::IsFdWatched(int id) const
   return pEntry && pEntry->mRegistered;
 }
 
-void HostLoop::SetBackend(std::unique_ptr<HostLoopBackend> backend)
+bool HostLoop::SetBackend(std::unique_ptr<HostLoopBackend> backend)
 {
   std::unique_ptr<HostLoopBackend> old;
   {
@@ -173,11 +173,12 @@ void HostLoop::SetBackend(std::unique_ptr<HostLoopBackend> backend)
   WDL_MutexLock lock(&mMutex);
   mBackend = std::move(backend);
   if (!mBackend)
-    return;
+    return true;
 
   mInitThread = HostLoopThreadId();
   HostLoopTrace("%s: backend=%s host-driven=%d entries=%d init-tid=%ld", mOwnerName, mBackend->GetName(), mBackend->IsHostDriven(), mEntries.GetSize(), mInitThread);
 
+  bool allTimers = true;
   for (int i = 0; i < mEntries.GetSize(); i++)
   {
     HostLoopEntry* pEntry = mEntries.Get(i);
@@ -185,8 +186,12 @@ void HostLoop::SetBackend(std::unique_ptr<HostLoopBackend> backend)
     if (pEntry->mRegistered)
       ++sLiveRegistrations;
     else
+    {
+      allTimers &= pEntry->mIsFd;
       HostLoopTrace("%s: %s cannot register %s id=%d", mOwnerName, mBackend->GetName(), pEntry->mIsFd ? "fd" : "timer", pEntry->mId);
+    }
   }
+  return allTimers;
 }
 
 void HostLoop::Dispatch(bool isFd, uintptr_t handle, int fdFlags)

@@ -98,8 +98,9 @@ public:
   bool IsFdWatched(int id) const;
 
   /** Format code only. Moves every entry to the new backend; nullptr leaves them waiting.
-   * Never call it from inside one of this loop's callbacks. */
-  void SetBackend(std::unique_ptr<HostLoopBackend> backend);
+   * Never call it from inside one of this loop's callbacks.
+   * @return false if the backend refused one of the timers (a host loop that exists but does not run them). */
+  bool SetBackend(std::unique_ptr<HostLoopBackend> backend);
   HostLoopBackend* GetBackend() const { return mBackend.get(); }
 
   /** Backends only. Runs the callback of the entry registered under handle; ignores stale handles. */
