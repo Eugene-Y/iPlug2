@@ -19,7 +19,7 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 - 100× open/close of 2 instances (every 5th close before the new window's first timer): fds, sockets, threads equal before/after, RSS flat, host registrations back to 0.
 - Validators identical to P2. NEEDED: `libX11.so.6` + libc/libm only. 22.04 builds green (GLIBC 2.34). macOS IPlugEffect CLAP Debug builds.
 - Visual: same layout and colours as macOS; text a little heavier at 1× (stb_truetype).
-- **REAPER CLAP `posix-fd-support` almost never calls `on_fd`** (the frame timer's drain carries input). REAPER VST3's factory IRunLoop delivers the X fd on the main thread (closes notes/10 #8 for REAPER).
+- REAPER polls plug-in fds once per tick with its own `ppoll`: CLAP (POLLIN) rarely finds input left after the frame timer's drain, VST3 (no event mask, so POLLIN|POLLOUT) fires every tick on the always-writable X socket. Our registration is correct (reviewer's mini host); input latency is bounded by the timer period in both formats. The VST3 factory IRunLoop delivers on the main thread (closes notes/10 #8 for REAPER).
 
 **Deviations**
 
