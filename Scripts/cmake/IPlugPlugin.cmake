@@ -120,6 +120,8 @@ endfunction()
 # Create APP, VST3, CLAP, AAX targets (macOS/Windows only)
 # ============================================================================
 function(_iplug_create_desktop_targets plugin_name formats sources ui_lib resources web_resources base_lib)
+  # iplug_configure_target must not deploy here: the copy has to run after the resources are added.
+  set(_IPLUG_DEFER_DEPLOY TRUE)
   # Skip on iOS and Emscripten
   if(IOS OR CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     return()
@@ -200,6 +202,7 @@ endfunction()
 # Create AUv2 target (macOS only)
 # ============================================================================
 function(_iplug_create_au_targets plugin_name formats sources ui_lib resources web_resources base_lib)
+  set(_IPLUG_DEFER_DEPLOY TRUE)
   # AUv2 is macOS desktop only
   if(NOT APPLE OR IOS)
     return()
