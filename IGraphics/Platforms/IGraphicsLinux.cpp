@@ -445,7 +445,7 @@ void IGraphicsLinux::DrawNow()
     DrawDirtyControls();
 }
 
-// Every IGraphics handler is the handler's last statement: it may close the editor and delete this object.
+// A call into IGraphics may close the editor and delete this object: it is each handler's last statement, or what follows checks the open flag.
 void IGraphicsLinux::HandleXEvent(const XEvent& event)
 {
   Impl& w = *mImpl;
