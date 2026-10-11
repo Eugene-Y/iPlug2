@@ -8,11 +8,12 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 
 | Commit | What |
 |---|---|
-| 534be52df | `IPlug/Linux/IPlugLinuxHostLoop.{h,cpp}` (per-instance timers + fd watches, deferred until a backend exists, migrated on swap; fallback thread with the running flag set before `pthread_create`), backends CLAP (`IPlugLinuxHostLoopCLAP.h`, installed in `init()`), VST3 (`IPlugLinuxHostLoopVST3.h`), GLib (`IPlugLinuxHostLoopGLib.h`, APP). `Timer_impl` on the instance loop. `OS_LINUX` hooks: `IPlugAPIBase` (`mHostLoop`, `GetHostLoop()`, `CreateTimer`), `IPlugCLAP` (`init`, `~IPlugCLAP`, `onTimer`/`onPosixFd`), VST3 component/controller/processor (`initialize`/`terminate`), view (`attached`/`removed`), factory (`addHostContextCallback`, `DeinitModule`). IPlugEffect test hook `IPLUG_TEST_LATENCY_FROM_IDLE` |
+| 534be52df | `IPlug/Linux/IPlugLinuxHostLoop.{h,cpp}` (per-instance timers + fd watches, deferred until a backend exists, migrated on swap; fallback thread with the running flag set before `pthread_create`), backends CLAP (`IPlugLinuxHostLoopCLAP.h`, installed in `init()`), VST3 (`IPlugLinuxHostLoopVST3.h`), GLib (`IPlugLinuxHostLoopGLib.h`, APP). `Timer_impl` on the instance loop. `OS_LINUX` hooks: `IPlugAPIBase` (`mHostLoop`, `GetHostLoop()`, `CreateTimer`), `IPlugCLAP` (`init`, `onTimer`/`onPosixFd`; destroy hook added in review), VST3 component/controller/processor (`initialize`/`terminate`), view (`attached`/`removed`), factory (`addHostContextCallback`, `DeinitModule`). IPlugEffect test hook `IPLUG_TEST_LATENCY_FROM_IDLE` |
 | 5c406b13a | `Tests/LinuxHostLoop` (ASan/UBSan); `scripts/host-loop-test.sh`, `gdb-hits.sh`; trace counters |
 | 393191673 | APP main loop blocks in `g_main_context_iteration` (10 ms wake for SWELL timers) instead of `Sleep(10)`; `scripts/app-host-loop-test.sh`; `IPLUG_TEST_VST3_FRAME_RUNLOOP_ONLY` |
 | 16a1ea43b | VST3: an IRunLoop whose `registerTimer` fails is skipped (the SDK validator's does) |
 | b987f53c2, later | evidence, notes/09, PLAN |
+| 38cd38313, 7e9a2c653, 51189a81d, 5e436a788, d02b36cd0, 971acf2bd | Review round 1 (notes/10): CLAP loop stopped in a wrapped `clap_plugin.destroy` (fallback `OnIdle` on a half-destroyed plug-in); lock-free `IsHostDriven`; refused-timer warning + VST3 IRunLoop probe; `Timer::Create` start order; nits; notes/09 |
 
 **Results** (all [R] in Docker, REAPER 7.82 headless; see notes/09 for the table)
 
