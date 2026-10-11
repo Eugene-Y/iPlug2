@@ -170,6 +170,73 @@ void TestRemoveInsideOwnCallback()
   EXPECT(otherCalls == 1);
 }
 
+void TestCallbackRemovesAnotherEntry()
+{
+  HostLoop loop("remove-other");
+  auto backend = std::make_unique<FakeBackend>(loop);
+  FakeBackend* pFake = backend.get();
+  loop.SetBackend(std::move(backend));
+
+  int otherId = 0, calls = 0, otherCalls = 0;
+  loop.AddTimer(10, [&]() { calls++; loop.RemoveTimer(otherId); });
+  otherId = loop.AddTimer(10, [&]() { otherCalls++; });
+  pFake->FireAll(); // the second handle is stale by the time it fires
+  EXPECT(calls == 1);
+  EXPECT(otherCalls == 0);
+  EXPECT(pFake->mHandles.size() == 1);
+}
+
+void TestNestedCallbackRemovesTheOuterEntry()
+{
+  // A host running a nested loop inside A's callback fires B, and B removes A: A must outlive its own callback.
+  HostLoop loop("nested-remove");
+  auto backend = std::make_unique<FakeBackend>(loop);
+  FakeBackend* pFake = backend.get();
+  loop.SetBackend(std::move(backend));
+
+  int outerId = 0, outerSteps = 0, innerCalls = 0;
+  outerId = loop.AddTimer(10, [&]() { outerSteps++; loop.Dispatch(false, pFake->mHandles.back()); outerSteps++; });
+  loop.AddTimer(10, [&]() { innerCalls++; loop.RemoveTimer(outerId); });
+  loop.Dispatch(false, pFake->mHandles.front());
+  EXPECT(outerSteps == 2);
+  EXPECT(innerCalls == 1);
+  EXPECT(pFake->mHandles.size() == 1);
+}
+
+void TestFallbackSelfRemoval()
+{
+  HostLoop loop("fallback-self-remove");
+  std::atomic<int> calls { 0 }, laterCalls { 0 };
+  int id = 0;
+  // Added before the backend, so the id is known before the thread can fire it.
+  id = loop.AddTimer(1, [&]() { calls++; loop.RemoveTimer(id); loop.AddTimer(1, [&]() { laterCalls++; }); });
+  loop.SetBackend(MakeFallbackHostLoopBackend(loop));
+  EXPECT(WaitFor([&]() { return laterCalls.load() >= 3; }));
+  EXPECT(calls.load() == 1);
+}
+
+void TestDestroyWhileFallbackCallbackRuns()
+{
+  for (int round = 0; round < 20; round++)
+  {
+    std::atomic<bool> inCallback { false };
+    auto pState = std::make_unique<std::vector<int>>(64, 0);
+    std::vector<int>* pRaw = pState.get();
+    {
+      HostLoop loop("destroy-in-flight");
+      loop.AddTimer(1, [&inCallback, pRaw]() {
+        inCallback = true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        (*pRaw)[3]++;
+      });
+      loop.SetBackend(MakeFallbackHostLoopBackend(loop));
+      while (!inCallback.load())
+        std::this_thread::yield();
+    } // ~HostLoop waits for the running callback before anything it uses goes away
+    pState.reset();
+  }
+}
+
 void TestNoReentryIntoTheSameEntry()
 {
   HostLoop loop("reentry");
@@ -446,7 +513,11 @@ int main()
   TestRemovedBeforeBackendNeverRegisters();
   TestMigrationKeepsEntriesAndIgnoresOldHandles();
   TestRemoveInsideOwnCallback();
+  TestCallbackRemovesAnotherEntry();
+  TestNestedCallbackRemovesTheOuterEntry();
   TestNoReentryIntoTheSameEntry();
+  TestFallbackSelfRemoval();
+  TestDestroyWhileFallbackCallbackRuns();
   TestFallbackThread();
   TestFallbackFd();
   TestFallbackToHostMigrationUnderLoad();
