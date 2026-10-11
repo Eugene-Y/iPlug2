@@ -80,6 +80,10 @@
 #include <system_error>
 #include <vector>
 
+#if defined(OS_LINUX)
+#include <Linux/IPlugLinuxOpen.h>
+#endif
+
 namespace hvoya {
 
 class PresetManager {
@@ -453,7 +457,7 @@ public:
         return added;
     }
 
-    // Opens _lastUsedDir in Finder / Explorer (falls back to _presetDir).
+    // Opens _lastUsedDir in Finder / Explorer / the default file manager (falls back to _presetDir).
     void openFolder() const {
         namespace fs = hvoya::fs;
         const std::string& target = _lastUsedDir.empty() ? _presetDir : _lastUsedDir;
@@ -462,6 +466,8 @@ public:
         system(("open \"" + target + "\"").c_str());
 #elif defined(OS_WIN)
         ShellExecuteA(nullptr, "explore", target.c_str(), nullptr, nullptr, SW_SHOW);
+#elif defined(OS_LINUX)
+        iplug::LinuxOpenWithDefaultApp(target.c_str());
 #endif
     }
 

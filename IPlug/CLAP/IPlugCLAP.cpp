@@ -888,6 +888,8 @@ bool IPlugCLAP::guiSetParent(const clap_window* pWindow) noexcept
 #elif defined OS_WIN
   return GUIWindowAttach(pWindow->win32);
 #elif defined OS_LINUX
+  if (!pWindow || !pWindow->api || strcmp(pWindow->api, CLAP_WINDOW_API_X11) != 0 || !pWindow->x11)
+    return false;
   return GUIWindowAttach((void*)(uintptr_t)pWindow->x11);
 #else
 #error Not Implemented!
