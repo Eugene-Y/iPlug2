@@ -11,9 +11,13 @@
 // Use `hvoya::format(...)` everywhere instead of `std::format(...)`; the
 // format-string grammar is identical ({fmt} is the reference std::format came
 // from), so no format strings need to change.
+//
+// libstdc++ before GCC 13 has no <format> at all (the old-glibc Linux build
+// container is GCC 11), so it takes the {fmt} path too.
 
-#if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) \
-    && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 130300
+#if (defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) \
+     && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 130300) \
+    || !__has_include(<format>)
 
   #ifndef FMT_HEADER_ONLY
     #define FMT_HEADER_ONLY
