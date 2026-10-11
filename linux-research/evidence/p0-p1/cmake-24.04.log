@@ -1,0 +1,297 @@
+-- IGraphics: NANOVG/GL3 -> iPlug2::IGraphics::NanoVG::GL3
+-- VST2 SDK not found at /Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST2_SDK. VST2 targets will not be available.
+-- AAX SDK not found at /Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/AAX_SDK. AAX targets will not be available.
+-- Configuring done (0.3s)
+-- Generating done (0.3s)
+-- Build files have been written to: /Volumes/Storage/code/IPlug2-linux/linux-research/build/p0
+=== BUILD IPlugEffect-clap
+[1/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-clap.dir/__/__/hvoya/hvoya/utils/soft_limiter.cpp.o
+[2/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-clap.dir/__/__/hvoya/hvoya/utils/utils.cpp.o
+[3/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-clap.dir/__/__/hvoya/hvoya/utils/audio_buffer.cpp.o
+[4/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-clap.dir/__/__/hvoya/hvoya/utils/midi_cc/mapper_serializer.cpp.o
+[5/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-clap.dir/__/__/hvoya/hvoya/utils/log/logger.cpp.o
+[6/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-clap.dir/__/__/hvoya/hvoya/utils/midi_cc/mapper.cpp.o
+[7/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-clap.dir/IPlugEffect.cpp.o
+In file included from /usr/include/c++/13/atomic:41,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugEffect/IPlugEffect.hpp:3,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugEffect/IPlugEffect.cpp:2:
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnUIOpen()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:100:63:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnUIOpen()':
+cc1plus: note: destination object is likely at address zero
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnRestoreState()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:152:69:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnRestoreState()':
+cc1plus: note: destination object is likely at address zero
+[8/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-clap.dir/IPlugEffectUI.cpp.o
+In file included from /usr/include/c++/13/bits/shared_ptr_atomic.h:33,
+                 from /usr/include/c++/13/memory:81,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsPrivate.h:19,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsStructs.h:27,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.h:48,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IControl.h:35,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/Controls/IControls.h:19,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugEffect/IPlugEffectUI.cpp:1:
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'bool hvoya::midi_cc::ControlDecorator<C>::tryProcessMidiCCMenuSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:732:59,
+    inlined from 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:504:51:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]':
+cc1plus: note: destination object is likely at address zero
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'bool hvoya::midi_cc::ControlDecorator<C>::tryProcessMidiCCMenuSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:739:59,
+    inlined from 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:504:51:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]':
+cc1plus: note: destination object is likely at address zero
+[9/9] Linking CXX shared module out/IPlugEffect.clap
+=== RESULT IPlugEffect-clap PASS
+=== BUILD IPlugEffect-vst3
+[1/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-vst3.dir/__/__/hvoya/hvoya/utils/soft_limiter.cpp.o
+[2/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-vst3.dir/__/__/hvoya/hvoya/utils/utils.cpp.o
+[3/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-vst3.dir/__/__/hvoya/hvoya/utils/audio_buffer.cpp.o
+[4/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-vst3.dir/__/__/hvoya/hvoya/utils/midi_cc/mapper_serializer.cpp.o
+[5/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-vst3.dir/__/__/hvoya/hvoya/utils/log/logger.cpp.o
+[6/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-vst3.dir/__/__/hvoya/hvoya/utils/midi_cc/mapper.cpp.o
+[7/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-vst3.dir/IPlugEffect.cpp.o
+In file included from /usr/include/c++/13/atomic:41,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugEffect/IPlugEffect.hpp:3,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugEffect/IPlugEffect.cpp:2:
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnUIOpen()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:100:63:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnUIOpen()':
+cc1plus: note: destination object is likely at address zero
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnRestoreState()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:152:69:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnRestoreState()':
+cc1plus: note: destination object is likely at address zero
+[8/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-vst3.dir/IPlugEffectUI.cpp.o
+In file included from /usr/include/c++/13/bits/shared_ptr_atomic.h:33,
+                 from /usr/include/c++/13/memory:81,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsPrivate.h:19,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsStructs.h:27,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.h:48,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IControl.h:35,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/Controls/IControls.h:19,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugEffect/IPlugEffectUI.cpp:1:
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'bool hvoya::midi_cc::ControlDecorator<C>::tryProcessMidiCCMenuSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:732:59,
+    inlined from 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:504:51:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]':
+cc1plus: note: destination object is likely at address zero
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'bool hvoya::midi_cc::ControlDecorator<C>::tryProcessMidiCCMenuSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:739:59,
+    inlined from 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:504:51:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]':
+cc1plus: note: destination object is likely at address zero
+[9/9] Linking CXX shared module out/IPlugEffect.vst3/Contents/aarch64-linux/IPlugEffect.so
+=== RESULT IPlugEffect-vst3 PASS
+=== BUILD IPlugEffect-app
+[1/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-app.dir/__/__/hvoya/hvoya/utils/utils.cpp.o
+[2/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-app.dir/__/__/hvoya/hvoya/utils/soft_limiter.cpp.o
+[3/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-app.dir/__/__/hvoya/hvoya/utils/audio_buffer.cpp.o
+[4/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-app.dir/__/__/hvoya/hvoya/utils/midi_cc/mapper_serializer.cpp.o
+[5/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-app.dir/__/__/hvoya/hvoya/utils/log/logger.cpp.o
+[6/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-app.dir/__/__/hvoya/hvoya/utils/midi_cc/mapper.cpp.o
+[7/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-app.dir/IPlugEffect.cpp.o
+In file included from /usr/include/c++/13/atomic:41,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugEffect/IPlugEffect.hpp:3,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugEffect/IPlugEffect.cpp:2:
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnUIOpen()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:100:63:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnUIOpen()':
+cc1plus: note: destination object is likely at address zero
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnRestoreState()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:152:69:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnRestoreState()':
+cc1plus: note: destination object is likely at address zero
+[8/9] Building CXX object Examples/IPlugEffect/CMakeFiles/IPlugEffect-app.dir/IPlugEffectUI.cpp.o
+In file included from /usr/include/c++/13/bits/shared_ptr_atomic.h:33,
+                 from /usr/include/c++/13/memory:81,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsPrivate.h:19,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsStructs.h:27,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.h:48,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IControl.h:35,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/Controls/IControls.h:19,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugEffect/IPlugEffectUI.cpp:1:
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'bool hvoya::midi_cc::ControlDecorator<C>::tryProcessMidiCCMenuSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:732:59,
+    inlined from 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:504:51:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]':
+cc1plus: note: destination object is likely at address zero
+In function 'std::__atomic_impl::_Val<_Tp> std::__atomic_impl::load(const _Tp*, std::memory_order) [with _Tp = double]',
+    inlined from '_Fp std::__atomic_float<_Fp>::load(std::memory_order) const [with _Fp = double]' at /usr/include/c++/13/bits/atomic_base.h:1275:35,
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'bool hvoya::midi_cc::ControlDecorator<C>::tryProcessMidiCCMenuSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:739:59,
+    inlined from 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]' at /Volumes/Storage/code/IPlug2-linux/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:504:51:
+/usr/include/c++/13/bits/atomic_base.h:1051:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+ 1051 |         __atomic_load(__ptr, __dest, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'void hvoya::midi_cc::ControlDecorator<C>::OnContextSelection(int) [with C = iplug::igraphics::IVKnobControl]':
+cc1plus: note: destination object is likely at address zero
+[9/9] Linking CXX executable out/IPlugEffect
+=== RESULT IPlugEffect-app PASS
+=== BUILD IPlugControls-clap
+[1/2] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/IPlugControls.cpp.o
+In file included from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:18,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:24,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsEditorDelegate.h:15,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugDelegate_select.h:28,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.h:18,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugAPIBase.h:21,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/CLAP/IPlugCLAP.h:20,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlug_include_in_plug_hdr.h:78,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugControls/IPlugControls.h:3,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugControls/IPlugControls.cpp:1:
+In member function '_Tp std::atomic<_Tp>::load(std::memory_order) const [with _Tp = double]',
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnRestoreState()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:152:69:
+/usr/include/c++/13/atomic:297:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+  297 |         __atomic_load(std::__addressof(_M_i), __ptr, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnRestoreState()':
+cc1plus: note: destination object is likely at address zero
+In member function '_Tp std::atomic<_Tp>::load(std::memory_order) const [with _Tp = double]',
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnUIOpen()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:100:63:
+/usr/include/c++/13/atomic:297:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+  297 |         __atomic_load(std::__addressof(_M_i), __ptr, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnUIOpen()':
+cc1plus: note: destination object is likely at address zero
+[2/2] Linking CXX shared module out/IPlugControls.clap
+=== RESULT IPlugControls-clap PASS
+=== BUILD IPlugControls-vst3
+[1/2] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/IPlugControls.cpp.o
+In file included from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:18,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:24,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsEditorDelegate.h:15,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugDelegate_select.h:28,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.h:18,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugAPIBase.h:21,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/VST3/IPlugVST3.h:31,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlug_include_in_plug_hdr.h:62,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugControls/IPlugControls.h:3,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugControls/IPlugControls.cpp:1:
+In member function '_Tp std::atomic<_Tp>::load(std::memory_order) const [with _Tp = double]',
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnRestoreState()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:152:69:
+/usr/include/c++/13/atomic:297:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+  297 |         __atomic_load(std::__addressof(_M_i), __ptr, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnRestoreState()':
+cc1plus: note: destination object is likely at address zero
+In member function '_Tp std::atomic<_Tp>::load(std::memory_order) const [with _Tp = double]',
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnUIOpen()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:100:63:
+/usr/include/c++/13/atomic:297:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+  297 |         __atomic_load(std::__addressof(_M_i), __ptr, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnUIOpen()':
+cc1plus: note: destination object is likely at address zero
+[2/2] Linking CXX shared module out/IPlugControls.vst3/Contents/aarch64-linux/IPlugControls.so
+=== RESULT IPlugControls-vst3 PASS
+=== BUILD IPlugControls-app
+[1/2] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-app.dir/IPlugControls.cpp.o
+In file included from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:18,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:24,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsEditorDelegate.h:15,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugDelegate_select.h:28,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.h:18,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugAPIBase.h:21,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/APP/IPlugAPP.h:21,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlug_include_in_plug_hdr.h:45,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugControls/IPlugControls.h:3,
+                 from /Volumes/Storage/code/IPlug2-linux/Examples/IPlugControls/IPlugControls.cpp:1:
+In member function '_Tp std::atomic<_Tp>::load(std::memory_order) const [with _Tp = double]',
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnUIOpen()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:100:63:
+/usr/include/c++/13/atomic:297:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+  297 |         __atomic_load(std::__addressof(_M_i), __ptr, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnUIOpen()':
+cc1plus: note: destination object is likely at address zero
+In member function '_Tp std::atomic<_Tp>::load(std::memory_order) const [with _Tp = double]',
+    inlined from 'double iplug::IParam::GetNormalized() const' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugParameter.h:374:53,
+    inlined from 'void iplug::IEditorDelegate::SendCurrentParamValuesFromDelegate()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:171:37,
+    inlined from 'virtual void iplug::IEditorDelegate::OnRestoreState()' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:152:69:
+/usr/include/c++/13/atomic:297:22: warning: 'long unsigned int __atomic_load_8(const volatile void*, int)' writing 8 bytes into a region of size 0 overflows the destination [-Wstringop-overflow=]
+  297 |         __atomic_load(std::__addressof(_M_i), __ptr, int(__m));
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In member function 'virtual void iplug::IEditorDelegate::OnRestoreState()':
+cc1plus: note: destination object is likely at address zero
+[2/2] Linking CXX executable out/IPlugControls
+=== RESULT IPlugControls-app PASS
+=== BUILD IPlugInstrument-clap
+ninja: no work to do.
+=== RESULT IPlugInstrument-clap PASS
+=== BUILD IPlugInstrument-vst3
+ninja: no work to do.
+=== RESULT IPlugInstrument-vst3 PASS
+=== BUILD IPlugInstrument-app
+ninja: no work to do.
+=== RESULT IPlugInstrument-app PASS

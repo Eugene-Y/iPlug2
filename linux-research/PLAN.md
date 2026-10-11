@@ -25,7 +25,7 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 
 **Results**
 
-- Build: IPlugEffect, IPlugControls, IPlugInstrument × CLAP/VST3/APP green on 24.04 (`build-24.04.log`). CLAP/VST3 also green on 22.04 (`build-22.04.log`).
+- Build: IPlugEffect, IPlugControls, IPlugInstrument × CLAP/VST3/APP green on 24.04 (`cmake-24.04.log`). CLAP/VST3 also green on 22.04 (`cmake-22.04.log`).
 - Exports: `.clap` → `clap_entry` only; `.so` → `GetPluginFactory`, `ModuleEntry`, `ModuleExit`. NEEDED: libc, libm, ld-linux only. No GLIBCXX refs.
 - GLIBC floor: 2.38 when built on 24.04, **2.34 on 22.04** (`inspect-*.txt`).
 - VST3 validator: Controls and Instrument 537/537. Effect 536/537: hvoya's IPlugEffect never names `par_gain_L/R` and the reserved params ("has no title"). That is an example bug on every platform, not Linux.
