@@ -132,6 +132,7 @@ function(iplug_configure_clap target project_name)
       LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CLAP_OUTPUT_DIR}"
       LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CLAP_OUTPUT_DIR}"
     )
+    iplug_linux_restrict_exports(${target} ${IPLUG2_LINUX_EXPORT_MAPS_DIR}/clap-exports.map)
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     # WASM/Emscripten: Use --no-entry linker option
     target_link_options(${target} PRIVATE --no-entry)

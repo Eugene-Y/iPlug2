@@ -213,6 +213,7 @@ function(iplug_configure_vst3 target project_name)
       LIBRARY_OUTPUT_DIRECTORY_DEBUG "${VST3_OUTPUT_DIR}"
       LIBRARY_OUTPUT_DIRECTORY_RELEASE "${VST3_OUTPUT_DIR}"
     )
+    iplug_linux_restrict_exports(${target} ${IPLUG2_LINUX_EXPORT_MAPS_DIR}/vst3-exports.map)
 
     add_custom_command(TARGET ${target} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/out/${project_name}.vst3/Contents/Resources"

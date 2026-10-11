@@ -314,3 +314,19 @@ if(NOT TARGET iPlug2::Extras::IWebViewControl)
 
   target_link_libraries(iPlug2::Extras::IWebViewControl INTERFACE iPlug2::IPlug)
 endif()
+# A Linux plug-in .so shares one flat symbol namespace with the host and every other plug-in, so
+# it must export only its entry points: otherwise its static libstdc++ / WDL / SDK symbols can
+# interpose on (or be interposed by) another module's copies.
+set(IPLUG2_LINUX_EXPORT_MAPS_DIR ${CMAKE_CURRENT_LIST_DIR}/Linux)
+function(iplug_linux_restrict_exports target export_map)
+  set_target_properties(${target} PROPERTIES
+    C_VISIBILITY_PRESET hidden
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
+    LINK_DEPENDS ${export_map}
+  )
+  target_link_options(${target} PRIVATE
+    "LINKER:--version-script=${export_map}"
+    "LINKER:--exclude-libs,ALL"
+  )
+endfunction()
