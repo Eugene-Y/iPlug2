@@ -1,0 +1,52 @@
+# IPlugControls, the P3a subset: mouse only (no keyboard, focus, OS menus or OS text entry; those are P3b).
+# Coordinates relative to the 1024x768 plugin view top-left. Popups are dismissed by clicking an empty spot.
+alive __PROC__
+shot c00-start
+# IVKnobControl starts at 100 %: drag down
+drag 322 237 322 330
+wait 0.5
+shot c01-knob-drag
+expect-change c00-start c01-knob-drag 262 170 120 130
+# IVXYPad drag
+drag 150 440 220 360
+# IVKeyboard: click a key
+click 330 560
+wait 0.5
+shot c02-xy-keyboard
+expect-change c01-knob-drag c02-xy-keyboard 137 325 115 130
+# mouse wheel over the IVKnobControl
+click 322 237 4
+click 322 237 4
+click 322 237 4
+wait 0.5
+shot c03-wheel
+expect-change c02-xy-keyboard c03-wheel 262 170 120 130
+# IVMenuButtonControl -> IGraphics popup
+click 828 284
+wait 1
+shot c04-popup-igraphics
+expect-change c03-wheel c04-popup-igraphics 760 270 200 150
+click 1010 600
+wait 0.5
+click 1010 600
+# ICaptionControl enum dropdown
+click 321 99
+wait 1
+shot c05-caption-popup
+click 1010 600
+click 1010 600
+# IVNumberBox double click -> IGraphics text entry opens (typing into it needs keyboard: P3b)
+dclick 941 437
+wait 1
+shot c06-textentry-igraphics
+click 1010 600
+wait 0.5
+alive __PROC__
+# info button -> IGraphics about box, dismissed by a click
+click 993 737
+wait 1
+shot c07-about
+click 500 400
+wait 1
+shot c08-end
+alive __PROC__

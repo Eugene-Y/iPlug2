@@ -16,7 +16,7 @@
 set -uo pipefail
 OUT="$1"; FX="$2"; PLUG="$3"; STEPS="${4:-}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-mkdir -p "$OUT"
+mkdir -p "$OUT"; : > "$OUT/xact-fails.txt"
 FAILS=()
 fail() { echo "FAIL: $*"; FAILS+=("$*"); }
 finish() {
@@ -59,6 +59,7 @@ echo "view origin $OX $OY"
 if [ -n "$STEPS" ]; then
   (echo "origin $OX $OY"; sed "s/__PROC__/$RPID/" "$STEPS") | OUT="$OUT" "$HERE/xact.sh"
   alive steps
+  if [ -s "$OUT/xact-fails.txt" ]; then while read -r l; do fail "steps: $l"; done < "$OUT/xact-fails.txt"; fi
   if [ -f "$OUT/c00-start.png" ] && [ -f "$OUT/c02-xy-keyboard.png" ] && cmp -s "$OUT/c00-start.png" "$OUT/c02-xy-keyboard.png"; then
     fail "steps: c00 and c02 identical -- editor never repainted after drag/click"
   fi
@@ -77,9 +78,18 @@ render_check "$OUT/r03-two-instances.png" second-instance "${FX#*: }.*Track 2"
 xwininfo -root -tree > "$OUT/xwininfo-tree.txt"
 pkill -INT -f "gdb -q -batch -p $RPID" 2>/dev/null; sleep 1
 "$HERE/threads.sh" "$RPID" 10 > "$OUT/threads.txt" 2>&1
-"$HERE/gdb-count.sh" "$RPID" 5 iplug::igraphics::IGraphicsLinux::OnDisplayTimer 'iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&)' > "$OUT/draw-threads.txt" 2>&1
+# Hover across the 2nd instance's editor while counting, so that a UI without animations still has dirty controls to draw.
+read -r PX PY PW PH < <(view_geom "${FX#*: }.*Track 2")
+( sleep 1; for i in $(seq 0 19); do xdotool mousemove $((PX + PW * i / 20)) $((PY + PH * (i % 3 + 1) / 4)); sleep 0.2; done ) &
+"$HERE/gdb-count.sh" "$RPID" 5 iplug::igraphics::IGraphicsLinux::OnDisplayTimer 'iplug::igraphics::IGraphicsLinux::ProcessXEvents()' 'iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&)' > "$OUT/draw-threads.txt" 2>&1
+wait
 echo "--- draw/timer hits by gdb thread id (1 = REAPER main thread):"; cat "$OUT/draw-threads.txt"
-[ -s "$OUT/draw-threads.txt" ] || fail "no Draw/OnDisplayTimer hits in 5 s (editor not rendering, or REAPER gone)"
+[ -s "$OUT/draw-threads.txt" ] || fail "no Draw/OnDisplayTimer/ProcessXEvents hits in 5 s (editor not rendering, or REAPER gone)"
+grep -q 'IGraphics::Draw' "$OUT/draw-threads.txt" || fail "no Draw hits in 5 s, even with the mouse moving over the editor"
+# host-driven editors (P3 on): X events and drawing only on the host main thread
+if grep -q 'ProcessXEvents' "$OUT/draw-threads.txt" && grep -v 'tid=1$' "$OUT/draw-threads.txt" | grep -q HIT; then
+  fail "editor work off REAPER's main thread: $(grep -v 'tid=1$' "$OUT/draw-threads.txt" | tr -s ' ' | tr '\n' ';')"
+fi
 # PR #1336-style IPlugTimer: one Timer_impl pthread per plugin instance drives OnIdle/ISender;
 # a thread that lost the start race leaves that instance without OnIdle while the editor may still paint.
 SO=$PLUG; [ -d "$PLUG" ] && SO=$(find "$PLUG/Contents" -name '*.so' | head -1)

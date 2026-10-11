@@ -1,0 +1,14 @@
+# IPlugEffect (450x305, hvoya layout): a knob drag, then a plug-in initiated resize with the corner resizer (Scale mode).
+alive __PROC__
+shot c00-start
+# "lim thresh" knob: drag down
+drag 112 237 112 300
+wait 0.5
+shot c01-knob-drag
+expect-change c00-start c01-knob-drag 70 180 90 110
+# corner resizer (bottom right): drag out to scale the UI up
+drag 446 302 560 380
+wait 1.5
+shot c02-resized
+windows
+alive __PROC__

@@ -9,6 +9,7 @@
 #   shot NAME                          screenshot -> $OUT/NAME.png
 #   alive PROC|PID                     prints ALIVE/DEAD for a process name or pid
 #   windows                            list named top-level windows
+#   expect-change A B X Y W H          shots A and B must differ inside the view rect; else a line in $OUT/xact-fails.txt
 #   # comment
 # Usage: OUT=<dir> xact.sh < steps.txt
 set -uo pipefail
@@ -36,6 +37,12 @@ while read -r cmd a b c d rest; do
     alive)
       if [[ "$a" =~ ^[0-9]+$ ]]; then st=$(ps -o stat= -p "$a" 2>/dev/null); [[ -n "$st" && "$st" != Z* ]] && log "ALIVE pid $a" || log "DEAD pid $a"
       elif pgrep -x "$a" >/dev/null; then log "ALIVE $a"; else log "DEAD $a"; fi;;
+    expect-change)
+      read -r w h _ <<<"$rest"
+      crop="${w}x${h}+$((OX+c))+$((OY+d))"
+      ae=$(compare -metric AE <(convert "$OUT/$a.png" -crop "$crop" +repage png:-) <(convert "$OUT/$b.png" -crop "$crop" +repage png:-) null: 2>&1)
+      if [ "${ae%% *}" = 0 ]; then log "UNCHANGED $a -> $b in view rect $c,$d ${w}x${h}"; echo "expect-change: $a -> $b unchanged in view rect $c,$d ${w}x${h}" >> "$OUT/xact-fails.txt"
+      else log "changed $a -> $b in view rect $c,$d ${w}x${h} ($ae px)"; fi;;
     windows) xdotool search --onlyvisible --name '.' getwindowname %@ 2>/dev/null | sort -u | sed 's/^/[xact]   win: /';;
     *) log "unknown step: $cmd";;
   esac
