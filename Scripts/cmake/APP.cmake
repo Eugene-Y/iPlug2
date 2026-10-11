@@ -130,6 +130,8 @@ if(NOT TARGET iPlug2::APP)
 
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GDK3 REQUIRED gdk-3.0)
+    # swell-generic-gdk uses GDBus (newer WDL), which gdk-3.0's pkg-config does not pull in
+    pkg_check_modules(GIO REQUIRED gio-2.0)
     pkg_check_modules(FREETYPE REQUIRED freetype2)
     pkg_check_modules(ALSA REQUIRED alsa)
     pkg_check_modules(JACK REQUIRED jack)
@@ -159,6 +161,7 @@ if(NOT TARGET iPlug2::APP)
 
     target_link_libraries(iPlug2::APP INTERFACE
       ${GDK3_LIBRARIES}
+      ${GIO_LIBRARIES}
       ${FREETYPE_LIBRARIES}
       ${ALSA_LINK_LIBRARIES}
       ${JACK_LINK_LIBRARIES}

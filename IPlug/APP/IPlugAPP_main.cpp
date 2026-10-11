@@ -593,6 +593,11 @@ INT_PTR SWELLAppMain(int msg, INT_PTR parm1, INT_PTR parm2)
 #define SWELL_DLG_FLAGS_AUTOGEN SWELL_DLG_WS_FLIPPED|SWELL_DLG_WS_RESIZABLE
 #endif
 #include "swell-dlggen.h"
+// swell-dlggen.h defines this flag only for macOS, yet its deprecated BEGIN macro (still emitted by
+// resgen for these .rc files) masks it out on every platform.
+#ifndef SWELL_DLG_WS_DEFAULT_SCALING
+#define SWELL_DLG_WS_DEFAULT_SCALING 0
+#endif
 #include "resources/main.rc_mac_dlg"
 #include "swell-menugen.h"
 #include "resources/main.rc_mac_menu"
