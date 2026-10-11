@@ -131,6 +131,9 @@ public:
 
   Steinberg::Vst::IComponentHandler* GetComponentHandler() { return componentHandler; }
   ViewType* GetView() { return mView; }
+#ifdef OS_LINUX
+  VST3HostLoopSelector& GetHostLoopSelector() { return mHostLoopSelector; }
+#endif
   
   Steinberg::Vst::AudioBus* getAudioInput(Steinberg::int32 index)
   {
@@ -168,6 +171,9 @@ public:
 
 private:
   ViewType* mView;
+#ifdef OS_LINUX
+  VST3HostLoopSelector mHostLoopSelector { GetHostLoop() };
+#endif
 };
 
 IPlugVST3* MakePlug(const InstanceInfo& info);

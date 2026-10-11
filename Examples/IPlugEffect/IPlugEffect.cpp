@@ -95,13 +95,36 @@ void IPlugEffect::initializeParams() {
 void IPlugEffect::OnIdle() {
 	if (_needsUIUpdate.exchange (false, std::memory_order_acq_rel))
 		tryUpdateLayout();
+
+	#ifdef IPLUG_TEST_LATENCY_FROM_IDLE
+		testLatencyFromIdle();
+	#endif
 }
 
 
 void IPlugEffect::OnActivate (bool enable) {
 	//LOGD << "OnActivate " << enable;
+    #ifdef IPLUG_TEST_LATENCY_FROM_IDLE
+        _testInActivate = true;
+    #endif
     OnIdle();
+    #ifdef IPLUG_TEST_LATENCY_FROM_IDLE
+        _testInActivate = false;
+    #endif
 }
+
+
+#ifdef IPLUG_TEST_LATENCY_FROM_IDLE
+    // Linux port test (P2): the latency must reach the host from the main thread with the editor closed.
+    void IPlugEffect::testLatencyFromIdle() {
+        // Hosts livelock on a latency change from inside setActive, which also calls OnIdle.
+        if (_testInActivate || ++_testIdleTicks % 50 != 0)
+            return;
+        const int latency = GetLatency() == 0 ? 256 : 0;
+        fprintf (stderr, "IPLUG_TEST SetLatency(%d) from OnIdle tid=%ld ui=%d\n", latency, iplug::HostLoopThreadId(), GetUI() != nullptr);
+        SetLatency (latency);
+    }
+#endif
 
 
 void IPlugEffect::OnReset() {

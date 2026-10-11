@@ -50,6 +50,9 @@ public:
 
   // IEditController
   Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) override;
+#ifdef OS_LINUX
+  Steinberg::tresult PLUGIN_API terminate() override;
+#endif
   Steinberg::IPlugView* PLUGIN_API createView(Steinberg::FIDString name) override;
   Steinberg::tresult PLUGIN_API setComponentState(Steinberg::IBStream* pState) override; // receives the processor's state
   Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* pState) override;
@@ -121,12 +124,18 @@ public:
 
   Steinberg::Vst::IComponentHandler* GetComponentHandler() const { return componentHandler; }
   ViewType* GetView() const { return mView; }
+#ifdef OS_LINUX
+  VST3HostLoopSelector& GetHostLoopSelector() { return mHostLoopSelector; }
+#endif
 
 private:
   ViewType* mView = nullptr;
   bool mPlugIsInstrument;
   bool mDoesMidiIn;
   Steinberg::FUID mProcessorGUID;
+#ifdef OS_LINUX
+  VST3HostLoopSelector mHostLoopSelector { GetHostLoop() };
+#endif
 };
 
 END_IPLUG_NAMESPACE

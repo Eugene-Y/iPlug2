@@ -54,6 +54,9 @@ tresult PLUGIN_API IPlugVST3::initialize(FUnknown* context)
     IPlugVST3ControllerBase::Initialize(this, IsInstrument(), DoesMIDIIn());
 
     IPlugVST3GetHost(this, context);
+#ifdef OS_LINUX
+    mHostLoopSelector.Initialize(context);
+#endif
     OnHostIdentified();
     OnParamReset(kReset);
     
@@ -67,6 +70,9 @@ tresult PLUGIN_API IPlugVST3::terminate()
 {
   TRACE
 
+#ifdef OS_LINUX
+  mHostLoopSelector.Terminate();
+#endif
   return SingleComponentEffect::terminate();
 }
 

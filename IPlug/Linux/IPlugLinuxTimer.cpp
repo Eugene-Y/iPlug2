@@ -8,21 +8,37 @@
  ==============================================================================
 */
 
-#include <atomic>
-#include <cstdio>
-
 #include "IPlugTimer.h"
 
 using namespace iplug;
 
 Timer* Timer::Create(ITimerFunction func, uint32_t intervalMs)
 {
-  return new Timer_impl(func, intervalMs);
+  return new Timer_impl(func, intervalMs, nullptr);
 }
 
-Timer_impl::Timer_impl(ITimerFunction func, uint32_t intervalMs)
+Timer_impl::Timer_impl(ITimerFunction func, uint32_t intervalMs, HostLoop* pLoop)
+: mLoop(pLoop)
+, mTimerFunc(func)
 {
-  static std::atomic<bool> sWarned { false };
-  if (!sWarned.exchange(true))
-    fprintf(stderr, "iPlug2: the Linux IPlugTimer is a stub, timers never fire (no OnIdle)\n");
+  if (!mLoop)
+  {
+    mOwnLoop = std::make_unique<HostLoop>("Timer::Create");
+    mOwnLoop->SetBackend(MakeFallbackHostLoopBackend(*mOwnLoop));
+    mLoop = mOwnLoop.get();
+  }
+
+  mId = mLoop->AddTimer(intervalMs, [this]() { mTimerFunc(*this); });
+}
+
+Timer_impl::~Timer_impl()
+{
+  Stop();
+}
+
+void Timer_impl::Stop()
+{
+  if (mId)
+    mLoop->RemoveTimer(mId);
+  mId = 0;
 }

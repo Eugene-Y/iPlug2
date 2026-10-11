@@ -124,6 +124,9 @@
   // called after library is unloaded
   bool DeinitModule()
   {
+    #ifdef OS_LINUX
+    iplug::VST3HostLoopSelector::ReleaseFactoryHostContext();
+    #endif
     return true;
   }
   #endif
@@ -135,6 +138,9 @@
   }
 
   BEGIN_FACTORY_DEF(PLUG_MFR, PLUG_URL_STR, PLUG_EMAIL_STR)
+  #ifdef OS_LINUX
+  gPluginFactory->addHostContextCallback(iplug::VST3HostLoopSelector::SetFactoryHostContext);
+  #endif
 
   DEF_CLASS2(INLINE_UID_FROM_FUID(FUID(VST3_PROCESSOR_UID)),
               Steinberg::PClassInfo::kManyInstances,          // cardinality
@@ -160,6 +166,9 @@
   }
 
   BEGIN_FACTORY_DEF(PLUG_MFR, PLUG_URL_STR, PLUG_EMAIL_STR)
+  #ifdef OS_LINUX
+  gPluginFactory->addHostContextCallback(iplug::VST3HostLoopSelector::SetFactoryHostContext);
+  #endif
 
   DEF_CLASS2 (INLINE_UID_FROM_FUID(FUID(VST3_PROCESSOR_UID)),
               PClassInfo::kManyInstances,                     // cardinality

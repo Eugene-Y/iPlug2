@@ -22,6 +22,10 @@
 #include "IPlugVST3_ProcessorBase.h"
 #include "IPlugVST3_Common.h"
 
+#ifdef OS_LINUX
+#include "Linux/IPlugLinuxHostLoopVST3.h"
+#endif
+
 /**
  * @file
  * @copydoc IPlugVST3Processor
@@ -83,6 +87,9 @@ private:
   
 //  Steinberg::Vst::ParameterChanges mOutputParamChanges;
   IMidiQueue mMidiOutputQueue;
+#ifdef OS_LINUX
+  VST3HostLoopSelector mHostLoopSelector { GetHostLoop() };
+#endif
 };
 
 Steinberg::FUnknown* MakeProcessor();

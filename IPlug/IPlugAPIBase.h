@@ -183,6 +183,11 @@ public:
 
   /** Called by the API class to create the timer that pumps the parameter/message queues */
   void CreateTimer();
+
+#ifdef OS_LINUX
+  /** Timers and fd watches on the host main thread. The API class installs the backend. */
+  HostLoop& GetHostLoop() { return mHostLoop; }
+#endif
   
 private:
   /** Implementations call into the APIs resize hooks
@@ -228,6 +233,9 @@ private:
 
 private:
   WDL_String mParamDisplayStr;
+#ifdef OS_LINUX
+  HostLoop mHostLoop; // declared before mTimer, which unregisters from it on destruction
+#endif
   std::unique_ptr<Timer> mTimer;
   
   IPlugQueue<ParamTuple> mParamChangeFromProcessor {PARAM_TRANSFER_SIZE};

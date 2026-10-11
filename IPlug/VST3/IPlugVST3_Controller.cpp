@@ -43,6 +43,9 @@ tresult PLUGIN_API IPlugVST3Controller::initialize(FUnknown* context)
   {
     Initialize(this, mPlugIsInstrument, mDoesMidiIn);
     IPlugVST3GetHost(this, context);
+#ifdef OS_LINUX
+    mHostLoopSelector.Initialize(context);
+#endif
     OnHostIdentified();
     OnParamReset(kReset);
     
@@ -56,6 +59,14 @@ tresult PLUGIN_API IPlugVST3Controller::initialize(FUnknown* context)
 
   return kResultFalse;
 }
+
+#ifdef OS_LINUX
+tresult PLUGIN_API IPlugVST3Controller::terminate()
+{
+  mHostLoopSelector.Terminate();
+  return EditControllerEx1::terminate();
+}
+#endif
 
 IPlugView* PLUGIN_API IPlugVST3Controller::createView(const char* name)
 {

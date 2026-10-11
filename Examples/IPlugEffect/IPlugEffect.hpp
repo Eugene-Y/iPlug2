@@ -107,6 +107,12 @@ class IPlugEffect final : public Plugin {
 		void setTooltips (IGraphics*);
 
 		std::atomic <bool> _needsUIUpdate { false };
+
+		#ifdef IPLUG_TEST_LATENCY_FROM_IDLE
+			void testLatencyFromIdle();
+			bool _testInActivate = false;
+			unsigned _testIdleTicks = 0;
+		#endif
 		bool tryUpdateLayout();
 		void triggerUIUpdate() { _needsUIUpdate.store (true, std::memory_order_release); }
 

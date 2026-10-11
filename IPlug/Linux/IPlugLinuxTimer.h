@@ -10,17 +10,27 @@
 
 #pragma once
 
+#include <memory>
+
+#include "IPlugLinuxHostLoop.h"
+
 BEGIN_IPLUG_NAMESPACE
 
-/** STUB: never fires. OnIdle, ISender draining and other timer work do not run on Linux yet.
- * The real timer must run its callback on the host main thread (CLAP timer-support, VST3 IRunLoop,
- * the APP's GLib loop), not on a thread of its own, because OnIdle touches the UI and calls SetLatency. */
+/** A timer on a plug-in instance's HostLoop, so the callback runs on the host main thread.
+ * Timer::Create() has no instance to take a loop from: such a timer gets a loop of its own with the
+ * fallback thread. IPlugAPIBase::CreateTimer() passes the instance's loop. */
 class Timer_impl : public Timer
 {
 public:
-  Timer_impl(ITimerFunction func, uint32_t intervalMs);
-  ~Timer_impl() = default;
-  void Stop() override {}
+  Timer_impl(ITimerFunction func, uint32_t intervalMs, HostLoop* pLoop);
+  ~Timer_impl();
+  void Stop() override;
+
+private:
+  std::unique_ptr<HostLoop> mOwnLoop;
+  HostLoop* mLoop;
+  ITimerFunction mTimerFunc;
+  int mId = 0;
 };
 
 END_IPLUG_NAMESPACE

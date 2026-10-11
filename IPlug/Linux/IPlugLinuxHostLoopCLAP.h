@@ -1,0 +1,82 @@
+/*
+ ==============================================================================
+
+ This file is part of the iPlug 2 library. Copyright (C) the iPlug 2 developers.
+
+ See LICENSE.txt for  more info.
+
+ ==============================================================================
+*/
+
+#pragma once
+
+/** @file
+ * @brief HostLoop backend on CLAP timer-support and posix-fd-support. Include from IPlugCLAP.cpp only.
+ * The host extensions may be queried from clap_plugin.init() on, not from the plug-in constructor. */
+
+#include "clap/ext/posix-fd-support.h"
+#include "clap/ext/timer-support.h"
+#include "clap/host.h"
+
+#include "IPlugLinuxHostLoop.h"
+
+BEGIN_IPLUG_NAMESPACE
+
+class CLAPHostLoopBackend final : public HostLoopBackend
+{
+public:
+  /** The CLAP backend if the host has timer-support, otherwise the fallback thread. */
+  static std::unique_ptr<HostLoopBackend> Make(HostLoop& loop, const clap_host* pHost)
+  {
+    auto* pTimers = static_cast<const clap_host_timer_support*>(pHost->get_extension(pHost, CLAP_EXT_TIMER_SUPPORT));
+    auto* pFds = static_cast<const clap_host_posix_fd_support*>(pHost->get_extension(pHost, CLAP_EXT_POSIX_FD_SUPPORT));
+    const bool hasTimers = pTimers && pTimers->register_timer && pTimers->unregister_timer;
+    const bool hasFds = pFds && pFds->register_fd && pFds->unregister_fd;
+
+    HostLoopTrace("%s: CLAP host '%s' timer-support=%d posix-fd-support=%d", loop.GetOwnerName(), pHost->name, hasTimers, hasFds);
+
+    if (!hasTimers)
+      return MakeFallbackHostLoopBackend(loop);
+
+    return std::make_unique<CLAPHostLoopBackend>(loop, pHost, pTimers, hasFds ? pFds : nullptr);
+  }
+
+  CLAPHostLoopBackend(HostLoop& loop, const clap_host* pHost, const clap_host_timer_support* pTimers, const clap_host_posix_fd_support* pFds)
+  : HostLoopBackend(loop), mHost(pHost), mTimers(pTimers), mFds(pFds)
+  {}
+
+  const char* GetName() const override { return "clap-timer-support"; }
+  bool IsHostDriven() const override { return true; }
+
+  bool Register(HostLoopEntry& entry) override
+  {
+    if (entry.mIsFd)
+    {
+      if (!mFds || !mFds->register_fd(mHost, entry.mFd, (clap_posix_fd_flags_t) entry.mFdFlags))
+        return false;
+      entry.mHandle = (uintptr_t) entry.mFd;
+      return true;
+    }
+
+    clap_id timerId = CLAP_INVALID_ID;
+    if (!mTimers->register_timer(mHost, entry.mIntervalMs, &timerId) || timerId == CLAP_INVALID_ID)
+      return false;
+    entry.mHandle = (uintptr_t) timerId;
+    return true;
+  }
+
+  void Unregister(HostLoopEntry& entry) override
+  {
+    if (entry.mIsFd)
+      mFds->unregister_fd(mHost, (int) entry.mHandle);
+    else
+      mTimers->unregister_timer(mHost, (clap_id) entry.mHandle);
+  }
+
+private:
+  const clap_host* mHost;
+  const clap_host_timer_support* mTimers;
+  const clap_host_posix_fd_support* mFds;
+};
+
+END_IPLUG_NAMESPACE

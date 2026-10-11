@@ -15,6 +15,10 @@
 #include <IPlugSWELL.h>
 #endif
 
+#ifdef OS_LINUX
+#include "Linux/IPlugLinuxHostLoopGLib.h"
+#endif
+
 #ifdef OS_MAC
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/QuartzCore.h>
@@ -42,6 +46,9 @@ IPlugAPP::IPlugAPP(const InstanceInfo& info, const Config& config)
   SetBlockSize(DEFAULT_BLOCK_SIZE);
   
   CreateTimer();
+#ifdef OS_LINUX
+  GetHostLoop().SetBackend(std::make_unique<GLibHostLoopBackend>(GetHostLoop()));
+#endif
 }
 
 bool IPlugAPP::EditorResize(int viewWidth, int viewHeight)

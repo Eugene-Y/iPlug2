@@ -16,6 +16,10 @@
 #include "plugin.hxx"
 #include "host-proxy.hxx"
 
+#ifdef OS_LINUX
+#include "Linux/IPlugLinuxHostLoopCLAP.h"
+#endif
+
 // TODO - respond to situations in which parameters can't be pushed (search try_push)
 // Keep in the queue or discard?? - up to us?
 
@@ -143,10 +147,22 @@ bool IPlugCLAP::SendSysEx(const ISysEx& msg)
 }
 
 // clap_plugin
+#ifdef OS_LINUX
+IPlugCLAP::~IPlugCLAP()
+{
+  // clap_plugin.destroy deletes us while the host is still valid; the timers must leave it now.
+  GetHostLoop().SetBackend(nullptr);
+}
+#endif
+
 bool IPlugCLAP::init() noexcept
 {
   SetDefaultConfig();
-  
+
+#ifdef OS_LINUX
+  GetHostLoop().SetBackend(CLAPHostLoopBackend::Make(GetHostLoop(), GetClapHost().host()));
+#endif
+
   return true;
 }
 

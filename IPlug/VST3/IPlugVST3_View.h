@@ -15,6 +15,10 @@
 
 #include "IPlugStructs.h"
 
+#ifdef OS_LINUX
+#include "Linux/IPlugLinuxHostLoopVST3.h"
+#endif
+
 /** IPlug VST3 View  */
 template <class T>
 class IPlugVST3View : public Steinberg::CPluginView
@@ -123,10 +127,11 @@ public:
       else // Carbon
         return Steinberg::kResultFalse;
 #elif defined OS_LINUX
-      if (strcmp(type, Steinberg::kPlatformTypeX11EmbedWindowID) == 0)
-        pView = mOwner.OpenWindow(pParent);
-      else
+      if (strcmp(type, Steinberg::kPlatformTypeX11EmbedWindowID) != 0)
         return Steinberg::kResultFalse;
+      // Before OpenWindow: the window registers its timers and X fd on the loop chosen here.
+      mOwner.GetHostLoopSelector().SetFrame(plugFrame);
+      pView = mOwner.OpenWindow(pParent);
 #endif
       return Steinberg::kResultTrue;
     }
@@ -137,7 +142,12 @@ public:
   Steinberg::tresult PLUGIN_API removed() override
   {
     if (mOwner.HasUI())
+    {
       mOwner.CloseWindow();
+#ifdef OS_LINUX
+      mOwner.GetHostLoopSelector().SetFrame(nullptr);
+#endif
+    }
     
     return CPluginView::removed();
   }

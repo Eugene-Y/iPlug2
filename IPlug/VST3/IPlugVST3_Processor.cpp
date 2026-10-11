@@ -41,6 +41,9 @@ tresult PLUGIN_API IPlugVST3Processor::initialize(FUnknown* context)
   {
     Initialize(this);
     IPlugVST3GetHost(this, context);
+#ifdef OS_LINUX
+    mHostLoopSelector.Initialize(context);
+#endif
     OnHostIdentified();
     OnParamReset(kReset);
     
@@ -52,6 +55,9 @@ tresult PLUGIN_API IPlugVST3Processor::initialize(FUnknown* context)
 
 tresult PLUGIN_API IPlugVST3Processor::terminate()
 {
+#ifdef OS_LINUX
+  mHostLoopSelector.Terminate();
+#endif
   return AudioEffect::terminate();
 }
 

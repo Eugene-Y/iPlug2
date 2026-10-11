@@ -84,6 +84,9 @@ class IPlugCLAP : public IPlugAPIBase
   
 public:
   IPlugCLAP(const InstanceInfo& info, const Config& config);
+#ifdef OS_LINUX
+  ~IPlugCLAP();
+#endif
 
   // IPlugAPIBase
   void BeginInformHostOfParamChange(int idx) override;
@@ -153,6 +156,14 @@ private:
 
   void paramsFlush(const clap_input_events* pInputParamChanges, const clap_output_events* pOutputParamChanges) noexcept override;
   bool isValidParamId(clap_id paramIdx) const noexcept override { return paramIdx < NParams(); }
+
+#ifdef OS_LINUX
+  // clap_plugin_timer_support, clap_plugin_posix_fd_support
+  bool implementsTimerSupport() const noexcept override { return true; }
+  void onTimer(clap_id timerId) noexcept override { GetHostLoop().Dispatch(false, timerId); }
+  bool implementsPosixFdSupport() const noexcept override { return true; }
+  void onPosixFd(int fd, clap_posix_fd_flags_t flags) noexcept override { GetHostLoop().Dispatch(true, (uintptr_t) fd, (int) flags); }
+#endif
 
   // clap_plugin_gui
   bool implementsGui() const noexcept override;
