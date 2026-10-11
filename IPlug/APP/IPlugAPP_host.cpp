@@ -82,14 +82,21 @@ bool IPlugAPPHost::OpenWindow(HWND pParent)
 #ifdef OS_LINUX
   // pParent is a SWELL HWND (heap pointer, not an X11 Window).
   // Extract the underlying X11 window so IGraphicsLinux can embed into it.
-  void* x11Parent = nullptr;
-  if (pParent)
+  GdkWindow* gdkWnd = pParent ? static_cast<GdkWindow*>(SWELL_GetOSWindow(pParent, "GdkWindow")) : nullptr;
+  void* x11Parent = gdkWnd ? (void*)(uintptr_t)GDK_WINDOW_XID(gdkWnd) : nullptr;
+  void* pView = mIPlug->OpenWindow(x11Parent);
+  if (pView && gdkWnd)
   {
-    GdkWindow* gdkWnd = static_cast<GdkWindow*>(SWELL_GetOSWindow(pParent, "GdkWindow"));
-    if (gdkWnd)
-      x11Parent = (void*)(uintptr_t)GDK_WINDOW_XID(gdkWnd);
+    // SWELL draws the menu bar into the same X window, so the editor's child window goes below it.
+    POINT clientOrigin { 0, 0 };
+    ClientToScreen(pParent, &clientOrigin);
+    RECT windowRect;
+    GetWindowRect(pParent, &windowRect);
+    Display* pDisplay = GDK_WINDOW_XDISPLAY(gdkWnd);
+    XMoveWindow(pDisplay, (Window)(uintptr_t)pView, clientOrigin.x - windowRect.left, clientOrigin.y - windowRect.top);
+    XFlush(pDisplay);
   }
-  return mIPlug->OpenWindow(x11Parent) != nullptr;
+  return pView != nullptr;
 #else
   return mIPlug->OpenWindow(pParent) != nullptr;
 #endif
