@@ -116,6 +116,7 @@ private:
   WDL_PtrList<HostLoopEntry> mEntries;
   std::unique_ptr<HostLoopBackend> mBackend;
   int mNextId = 1;
+  long mInitThread = 0; // where the format installed the backend: the host main thread
   char mOwnerName[64];
 };
 

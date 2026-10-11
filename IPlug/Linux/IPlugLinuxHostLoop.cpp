@@ -47,6 +47,9 @@ void iplug::HostLoopTrace(const char* format, ...)
 
 #pragma mark - HostLoop
 
+// Across all loops in the module; the trace prints it so a test can spot registrations that leak.
+static std::atomic<int> sLiveRegistrations { 0 };
+
 HostLoop::HostLoop(const char* ownerName)
 {
   SetOwnerName(ownerName);
@@ -61,6 +64,7 @@ HostLoop::~HostLoop()
 {
   SetBackend(nullptr);
   WDL_MutexLock lock(&mMutex);
+  HostLoopTrace("%s: destroyed with %d entries, live registrations in module=%d", mOwnerName, mEntries.GetSize(), sLiveRegistrations.load());
   mEntries.Empty(true);
 }
 
@@ -82,7 +86,9 @@ int HostLoop::Add(HostLoopEntry* pEntry)
   if (mBackend)
   {
     pEntry->mRegistered = mBackend->Register(*pEntry);
-    if (!pEntry->mRegistered)
+    if (pEntry->mRegistered)
+      ++sLiveRegistrations;
+    else
       HostLoopTrace("%s: %s cannot register %s id=%d", mOwnerName, mBackend->GetName(), pEntry->mIsFd ? "fd" : "timer", pEntry->mId);
   }
   return pEntry->mId;
@@ -114,7 +120,10 @@ void HostLoop::RemoveTimer(int id)
     return;
 
   if (pEntry->mRegistered)
+  {
     mBackend->Unregister(*pEntry);
+    --sLiveRegistrations;
+  }
 
   mEntries.DeletePtr(pEntry);
 
@@ -146,7 +155,10 @@ void HostLoop::SetBackend(std::unique_ptr<HostLoopBackend> backend)
     {
       HostLoopEntry* pEntry = mEntries.Get(i);
       if (pEntry->mRegistered)
+      {
         mBackend->Unregister(*pEntry);
+        --sLiveRegistrations;
+      }
       pEntry->mRegistered = false;
       pEntry->mHandle = 0;
     }
@@ -163,13 +175,16 @@ void HostLoop::SetBackend(std::unique_ptr<HostLoopBackend> backend)
   if (!mBackend)
     return;
 
-  HostLoopTrace("%s: backend=%s host-driven=%d entries=%d", mOwnerName, mBackend->GetName(), mBackend->IsHostDriven(), mEntries.GetSize());
+  mInitThread = HostLoopThreadId();
+  HostLoopTrace("%s: backend=%s host-driven=%d entries=%d init-tid=%ld", mOwnerName, mBackend->GetName(), mBackend->IsHostDriven(), mEntries.GetSize(), mInitThread);
 
   for (int i = 0; i < mEntries.GetSize(); i++)
   {
     HostLoopEntry* pEntry = mEntries.Get(i);
     pEntry->mRegistered = mBackend->Register(*pEntry);
-    if (!pEntry->mRegistered)
+    if (pEntry->mRegistered)
+      ++sLiveRegistrations;
+    else
       HostLoopTrace("%s: %s cannot register %s id=%d", mOwnerName, mBackend->GetName(), pEntry->mIsFd ? "fd" : "timer", pEntry->mId);
   }
 }
@@ -193,8 +208,15 @@ void HostLoop::Dispatch(bool isFd, uintptr_t handle, int fdFlags)
     return;
 
   pEntry->mInCallback = true;
-  if (pEntry->mCalls++ == 0)
-    HostLoopTrace("%s: first %s callback id=%d backend=%s", mOwnerName, isFd ? "fd" : "timer", pEntry->mId, mBackend ? mBackend->GetName() : "none");
+#ifdef IPLUG_TRACE_HOST_LOOP
+  const long tid = HostLoopThreadId();
+  const char* where = tid == mInitThread ? "main" : "OFF-MAIN";
+  if (pEntry->mCalls == 0)
+    HostLoopTrace("%s: first %s callback id=%d backend=%s on %s (init-tid=%ld)", mOwnerName, isFd ? "fd" : "timer", pEntry->mId, mBackend ? mBackend->GetName() : "none", where, mInitThread);
+  else if (tid != mInitThread && pEntry->mCalls % 250 == 0)
+    HostLoopTrace("%s: %s callback id=%d call=%u on OFF-MAIN (init-tid=%ld)", mOwnerName, isFd ? "fd" : "timer", pEntry->mId, pEntry->mCalls, mInitThread);
+#endif
+  pEntry->mCalls++;
 
   if (isFd)
     pEntry->mFdFunc(pEntry->mFd, fdFlags);
