@@ -95,12 +95,12 @@ void IPlugEffect::initializeLayout() {
 
             auto plugNameTxt = largeTxtLight;
             plugNameTxt.mVAlign = EVAlign::Middle;
-			std::string str = std::format ("{} v{} {}", PLUG_NAME, PLUG_VERSION_STR,
+			std::string str = hvoya::format ("{} v{} {}", PLUG_NAME, PLUG_VERSION_STR,
 										   (isDebug() ? "DEBUG" : "RELEASE"));
 			pG->AttachControl (new ITextControl (stringRect (0, 0).GetVPadded (5),
 												 str.c_str(), plugNameTxt));
 
-			str = std::format ("{} {}", PLUG_PRODUCT, PLUG_ARCHS);
+			str = hvoya::format ("{} {}", PLUG_PRODUCT, PLUG_ARCHS);
 			pG->AttachControl (new ITextControl (stringRect (2, 0),  str.c_str(), smallTxtLight));
 
 			pG->AttachControl (new ITextControl (stringRect (3, 0), PLUG_GIT_BRANCH_NAME, smallTxtLight));
@@ -188,11 +188,11 @@ void IPlugEffect::initializeLayout() {
 
 			auto aboutAttachFunc = [textStyle] (IContainerBase* pP, const IRECT& r) {
 				pP->AddChildControl (new IURLControl (IRECT(), "hvoya.audio", PLUG_URL_STR, textStyle));
-				std::string str = std::format ("{} v{}", PLUG_NAME, PLUG_VERSION_STR);
+				std::string str = hvoya::format ("{} v{}", PLUG_NAME, PLUG_VERSION_STR);
 				pP->AddChildControl (new ITextControl (IRECT(), str.c_str(), textStyle));
-				str = std::format ("{} {} {}", PLUG_PRODUCT, PLUG_ARCHS, (isDebug() ? "debug" : "release"));
+				str = hvoya::format ("{} {} {}", PLUG_PRODUCT, PLUG_ARCHS, (isDebug() ? "debug" : "release"));
 				pP->AddChildControl (new ITextControl (IRECT(), str.c_str(), textStyle));
-				str = std::format ("{} {}", PLUG_GIT_BRANCH_NAME, PLUG_GIT_COMMIT_SHA);
+				str = hvoya::format ("{} {}", PLUG_GIT_BRANCH_NAME, PLUG_GIT_COMMIT_SHA);
 				pP->AddChildControl (new ITextControl (IRECT(), str.c_str(), textStyle));
 				pP->AddChildControl (new ITextControl (IRECT(), PLUG_BUILD_DATE, textStyle));
 				pP->Hide (true);

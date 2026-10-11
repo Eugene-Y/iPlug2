@@ -562,7 +562,9 @@ void IPlugControls::OnMidiMsgUI(const IMidiMsg& msg)
 void IPlugControls::OnUIClose()
 {
   // store the background pattern. No modifications to other controls are stored, and this would also need to be serialized in plugin state, for recall!
-  mBGControlPattern = GetUI()->GetBackgroundControl()->As<IPanelControl>()->GetPattern();
+  // A platform window that failed to open (e.g. the Linux stub) closes without the layout ever having run.
+  if (IControl* pBG = GetUI() ? GetUI()->GetBackgroundControl() : nullptr)
+    mBGControlPattern = pBG->As<IPanelControl>()->GetPattern();
 }
 
 #endif
