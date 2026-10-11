@@ -385,7 +385,10 @@ private:
       }
 
       if (poll(pollFds.Get(), pollFds.GetSize(), timeoutMs) < 0 && errno != EINTR)
+      {
+        fprintf(stderr, "iPlug2: the host-loop fallback thread stops, poll failed: %s\n", strerror(errno));
         break;
+      }
 
       if (pollFds.Get()[0].revents & POLLIN)
       {

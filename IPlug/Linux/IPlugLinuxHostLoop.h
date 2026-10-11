@@ -20,6 +20,8 @@
  *
  * Every public method and every SetBackend() call belongs to the host main thread. Callbacks run on the
  * host main thread, except with the fallback backend, which runs them on a thread of its own.
+ * A callback may add and remove entries, its own included, on either thread.
+ * An fd callback must RemoveFd() once it sees kFdError: a hung-up fd stays ready and fires again forever.
  */
 
 #include <atomic>
@@ -75,7 +77,7 @@ protected:
 class HostLoop
 {
 public:
-  enum EFdFlags { kFdRead = 1, kFdWrite = 2, kFdError = 4 }; // same values as CLAP_POSIX_FD_*
+  enum EFdFlags { kFdRead = 1, kFdWrite = 2, kFdError = 4 };
 
   using TimerFunc = std::function<void()>;
   using FdFunc = std::function<void(int fd, int flags)>;

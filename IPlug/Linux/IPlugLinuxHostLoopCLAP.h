@@ -22,6 +22,9 @@
 
 BEGIN_IPLUG_NAMESPACE
 
+static_assert(HostLoop::kFdRead == CLAP_POSIX_FD_READ && HostLoop::kFdWrite == CLAP_POSIX_FD_WRITE
+              && HostLoop::kFdError == CLAP_POSIX_FD_ERROR, "HostLoop fd flags are passed to CLAP unconverted");
+
 class CLAPHostLoopBackend final : public HostLoopBackend
 {
 public:
