@@ -133,12 +133,6 @@ void HostLoop::RemoveTimer(int id)
     delete pEntry;
 }
 
-bool HostLoop::IsHostDriven() const
-{
-  WDL_MutexLock lock(&mMutex);
-  return mBackend && mBackend->IsHostDriven();
-}
-
 bool HostLoop::IsFdWatched(int id) const
 {
   WDL_MutexLock lock(&mMutex);
@@ -163,6 +157,7 @@ bool HostLoop::SetBackend(std::unique_ptr<HostLoopBackend> backend)
       pEntry->mHandle = 0;
     }
     old = std::move(mBackend);
+    mHostDriven = false;
   }
 
   // Outside the lock: a fallback backend joins its thread here, and that thread may be waiting for mMutex.
@@ -174,6 +169,7 @@ bool HostLoop::SetBackend(std::unique_ptr<HostLoopBackend> backend)
   mBackend = std::move(backend);
   if (!mBackend)
     return true;
+  mHostDriven = mBackend->IsHostDriven();
 
   mInitThread = HostLoopThreadId();
   HostLoopTrace("%s: backend=%s host-driven=%d entries=%d init-tid=%ld", mOwnerName, mBackend->GetName(), mBackend->IsHostDriven(), mEntries.GetSize(), mInitThread);

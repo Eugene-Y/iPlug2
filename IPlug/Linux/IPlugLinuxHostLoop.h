@@ -22,6 +22,7 @@
  * host main thread, except with the fallback backend, which runs them on a thread of its own.
  */
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -93,8 +94,8 @@ public:
   int AddFd(int fd, int flags, FdFunc func);
   void RemoveFd(int id) { RemoveTimer(id); }
 
-  /** True when callbacks come from the host's own main loop. */
-  bool IsHostDriven() const;
+  /** True when callbacks come from the host's own main loop. Lock-free: never waits for a running callback. */
+  bool IsHostDriven() const { return mHostDriven.load(std::memory_order_acquire); }
   bool IsFdWatched(int id) const;
 
   /** Format code only. Moves every entry to the new backend; nullptr leaves them waiting.
@@ -112,8 +113,11 @@ private:
   int Add(HostLoopEntry* pEntry);
   HostLoopEntry* Find(int id) const;
 
-  // Uncontended except with the fallback backend, whose thread dispatches while the main thread edits.
+  // Held across each callback, so RemoveTimer, SetBackend and ~HostLoop return only after a callback running
+  // on the fallback thread has finished: after that the caller may destroy what the callback uses.
+  // Recursive, so callbacks may add and remove entries.
   mutable WDL_Mutex mMutex;
+  std::atomic<bool> mHostDriven { false };
   WDL_PtrList<HostLoopEntry> mEntries;
   std::unique_ptr<HostLoopBackend> mBackend;
   int mNextId = 1;

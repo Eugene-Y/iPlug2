@@ -505,6 +505,19 @@ void TestVST3RunLoopThatRefusesTimers()
   EXPECT(factory.mRefs == 1);
 }
 
+void TestIsHostDrivenDoesNotWaitForACallback()
+{
+  HostLoop loop("lock-free-query");
+  std::atomic<bool> inCallback { false };
+  loop.AddTimer(1, [&]() { inCallback = true; std::this_thread::sleep_for(std::chrono::milliseconds(300)); inCallback = false; });
+  loop.SetBackend(MakeFallbackHostLoopBackend(loop));
+  EXPECT(WaitFor([&]() { return inCallback.load(); }));
+  const auto start = std::chrono::steady_clock::now();
+  EXPECT(!loop.IsHostDriven());
+  EXPECT(std::chrono::steady_clock::now() - start < std::chrono::milliseconds(100));
+  loop.SetBackend(nullptr);
+}
+
 } // namespace
 
 int main()
@@ -525,6 +538,7 @@ int main()
   TestVST3FrameOnlyHost();
   TestVST3FactoryContextWins();
   TestVST3RunLoopThatRefusesTimers();
+  TestIsHostDrivenDoesNotWaitForACallback();
 
   if (gFailures)
   {
