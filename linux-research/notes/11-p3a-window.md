@@ -109,4 +109,4 @@ nothing. All expected for P3b (keyboard, platform menus and text entry) and P4 (
 | F7 | `dlerror()` may be NULL after the `dlclose`: guarded ("GLX entry points missing", seen in the probe) |
 | notes | Finding 1 rewritten from the reviewer's strace: REAPER polls plug-in fds once per tick; CLAP POLLIN rarely finds input after the timer's drain, VST3 POLLOUT fires every tick |
 
-Re-run after the fixes [R]: REAPER IPlugControls CLAP + VST3 and IPlugEffect CLAP PASS, every Draw/X hit on the main thread.
+Re-run after the fixes [R]: REAPER IPlugControls CLAP + VST3 and IPlugEffect CLAP PASS, every Draw/X hit on the main thread. macOS IPlugEffect CLAP + VST3 Debug BUILD SUCCEEDED with the F4 hooks (nothing installed into `~/Library`) [M].
