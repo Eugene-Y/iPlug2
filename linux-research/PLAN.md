@@ -22,6 +22,7 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 | 702ed635d | Exports: hidden visibility + version script + `--exclude-libs,ALL` |
 | 2f3944b05 | `format_compat.hpp`: `{fmt}` when `<format>` is missing (GCC 11 on 22.04) |
 | 131518f90 | Examples: IPlugControls `OnUIClose` null guard (crashed REAPER on editor close), IPlugEffect `hvoya::format` |
+| 2d022fa61, 028a14d21, 67eeacaf1, a8c0b32ec | Review round 1 (`notes/08-review-p0-p1.md`): restored auto-deploy in `iplug_configure_target` (RR's move had dropped it for direct callers on all platforms); stub prompts call `completionHandler` as cancelled; `IPlugLinuxOpen.h` comment; docker README |
 
 **Results**
 
