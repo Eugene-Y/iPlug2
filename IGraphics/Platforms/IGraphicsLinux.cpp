@@ -42,14 +42,22 @@ EMsgBoxResult IGraphicsLinux::ShowMessageBox(const char* str, const char* title,
   return result;
 }
 
+// No dialog yet: behave like a cancelled one (mac/win), so async callers still get their callback.
 void IGraphicsLinux::PromptForFile(WDL_String& fileName, WDL_String& path, EFileAction action, const char* ext, IFileDialogCompletionHandlerFunc completionHandler)
 {
   fileName.Set("");
+  if (completionHandler)
+    completionHandler(fileName, path);
 }
 
 void IGraphicsLinux::PromptForDirectory(WDL_String& dir, IFileDialogCompletionHandlerFunc completionHandler)
 {
   dir.Set("");
+  if (completionHandler)
+  {
+    WDL_String fileName;
+    completionHandler(fileName, dir);
+  }
 }
 
 bool IGraphicsLinux::OpenURL(const char* url, const char* msgWindowTitle, const char* confirmMsg, const char* errMsgOnFailure)
