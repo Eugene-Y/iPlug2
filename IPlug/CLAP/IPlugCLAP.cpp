@@ -868,6 +868,8 @@ bool IPlugCLAP::guiIsApiSupported(const char* api, bool isFloating) noexcept
   return !isFloating && !strcmp(api, CLAP_WINDOW_API_COCOA);
 #elif defined OS_WIN
   return !isFloating && !strcmp(api, CLAP_WINDOW_API_WIN32);
+#elif defined OS_LINUX
+  return !isFloating && !strcmp(api, CLAP_WINDOW_API_X11);
 #else
 #error Not Implemented!
 #endif
@@ -879,6 +881,8 @@ bool IPlugCLAP::guiSetParent(const clap_window* pWindow) noexcept
   return GUIWindowAttach(pWindow->cocoa);
 #elif defined OS_WIN
   return GUIWindowAttach(pWindow->win32);
+#elif defined OS_LINUX
+  return GUIWindowAttach((void*)(uintptr_t)pWindow->x11);
 #else
 #error Not Implemented!
 #endif

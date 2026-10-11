@@ -46,6 +46,9 @@ public:
 #elif defined OS_MAC
       if (strcmp(type, Steinberg::kPlatformTypeNSView) == 0)
         return Steinberg::kResultTrue;
+#elif defined OS_LINUX
+      if (strcmp(type, Steinberg::kPlatformTypeX11EmbedWindowID) == 0)
+        return Steinberg::kResultTrue;
 #endif
     }
     
@@ -118,6 +121,11 @@ public:
       if (strcmp(type, Steinberg::kPlatformTypeNSView) == 0)
         pView = mOwner.OpenWindow(pParent);
       else // Carbon
+        return Steinberg::kResultFalse;
+#elif defined OS_LINUX
+      if (strcmp(type, Steinberg::kPlatformTypeX11EmbedWindowID) == 0)
+        pView = mOwner.OpenWindow(pParent);
+      else
         return Steinberg::kResultFalse;
 #endif
       return Steinberg::kResultTrue;
