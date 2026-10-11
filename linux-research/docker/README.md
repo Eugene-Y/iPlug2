@@ -128,6 +128,9 @@ in `linux-research/`. `core` is also git-ignored.
 | `threads.sh <proc>` | GUI container | thread names + all-thread backtraces |
 | `gdb-count.sh <proc> <secs> <sym>...` | GUI container | count hits per gdb thread id (`tid=1` = main thread) |
 | `gdb-catch.sh <pid> <out>` | GUI container | attach and dump backtraces on crash |
+| `gdb-hits.sh <pid> <secs> <sym>...` | GUI container | every hit of member functions with the caller's LWP (main = pid) and `this` |
+| `host-loop-test.sh <out> "<FMT: Name>" <plugin> [Class]` | GUI container | P2: `OnTimer`/`OnIdle` thread per phase (never opened, open, closed, 2 instances, 50× churn), latency via REAPER `pdc`, thread/fd/registration leaks. `EXPECT_CLOSED=worker` for frame-only test builds |
+| `app-host-loop-test.sh <out> <app>` | GUI container | P2: the APP's `OnTimer`/`OnIdle` on its main thread (`--no-io`) |
 | `trial/resolve.py` | host | resolve conflict blocks ours/theirs/both (hvoya trial) |
 | `run-gui-test.sh <plugin-or-app> <out>` | host | one-shot REAPER or standalone test (starts the GUI container) |
 | `rerun-reaper-matrix.sh [regex]` | host | re-run all REAPER tests behind notes/03, prints one RESULT per row |

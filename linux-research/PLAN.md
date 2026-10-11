@@ -4,6 +4,42 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 
 ## Progress
 
+**P2 done (2026-10-11)**: host-loop timer layer, 534be52df..HEAD. Details and findings: `notes/09-p2-host-loop.md`. Evidence: `evidence/p2/`.
+
+| Commit | What |
+|---|---|
+| 534be52df | `IPlug/Linux/IPlugLinuxHostLoop.{h,cpp}` (per-instance timers + fd watches, deferred until a backend exists, migrated on swap; fallback thread with the running flag set before `pthread_create`), backends CLAP (`IPlugLinuxHostLoopCLAP.h`, installed in `init()`), VST3 (`IPlugLinuxHostLoopVST3.h`), GLib (`IPlugLinuxHostLoopGLib.h`, APP). `Timer_impl` on the instance loop. `OS_LINUX` hooks: `IPlugAPIBase` (`mHostLoop`, `GetHostLoop()`, `CreateTimer`), `IPlugCLAP` (`init`, `~IPlugCLAP`, `onTimer`/`onPosixFd`), VST3 component/controller/processor (`initialize`/`terminate`), view (`attached`/`removed`), factory (`addHostContextCallback`, `DeinitModule`). IPlugEffect test hook `IPLUG_TEST_LATENCY_FROM_IDLE` |
+| 5c406b13a | `Tests/LinuxHostLoop` (ASan/UBSan); `scripts/host-loop-test.sh`, `gdb-hits.sh`; trace counters |
+| 393191673 | APP main loop blocks in `g_main_context_iteration` (10 ms wake for SWELL timers) instead of `Sleep(10)`; `scripts/app-host-loop-test.sh`; `IPLUG_TEST_VST3_FRAME_RUNLOOP_ONLY` |
+| 16a1ea43b | VST3: an IRunLoop whose `registerTimer` fails is skipped (the SDK validator's does) |
+| b987f53c2, later | evidence, notes/09, PLAN |
+
+**Results** (all [R] in Docker, REAPER 7.82 headless; see notes/09 for the table)
+
+- `OnTimer`/`OnIdle` on REAPER's main thread for IPlugEffect and IPlugControls × CLAP/VST3: never opened, open, closed again, 2 instances (2 timer objects), after 50× add/delete (threads, fds and live host registrations unchanged).
+- Latency from `OnIdle` with the editor closed reaches REAPER (`pdc` toggles 0/256) from the main thread, CLAP and VST3.
+- APP `--no-io`: `OnIdle` on the main thread (GLib backend).
+- Validators identical to P0. Exports/NEEDED unchanged. 22.04 builds green. macOS IPlugEffect CLAP + VST3 Debug build.
+- **Key risk answered for REAPER: VST3 `IRunLoop` comes through the factory host context (`setHostContext`), not `initialize()`'s context; closed-editor idle is host-driven.** Other hosts: probe with `-DIPLUG_TRACE_HOST_LOOP` (VM, P10).
+- REAPER **ignores** a VST3 latency change reported from the fallback thread (forced with the frame-only test build). Gneiss must defer `SetLatency` when `!GetHostLoop().IsHostDriven()` (P9).
+
+**Deviations**
+
+- Backends are header-only and included only by their format's TU, so no per-format CMake source lists.
+- VST3 prefers the factory, then the `initialize()` IRunLoop over the frame's, even while attached: one stable loop, no migration on every open/close. The frame's loop is used only when neither exists.
+- The fallback warns once per process with `fprintf(stderr)`, not `DBGMSG` (which is compiled out in release builds).
+- `Timer::Create()` without an instance (OSC, ReaperExt) runs on a fallback thread of its own.
+- The APP's polling loop was replaced here, not in P8 (small; SWELL's modal loops still poll).
+- VST3 distributed (`VST3P_API`) has the hooks but no Linux build target; untested.
+
+**Next:** P3 (IGraphicsLinux, host-driven): register the X fd with `GetHostLoop().AddFd(...)` and the frame timer with `AddTimer` from `OpenWindow`; drain `XPending` in both. The VST3 view already picks the loop before `OpenWindow`.
+
+**Open decisions for the user**
+
+- RR 360d84011 `StringToValue` change: not applied; optional (`notes/08`, "Open decision").
+
+---
+
 **P0 and P1 done (2026-10-11)** on `hvoya-linux`, 61e272b3a..131518f90. Evidence: `evidence/p0-p1/`.
 
 | Commit | What |
@@ -22,7 +58,7 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 | 702ed635d | Exports: hidden visibility + version script + `--exclude-libs,ALL` |
 | 2f3944b05 | `format_compat.hpp`: `{fmt}` when `<format>` is missing (GCC 11 on 22.04) |
 | 131518f90 | Examples: IPlugControls `OnUIClose` null guard (crashed REAPER on editor close), IPlugEffect `hvoya::format` |
-| 2d022fa61, 028a14d21, 67eeacaf1, a8c0b32ec | Review round 1 (`notes/08-review-p0-p1.md`): restored auto-deploy in `iplug_configure_target` (RR's move had dropped it for direct callers on all platforms); stub prompts call `completionHandler` as cancelled; `IPlugLinuxOpen.h` comment; docker README |
+| 2d022fa61, 028a14d21, 67eeacaf1, a8c0b32ec, 7e4875daa, b4ef31cdc | Review round 1 (`notes/08-review-p0-p1.md`): restored auto-deploy in `iplug_configure_target` (RR's move had dropped it for direct callers on all platforms); stub prompts call `completionHandler` as cancelled; `IPlugLinuxOpen.h` comment; docker README |
 
 **Results**
 
@@ -43,11 +79,10 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 
 **Open issues**
 
-- APP: RR's `Sleep(10)` polling main loop and the `--no-io` segfault without ALSA are still there (P8).
+- APP: the `--no-io` segfault without ALSA is still there (P8). The `Sleep(10)` main loop was replaced in P2.
 - Each format build compiles every iPlug source again (9 targets ≈ 5 min on colima). Fine for now.
 - `IPlugEffect` APP on macOS needs `IPlugAPP.cpp` set to Objective-C++ in its project (pre-existing).
 
-**Next:** P2 (host-loop timer layer). Replace `IPlug/Linux/IPlugLinuxTimer.*`; register CLAP timers in `init()`.
 Research summary for humans: [`../LINUX_PORT_RESEARCH.md`](../LINUX_PORT_RESEARCH.md) (Russian).
 VM setup for visual tests: [`../LINUX_VM_SETUP.md`](../LINUX_VM_SETUP.md).
 
@@ -256,7 +291,7 @@ RR's SWELL/GDK host + RtAudio (ALSA/JACK/Pulse; PipeWire through its shims), dri
 
 ## 4. Risks to probe first
 
-1. VST3 hosts without `IRunLoop` while the editor is closed → decides how much Gneiss fallback is needed (P2 probe).
+1. VST3 hosts without `IRunLoop` while the editor is closed → decides how much Gneiss fallback is needed. REAPER: has it (factory context, notes/09). Bitwig, Ardour, Carla: probe with `-DIPLUG_TRACE_HOST_LOOP`.
 2. XEmbed keyboard focus per host (Bitwig, Carla).
 3. Vsync/driver differences (NVIDIA proprietary vs Mesa); XWayland scaling.
 4. Upstream merging #1336 later → keep Linux code isolated in new files.
@@ -271,4 +306,6 @@ RR's SWELL/GDK host + RtAudio (ALSA/JACK/Pulse; PipeWire through its shims), dri
 | Thread model per candidate × format, conflict counts, detailed plan | notes/04-architecture-review.md |
 | What the review refuted/confirmed, probes | notes/05-review-of-build-results.md, evidence/review/probes/ |
 | Upstream merge contents/conflicts | notes/07-upstream-merge-analysis.md |
+| P0–P1 review | notes/08-review-p0-p1.md |
+| P2 host loop: design, REAPER IRunLoop finding, acceptance | notes/09-p2-host-loop.md |
 | Patches used to build each candidate | evidence/*/patches/ |
