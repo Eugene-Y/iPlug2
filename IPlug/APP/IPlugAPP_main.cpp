@@ -531,6 +531,7 @@ INT_PTR SWELLAppMain(int msg, INT_PTR parm1, INT_PTR parm2)
 #include "IPlugSWELL.h"
 #include "swell-internal.h"
 #include <alsa/asoundlib.h>
+#include <glib.h>
 
 HWND gHWND;
 HINSTANCE gHINSTANCE;
@@ -569,11 +570,17 @@ int main(int argc, char** argv)
   if (gHWND && menu)
     SetMenu(gHWND, menu);
 
+  // Block in GLib instead of sleeping, so X input and the plug-in's HostLoop sources run as soon as they
+  // are ready, also without a display. SWELL polls its own timers and posted messages in
+  // SWELL_RunMessageLoop, which the 10 ms wake-up keeps serviced.
+  GMainContext* pContext = g_main_context_default();
+  const guint swellPump = g_timeout_add(10, [](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr);
   while (gHWND && !gHWND->m_hashaddestroy)
   {
     SWELL_RunMessageLoop();
-    Sleep(10);
+    g_main_context_iteration(pContext, TRUE);
   }
+  g_source_remove(swellPump);
 
   if (gHWND)
     DestroyWindow(gHWND);

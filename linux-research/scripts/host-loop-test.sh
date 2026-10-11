@@ -11,7 +11,10 @@
 #   churn   - 50x add + delete an instance on track 3; threads, fds and live host registrations compared
 # FAIL when: any hit off the REAPER main thread; no hits in a phase; not 2 timer objects in "two";
 #   an OFF-MAIN line in the trace; threads/fds/registrations grow over the churn; REAPER dies; LUA ERROR.
+#   EXPECT_CLOSED=worker: closed-editor phases must run on the fallback thread (IPLUG_TEST_VST3_FRAME_RUNLOOP_ONLY);
+#   the OFF-MAIN trace check is then skipped.
 set -uo pipefail
+CLOSED="${EXPECT_CLOSED:-main}"
 OUT="$1"; FX="$2"; PLUG="$3"; NAME="${FX#*: }"; CLASS="${4:-$NAME}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$OUT"
@@ -26,18 +29,19 @@ finish() {
 rpr() { local r; r=$("$HERE/rpr.sh" "$1"); echo "$r"; if grep -q 'LUA ERROR\|no output from lua' <<<"$r"; then fail "lua: $r"; fi; }
 alive() { local st; st=$(ps -o stat= -p "$RPID" 2>/dev/null); if [[ -z "$st" || "$st" == Z* ]]; then fail "REAPER died at '$1'"; finish; fi; }
 
-# <phase> <seconds> [expected objects]: hits per symbol/thread/object; every hit must be on the main thread.
+# <phase> <seconds> [expected objects] [main|worker]: hits per symbol/thread/object, all on the expected thread.
+# [thread]: "worker" when the phase is expected to run on the fallback thread (frame-only test builds).
 hits() {
-  local phase="$1" secs="$2" want="${3:-}"
+  local phase="$1" secs="$2" want="${3:-}" thread="${4:-main}"
   "$HERE/gdb-hits.sh" "$RPID" "$secs" 'iplug::IPlugAPIBase::OnTimer(iplug::Timer&)' "$CLASS::OnIdle()" > "$OUT/hits-$phase.txt"
   echo "--- $phase: hits by symbol, thread (main = lwp $RPID), object"
   sed -E 's/\(.*\)//' "$OUT/hits-$phase.txt" | sort | uniq -c | tee "$OUT/hits-$phase-summary.txt"
   local total off timers
   total=$(grep -c 'OnTimer' "$OUT/hits-$phase.txt")
-  off=$(grep -vc "lwp=$RPID " "$OUT/hits-$phase.txt")
+  if [ "$thread" = main ]; then off=$(grep -vc "lwp=$RPID " "$OUT/hits-$phase.txt"); else off=$(grep -c "lwp=$RPID " "$OUT/hits-$phase.txt"); fi
   timers=$(grep 'OnTimer' "$OUT/hits-$phase.txt" | sed -E 's/.*this=//' | sort -u | wc -l)
   [ "$total" -gt 0 ] || fail "$phase: no OnTimer hits in ${secs}s"
-  [ "$off" -eq 0 ] || fail "$phase: $off hits off the main thread"
+  [ "$off" -eq 0 ] || fail "$phase: $off hits not on the expected thread ($thread)"
   grep -q 'OnIdle' "$OUT/hits-$phase.txt" || fail "$phase: no OnIdle hits"
   [ -z "$want" ] || [ "$timers" -eq "$want" ] || fail "$phase: OnTimer ran for $timers objects, expected $want"
 }
@@ -51,7 +55,7 @@ echo "REAPER pid $RPID"
 
 rpr "reaper.InsertTrackAtIndex(0,true); local t=reaper.GetTrack(0,0); out('add', reaper.TrackFX_AddByName(t,\"$FX\",false,-1))"
 sleep 2; alive add
-hits closed 4 1
+hits closed 4 1 "$CLOSED"
 
 rpr "local t=reaper.GetTrack(0,0); reaper.TrackFX_Show(t,0,3); out('shown')"
 sleep 2; alive open
@@ -59,11 +63,11 @@ hits open 4 1
 
 rpr "local t=reaper.GetTrack(0,0); reaper.TrackFX_Show(t,0,2); out('closed')"
 sleep 2; alive reclose
-hits reclose 4 1
+hits reclose 4 1 "$CLOSED"
 
 rpr "reaper.InsertTrackAtIndex(1,true); local t=reaper.GetTrack(0,1); out('add2', reaper.TrackFX_AddByName(t,\"$FX\",false,-1))"
 sleep 2; alive two
-hits two 4 2
+hits two 4 2 "$CLOSED"
 
 echo "--- latency: REAPER pdc of track 1 fx 0 (editor closed)"
 : > "$OUT/latency.txt"
@@ -74,8 +78,11 @@ done
 cat "$OUT/latency.txt"
 grep 'IPLUG_TEST SetLatency' /tmp/reaper.log | tail -6 | tee "$OUT/latency-calls.txt"
 if [ -s "$OUT/latency-calls.txt" ]; then
-  [ "$(sort -u "$OUT/latency.txt" | wc -l)" -ge 2 ] || fail "latency: OnIdle changed it, REAPER's pdc never changed"
-  grep -v "tid=$RPID " "$OUT/latency-calls.txt" && fail "latency: SetLatency called off the main thread"
+  if [ "$(sort -u "$OUT/latency.txt" | wc -l)" -lt 2 ]; then
+    if [ "$CLOSED" = main ]; then fail "latency: OnIdle changed it, REAPER's pdc never changed"
+    else echo "EXPECTED (fallback thread): REAPER ignores a latency change reported off its main thread"; fi
+  fi
+  [ "$CLOSED" = main ] && grep -v "tid=$RPID " "$OUT/latency-calls.txt" && fail "latency: SetLatency called off the main thread"
   grep -q 'ui=1' "$OUT/latency-calls.txt" && fail "latency: the editor was open"
 fi
 
@@ -98,10 +105,10 @@ echo "threads $T0 -> $T1, fds $F0 -> $F1, trace: '$L0' -> '$L1', backends instal
 [ "$F1" -le "$F0" ] || fail "churn: fds grew $F0 -> $F1"
 # the last instance destroyed reports what the module still has registered: the 2 remaining instances' timers
 [ -z "$L1" ] || [ "${L1##*=}" -eq 2 ] || fail "churn: $L1 after the churn, expected 2 (one timer per remaining instance)"
-hits after-churn 3 2
+hits after-churn 3 2 "$CLOSED"
 
 "$HERE/threads.sh" "$RPID" 8 > "$OUT/threads.txt" 2>&1
 grep 'IPLUG_HOSTLOOP' /tmp/reaper.log > "$OUT/trace.txt"
-grep -q 'OFF-MAIN' "$OUT/trace.txt" && fail "trace: a callback ran off the main thread"
+[ "$CLOSED" = main ] && grep -q 'OFF-MAIN' "$OUT/trace.txt" && fail "trace: a callback ran off the main thread"
 alive end
 finish

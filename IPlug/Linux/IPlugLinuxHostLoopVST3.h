@@ -159,6 +159,10 @@ public:
     mFactoryRunLoop = sFactoryRunLoop;
     Steinberg::FUnknownPtr<Steinberg::Linux::IRunLoop> contextRunLoop(pContext);
     mContextRunLoop = contextRunLoop.getInterface();
+#ifdef IPLUG_TEST_VST3_FRAME_RUNLOOP_ONLY // exercises the fallback and the attach/detach migration in hosts that offer more
+    mFactoryRunLoop = nullptr;
+    mContextRunLoop = nullptr;
+#endif
     HostLoopTrace("%s: VST3 initialize: factory IRunLoop=%p context IRunLoop=%p", mLoop.GetOwnerName(),
                   (void*) mFactoryRunLoop.get(), (void*) mContextRunLoop.get());
     mInitialized = true;
