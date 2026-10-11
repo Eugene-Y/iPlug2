@@ -722,7 +722,11 @@ struct IText
     SetFont(fontID);
   }
 
-  void SetFont (const char* fontID) { strncpy(mFont, (fontID ? fontID : DEFAULT_FONT), sizeof(mFont)); }
+  void SetFont (const char* fontID)
+  {
+    strncpy(mFont, (fontID ? fontID : DEFAULT_FONT), sizeof(mFont) - 1);
+    mFont[sizeof(mFont) - 1] = '\0';
+  }
 
   IText WithFGColor(const IColor& fgColor) const { IText newText = *this; newText.mFGColor = fgColor; return newText; }
   IText WithTEColors(const IColor& teBgColor, const IColor& teFgColor) const { IText newText = *this; newText.mTextEntryBGColor = teBgColor; newText.mTextEntryFGColor = teFgColor; return newText; }
@@ -730,7 +734,7 @@ struct IText
   IText WithVAlign(EVAlign valign) const { IText newText = *this; newText.mVAlign = valign; return newText; }
   IText WithSize(float size) const { IText newText = *this; newText.mSize = size; return newText; }
   IText WithAngle(float v) const { IText newText = *this; newText.mAngle = v; return newText; }
-  IText WithFont(const char* fontID) const { IText newText = *this; strcpy(newText.mFont, (fontID ? fontID : DEFAULT_FONT));; return newText; }
+  IText WithFont(const char* fontID) const { IText newText = *this; newText.SetFont(fontID); return newText; }
   
   char mFont[FONT_LEN];
   float mSize;
