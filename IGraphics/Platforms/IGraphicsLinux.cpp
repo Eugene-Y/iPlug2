@@ -334,6 +334,7 @@ void IGraphicsLinux::DestroyWindowResources()
       XFreeColormap(w.mDisplay, w.mColormap);
     XSync(w.mDisplay, False);
   }
+  ScopedXErrorTrap::ForgetDisplay(w.mDisplay);
   XCloseDisplay(w.mDisplay);
 
   const GLXFunctions* pGLX = w.mGLX;
@@ -363,7 +364,10 @@ void IGraphicsLinux::ActivateGLContext()
   if (w.mPrevContext == w.mGLContext && w.mPrevDrawable == w.mWindow)
     return;
 
-  // On failure (our window already gone) leave no context current, rather than someone else's,
+  // Also reached from host calls outside any drain (set_size, bitmap loads); Mesa's make-current asks the
+  // server for the drawable's geometry, which fails once the host destroyed our window.
+  ScopedXErrorTrap trap(w.mDisplay);
+  // On failure leave no context current, rather than someone else's,
   // so that the GL calls that follow cannot touch another context's objects.
   if (!w.mGLX->MakeCurrent(w.mDisplay, w.mWindow, w.mGLContext))
     w.mGLX->MakeCurrent(w.mDisplay, None, nullptr);
@@ -377,6 +381,7 @@ void IGraphicsLinux::DeactivateGLContext()
   if (w.mPrevContext == w.mGLContext && w.mPrevDrawable == w.mWindow)
     return;
 
+  ScopedXErrorTrap trap(w.mDisplay);
   if (w.mPrevContext && w.mPrevDisplay)
     w.mGLX->MakeCurrent(w.mPrevDisplay, w.mPrevDrawable, w.mPrevContext);
   else
@@ -439,10 +444,13 @@ void IGraphicsLinux::DrawDirtyControls()
   DeactivateGLContext();
 }
 
+// Like the mac version, a full repaint: callers use it right after Resize + LayoutUI.
 void IGraphicsLinux::DrawNow()
 {
-  if (mImpl->mOpen && *mImpl->mOpen)
-    DrawDirtyControls();
+  if (!mImpl->mOpen || !*mImpl->mOpen || !mImpl->mMapped)
+    return;
+  SetAllControlsDirty();
+  DrawDirtyControls();
 }
 
 // A call into IGraphics may close the editor and delete this object: it is each handler's last statement, or what follows checks the open flag.
@@ -579,19 +587,23 @@ void IGraphicsLinux::HandleConfigure(const XEvent& event)
 
   if (configure.window == w.mWindow)
   {
-    // Echoes of our own XResizeWindow calls carry an older serial; only a later size is someone else's doing.
+    // Echoes of earlier XResizeWindow calls have an older serial; the latest one's echo fails the size check.
     if (configure.serial < w.mResizeSerial)
       return;
     if (configure.width == w.mWindowW && configure.height == w.mWindowH)
       return;
     w.mWindowW = configure.width;
     w.mWindowH = configure.height;
-    const std::shared_ptr<bool> open = w.mOpen;
-    GetDelegate()->OnParentWindowResize(configure.width, configure.height);
-    // The editor may keep its size (constraints, or no change at all): then put the window back to it,
+    if (IsHostResizeEnabled())
+    {
+      const std::shared_ptr<bool> open = w.mOpen;
+      GetDelegate()->OnParentWindowResize(configure.width, configure.height);
+      if (!*open)
+        return;
+    }
+    // When the editor keeps its size (host resize off, constraints), the window goes back to it,
     // or the drawable and the GL viewport no longer match.
-    if (*open)
-      PlatformResize(false);
+    PlatformResize(false);
     return;
   }
 
@@ -603,11 +615,17 @@ void IGraphicsLinux::HandleConfigure(const XEvent& event)
   // A host that resizes its embedding window without telling the plug-in (set_size / onSize) still gets
   // a matching editor. The APP's parent also holds its menu bar; the APP reports its client size itself.
   auto* pPlug = dynamic_cast<IPlugAPIBase*>(GetDelegate());
-  if (!pPlug || !pPlug->GetHostResizeEnabled() || pPlug->GetAPI() == kAPIAPP)
+  if (!IsHostResizeEnabled() || pPlug->GetAPI() == kAPIAPP)
     return;
   if (configure.width == w.mWindowW && configure.height == w.mWindowH)
     return;
   GetDelegate()->OnParentWindowResize(configure.width, configure.height);
+}
+
+bool IGraphicsLinux::IsHostResizeEnabled()
+{
+  auto* pPlug = dynamic_cast<IPlugAPIBase*>(GetDelegate());
+  return pPlug && pPlug->GetHostResizeEnabled();
 }
 
 void IGraphicsLinux::PlatformResize(bool parentHasResized)

@@ -79,6 +79,7 @@ private:
   void HandleMotion(const _XEvent& event);
   void HandleConfigure(const _XEvent& event);
   void DrawDirtyControls();
+  bool IsHostResizeEnabled();
   void DestroyWindowResources();
 
   struct Impl;

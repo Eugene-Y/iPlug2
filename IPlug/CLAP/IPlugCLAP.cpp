@@ -990,7 +990,13 @@ bool IPlugCLAP::GUIWindowAttach(void* pWindow) noexcept
 {
   if (HasUI())
   {
+#ifdef OS_LINUX
+    // The editor can fail to open (no libGL, no GLX visual): the host then shows its own UI, not an empty frame.
+    if (!OpenWindow(pWindow))
+      return false;
+#else
     OpenWindow(pWindow);
+#endif
     mWindow = pWindow;
     mGUIOpen = true;
     return true;

@@ -61,7 +61,10 @@ struct GLXFunctions
     {
       sTried = true;
       if (!sGLX.Load())
-        fprintf(stderr, "iPlug2: no usable libGL.so.1 (%s), the editor cannot open\n", dlerror());
+      {
+        const char* pError = dlerror(); // NULL when dlclose() after a missing symbol cleared it
+        fprintf(stderr, "iPlug2: no usable libGL.so.1 (%s), the editor cannot open\n", pError ? pError : "GLX entry points missing");
+      }
     }
     return sGLX.mLib ? &sGLX : nullptr;
   }
@@ -129,6 +132,13 @@ public:
   /** Errors seen so far in this scope. Call XSync() first to wait for the replies of earlier requests. */
   int GetErrorCount() const { return sErrorCount; }
 
+  /** Before XCloseDisplay: a later connection at the same address reports its first error again. */
+  static void ForgetDisplay(Display* pDisplay)
+  {
+    if (sReportedDisplay == pDisplay)
+      sReportedDisplay = nullptr;
+  }
+
 private:
   static int Handler(Display* pDisplay, XErrorEvent* pError)
   {
@@ -136,18 +146,23 @@ private:
       return (sOuterHandler && sOuterHandler != &Handler) ? sOuterHandler(pDisplay, pError) : 0;
 
     sErrorCount++;
-#ifndef NDEBUG
+#ifdef NDEBUG
+    // Release builds name the first error of each editor connection only.
+    if (sReportedDisplay == pDisplay)
+      return 0;
+    sReportedDisplay = pDisplay;
+#endif
     char text[128];
     XGetErrorText(pDisplay, pError->error_code, text, sizeof(text));
     fprintf(stderr, "iPlug2: X error ignored: %s (request %d.%d, resource 0x%lx)\n", text,
             pError->request_code, pError->minor_code, pError->resourceid);
-#endif
     return 0;
   }
 
   static inline Display* sDisplay = nullptr;
   static inline int sErrorCount = 0;
   static inline XErrorHandler sOuterHandler = nullptr;
+  static inline Display* sReportedDisplay = nullptr;
   Display* mPrevDisplay;
   int mPrevCount;
   XErrorHandler mPrevHandler = nullptr;

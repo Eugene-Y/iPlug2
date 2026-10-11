@@ -132,6 +132,11 @@ public:
       // Before OpenWindow: the window registers its timers and X fd on the loop chosen here.
       mOwner.GetHostLoopSelector().SetFrame(plugFrame);
       pView = mOwner.OpenWindow(pParent);
+      if (!pView) // no libGL or no GLX visual: let the host show its own UI
+      {
+        mOwner.GetHostLoopSelector().SetFrame(nullptr);
+        return Steinberg::kResultFalse;
+      }
 #endif
       return Steinberg::kResultTrue;
     }
