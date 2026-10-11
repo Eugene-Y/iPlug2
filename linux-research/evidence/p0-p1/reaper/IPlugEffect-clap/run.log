@@ -1,0 +1,24 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=5959 (open)
+FAIL: render[first-open]: editor area 450x305+113+188 is blank (stddev 0)
+view origin 113 188
+[xact] origin 113,188
+REAPER ALIVE pid=5959 (steps)
+REAPER ALIVE pid=5959 (reopen 1)
+REAPER ALIVE pid=5959 (reopen 2)
+REAPER ALIVE pid=5959 (reopen 3)
+REAPER ALIVE pid=5959 (reopen 4)
+REAPER ALIVE pid=5959 (reopen 5)
+FAIL: render[after-reopen]: editor area 450x305+113+188 is blank (stddev 0)
+add2 0
+REAPER ALIVE pid=5959 (two instances)
+FAIL: render[second-instance]: editor area 450x305+145+220 is blank (stddev 0)
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+FAIL: no Draw/OnDisplayTimer hits in 5 s (editor not rendering, or REAPER gone)
+REAPER ALIVE pid=5959 (end)
+RESULT: FAIL (4)
+  - render[first-open]: editor area 450x305+113+188 is blank (stddev 0)
+  - render[after-reopen]: editor area 450x305+113+188 is blank (stddev 0)
+  - render[second-instance]: editor area 450x305+145+220 is blank (stddev 0)
+  - no Draw/OnDisplayTimer hits in 5 s (editor not rendering, or REAPER gone)

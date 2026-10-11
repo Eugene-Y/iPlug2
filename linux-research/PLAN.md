@@ -1,6 +1,52 @@
 # Linux port of hvoya iPlug2 — START HERE
 
 Working plan for continuing the port from a cold session. Written 2026-10-11.
+
+## Progress
+
+**P0 and P1 done (2026-10-11)** on `hvoya-linux`, 61e272b3a..131518f90. Evidence: `evidence/p0-p1/`.
+
+| Commit | What |
+|---|---|
+| 75fa19049 | RR 27b4a5517 CMake. Conflict `ReaperExt.cmake`: kept upstream's macOS export list, added RR's Linux branch (output name `reaper_<name>` like the other platforms) |
+| 025764cd5 | RR 14418467f, partial: `OS_LINUX` guard, EXPORT/BUNDLE_ID, VoiceAllocator includes, WebView stub. Dropped the pthread `Timer_impl` (start race, `OnIdle` off-main), RR's IPlugPaths, the logger fix (hvoya has it), the `EditorResizeFromUI` change (shared resize code) |
+| 161dc60f4 | RR dda961827, partial: VST3 X11 platform type, CLAP X11 api/parent, APP SWELL/GDK main loop. Dropped CLAP timer/posix-fd/`SetHostDriven`, `guiGetResizeHints` and the Scale aspect clamp (all platforms), the `IPLUG2_SCREEN_SCALE` setenv. macOS settings-folder code left as it was. `fork()`+`execlp` replaced by `IPlug/Linux/IPlugLinuxOpen.h` |
+| 38fad33b9, 379852a71, e816a7ba5, 5f5ea9bcc, 10c75357a | RR deploy, pkg-config audio, `-fsigned-char` (clean) |
+| b67ea64ae | RR 166c02d1b CMake only (static libstdc++/libgcc); its IGraphicsLinux fontconfig dlopen not taken |
+| ef002e167, da7cd2493 | RR CLAP 3580ba00d (snap stepped values before display text) and 1e2dab793 (buffer off-by-one): hvoya lacked both. 360d84011 skipped: hvoya already loops the state write, and its `StringToValue` change alters text parsing in every format; left for a decision |
+| 5e23641b8 | P1 paths: Stillwell's `IPlugLinuxPathUtils.h` + test (`Tests/LinuxPaths`, passes) in `IPlug/Linux/`. XDG data/config dirs. Resources: VST3 `Contents/Resources/`, CLAP and APP `<Name>.resources/` beside the module; CMake copy and deploy follow it |
+| 6c7b09472 | GCC portability: `std::expf`/`fmodf`, `<cstdint>`, `SWELL_DLG_WS_DEFAULT_SCALING`, gio-2.0 for the APP |
+| c57c4f908 | Stub `IGraphicsLinux` (no window, warns once) and stub `Timer_impl` (never fires, warns once); thin `OS_LINUX` hooks; `--no-undefined` |
+| 29c6bea6f | IPlugEffect builds with CMake (hvoya utils, generated `plug_build_info.hpp`, C++20) |
+| 3430dd8e8 | P1: CLAP `guiSetParent` validation; `PresetManager::openFolder()` via xdg-open |
+| 702ed635d | Exports: hidden visibility + version script + `--exclude-libs,ALL` |
+| 2f3944b05 | `format_compat.hpp`: `{fmt}` when `<format>` is missing (GCC 11 on 22.04) |
+| 131518f90 | Examples: IPlugControls `OnUIClose` null guard (crashed REAPER on editor close), IPlugEffect `hvoya::format` |
+
+**Results**
+
+- Build: IPlugEffect, IPlugControls, IPlugInstrument × CLAP/VST3/APP green on 24.04 (`build-24.04.log`). CLAP/VST3 also green on 22.04 (`build-22.04.log`).
+- Exports: `.clap` → `clap_entry` only; `.so` → `GetPluginFactory`, `ModuleEntry`, `ModuleExit`. NEEDED: libc, libm, ld-linux only. No GLIBCXX refs.
+- GLIBC floor: 2.38 when built on 24.04, **2.34 on 22.04** (`inspect-*.txt`).
+- VST3 validator: Controls and Instrument 537/537. Effect 536/537: hvoya's IPlugEffect never names `par_gain_L/R` and the reserved params ("has no title"). That is an example bug on every platform, not Linux.
+- clap-validator: the same failures as the hvoya trial. `state-reproducibility-{basic,binary,buffered}` ×3 on all three, plus Instrument `param-fuzz-bounds` (subnormal). RR's `layout-audio-ports-config` failure does not occur. The 22.04 builds give the same numbers.
+- REAPER 7.82 headless (`reaper/`, `reaper-summary.txt`, steps `/dev/null`): all 6 plug-ins load (`TrackFX_AddByName` → 0). REAPER stays alive through open, close/reopen ×5 and a second instance. No LUA errors. Each run is still `RESULT: FAIL`, but only on the expected checks: blank editor ×3 and no Draw hits (stub window). Before 131518f90, IPlugControls crashed REAPER in `OnUIClose` on the first close.
+- macOS: IPlugEffect CLAP Debug builds from this worktree (`macos/`). IPlugEffect APP fails in `IPlugAPP.cpp` (Cocoa imported into a C++ TU). That is pre-existing since hvoya cf2b2a1f4: Gneiss's project marks the file `objcpp`, the example's does not. The APP files touched here (`IPlugAPP_dialog/host/main.cpp`) compiled.
+
+**Deviations**
+
+- The resources layout was not left for P7. RR's shared `resources/` beside the `.clap` contradicts §1, and P1 took SW's lookup. So the CMake copy/deploy was switched to `<Name>.resources/` now.
+- Linux files live in `IPlug/Linux/` (timer, paths, xdg-open helper), added via `IPlug.cmake`, not in `#elif` branches of the shared `.cpp`s.
+- Platform-neutral fixes touched shared code: `std::exp`/`std::fmod`, `format_compat.hpp` (extra `!__has_include(<format>)` condition), two examples. macOS behaviour is unchanged.
+- hvoya utils' `host_time_info.hpp` and `preset_manager.hpp` were edited in this repo (`hvoya/hvoya/utils`).
+
+**Open issues**
+
+- APP: RR's `Sleep(10)` polling main loop and the `--no-io` segfault without ALSA are still there (P8).
+- Each format build compiles every iPlug source again (9 targets ≈ 5 min on colima). Fine for now.
+- `IPlugEffect` APP on macOS needs `IPlugAPP.cpp` set to Objective-C++ in its project (pre-existing).
+
+**Next:** P2 (host-loop timer layer). Replace `IPlug/Linux/IPlugLinuxTimer.*`; register CLAP timers in `init()`.
 Research summary for humans: [`../LINUX_PORT_RESEARCH.md`](../LINUX_PORT_RESEARCH.md) (Russian).
 VM setup for visual tests: [`../LINUX_VM_SETUP.md`](../LINUX_VM_SETUP.md).
 
@@ -173,11 +219,12 @@ GL2 vs GL3 decision, RR's FBO fixes for llvmpipe, and a visual parity check of G
 
 ### P7. Build and packaging + Gneiss CMake (3–4 d)
 
-- Gneiss has only xcodeproj/vcxproj. Write `Gneiss/CMakeLists.txt` for Linux (CLAP, VST3, APP) in the Gneiss repo (`/Volumes/Storage/code/hvoya/Gneiss`). Port the Xcode/py prebuild steps (`plug_build_info`, resources).
-- Add the symbol version script, hidden visibility, static libstdc++, and a 22.04 build container (add a `docker/Dockerfile.22.04` build-only image).
+- Gneiss has only xcodeproj/vcxproj. Write `Gneiss/CMakeLists.txt` for Linux (CLAP, VST3, APP). Port the Xcode/py prebuild steps (`plug_build_info`, resources); `Examples/IPlugEffect/CMakeLists.txt` already shows both for the hvoya utils.
+  - Where: the user allowed experiments on a **local-only** Gneiss branch `linux-experiment`, worktree `/Volumes/Storage/code/hvoya/Gneiss-linux` (from Gneiss master d8e95fd). Never push it, and never touch the main checkout `/Volumes/Storage/code/hvoya/Gneiss`. Point its Linux CMake build at `/Volumes/Storage/code/IPlug2-linux`.
+- Done in P0: the version script, hidden visibility, `--exclude-libs,ALL` and static libstdc++ (`iplug_linux_restrict_exports` in `IPlug.cmake`). The 22.04 image already exists (`--build-arg UBUNTU=22.04`) and gives GLIBC 2.34.
 - Bundles:
   - VST3: `Gneiss.vst3/Contents/{x86_64,aarch64}-linux/Gneiss.so` + `Contents/Resources`;
-  - CLAP: embed resources or use a per-product dir.
+  - CLAP: a per-product `Gneiss.resources/` beside the `.clap` (done in P0/P1). Embedding is still an option.
 - Optionally run an amd64 build via `--platform linux/amd64` (Rosetta).
 
 ### P8. Standalone (2–3 d)
