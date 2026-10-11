@@ -11,14 +11,23 @@ unregistered until the format installs a backend, and move when it swaps backend
 
 | Backend | File | Installed by | Callback thread |
 |---|---|---|---|
-| CLAP `timer-support` + `posix-fd-support` | `IPlugLinuxHostLoopCLAP.h` | `IPlugCLAP::init()`; removed in `~IPlugCLAP` (host still valid) | host main |
+| CLAP `timer-support` + `posix-fd-support` | `IPlugLinuxHostLoopCLAP.h` | `IPlugCLAP::init()`; removed in a wrapped `clap_plugin.destroy`, before any destructor | host main |
 | VST3 `Linux::IRunLoop` | `IPlugLinuxHostLoopVST3.h` | `VST3HostLoopSelector`: `initialize`, view `attached`/`removed`, `terminate` | host main |
 | GLib default context | `IPlugLinuxHostLoopGLib.h` | `IPlugAPP` constructor | APP main |
 | fallback thread | `IPlugLinuxHostLoop.cpp` | CLAP without timer-support; VST3 with no usable IRunLoop | its own thread, warns once on stderr |
 
 `Timer_impl` (`IPlugLinuxTimer.*`) is a timer on a `HostLoop`. `IPlugAPIBase::CreateTimer()` passes the instance's
 loop, so `OnTimer → OnIdle`, `ISender` draining and the queue pumps run where the backend says. `Timer::Create()`
-has no instance: such timers (OSC, ReaperExt) get a private loop on the fallback thread.
+has no instance: such timers (OSC, ReaperExt) get a private loop on the fallback thread, so they run **off the
+main thread**. ReaperExt therefore calls the REAPER API off REAPER's main thread; the fix, when ReaperExt matters on
+Linux, is REAPER's own `plugin_register("timer", ...)`.
+
+CLAP destroy: the plug-in's destructors (`~IPlugEffect`, `~Gneiss`) run before `~IPlugAPIBase`, so stopping the loop
+in a destructor of the iPlug classes is too late for the fallback thread, which could run `OnIdle` on a
+half-destroyed object (review round 1, reproduced with ASan). `CLAPHostLoopDestroyHook` (in
+`IPlugLinuxHostLoopCLAP.h`, installed in the `IPlugCLAP` constructor) replaces `clap_plugin.destroy` with a function
+that calls `SetBackend(nullptr)` and then clap-helpers' own destroy. VST3 needs nothing: hosts call `terminate()`
+before the last `release()`.
 
 VST3 IRunLoop sources, in order of preference: the factory host context (`CPluginFactory::addHostContextCallback`,
 hooked into `BEGIN_FACTORY_DEF`; released in `DeinitModule`), the `initialize()` context, the attached view's
@@ -47,6 +56,11 @@ module's live host registrations when an instance dies.
 5. Observed rates under gdb (50 Hz requested): REAPER CLAP ≈ 26 Hz, REAPER VST3 ≈ 35 Hz, APP (GLib) ≈ 45 Hz.
    gdb breakpoints slow the process, so these are lower bounds.
 
+6. **Debug CLAP builds and the fallback thread.** Debug builds use clap-helpers with `Terminate`/`Maximal`
+   checking. Any `[main-thread]` host call made from the fallback thread calls `std::terminate()`. Example:
+   `SetLatency` in `OnIdle` leads to `latency.changed`. Release builds ignore it and pass the call on.
+   Another reason for P9's main-thread deferral when `!IsHostDriven()`.
+
 ## Acceptance
 
 | # | Check | Result |
@@ -68,6 +82,21 @@ self-removal and re-add inside a callback, no re-entry, fallback timers and fds,
 thread or fd leaks, 100 fallback→host swaps under load, `Timer_impl`, VST3 frame-only, factory precedence, a
 refusing IRunLoop, late host calls on unregistered handlers. Two mutations checked: dropping the deferred delete →
 ASan use-after-free; deleting the old backend under the lock → deadlock (timeout).
+
+## Review round 1 (notes/10) fixes
+
+- 38cd38313: CLAP loop stopped in a wrapped `clap_plugin.destroy`. clap-validator trace: every `clap_plugin.destroy`
+  line is followed by `backend fallback-thread -> none` before the instance is freed
+  (`evidence/p2/validators/clap-destroy-trace.txt`; the one instance without that line was never `init()`ed).
+- 7e9a2c653: `IsHostDriven()` is an atomic set in `SetBackend`. It never waits behind a running fallback callback.
+  `mMutex` now documents why it spans the callback.
+- 51189a81d: a refused timer warns once on stderr. The VST3 selector probes each IRunLoop with a detached handler, so
+  refusal is caught even before any timer exists.
+- 5e436a788: `Timer::Create` starts its fallback thread only after the timer id is stored.
+- d02b36cd0: `static_assert` on the CLAP fd flags. A failing fallback `poll` is reported. The header now documents the
+  callback rules: add/remove from callbacks; `RemoveFd` on `kFdError`.
+- Re-run after the fixes: unit test (with the reviewer's 4 cases + 2 new) PASS; REAPER CLAP/VST3 × Effect/Controls
+  PASS; APP PASS; clap-validator unchanged; macOS CLAP Debug build OK.
 
 ## Not done / for later
 
