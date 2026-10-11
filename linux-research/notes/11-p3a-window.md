@@ -107,6 +107,7 @@ nothing. All expected for P3b (keyboard, platform menus and text entry) and P4 (
 | F5 | Release builds print the first swallowed X error of each editor connection; debug builds every one |
 | F6 | Serial comment: earlier echoes have an older serial, the latest echo fails the size check |
 | F7 | `dlerror()` may be NULL after the `dlclose`: guarded ("GLX entry points missing", seen in the probe) |
+| G1 (round 2) | Destroying an ancestor sends our window DestroyNotify only, never UnmapNotify, so frames kept drawing into the dead drawable and llvmpipe crashed (reviewer's mini host, parent destroyed before `gui.destroy`, ASan, 5/5). Now DestroyNotify for our window or the parent stops drawing, `DrawNow` and resizing, and `CloseWindow` skips `XDestroyWindow`; make-current counts an X error during the call as failure and draws only with our context current. Re-run: parent-death 6/6 alive under ASan with no X error at all; fd, two, churn (50) clean; REAPER IPlugControls CLAP + VST3 PASS; 100× churn stable [R] |
 | notes | Finding 1 rewritten from the reviewer's strace: REAPER polls plug-in fds once per tick; CLAP POLLIN rarely finds input after the timer's drain, VST3 POLLOUT fires every tick |
 
 Re-run after the fixes [R]: REAPER IPlugControls CLAP + VST3 and IPlugEffect CLAP PASS, every Draw/X hit on the main thread. macOS IPlugEffect CLAP + VST3 Debug BUILD SUCCEEDED with the F4 hooks (nothing installed into `~/Library`) [M].
