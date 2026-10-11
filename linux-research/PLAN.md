@@ -4,6 +4,35 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 
 ## Progress
 
+**P3a done (2026-10-11)**: host-driven X11 editor window, NanoVG on GL2, ec828eacc..HEAD. Details: `notes/11-p3a-window.md`. Evidence: `evidence/p3a/`.
+
+| Commit | What |
+|---|---|
+| ec828eacc | `IGraphics/Platforms/IGraphicsLinux.{h,cpp}` (pimpl, own Display, child of the host window, `_XEMBED_INFO`, GLX context per editor, make-current/restore, swap interval 0, X fd + frame timer on `GetHostLoop()`, drain in both, draw only when dirty, `DrawNow`, `mInOpenWindow`, resize, expose/map, mouse, file/memory fonts), `IGraphicsLinuxGLX.h` (libGL `dlopen`, scoped X error trap). CMake: GL2 default on Linux, no libGL link |
+| 69ffcd184 | APP: the editor's window goes below SWELL's menu bar |
+| 362ef9f13 | External resize the editor does not take: the window is put back to the editor's size |
+| d6ce31016, 75e265d91, 362ef9f13 | Harness: `expect-change` step, P3a step files, main-thread check of editor work, editor churn test, X fd probe, external-resize probe, contact sheets, Linux/mac comparison |
+
+**Results** [R] = Docker, REAPER 7.82, llvmpipe
+
+- IPlugControls and IPlugEffect × CLAP/VST3: render on first open, after reopen ×5 and for a 2nd instance; knob drag, wheel, XY pad, keyboard, IGraphics popups change the screen; plug-in resize (IPlugEffect corner resizer) grows REAPER's window; every `Draw` / X-event hit on REAPER's main thread. APP IPlugControls renders and reacts, main thread.
+- 100× open/close of 2 instances (every 5th close before the new window's first timer): fds, sockets, threads equal before/after, RSS flat, host registrations back to 0.
+- Validators identical to P2. NEEDED: `libX11.so.6` + libc/libm only. 22.04 builds green (GLIBC 2.34). macOS IPlugEffect CLAP Debug builds.
+- Visual: same layout and colours as macOS; text a little heavier at 1× (stb_truetype).
+- **REAPER CLAP `posix-fd-support` almost never calls `on_fd`** (the frame timer's drain carries input). REAPER VST3's factory IRunLoop delivers the X fd on the main thread (closes notes/10 #8 for REAPER).
+
+**Deviations**
+
+- GL2, not RR's GL3: FBOs work on GL2 in iPlug (`IGraphicsNanoVG.h` defines `NANOVG_FBO_VALID`); RR's llvmpipe patches to `nanovg_gl_utils.h` / `IGraphicsNanoVG.cpp` were not needed.
+- libGL is `dlopen`ed, not linked.
+- Host resize goes through the shared `OnParentWindowResize` (as CLAP `set_size` does), not RR's Linux-only Scale-mode branch; our own resize echoes are filtered by X request serial instead of RR's flags.
+- The P3a step file is mouse-only. The original `steps/iplugcontrols.txt` runs (`fullsteps-controls-clap`), but its keyboard, OS-menu, OS-text-entry and dialog steps do nothing yet: P3b/P4.
+- APP menu-bar offset done in `IPlugAPP_host.cpp` (Linux branch), not with RR's env var.
+
+**Next:** P3b: keyboard + focus/XEmbed, in-place text entry, cursors (hide/lock during drags), clipboard, platform popup menus decision (Gneiss), fonts by name. Then P4.
+
+---
+
 **P2 done (2026-10-11)**: host-loop timer layer, 534be52df..HEAD. Details and findings: `notes/09-p2-host-loop.md`. Evidence: `evidence/p2/`.
 
 | Commit | What |
@@ -252,7 +281,7 @@ Report physical sizes. Check against hvoya's resize fixes.
 
 ### P6. NanoVG GL on Linux (1–2 d)
 
-GL2 vs GL3 decision, RR's FBO fixes for llvmpipe, and a visual parity check of Gneiss against Metal (mac) and GL2 (win) screenshots.
+GL2 vs GL3 decision (made in P3a: GL2, notes/11), RR's FBO fixes for llvmpipe (not needed on GL2 in P3a), and a visual parity check of Gneiss against Metal (mac) and GL2 (win) screenshots.
 
 ### P7. Build and packaging + Gneiss CMake (3–4 d)
 
@@ -310,4 +339,5 @@ RR's SWELL/GDK host + RtAudio (ALSA/JACK/Pulse; PipeWire through its shims), dri
 | P0–P1 review | notes/08-review-p0-p1.md |
 | P2 host loop: design, REAPER IRunLoop finding, acceptance | notes/09-p2-host-loop.md |
 | P2 review: findings, fixes, verdict | notes/10-review-p2.md |
+| P3a editor window: design, GL2 choice, REAPER fd finding, acceptance | notes/11-p3a-window.md |
 | Patches used to build each candidate | evidence/*/patches/ |

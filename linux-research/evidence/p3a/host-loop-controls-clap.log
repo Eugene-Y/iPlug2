@@ -1,0 +1,38 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+REAPER pid 39055
+add 0
+--- closed: hits by symbol, thread (main = lwp 39055), object
+    103 HIT IPlugControls::OnIdle lwp=39055 this=0x3cf3b610
+    103 HIT iplug::IPlugAPIBase::OnTimer lwp=39055 this=0x3cf3b610
+shown
+--- open: hits by symbol, thread (main = lwp 39055), object
+     99 HIT IPlugControls::OnIdle lwp=39055 this=0x3cf3b610
+     99 HIT iplug::IPlugAPIBase::OnTimer lwp=39055 this=0x3cf3b610
+closed
+--- reclose: hits by symbol, thread (main = lwp 39055), object
+    105 HIT IPlugControls::OnIdle lwp=39055 this=0x3cf3b610
+    105 HIT iplug::IPlugAPIBase::OnTimer lwp=39055 this=0x3cf3b610
+add2 0
+--- two: hits by symbol, thread (main = lwp 39055), object
+    105 HIT IPlugControls::OnIdle lwp=39055 this=0x3cf3b610
+    105 HIT IPlugControls::OnIdle lwp=39055 this=0x41ca7580
+    105 HIT iplug::IPlugAPIBase::OnTimer lwp=39055 this=0x3cf3b610
+    105 HIT iplug::IPlugAPIBase::OnTimer lwp=39055 this=0x41ca7580
+--- latency: REAPER pdc of track 1 fx 0 (editor closed)
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+--- churn: 50x add/delete on track 3
+track3
+threads 14 -> 14, fds 6 -> 6, trace: '' -> 'live registrations in module=2', backends installed in total: 52
+--- after-churn: hits by symbol, thread (main = lwp 39055), object
+     76 HIT IPlugControls::OnIdle lwp=39055 this=0x3cf3b610
+     76 HIT IPlugControls::OnIdle lwp=39055 this=0x41ca7580
+     76 HIT iplug::IPlugAPIBase::OnTimer lwp=39055 this=0x3cf3b610
+     76 HIT iplug::IPlugAPIBase::OnTimer lwp=39055 this=0x41ca7580
+RESULT: PASS
