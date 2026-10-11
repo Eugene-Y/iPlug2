@@ -161,4 +161,5 @@ colima start
 `scripts/run-gui-test.sh <plugin> <outdir>` (REAPER под Xvfb, скриншоты, xdotool-шаги, gdb на краш,
 подсчёт потоков). Работает для любого worktree, включая ветки от `hvoya` (для чистого чекаута — патч
 CMake примера, см. README). Ветка `linux-trial/rangerrick` (PR #1336 на `hvoya`) лежит в
-`linux-research/wt/hvoya-trial-rangerrick` (локально) и запушена в `gene`.
+`linux-research/wt/hvoya-trial-rangerrick` (только локально; разрешения конфликтов — в
+`linux-research/evidence/hvoya-trial/cherry-pick.log`).

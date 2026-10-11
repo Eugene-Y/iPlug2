@@ -11,7 +11,7 @@ VM setup for visual tests: [`../LINUX_VM_SETUP.md`](../LINUX_VM_SETUP.md).
 - Branch **`hvoya-linux`** (pushed to `gene`) is the Linux port branch.
   - It is cut from `hvoya` after upstream master (d54f69050) was merged into `hvoya` (merge 5d854712d, 2026-10-11).
   - Local worktree: `/Volumes/Storage/code/IPlug2-linux`. The main checkout `/Volumes/Storage/code/IPlug2` stays on `hvoya`, because Gneiss builds against it via relative paths.
-- Reference branch **`linux-trial/rangerrick`** (pushed to `gene`) is PR #1336 cherry-picked onto **pre-merge** hvoya. Use it to read RR code adapted to hvoya. Do NOT build the port on it.
+- Reference branch **`linux-trial/rangerrick`** (local only, not pushed) is PR #1336 cherry-picked onto **pre-merge** hvoya. Use it to read RR code adapted to hvoya. Do NOT build the port on it. If it is gone, recreate it by cherry-picking RR's non-chore commits onto hvoya; the conflict resolutions are recorded in `evidence/hvoya-trial/cherry-pick.log`.
 - Remotes to (re)add if missing:
   ```bash
   git remote add rangerrick https://github.com/RangerRick/iPlug2.git
@@ -131,7 +131,7 @@ Each phase ends with a commit on `hvoya-linux` and a harness run. Day estimates 
 ### P3. IGraphicsLinux, host-driven only (6–9 d)
 
 - Base: SW's `IGraphicsLinux` structure — pimpl, XIM, pointer grab, close deferral during host popups. It is **Skia-only**, so port the drawing glue to NanoVG/GL.
-- Graft from RR (`2cc5e6f0a`, `5a8aed3aa`, `cb8ec371c`, read in `linux-trial/rangerrick`):
+- Graft from RR (`2cc5e6f0a`, `5a8aed3aa`, `cb8ec371c`, read in `linux-trial/rangerrick` or `rangerrick/feature/linux-support`):
   - ConfigureNotify and host-resize logic;
   - double-click timing;
   - X11 clipboard (serve `SelectionRequest`);
