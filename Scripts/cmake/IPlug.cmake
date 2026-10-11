@@ -128,8 +128,13 @@ if(NOT TARGET iPlug2::IPlug)
       -Wno-multichar
     )
     target_compile_definitions(iPlug2::IPlug INTERFACE OS_LINUX)
-    target_link_options(iPlug2::IPlug INTERFACE -static-libstdc++ -static-libgcc)
+    # --no-undefined: a plug-in .so must not defer missing symbols to dlopen time in the host.
+    target_link_options(iPlug2::IPlug INTERFACE -static-libstdc++ -static-libgcc LINKER:--no-undefined)
     target_link_libraries(iPlug2::IPlug INTERFACE pthread dl)
+    target_sources(iPlug2::IPlug INTERFACE
+      ${IPLUG_DIR}/Linux/IPlugLinuxPaths.cpp
+      ${IPLUG_DIR}/Linux/IPlugLinuxTimer.cpp
+    )
   endif()
 
   # Generate PkgInfo file for macOS bundles (used by VST2, CLAP, etc.)

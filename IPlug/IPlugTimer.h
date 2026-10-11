@@ -95,8 +95,12 @@ private:
   long ID = 0;
   ITimerFunction mTimerFunc;
 };
-#else
+#elif !defined OS_LINUX
   #error NOT IMPLEMENTED
 #endif
 
 END_IPLUG_NAMESPACE
+
+#ifdef OS_LINUX
+  #include "Linux/IPlugLinuxTimer.h"
+#endif
