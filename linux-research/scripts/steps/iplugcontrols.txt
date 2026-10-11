@@ -1,0 +1,79 @@
+# IPlugControls interaction script. Coordinates relative to the 1024x768 plugin view top-left.
+# Escape is avoided: in the standalone APP it closes the SWELL main dialog (IDCANCEL); popups are
+# dismissed by clicking an empty spot (view 1010,600) instead.
+alive __PROC__
+shot c00-start
+# IVKnobControl drag up
+drag 322 237 322 150
+shot c01-knob-drag
+# IVXYPad drag
+drag 150 440 220 360
+# IVKeyboard: click a key
+click 330 560
+shot c02-xy-keyboard
+# IVMenuButtonControl -> IGraphics popup (OS Menu off)
+click 828 284
+wait 1
+shot c03-popup-igraphics
+click 1010 600
+wait 0.5
+click 1010 600
+# ICaptionControl enum dropdown
+click 321 99
+wait 1
+shot c04-caption-popup
+click 1010 600
+click 1010 600
+# IEditableTextControl / IVNumberBox text entry (IGraphics text entry)
+dclick 941 437
+wait 1
+shot c05-textentry-igraphics
+type 42
+key Return
+wait 0.5
+shot c06-textentry-committed
+alive __PROC__
+# switch to OS-native menus + text entry
+click 224 692
+click 224 720
+wait 0.5
+shot c07-os-toggles
+click 828 284
+wait 1.5
+shot c08-popup-os
+windows
+click 1010 600
+wait 1
+alive __PROC__
+dclick 941 437
+wait 1.5
+shot c09-textentry-os
+windows
+type 7
+key Return
+wait 1
+alive __PROC__
+# color swatch -> color chooser
+click 919 388
+wait 2
+shot c10-colorpicker
+windows
+click 1010 600
+wait 1
+alive __PROC__
+# font button -> font/file dialog?
+click 546 744
+wait 2
+shot c11-font-button
+windows
+click 1010 600
+wait 1
+# info button -> message box
+click 993 737
+wait 2
+shot c12-info
+windows
+key Return
+wait 1
+alive __PROC__
+shot c13-end

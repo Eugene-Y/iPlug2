@@ -1,0 +1,340 @@
+pid=1969 cmd=/opt/REAPER/reaper -nosplash -new 
+--- threads (count name)
+      2 llvmpipe-0
+      2 llvmpipe-1
+      2 llvmpipe-2
+      2 llvmpipe-3
+      2 llvmpipe-4
+      2 llvmpipe-5
+     16 reaper
+      1 reaper/audio_dm
+      5 reaper/livefx
+      6 reaper/mediaafx
+      1 reaper/video
+      2 reaper:disk$0
+--- backtraces
+Thread 43 (Thread 0xfcb74e827160 (LWP 1982) "reaper/video"):
+#0  0x0000fcb750b9bd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750ba60bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750bcb5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000fcb74d5aff38 in ??? () at /opt/REAPER/Plugins/reaper_video.so
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 42 (Thread 0xfcb74d41f160 (LWP 1983) "reaper/audio_dm"):
+#0  0x0000fcb750b9bd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750ba60bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750bcb5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000000000a31268 in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 41 (Thread 0xfcb74ca8f160 (LWP 1984) "reaper/mediaafx"):
+#0  0x0000fcb750b61d70 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 40 (Thread 0xfcb747fff160 (LWP 1985) "reaper/mediaafx"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 39 (Thread 0xfcb7477ef160 (LWP 1986) "reaper/mediaafx"):
+#0  0x0000fcb750b61d70 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 38 (Thread 0xfcb746fdf160 (LWP 1987) "reaper/mediaafx"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 37 (Thread 0xfcb7467cf160 (LWP 1988) "reaper/mediaafx"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 36 (Thread 0xfcb745fbf160 (LWP 1989) "reaper/mediaafx"):
+#0  0x0000fcb750b61d70 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 35 (Thread 0xfcb7457af160 (LWP 1990) "reaper/livefx"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 34 (Thread 0xfcb744f9f160 (LWP 1991) "reaper/livefx"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 33 (Thread 0xfcb74478f160 (LWP 1992) "reaper/livefx"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 32 (Thread 0xfcb743f7f160 (LWP 1993) "reaper/livefx"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 31 (Thread 0xfcb74376f160 (LWP 1994) "reaper/livefx"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b64d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750a1cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000fcb750a1d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 30 (Thread 0xfcb740876160 (LWP 2021) "reaper"):
+#0  0x0000fcb750b9bd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750ba60bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750bcb5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000fcb73fea9e3c in iplug::Timer_impl::ThreadProc(void*) () at /tmp/rhome/.vst3/IPlugControls.vst3/Contents/aarch64-linux/IPlugControls.so
+#4  0x0000fcb750b6582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#5  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 29 (Thread 0xfcb6fafdf160 (LWP 3135) "llvmpipe-0"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 28 (Thread 0xfcb71f7ef160 (LWP 3136) "llvmpipe-1"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 27 (Thread 0xfcb72cd2f160 (LWP 3137) "llvmpipe-2"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 26 (Thread 0xfcb71ffff160 (LWP 3138) "llvmpipe-3"):
+#0  0x0000fcb750b6369c in pthread_barrier_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb73d409df0 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#2  0x0000fcb73d6d017c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#5  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 25 (Thread 0xfcb72dd4f160 (LWP 3139) "llvmpipe-4"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 24 (Thread 0xfcb72d53f160 (LWP 3140) "llvmpipe-5"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 23 (Thread 0xfcb71efdf160 (LWP 3141) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 22 (Thread 0xfcb71e7cf160 (LWP 3142) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 21 (Thread 0xfcb71dfbf160 (LWP 3143) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 20 (Thread 0xfcb71d7af160 (LWP 3144) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 19 (Thread 0xfcb71cf9f160 (LWP 3145) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 18 (Thread 0xfcb6fbfff160 (LWP 3146) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 17 (Thread 0xfcb6fb7ef160 (LWP 3147) "reaper:disk$0"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d408cdc [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 16 (Thread 0xfcb6fa7cf160 (LWP 3148) "reaper"):
+#0  0x0000fcb750b81a58 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb73d6e0ef8 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#2  0x0000fcb73d6e2c8c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6e9464 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d60870c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb73d604104 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#6  0x0000fcb73d60460c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#7  0x0000fcb73d59d32c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#8  0x0000fcb73d596e4c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#9  0x0000fcb73d597178 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+Thread 15 (Thread 0xfcb6f97af160 (LWP 3281) "llvmpipe-0"):
+#0  0x0000fcb750b6369c in pthread_barrier_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb73d409df0 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#2  0x0000fcb73d6d0168 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#5  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 14 (Thread 0xfcb6f8f9f160 (LWP 3282) "llvmpipe-1"):
+#0  0x0000fcb73d6d7670 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#1  0x0000fcb73d6cff2c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#2  0x0000fcb73d6d0174 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#5  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 13 (Thread 0xfcb6f3fff160 (LWP 3283) "llvmpipe-2"):
+#0  0x0000fcb750a0efc4 in ??? ()
+Thread 12 (Thread 0xfcb6f37ef160 (LWP 3284) "llvmpipe-3"):
+#0  0x0000fcb750a0e04c in ??? ()
+#1  0x00000000260b9698 in ??? ()
+Thread 11 (Thread 0xfcb6f2fdf160 (LWP 3285) "llvmpipe-4"):
+#0  0x0000fcb750a0f2f0 in ??? ()
+#1  0x3f48c8c93f48c8c9 in ??? ()
+Thread 10 (Thread 0xfcb6f27cf160 (LWP 3286) "llvmpipe-5"):
+#0  0x0000fcb750a0e3f0 in ??? ()
+#1  0x3efefeff3efefeff in ??? ()
+Thread 9 (Thread 0xfcb6f1fbf160 (LWP 3287) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 8 (Thread 0xfcb6f17af160 (LWP 3288) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 7 (Thread 0xfcb6f0f9f160 (LWP 3289) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 6 (Thread 0xfcb6dbfff160 (LWP 3290) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 5 (Thread 0xfcb6db7ef160 (LWP 3291) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 4 (Thread 0xfcb6dafdf160 (LWP 3292) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 3 (Thread 0xfcb6da7cf160 (LWP 3293) "reaper:disk$0"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d408cdc [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d42ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb750b6582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fcb750bcbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 2 (Thread 0xfcb6d9fbf160 (LWP 3294) "reaper"):
+#0  0x0000fcb750b61d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750b649f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb73d42ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000fcb73d6ccc44 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000fcb73d6c8190 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000fcb73d6cd28c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#6  0x0000fcb73d6cd394 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#7  0x0000fcb73d6fd6a4 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#8  0x0000fcb73d2bd590 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#9  0x0000fcb73d05d4a0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+Thread 1 (Thread 0xfcb7511d2460 (LWP 1969) "reaper"):
+#0  0x0000fcb750b9bd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fcb750ba60bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fcb750bcb5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x000000000040b698 in ??? ()
+#4  0x0000fcb750b084c4 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#5  0x0000fcb750b08598 in __libc_start_main () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000000000418ee8 in _start ()

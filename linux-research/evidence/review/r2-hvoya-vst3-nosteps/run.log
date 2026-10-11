@@ -1,0 +1,22 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=23364 (open)
+render[first-open] ok (stddev 0.196562)
+view origin 113 188
+[xact] origin 113,188
+REAPER ALIVE pid=23364 (steps)
+REAPER ALIVE pid=23364 (reopen 1)
+REAPER ALIVE pid=23364 (reopen 2)
+REAPER ALIVE pid=23364 (reopen 3)
+REAPER ALIVE pid=23364 (reopen 4)
+REAPER ALIVE pid=23364 (reopen 5)
+FAIL: render[after-reopen]: editor area 1024x768+113+188 is blank (stddev 0)
+add2 0
+REAPER ALIVE pid=23364 (two instances)
+render[second-instance] ok (stddev 0.196033)
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+     96 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=2
+     96 HIT iplug::igraphics::IGraphicsLinux::OnDisplayTimer tid=2
+REAPER ALIVE pid=23364 (end)
+RESULT: FAIL (1)
+  - render[after-reopen]: editor area 1024x768+113+188 is blank (stddev 0)

@@ -1,0 +1,13 @@
+diff --git a/IPlug/IPlugLogger.h b/IPlug/IPlugLogger.h
+index f69520a6f..33b0d9fd1 100644
+--- a/IPlug/IPlugLogger.h
++++ b/IPlug/IPlugLogger.h
+@@ -144,7 +144,7 @@ BEGIN_IPLUG_NAMESPACE
+     int i = (int) strlen(cStr);
+     cStr[i++] = tz >= 0 ? '+' : '-';
+     if (tz < 0) tz = -tz;
+-    snprintf(&cStr[i], 32, "%02d%02d", tz / 60, tz % 60);
++    snprintf(&cStr[i], sizeof(cStr) - i, "%02d%02d", tz / 60, tz % 60);
+     
+     static char sTimeStr[32];
+     strcpy(sTimeStr, cStr);

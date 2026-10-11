@@ -1,0 +1,193 @@
+pid=3362 cmd=build/rangerrick/out/IPlugControls --no-io 
+--- threads (count name)
+      1 IPlugCo:disk$0
+     10 IPlugControls
+      1 dconf worker
+      1 gdbus
+      1 gmain
+      1 llvmpipe-0
+      1 llvmpipe-1
+      1 llvmpipe-2
+      1 llvmpipe-3
+      1 llvmpipe-4
+      1 llvmpipe-5
+      1 pool-IPlugContr
+      1 pool-spawner
+--- backtraces
+Thread 22 (Thread 0xf6e11d7aee00 (LWP 3363) "IPlugControls"):
+#0  0x0000f6e11f5e203c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e8ba8 in pthread_mutex_lock () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000b66d3bc9923c in iplug::igraphics::IGEditorDelegate::SendControlValueFromDelegate(int, double) ()
+#3  0x0000b66d3bb29c94 in IPlugControls::OnIdle() ()
+#4  0x0000b66d3bc3b204 in iplug::Timer_impl::ThreadProc(void*) ()
+#5  0x0000f6e11f5e582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 21 (Thread 0xf6e10f0fee00 (LWP 3364) "llvmpipe-0"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a38012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 20 (Thread 0xf6e10e8eee00 (LWP 3365) "llvmpipe-1"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a38012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 19 (Thread 0xf6e107ffee00 (LWP 3366) "llvmpipe-2"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a38012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 18 (Thread 0xf6e10e0dee00 (LWP 3367) "llvmpipe-3"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a38012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 17 (Thread 0xf6e10d8cee00 (LWP 3368) "llvmpipe-4"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a38012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 16 (Thread 0xf6e10d0bee00 (LWP 3369) "llvmpipe-5"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a38012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 15 (Thread 0xf6e10c8aee00 (LWP 3370) "IPlugControls"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a37bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 14 (Thread 0xf6e1077eee00 (LWP 3371) "IPlugControls"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a37bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 13 (Thread 0xf6e106fdee00 (LWP 3372) "IPlugControls"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a37bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 12 (Thread 0xf6e1067cee00 (LWP 3373) "IPlugControls"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a37bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 11 (Thread 0xf6e105fbee00 (LWP 3374) "IPlugControls"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a37bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 10 (Thread 0xf6e1057aee00 (LWP 3375) "IPlugControls"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a37bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 9 (Thread 0xf6e104e5de00 (LWP 3376) "IPlugCo:disk$0"):
+#0  0x0000f6e11f5e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f5e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11a0ded20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f6e11a0b8cdc [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f6e11a0debe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 8 (Thread 0xf6e0e79fce00 (LWP 3377) "IPlugControls"):
+#0  0x0000f6e11f640bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11fec1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f6e11fe602b0 [PAC] in g_main_loop_run () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000f6e0e4574b7c [PAC] in gtk_dialog_run () at /lib/aarch64-linux-gnu/libgtk-3.so.0
+#4  0x0000b66d3bcbfd68 [PAC] in iplug::igraphics::IGraphicsLinux::PromptForFile(WDL_String&, WDL_String&, iplug::igraphics::EFileAction, char const*, std::function<void (WDL_String const&, WDL_String const&)>) ()
+#5  0x0000b66d3bb29ea0 in std::_Function_handler<void (iplug::igraphics::IControl*), IPlugControls::IPlugControls(iplug::InstanceInfo const&)::{lambda(iplug::igraphics::IGraphics*)#1}::operator()(iplug::igraphics::IGraph
+#6  0x0000b66d3bc6d0d8 in iplug::igraphics::IButtonControlBase::OnEndAnimation() ()
+#7  0x0000b66d3bc70a5c in iplug::igraphics::IControl::Animate() ()
+#8  0x0000b66d3bc84cd0 in iplug::igraphics::IGraphics::ForAllControlsFunc(std::function<void (iplug::igraphics::IControl*)>) ()
+#9  0x0000b66d3bc85b80 in iplug::igraphics::IGraphics::IsDirty(iplug::igraphics::IRECTList&) ()
+Thread 7 (Thread 0xf6e0cfffee00 (LWP 3542) "IPlugControls"):
+#0  0x0000f6e11f649764 in syscall () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11febb630 in g_cond_wait () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f6e11fe278d8 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000f6e11fe2795c [PAC] in g_async_queue_pop () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#4  0x0000f6e11e1ea52c [PAC] in ??? () at /lib/aarch64-linux-gnu/libpangoft2-1.0.so.0
+#5  0x0000f6e11fe8f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#6  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 6 (Thread 0xf6e0e6c50e00 (LWP 3608) "gmain"):
+#0  0x0000f6e11f640bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11fec1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f6e11fe5ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000f6e11fe5ec24 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#4  0x0000f6e11fe8f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 5 (Thread 0xf6e0e6440e00 (LWP 3609) "pool-spawner"):
+#0  0x0000f6e11f649764 in syscall () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11febb630 in g_cond_wait () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f6e11fe278d8 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000f6e11fe904bc [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#4  0x0000f6e11fe8f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 4 (Thread 0xf6e0e5c30e00 (LWP 3610) "pool-IPlugContr"):
+#0  0x0000f6e11f649764 in syscall () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11febc034 in g_cond_wait_until () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f6e11fe2789c [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000f6e11fe959e8 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#4  0x0000f6e11fe8f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 3 (Thread 0xf6e0cefdee00 (LWP 3612) "gdbus"):
+#0  0x0000f6e11f640bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11fec1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f6e11fe602b0 [PAC] in g_main_loop_run () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000f6e12013eff4 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgio-2.0.so.0
+#4  0x0000f6e11fe8f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 2 (Thread 0xf6e0ce7cee00 (LWP 3613) "dconf worker"):
+#0  0x0000f6e11f640bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11fec1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f6e11fe5ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000f6e11cbb625c [PAC] in ??? () at /usr/lib/aarch64-linux-gnu/gio/modules/libdconfsettings.so
+#4  0x0000f6e11fe8f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000f6e11f5e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f6e11f64bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 1 (Thread 0xf6e120378ac0 (LWP 3362) "IPlugControls"):
+#0  0x0000f6e11f61bd94 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f6e11f6260bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f6e11f64b5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000b66d3bb241bc in main ()

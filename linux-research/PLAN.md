@@ -1,0 +1,226 @@
+# Linux port of hvoya iPlug2 — START HERE
+
+Working plan for continuing the port from a cold session. Written 2026-10-11.
+Research summary for humans: [`../LINUX_PORT_RESEARCH.md`](../LINUX_PORT_RESEARCH.md) (Russian).
+VM setup for visual tests: [`../LINUX_VM_SETUP.md`](../LINUX_VM_SETUP.md).
+
+## 0. Cold start checklist
+
+**Repo layout and remotes**
+
+- Branch **`hvoya-linux`** (pushed to `gene`) is the Linux port branch.
+  - It is cut from `hvoya` after upstream master (d54f69050) was merged into `hvoya` (merge 5d854712d, 2026-10-11).
+  - Local worktree: `/Volumes/Storage/code/IPlug2-linux`. The main checkout `/Volumes/Storage/code/IPlug2` stays on `hvoya`, because Gneiss builds against it via relative paths.
+- Reference branch **`linux-trial/rangerrick`** (pushed to `gene`) is PR #1336 cherry-picked onto **pre-merge** hvoya. Use it to read RR code adapted to hvoya. Do NOT build the port on it.
+- Remotes to (re)add if missing:
+  ```bash
+  git remote add rangerrick https://github.com/RangerRick/iPlug2.git
+  git remote add stillwell https://github.com/stillwellaudio/iPlug2.git
+  git remote add tomtrnk https://github.com/TomTrnk/iPlug2bn.git
+  git fetch rangerrick feature/linux-support && git fetch stillwell master
+  ```
+  Pinned heads at research time: RR `03d3c1af1`, Stillwell `1d04aa5ff`. Stillwell's Linux range is `80c430878..910303d27`; its PR #1 is `4c48eff6f`.
+- `linux-research/` holds:
+  - `notes/`: the research — 01 efforts, 02 best practices, 03 build/test, 04 architecture review + plan, 05 review of 03, 06 doc fact-check, 07 upstream merge analysis;
+  - `docker/` and `scripts/`: the harness;
+  - `evidence/`: logs, patches, contact sheets;
+  - `cmake/stillwell/`: CMake driver for the Stillwell fork.
+- Not in git (regenerate): `cache/` (SDKs, Skia, REAPER — `scripts/fetch-sdks.sh`), `build/`, `wt/` (throwaway worktrees), most screenshots.
+
+**Docker (colima)**
+
+`brew install colima docker docker-buildx` is already installed on this Mac; `~/.docker/config.json` has `cliPluginsExtraDirs`.
+
+```bash
+colima start --cpu 6 --memory 8 --disk 50 --vm-type vz --vz-rosetta --mount-type virtiofs --mount /Volumes/Storage/code:w --mount /private/tmp/claude-501:w --mount "$HOME:w"
+```
+
+Then follow `docker/README.md`:
+1. Build the image: `docker build -t iplug2-linux:24.04 linux-research/docker`.
+2. `scripts/fetch-sdks.sh`, then `scripts/install-sdks.sh <tree>`.
+3. `scripts/build-cmake.sh <tree> <builddir> <targets>`.
+4. `scripts/reaper-plugin-test.sh` / `run-gui-test.sh`. These run REAPER 7.82 aarch64 under Xvfb with xdotool steps, screenshots and gdb.
+
+The harness fails on a blank editor, no repaint, a REAPER PID change, `LUA ERROR`, no draw hits, and fewer timer threads than instances. Use `GUI=<name>` for your own container.
+
+**VM:** see `LINUX_VM_SETUP.md`. SSH key: `~/.ssh/claude_linux_vm`. The user sends the IP and user name; then install build deps and REAPER aarch64 over SSH. Use `DISPLAY=:0`, `xdotool`, and `import -window root` for screenshots.
+
+## 1. Decisions already made (do not re-litigate)
+
+- The port branch comes from `hvoya` (many product fixes), not upstream.
+- v1 scope:
+  - CLAP + VST3 + standalone APP;
+  - IGraphics + NanoVG on GL (GL2 like Windows, or GL3 like RR — pick in P3);
+  - X11 only (XWayland covers Wayland desktops).
+- Out of scope for v1: Skia, native Wayland, LV2 (Ardour loads VST3), WebView.
+- **Threading contract — the decisive requirement.** All X event processing, IGraphics drawing, `IPlugTimer` callbacks (→ `OnIdle`, `ISender` draining) and editor-delegate callbacks run on the **host main thread**:
+  - CLAP: `timer-support`, plus `posix-fd-support` for the X fd.
+  - VST3: `Linux::IRunLoop`, `registerTimer` + `registerEventHandler`.
+  - APP: GLib/SWELL main loop.
+
+  Gneiss `OnIdle()` calls `GetUI()` and `SetLatency()` ("message thread only": `Gneiss.cpp:1285-1294`). A plugin-owned worker thread is allowed **only** as a logged fallback when the host provides no loop; Gneiss must then defer `SetLatency`.
+- **No GTK in the plugin process.** It clashes with the host's GTK ABI and crashes Ardour; nested `gtk_dialog_run` caused the RR text-entry crash and the hangs.
+  - Dialogs: xdg-desktop-portal (libdbus via dlopen), else zenity/kdialog through `posix_spawn` with the pipe fd on the host loop. Never block the host thread.
+  - Text entry: in-place, like mac/win. `CreatePlatformTextEntry` must return immediately and commit later, because `IGraphics::CreateTextEntry` dereferences `mInTextEntry` after it returns (`IGraphics.cpp:~1977`).
+- GL: one context per editor, make-current/restore around draws, **swap interval 0**; the host timer sets the pace. GLX now, EGL later.
+- Binary hygiene:
+  - `-fvisibility=hidden` + a version script exporting only `clap_entry`, or `GetPluginFactory`/`ModuleEntry`/`ModuleExit`;
+  - `-Wl,--exclude-libs,ALL`, `-static-libstdc++ -static-libgcc`;
+  - build on an old glibc (Ubuntu 22.04 container; RR on 22.04 gives a GLIBC floor of 2.34);
+  - resources inside the bundle, or embedded — never a shared `resources/` next to the `.clap`.
+- Keep Linux code in **new files** with thin `#ifdef OS_LINUX` hooks in shared code. Do not change shared resize code for all platforms the way RR does. That keeps future upstream syncs (and a possible upstream merge of #1336) tractable.
+
+## 2. Known bugs to NOT import (from RR/Stillwell)
+
+| Bug | Where | Note |
+|---|---|---|
+| Thread-start race: `mRunning=true` after `pthread_create` | RR `IGraphicsLinux::StartTimer`, `IPlugTimer.cpp` `Timer_impl` (cb8ec371c) | fix: `evidence/review/probes/racefix.patch`; moot once host-driven |
+| OS text-entry null deref | RR GTK `CreatePlatformTextEntry` | design it async |
+| Close-editor deadlock (lock → join render thread that waits on lock) | RR `IGraphicsEditorDelegate.cpp:52` vs `IGraphicsLinux.cpp:1801` | delete `GfxMutex` with the render thread |
+| CLAP `onPosixFd` processes X events without the lock | RR `IPlugCLAP.cpp:1186-1190` | moot when host-driven only |
+| CLAP attach starts the private render thread, then `SetHostDriven(true)` | RR | never start it |
+| Redraw on every tick | RR | redraw only when dirty |
+| Logger `snprintf` FORTIFY abort | fixed in hvoya 46f834a92 | — |
+| Stillwell `OnUIClose` before the UI exists | SW editor delegate | — |
+| GTK menus/dialogs from plugin | RR | — |
+
+## 3. Work plan
+
+Each phase ends with a commit on `hvoya-linux` and a harness run. Day estimates come from code reading (notes/04 + 06), total ≈ 31–49 dev-days. Treat P0–P2 as validation of the estimate.
+
+### P0. Branch hygiene and build skeleton (0.5–1 d)
+
+1. Bring RR's **build/format scaffolding** onto `hvoya-linux` by cherry-pick, not merge:
+   - `27b4a5517` (CMake), `14418467f` (IPlug core), `dda961827` (APP/VST3/CLAP wiring);
+   - `4c4354f2e`, `deb25d88b`, `cf407a8bb` (deploy — revisit the resources layout in P7);
+   - `55fcbf686` (pkg-config audio), `166c02d1b` (dlopen fontconfig, static C++), `27706feec` (`-fsigned-char`).
+
+   Skip:
+   - CLAP fixes `360d84011`, `3580ba00d`, `1e2dab793` — compare with hvoya's CLAP fixes first; hvoya already loops the state write;
+   - `3231b87e9` (GfxMutex), the GTK commits `2cc5e6f0a` and `9afbb1524` (take only X11 bits by hand in P3), and chores.
+
+   notes/07 says the merged tree gives ~8 conflicting files (`IPlugPlatform.h` + CMake), all mechanical.
+2. Make `IPlugEffect` CLAP/VST3/APP build in Docker with a **stub** `IGraphicsLinux` (no window), so the build matrix is green before UI work.
+3. Acceptance: `build-cmake.sh` green for IPlugEffect + IPlugControls; the VST3 validator passes; clap-validator runs. The UI test is expected to fail.
+
+### P1. IPlug core Linux (1.5–2 d)
+
+- `IPlugPlatform`, `IPlugPaths`: take RR's or SW's `IPlugLinuxPathUtils.h` + tests; XDG dirs for presets/settings.
+- VST3 `linuxmain.cpp`, `isPlatformTypeSupported(kPlatformTypeX11EmbedWindowID)`.
+- CLAP `guiIsApiSupported(CLAP_WINDOW_API_X11)` and `guiSetParent`.
+- hvoya utils `preset_manager.hpp` `openFolder()` → `xdg-open` via `posix_spawn`.
+
+### P2. Host-loop timer layer (4–6 d) — the core
+
+- New `IPlug/Linux/IPlugLinuxHostLoop.{h,cpp}`: a per-instance interface `{ addTimer(ms, cb), removeTimer, addFd(fd, cb), removeFd }`. Implementations:
+  - **CLAP:** `clap_host_timer_support` / `clap_host_posix_fd_support`. Register in `init()`, not the constructor (as SW does at `IPlugCLAP.cpp:155-163`). Dispatch from `on_timer` / `on_fd`.
+  - **VST3:**
+    - `Linux::IRunLoop`, obtained from `IPlugFrame` when the view attaches;
+    - for closed-editor idle, also from the factory host context (`IPluginFactory3::setHostContext`, as JUCE does at `juce_audio_plugin_client_VST3.cpp:3994-4000`).
+    - Reference: SW `VST3RunLoopTimer` (`IPlugVST3_RunLoop.h`, `IPlugVST3_View.h:415-449`) and old upstream `IPlugVST3_RunLoop.cpp:34-165` (`upstrem/linux`, daf40c93b).
+    - Watch for hosts that call back for an already-unregistered handler: use refcounted handlers, like SW.
+  - **APP:** a GLib `g_timeout_add` / `g_unix_fd_add` on SWELL's GTK loop.
+  - **Fallback:** a worker thread, with `DBGMSG` warning. Gneiss must handle this.
+- A Linux `Timer_impl` (`IPlugTimer`) on top of the host loop, so `OnIdle` and `ISender` run on the host thread.
+- **Probe early** with a trace build (like SW's `IPLUG_TRACE_VST3_RUNLOOP`): which hosts give `IRunLoop` with the editor closed? REAPER in Docker now; Bitwig, Ardour and Carla in the VM / on a PC later.
+- Acceptance:
+  - harness thread check: Draw, `OnTimer` and `OnIdle` all on the host main thread, for VST3, CLAP and APP;
+  - 2 instances → 2 timers;
+  - latency change with the editor **closed** reaches the host from the main thread.
+
+### P3. IGraphicsLinux, host-driven only (6–9 d)
+
+- Base: SW's `IGraphicsLinux` structure — pimpl, XIM, pointer grab, close deferral during host popups. It is **Skia-only**, so port the drawing glue to NanoVG/GL.
+- Graft from RR (`2cc5e6f0a`, `5a8aed3aa`, `cb8ec371c`, read in `linux-trial/rangerrick`):
+  - ConfigureNotify and host-resize logic;
+  - double-click timing;
+  - X11 clipboard (serve `SelectionRequest`);
+  - Xcursor;
+  - llvmpipe FBO fixes.
+- Add:
+  - X fd registration plus `XPending` drain in both the fd and timer callbacks;
+  - GLX context per editor, swap interval 0 (`GLX_EXT_swap_control` / `GLX_MESA_swap_control`);
+  - `DrawNow()` (hvoya API, called at `GneissUI.cpp:1180`);
+  - `mInOpenWindow` set during open (hvoya, see `IGraphicsMac.mm:103-110`);
+  - respect `IGEditorDelegate::mOpening`;
+  - `_XEMBED_INFO`, plus `XSetInputFocus` on click and during text entry;
+  - in-place text entry;
+  - IGraphics popup menus as the default on Linux. Gneiss uses platform menus — consider `AttachPopupMenuControl` for Linux and check clipping at the window edge.
+- Do NOT call `XInitThreads`; do not keep a render thread.
+- Acceptance: the harness IPlugControls step script passes for VST3 and CLAP (render, knob drag, popups, text entry, reopen ×5, 2 instances), and 100× open/close without leaks (fd count, GL contexts).
+
+### P4. Dialogs (4–6 d)
+
+- `PromptForFile` / `PromptForDirectory`:
+  - xdg-desktop-portal `org.freedesktop.portal.FileChooser` via dlopen'd libdbus; parent `x11:<hex XID>`; the response is async on the D-Bus fd registered on the host loop.
+  - Fallback: zenity/kdialog through `posix_spawn`, with the pipe fd on the host loop. BN `IGraphicsLinux.cpp:428-776` on `upstrem/linux-bindernews` is a reference for argument building.
+- `ShowMessageBox`: portal/zenity, or IGraphics-drawn. `PromptForColor`: zenity or IGraphics.
+- The completion handler always fires on the host thread.
+- Gneiss callers: `morph/morph_controller.hpp:2114,2126`, `morph/morph_file_router.hpp:115-146`, `hvoya/utils/preset_strip_control.hpp:421-446`, `user_tab_panel.cpp:841-851`.
+
+### P5. HiDPI (2–3 d)
+
+Scale sources, in priority order:
+1. host-provided — CLAP `gui.set_scale`, VST3 `IPlugViewContentScaleSupport`;
+2. `Xft.dpi`/96;
+3. `GDK_SCALE`.
+
+Report physical sizes. Check against hvoya's resize fixes.
+
+### P6. NanoVG GL on Linux (1–2 d)
+
+GL2 vs GL3 decision, RR's FBO fixes for llvmpipe, and a visual parity check of Gneiss against Metal (mac) and GL2 (win) screenshots.
+
+### P7. Build and packaging + Gneiss CMake (3–4 d)
+
+- Gneiss has only xcodeproj/vcxproj. Write `Gneiss/CMakeLists.txt` for Linux (CLAP, VST3, APP) in the Gneiss repo (`/Volumes/Storage/code/hvoya/Gneiss`). Port the Xcode/py prebuild steps (`plug_build_info`, resources).
+- Add the symbol version script, hidden visibility, static libstdc++, and a 22.04 build container (add a `docker/Dockerfile.22.04` build-only image).
+- Bundles:
+  - VST3: `Gneiss.vst3/Contents/{x86_64,aarch64}-linux/Gneiss.so` + `Contents/Resources`;
+  - CLAP: embed resources or use a per-product dir.
+- Optionally run an amd64 build via `--platform linux/amd64` (Rosetta).
+
+### P8. Standalone (2–3 d)
+
+RR's SWELL/GDK host + RtAudio (ALSA/JACK/Pulse; PipeWire through its shims), driven by the GLib loop. Fix the segfault when no audio device is present (RR needs `--no-io`). Drop the `IPLUG2_MENU_OFFSET` / `IPLUG2_SCREEN_SCALE` env hacks.
+
+### P9. Gneiss-side work (2–4 d)
+
+- `SetLatency` path when `OnIdle` falls back to a worker thread;
+- `openFolder()` (P1);
+- the menu strategy (P3);
+- a visual QA pass.
+
+### P10. Validation (5–8 d)
+
+- Validators: clap-validator, VST3 validator, pluginval `--skip-gui-tests`.
+- Hosts:
+  - REAPER (Docker + VM);
+  - Carla, Ardour (VST3), Renoise (VM, arm64 permitting);
+  - Bitwig — x86_64 only, needs a PC.
+- Cases:
+  - multi-instance;
+  - 100× open/close;
+  - state load with the editor open and closed;
+  - latency change with the editor closed;
+  - Wayland session via XWayland (VM, manual).
+- Known open item: clap-validator `state-reproducibility-*` fails on hvoya-based builds. Check whether the mac CLAP of Gneiss fails it too — shared code?
+
+## 4. Risks to probe first
+
+1. VST3 hosts without `IRunLoop` while the editor is closed → decides how much Gneiss fallback is needed (P2 probe).
+2. XEmbed keyboard focus per host (Bitwig, Carla).
+3. Vsync/driver differences (NVIDIA proprietary vs Mesa); XWayland scaling.
+4. Upstream merging #1336 later → keep Linux code isolated in new files.
+
+## 5. Where the facts are
+
+| Question | File |
+|---|---|
+| Who did what, links, PR comments | notes/01-existing-efforts.md |
+| How JUCE/DPF/VSTGUI/pugl/Visage/baseview do it (with source paths) | notes/02-how-others-do-it.md |
+| Build/test matrix of RR, SW, BN, hvoya trial | notes/03-build-test-results.md (corrected; notes/05 authoritative) |
+| Thread model per candidate × format, conflict counts, detailed plan | notes/04-architecture-review.md |
+| What the review refuted/confirmed, probes | notes/05-review-of-build-results.md, evidence/review/probes/ |
+| Upstream merge contents/conflicts | notes/07-upstream-merge-analysis.md |
+| Patches used to build each candidate | evidence/*/patches/ |

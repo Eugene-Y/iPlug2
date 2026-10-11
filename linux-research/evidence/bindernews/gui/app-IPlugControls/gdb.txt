@@ -1,0 +1,32 @@
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0xfffff5f0eee0 (LWP 174)]
+[New Thread 0xfffff56feee0 (LWP 175)]
+[New Thread 0xffffe734eee0 (LWP 176)]
+[New Thread 0xffffde9feee0 (LWP 177)]
+[New Thread 0xffffe6b3eee0 (LWP 178)]
+[New Thread 0xffffe632eee0 (LWP 179)]
+[New Thread 0xffffe5b1eee0 (LWP 180)]
+[New Thread 0xffffe530eee0 (LWP 181)]
+[New Thread 0xffffe4afeee0 (LWP 182)]
+[New Thread 0xffffdfffeee0 (LWP 183)]
+[New Thread 0xffffdf7eeee0 (LWP 184)]
+[New Thread 0xffffde1eeee0 (LWP 185)]
+[New Thread 0xffffdd9deee0 (LWP 186)]
+[New Thread 0xffffdd1ceee0 (LWP 187)]
+[New Thread 0xffffdc9beee0 (LWP 188)]
+[New Thread 0xffffafbfdee0 (LWP 189)]
+
+Thread 17 "iPlug2Loop" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0xffffafbfdee0 (LWP 189)]
+0x0000aaaaaabb6768 in iplug::igraphics::ISVGSliderControl::OnResize() ()
+#0  0x0000aaaaaabb6768 in iplug::igraphics::ISVGSliderControl::OnResize() ()
+#1  0x0000aaaaaaba6794 in iplug::igraphics::IGraphics::AttachControl(iplug::igraphics::IControl*, int, char const*) ()
+#2  0x0000aaaaaaadd234 in IPlugControls::IPlugControls(iplug::InstanceInfo const&)::{lambda(iplug::igraphics::IGraphics*)#1}::operator()(iplug::igraphics::IGraphics*) const ()
+#3  0x0000aaaaaabfec74 in std::_Function_handler<void (), iplug::igraphics::IGraphicsLinux::OpenWindow(void*)::{lambda()#1}>::_M_invoke(std::_Any_data const&) ()
+#4  0x0000aaaaaac05f00 in iplug::igraphics::IGraphicsLinux::UpdateUI() ()
+#5  0x0000aaaaaac06160 in std::_Function_handler<bool (unsigned long), iplug::igraphics::IGraphicsLinux::OpenWindow(void*)::{lambda(unsigned long)#1}>::_M_invoke(std::_Any_data const&, unsigned long&&) ()
+#6  0x0000aaaaaab74770 in iplug::IPlugTaskThread_Impl::loop() ()
+#7  0x0000fffff75f1ae0 in ??? () at /lib/aarch64-linux-gnu/libstdc++.so.6
+#8  0x0000fffff72e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#9  0x0000fffff734bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6

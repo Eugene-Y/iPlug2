@@ -1,0 +1,13 @@
+diff --git a/Examples/IPlugControls/IPlugControls.cpp b/Examples/IPlugControls/IPlugControls.cpp
+index dee1eb321..6bd52d707 100644
+--- a/Examples/IPlugControls/IPlugControls.cpp
++++ b/Examples/IPlugControls/IPlugControls.cpp
+@@ -561,6 +561,8 @@ void IPlugControls::OnMidiMsgUI(const IMidiMsg& msg)
+ 
+ void IPlugControls::OnUIClose()
+ {
++  if (!GetUI())
++    return;
+   // store the background pattern. No modifications to other controls are stored, and this would also need to be serialized in plugin state, for recall!
+   mBGControlPattern = GetUI()->GetBackgroundControl()->As<IPanelControl>()->GetPattern();
+ }

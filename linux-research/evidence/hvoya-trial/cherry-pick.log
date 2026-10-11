@@ -1,0 +1,37 @@
+CONFLICT 27b4a5517 Add Linux CMake build infrastructure
+    U CMakePresets.json
+    U Scripts/cmake/APP.cmake
+    U Scripts/cmake/CLAP.cmake
+    U Scripts/cmake/IGraphics.cmake
+    U Scripts/cmake/IPlug.cmake
+    U Scripts/cmake/VST3.cmake
+    U Scripts/cmake/WebView.cmake
+    -> resolved: 5 cmake files take-theirs, WebView.cmake keep-ours (no WebView dir on hvoya), CMakePresets hand-merged (linux presets + hvoya wam)
+CONFLICT 14418467f Add IPlug core Linux support
+    U IPlug/IPlugPlatform.h (1 hunks)
+    -> resolved: kept OS_LINUX guard from PR + hvoya's 'EMSCRIPTEN' elif
+OK   2cc5e6f0a Add IGraphics Linux platform (X11, NanoVG/GL3, GTK3 dialogs)
+OK   dda961827 Wire Linux into APP, VST3, and CLAP plugin formats
+OK   4c4354f2e Deploy resources alongside flat plugins (CLAP/APP on Linux)
+OK   3adf9e38b Add Linux CI and documentation
+OK   5a8aed3aa Add X11 double-click detection via timestamp tracking
+OK   55fcbf686 Use pkg-config for ALSA, JACK, and PulseAudio on Linux
+OK   166c02d1b dlopen fontconfig, drop freetype, static-link C++ runtime on Linux
+CONFLICT 360d84011 Fix CLAP param text roundtrip and buffered state save
+    U IPlug/CLAP/IPlugCLAP.cpp (2 hunks)
+    -> resolved: keep hvoya (it already has its own chunked CLAP state write)
+OK   3580ba00d Fix CLAP paramsValueToText for stepped params
+OK   deb25d88b Fix resource deploy for plugins without resources directory
+OK   cf407a8bb Fix CopyIfExists.cmake path resolution in Deploy.cmake
+OK   27706feec Add -fsigned-char to FlexBox object library on Linux
+CONFLICT 3231b87e9 Protect IGEditorDelegate against concurrent host/timer thread access on Linux
+    U IGraphics/IGraphicsEditorDelegate.cpp (1 hunks)
+    U IGraphics/IGraphicsEditorDelegate.h (1 hunks)
+    -> resolved: keep both (hvoya mOpening re-entrancy guard first, then PR's Linux gfx mutex)
+OK   68163d6e4 Resize standalone dialog before opening plugin window
+OK   9afbb1524 Fix GTK popup menus, menu bar offset, and build warnings on Linux
+OK   1e2dab793 Fix CLAP paramsValueToText off-by-one buffer overflow
+OK   6a9419727 Harden Linux IPlugTimer thread lifecycle
+OK   cd6fd8531 Catch standalone app exceptions by const reference
+OK   46fac4b04 Guard against null HOME in macOS InitState
+OK   cb8ec371c Harden Linux IGraphics dlopen, timer, and clipboard
