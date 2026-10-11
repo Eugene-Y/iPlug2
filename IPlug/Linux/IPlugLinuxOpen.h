@@ -22,10 +22,9 @@ extern char** environ;
 BEGIN_IPLUG_NAMESPACE
 
 /** Opens a file, folder or URL with the desktop's default handler (xdg-open).
- * Returns once a shell has been started; it does not wait for xdg-open, which may block until the
- * launched app exits on some desktops. The shell backgrounds xdg-open and exits at once, so the only
- * wait is for that shell, and xdg-open is reparented away from the host: no zombie, and no thread of
- * ours outlives a plugin unload. */
+ * xdg-open can block until the launched app exits, so `sh -c '... &'` backgrounds it and exits at once:
+ * we only reap that shell, leaving no zombie and nothing of ours to outlive a plug-in unload.
+ * The target is passed as $1, so the shell never parses it. */
 inline bool LinuxOpenWithDefaultApp(const char* pathOrURL)
 {
   if (!pathOrURL || !pathOrURL[0])
