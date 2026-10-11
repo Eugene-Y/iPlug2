@@ -57,13 +57,19 @@ docker rm -f gui                                                                
 ```
 
 `dock.sh` and `gx.sh` use `linux-research/` as the working directory, so paths are relative to it.
-Only the repo (`/Volumes/Storage/code/IPlug2`) is mounted. `/private/tmp` (the session scratchpad)
+`dock.sh` (and so `gui-up.sh`) mounts the tree its `linux-research/` belongs to, at the same path
+(e.g. `/Volumes/Storage/code/IPlug2-linux`). When that tree is a linked worktree it also mounts the
+git common dir, so `.git` links resolve. Nothing else is mounted: `/private/tmp` (the session scratchpad)
 and `$HOME` are **not** visible in the containers, so anything a container must read
 (gdb scripts, step files, patches) has to live under the repo, e.g. `linux-research/scripts/`.
 
 ### Building a hvoya-based tree
 
-`hvoya`'s `Examples/IPlugEffect/CMakeLists.txt` lists sources that no longer exist (`IPlugEffect.h`).
+On `hvoya-linux` from 29c6bea6f on, nothing is needed: IPlugEffect has a working CMakeLists (hvoya
+utils, generated `plug_build_info.hpp`) and all three examples build. The patch below does not apply there.
+
+On plain `hvoya` and on trees from before 29c6bea6f (e.g. `linux-trial/rangerrick`),
+`Examples/IPlugEffect/CMakeLists.txt` lists sources that no longer exist (`IPlugEffect.h`).
 Configuring the top-level tree fails on that, even for IPlugControls targets. Apply the patch before the first configure:
 
 ```sh
@@ -71,8 +77,8 @@ git -C <worktree> apply $PWD/linux-research/evidence/hvoya-trial/patches/01-iplu
 ```
 
 The patch only touches that one file, so it still applies after `install-sdks.sh`.
-IPlugEffect itself still won't build on hvoya: it needs the Xcode-generated `plug_build_info.hpp`
-and `hvoya/utils` from another repo. Build IPlugControls / IPlugInstrument targets.
+IPlugEffect itself still won't build on those trees: they lack the CMake equivalents of the Xcode-generated
+`plug_build_info.hpp` and of the `hvoya/utils` sources. Build IPlugControls / IPlugInstrument targets.
 
 ### REAPER test semantics (`reaper-plugin-test.sh`)
 
