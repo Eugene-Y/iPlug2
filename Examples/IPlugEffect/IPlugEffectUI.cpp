@@ -60,11 +60,12 @@ auto getDefaultKnobStyle = [](){
 };
 
 
+// Namespace scope, not function-local: GCC rejects a local in a lambda's default argument.
+static constexpr float boundsPad = 10;
+static constexpr float headerH = PLUG_INFO_HEADER_HEIGHT;
+
 void IPlugEffect::initializeLayout() {
     #if IPLUG_EDITOR // http://bit.ly/2S64BDd
-
-        static constexpr float boundsPad = 10;
-        static constexpr float headerH = PLUG_INFO_HEADER_HEIGHT;
 
         const auto getFullBounds = [=] (IGraphics* pG, float pad = boundsPad) {
             return pG->GetBounds().GetPadded (-pad);
@@ -211,7 +212,7 @@ void IPlugEffect::initializeLayout() {
 
 			setTooltips (pG);
 
-            _midiCCMediator.UpdateMidiControllableUI();
+            _midiCCMediator.refreshUI();
         };
 
     #endif
