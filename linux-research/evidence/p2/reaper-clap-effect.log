@@ -1,23 +1,23 @@
 REAPER up: REAPER v7.82 - EVALUATION LICENSE
-REAPER pid 67
+REAPER pid 7290
 add 0
---- closed: hits by symbol, thread (main = lwp 67), object
-    103 HIT IPlugEffect::OnIdle lwp=67 this=0x143c9580
-    103 HIT iplug::IPlugAPIBase::OnTimer lwp=67 this=0x143c9580
+--- closed: hits by symbol, thread (main = lwp 7290), object
+    108 HIT IPlugEffect::OnIdle lwp=7290 this=0x3001760
+    109 HIT iplug::IPlugAPIBase::OnTimer lwp=7290 this=0x3001760
 shown
---- open: hits by symbol, thread (main = lwp 67), object
-    107 HIT IPlugEffect::OnIdle lwp=67 this=0x143c9580
-    107 HIT iplug::IPlugAPIBase::OnTimer lwp=67 this=0x143c9580
+--- open: hits by symbol, thread (main = lwp 7290), object
+    107 HIT IPlugEffect::OnIdle lwp=7290 this=0x3001760
+    107 HIT iplug::IPlugAPIBase::OnTimer lwp=7290 this=0x3001760
 closed
---- reclose: hits by symbol, thread (main = lwp 67), object
-    106 HIT IPlugEffect::OnIdle lwp=67 this=0x143c9580
-    106 HIT iplug::IPlugAPIBase::OnTimer lwp=67 this=0x143c9580
+--- reclose: hits by symbol, thread (main = lwp 7290), object
+    108 HIT IPlugEffect::OnIdle lwp=7290 this=0x3001760
+    108 HIT iplug::IPlugAPIBase::OnTimer lwp=7290 this=0x3001760
 add2 0
---- two: hits by symbol, thread (main = lwp 67), object
-    105 HIT IPlugEffect::OnIdle lwp=67 this=0x143c9580
-    105 HIT IPlugEffect::OnIdle lwp=67 this=0x153e9ae0
-    105 HIT iplug::IPlugAPIBase::OnTimer lwp=67 this=0x143c9580
-    105 HIT iplug::IPlugAPIBase::OnTimer lwp=67 this=0x153e9ae0
+--- two: hits by symbol, thread (main = lwp 7290), object
+    107 HIT IPlugEffect::OnIdle lwp=7290 this=0x3001760
+    107 HIT IPlugEffect::OnIdle lwp=7290 this=0x46fbb50
+    107 HIT iplug::IPlugAPIBase::OnTimer lwp=7290 this=0x3001760
+    107 HIT iplug::IPlugAPIBase::OnTimer lwp=7290 this=0x46fbb50
 --- latency: REAPER pdc of track 1 fx 0 (editor closed)
 pdc 0
 pdc 0
@@ -27,18 +27,18 @@ pdc 0
 pdc 0
 pdc 256
 pdc 256
-IPLUG_TEST SetLatency(256) from OnIdle tid=67 ui=0
-IPLUG_TEST SetLatency(0) from OnIdle tid=67 ui=0
-IPLUG_TEST SetLatency(0) from OnIdle tid=67 ui=0
-IPLUG_TEST SetLatency(256) from OnIdle tid=67 ui=0
-IPLUG_TEST SetLatency(256) from OnIdle tid=67 ui=0
-IPLUG_TEST SetLatency(0) from OnIdle tid=67 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=7290 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=7290 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=7290 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=7290 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=7290 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=7290 ui=0
 --- churn: 50x add/delete on track 3
 track3
-threads 14 -> 14, fds 7 -> 7, trace: '' -> 'live registrations in module=2', backends installed in total: 104
---- after-churn: hits by symbol, thread (main = lwp 67), object
-     76 HIT IPlugEffect::OnIdle lwp=67 this=0x143c9580
-     76 HIT IPlugEffect::OnIdle lwp=67 this=0x153e9ae0
-     76 HIT iplug::IPlugAPIBase::OnTimer lwp=67 this=0x143c9580
-     76 HIT iplug::IPlugAPIBase::OnTimer lwp=67 this=0x153e9ae0
+threads 14 -> 14, fds 6 -> 6, trace: '' -> 'live registrations in module=2', backends installed in total: 52
+--- after-churn: hits by symbol, thread (main = lwp 7290), object
+     77 HIT IPlugEffect::OnIdle lwp=7290 this=0x3001760
+     77 HIT IPlugEffect::OnIdle lwp=7290 this=0x46fbb50
+     77 HIT iplug::IPlugAPIBase::OnTimer lwp=7290 this=0x3001760
+     77 HIT iplug::IPlugAPIBase::OnTimer lwp=7290 this=0x46fbb50
 RESULT: PASS
