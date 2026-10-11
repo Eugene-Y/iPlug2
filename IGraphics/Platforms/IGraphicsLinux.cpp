@@ -586,7 +586,12 @@ void IGraphicsLinux::HandleConfigure(const XEvent& event)
       return;
     w.mWindowW = configure.width;
     w.mWindowH = configure.height;
+    const std::shared_ptr<bool> open = w.mOpen;
     GetDelegate()->OnParentWindowResize(configure.width, configure.height);
+    // The editor may keep its size (constraints, or no change at all): then put the window back to it,
+    // or the drawable and the GL viewport no longer match.
+    if (*open)
+      PlatformResize(false);
     return;
   }
 
