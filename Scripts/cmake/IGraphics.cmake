@@ -80,14 +80,15 @@ if(NOT TARGET iPlug2::IGraphics)
       "-framework QuartzCore"
     )
   elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
+    # libGL is dlopen'ed by IGraphicsLinux (IGraphicsLinuxGLX.h), so only its headers are needed here.
     find_package(X11 REQUIRED)
     find_package(OpenGL REQUIRED)
     target_include_directories(iPlug2::IGraphics INTERFACE
       ${X11_INCLUDE_DIR}
+      ${OPENGL_INCLUDE_DIR}
     )
     target_link_libraries(iPlug2::IGraphics INTERFACE
       ${X11_LIBRARIES}
-      OpenGL::GL
       dl
       pthread
     )
@@ -160,7 +161,6 @@ if(NOT TARGET iPlug2::IGraphics::NanoVG)
     target_sources(iPlug2::IGraphics::NanoVG INTERFACE
       ${IGRAPHICS_DEPS_DIR}/glad_GL2/src/glad.c
     )
-    target_link_libraries(iPlug2::IGraphics::NanoVG INTERFACE OpenGL::GL)
   endif()
 
   target_compile_definitions(iPlug2::IGraphics::NanoVG INTERFACE
@@ -214,7 +214,6 @@ if(NOT TARGET iPlug2::IGraphics::NanoVG::GL3)
     target_sources(iPlug2::IGraphics::NanoVG::GL3 INTERFACE
       ${IGRAPHICS_DEPS_DIR}/glad_GL3/src/glad.c
     )
-    target_link_libraries(iPlug2::IGraphics::NanoVG::GL3 INTERFACE OpenGL::GL)
   endif()
 
   target_compile_definitions(iPlug2::IGraphics::NanoVG::GL3 INTERFACE
@@ -500,9 +499,9 @@ if(NOT DEFINED IGRAPHICS_RENDERER)
   elseif(APPLE OR IOS)
     set(DEFAULT_RENDERER "METAL")
   elseif(UNIX AND NOT APPLE)
-    # GL3 is required on Linux: NANOVG_FBO_VALID is only defined for GL3+,
-    # so nvgluCreateFramebuffer always returns NULL when built with GL2.
-    set(DEFAULT_RENDERER "GL3")
+    # GL2 like the Windows build. IGraphicsNanoVG.h defines NANOVG_FBO_VALID itself, so the GL2 path has
+    # FBOs too (through GL_ARB_framebuffer_object, which glad_GL2 loads).
+    set(DEFAULT_RENDERER "GL2")
   else()
     set(DEFAULT_RENDERER "GL2")
   endif()
