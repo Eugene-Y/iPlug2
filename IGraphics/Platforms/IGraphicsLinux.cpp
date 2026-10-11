@@ -104,6 +104,9 @@ struct IGraphicsLinux::Impl
   GLXContext mGLContext = nullptr;
   bool mViewInitialized = false;
   bool mMapped = false;
+  // Destroying an ancestor sends our window DestroyNotify only, never UnmapNotify: without this flag every frame
+  // would draw and swap into a dead drawable, which crashes llvmpipe.
+  bool mWindowAlive = false;
   Atom mWMDeleteWindow = 0;
 
   int mWindowW = 0; // physical size of our X window: last requested, or last seen when someone else resized it
@@ -221,6 +224,8 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
                             pVisual->depth, InputOutput, pVisual->visual,
                             CWColormap | CWEventMask | CWBorderPixel | CWBackPixel, &attributes);
 
+  w.mWindowAlive = w.mWindow != 0;
+
   const long xembedInfo[] = { kXEmbedVersion, kXEmbedMapped };
   const Atom xembedInfoAtom = XInternAtom(pDisplay, "_XEMBED_INFO", False);
   XChangeProperty(pDisplay, w.mWindow, xembedInfoAtom, xembedInfoAtom, 32, PropModeReplace,
@@ -328,7 +333,7 @@ void IGraphicsLinux::DestroyWindowResources()
         w.mGLX->MakeCurrent(w.mDisplay, None, nullptr);
       w.mGLX->DestroyContext(w.mDisplay, w.mGLContext);
     }
-    if (w.mWindow)
+    if (w.mWindow && w.mWindowAlive)
       XDestroyWindow(w.mDisplay, w.mWindow);
     if (w.mColormap)
       XFreeColormap(w.mDisplay, w.mColormap);
@@ -365,11 +370,14 @@ void IGraphicsLinux::ActivateGLContext()
     return;
 
   // Also reached from host calls outside any drain (set_size, bitmap loads); Mesa's make-current asks the
-  // server for the drawable's geometry, which fails once the host destroyed our window.
+  // server for the drawable's geometry, which fails once the host destroyed our window. Mesa can still
+  // return True then, so an X error during the call counts as failure too.
   ScopedXErrorTrap trap(w.mDisplay);
+  const bool madeCurrent = w.mWindowAlive && w.mGLX->MakeCurrent(w.mDisplay, w.mWindow, w.mGLContext)
+                        && trap.GetErrorCount() == 0;
   // On failure leave no context current, rather than someone else's,
   // so that the GL calls that follow cannot touch another context's objects.
-  if (!w.mGLX->MakeCurrent(w.mDisplay, w.mWindow, w.mGLContext))
+  if (!madeCurrent)
     w.mGLX->MakeCurrent(w.mDisplay, None, nullptr);
 }
 
@@ -428,7 +436,7 @@ bool IGraphicsLinux::ProcessXEvents()
 void IGraphicsLinux::DrawDirtyControls()
 {
   Impl& w = *mImpl;
-  if (!w.mMapped)
+  if (!w.mMapped || !w.mWindowAlive)
     return;
 
   const std::shared_ptr<bool> open = w.mOpen;
@@ -439,15 +447,18 @@ void IGraphicsLinux::DrawDirtyControls()
 
   ScopedXErrorTrap trap(w.mDisplay);
   ActivateGLContext();
-  Draw(rects);
-  w.mGLX->SwapBuffers(w.mDisplay, w.mWindow);
+  if (w.mGLX->GetCurrentContext() == w.mGLContext)
+  {
+    Draw(rects);
+    w.mGLX->SwapBuffers(w.mDisplay, w.mWindow);
+  }
   DeactivateGLContext();
 }
 
 // Like the mac version, a full repaint: callers use it right after Resize + LayoutUI.
 void IGraphicsLinux::DrawNow()
 {
-  if (!mImpl->mOpen || !*mImpl->mOpen || !mImpl->mMapped)
+  if (!mImpl->mOpen || !*mImpl->mOpen || !mImpl->mMapped || !mImpl->mWindowAlive)
     return;
   SetAllControlsDirty();
   DrawDirtyControls();
@@ -468,6 +479,13 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
       {
         w.mMapped = true;
         SetAllControlsDirty();
+      }
+      break;
+    case DestroyNotify:
+      if (event.xdestroywindow.window == w.mWindow || event.xdestroywindow.window == w.mParent)
+      {
+        w.mWindowAlive = false;
+        w.mMapped = false;
       }
       break;
     case UnmapNotify:
@@ -631,7 +649,7 @@ bool IGraphicsLinux::IsHostResizeEnabled()
 void IGraphicsLinux::PlatformResize(bool parentHasResized)
 {
   Impl& w = *mImpl;
-  if (!w.mWindow)
+  if (!w.mWindow || !w.mWindowAlive)
     return;
 
   const int width = std::max(1, static_cast<int>(WindowWidth() * GetScreenScale()));
