@@ -84,9 +84,6 @@ class IPlugCLAP : public IPlugAPIBase
   
 public:
   IPlugCLAP(const InstanceInfo& info, const Config& config);
-#ifdef OS_LINUX
-  ~IPlugCLAP();
-#endif
 
   // IPlugAPIBase
   void BeginInformHostOfParamChange(int idx) override;

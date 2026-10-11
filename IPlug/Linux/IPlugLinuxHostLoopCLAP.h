@@ -79,4 +79,29 @@ private:
   const clap_host_posix_fd_support* mFds;
 };
 
+/** Replaces clap_plugin.destroy with one that stops the HostLoop first. The plug-in's own destructors run
+ * before ~IPlugAPIBase, and a fallback thread would keep calling OnIdle on the half-destroyed object.
+ * clap-helpers offers no virtual hook before its `delete`, hence the wrapped function pointer. */
+template <class TPlugin, class THelper>
+struct CLAPHostLoopDestroyHook
+{
+  static void Install(TPlugin& plugin)
+  {
+    auto* pClapPlugin = const_cast<clap_plugin*>(plugin.clapPlugin()); // a non-const member of the helper
+    sHelperDestroy = pClapPlugin->destroy;
+    pClapPlugin->destroy = Destroy;
+  }
+
+private:
+  static void Destroy(const clap_plugin* pClapPlugin)
+  {
+    auto* pPlugin = static_cast<TPlugin*>(static_cast<THelper*>(pClapPlugin->plugin_data));
+    HostLoopTrace("%s: clap_plugin.destroy, stopping the loop before delete", pPlugin->GetHostLoop().GetOwnerName());
+    pPlugin->GetHostLoop().SetBackend(nullptr);
+    sHelperDestroy(pClapPlugin);
+  }
+
+  static inline void (*sHelperDestroy)(const clap_plugin*) = nullptr;
+};
+
 END_IPLUG_NAMESPACE

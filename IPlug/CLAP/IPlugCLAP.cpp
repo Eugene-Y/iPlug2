@@ -55,6 +55,9 @@ IPlugCLAP::IPlugCLAP(const InstanceInfo& info, const Config& config)
   
   SetHost(info.mHost->name, version);
   CreateTimer();
+#ifdef OS_LINUX
+  CLAPHostLoopDestroyHook<IPlugCLAP, ClapPluginHelper>::Install(*this);
+#endif
 }
 
 uint32_t IPlugCLAP::tailGet() const noexcept
@@ -147,14 +150,6 @@ bool IPlugCLAP::SendSysEx(const ISysEx& msg)
 }
 
 // clap_plugin
-#ifdef OS_LINUX
-IPlugCLAP::~IPlugCLAP()
-{
-  // clap_plugin.destroy deletes us while the host is still valid; the timers must leave it now.
-  GetHostLoop().SetBackend(nullptr);
-}
-#endif
-
 bool IPlugCLAP::init() noexcept
 {
   SetDefaultConfig();
