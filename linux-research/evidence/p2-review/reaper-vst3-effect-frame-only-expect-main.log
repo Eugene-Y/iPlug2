@@ -1,0 +1,64 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+REAPER pid 5470
+add 0
+--- closed: hits by symbol, thread (main = lwp 5470), object
+    193 HIT IPlugEffect::OnIdle lwp=5524 this=0x1581e060
+    193 HIT iplug::IPlugAPIBase::OnTimer lwp=5524 this=0x1581e060
+FAIL: closed: 386 hits not on the expected thread (main)
+shown
+--- open: hits by symbol, thread (main = lwp 5470), object
+    146 HIT IPlugEffect::OnIdle lwp=5470 this=0x1581e060
+    146 HIT iplug::IPlugAPIBase::OnTimer lwp=5470 this=0x1581e060
+closed
+--- reclose: hits by symbol, thread (main = lwp 5470), object
+    194 HIT IPlugEffect::OnIdle lwp=5603 this=0x1581e060
+    195 HIT iplug::IPlugAPIBase::OnTimer lwp=5603 this=0x1581e060
+FAIL: reclose: 389 hits not on the expected thread (main)
+add2 0
+--- two: hits by symbol, thread (main = lwp 5470), object
+    194 HIT IPlugEffect::OnIdle lwp=5603 this=0x1581e060
+    195 HIT IPlugEffect::OnIdle lwp=5643 this=0x1664cb60
+    194 HIT iplug::IPlugAPIBase::OnTimer lwp=5603 this=0x1581e060
+    195 HIT iplug::IPlugAPIBase::OnTimer lwp=5643 this=0x1664cb60
+FAIL: two: 778 hits not on the expected thread (main)
+--- latency: REAPER pdc of track 1 fx 0 (editor closed)
+pdc 256
+pdc 256
+pdc 256
+pdc 256
+pdc 256
+pdc 256
+pdc 256
+pdc 256
+IPLUG_TEST SetLatency(0) from OnIdle tid=5643 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=5603 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=5643 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=5603 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=5643 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=5603 ui=0
+FAIL: latency: OnIdle changed it, REAPER's pdc never changed
+IPLUG_TEST SetLatency(0) from OnIdle tid=5643 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=5603 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=5643 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=5603 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=5643 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=5603 ui=0
+FAIL: latency: SetLatency called off the main thread
+--- churn: 50x add/delete on track 3
+track3
+threads 16 -> 16, fds 8 -> 8, trace: '' -> 'live registrations in module=2', backends installed in total: 54
+--- after-churn: hits by symbol, thread (main = lwp 5470), object
+    143 HIT IPlugEffect::OnIdle lwp=5603 this=0x1581e060
+    143 HIT IPlugEffect::OnIdle lwp=5643 this=0x1664cb60
+    143 HIT iplug::IPlugAPIBase::OnTimer lwp=5603 this=0x1581e060
+    143 HIT iplug::IPlugAPIBase::OnTimer lwp=5643 this=0x1664cb60
+FAIL: after-churn: 572 hits not on the expected thread (main)
+FAIL: trace: a callback ran off the main thread
+RESULT: FAIL (7)
+  - closed: 386 hits not on the expected thread (main)
+  - reclose: 389 hits not on the expected thread (main)
+  - two: 778 hits not on the expected thread (main)
+  - latency: OnIdle changed it, REAPER's pdc never changed
+  - latency: SetLatency called off the main thread
+  - after-churn: 572 hits not on the expected thread (main)
+  - trace: a callback ran off the main thread

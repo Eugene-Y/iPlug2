@@ -309,4 +309,5 @@ RR's SWELL/GDK host + RtAudio (ALSA/JACK/Pulse; PipeWire through its shims), dri
 | Upstream merge contents/conflicts | notes/07-upstream-merge-analysis.md |
 | P0–P1 review | notes/08-review-p0-p1.md |
 | P2 host loop: design, REAPER IRunLoop finding, acceptance | notes/09-p2-host-loop.md |
+| P2 review: findings, fixes, verdict | notes/10-review-p2.md |
 | Patches used to build each candidate | evidence/*/patches/ |
