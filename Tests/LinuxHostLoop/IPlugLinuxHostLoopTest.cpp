@@ -505,6 +505,20 @@ void TestVST3RunLoopThatRefusesTimers()
   EXPECT(factory.mRefs == 1);
 }
 
+void TestVST3RefusingRunLoopWithoutTimersYet()
+{
+  FakeRunLoop context;
+  context.mRefuseTimers = true;
+  HostLoop loop("vst3-refusing-empty");
+  VST3HostLoopSelector selector(loop);
+  selector.Initialize(static_cast<Linux::IRunLoop*>(&context));
+  EXPECT(!loop.IsHostDriven()); // caught by the probe, although no timer existed to fail
+  std::atomic<int> calls { 0 };
+  loop.AddTimer(2, [&]() { calls++; });
+  EXPECT(WaitFor([&]() { return calls.load() >= 2; }));
+  selector.Terminate();
+}
+
 void TestIsHostDrivenDoesNotWaitForACallback()
 {
   HostLoop loop("lock-free-query");
@@ -538,6 +552,7 @@ int main()
   TestVST3FrameOnlyHost();
   TestVST3FactoryContextWins();
   TestVST3RunLoopThatRefusesTimers();
+  TestVST3RefusingRunLoopWithoutTimersYet();
   TestIsHostDrivenDoesNotWaitForACallback();
 
   if (gFailures)

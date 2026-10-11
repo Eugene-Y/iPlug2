@@ -210,10 +210,13 @@ private:
         continue;
       if (mLoop.GetBackend() && candidate.pRunLoop == mActive.get())
         return;
-      mActive = candidate.pRunLoop;
-      if (mLoop.SetBackend(std::make_unique<VST3HostLoopBackend>(mLoop, candidate.pRunLoop, candidate.source)))
-        return;
       // Seen in the SDK validator: its IRunLoop exists but registerTimer fails, so nothing would ever fire.
+      if (AcceptsTimers(candidate.pRunLoop))
+      {
+        mActive = candidate.pRunLoop;
+        if (mLoop.SetBackend(std::make_unique<VST3HostLoopBackend>(mLoop, candidate.pRunLoop, candidate.source)))
+          return;
+      }
       HostLoopTrace("%s: the %s IRunLoop refuses timers, trying the next source", mLoop.GetOwnerName(), candidate.source);
       *candidate.pRefused = true;
     }
@@ -222,6 +225,18 @@ private:
       return;
     mActive = nullptr;
     mLoop.SetBackend(MakeFallbackHostLoopBackend(mLoop));
+  }
+
+  /** Probes with a detached handler, so a refusing loop is caught even when no timer exists yet. */
+  bool AcceptsTimers(Steinberg::Linux::IRunLoop* pRunLoop)
+  {
+    auto* pProbe = new VST3RunLoopHandler(mLoop);
+    pProbe->Detach();
+    const bool accepted = pRunLoop->registerTimer(pProbe, 1000) == Steinberg::kResultOk;
+    if (accepted)
+      pRunLoop->unregisterTimer(pProbe);
+    pProbe->release();
+    return accepted;
   }
 
   HostLoop& mLoop;

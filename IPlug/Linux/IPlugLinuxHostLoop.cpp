@@ -89,7 +89,12 @@ int HostLoop::Add(HostLoopEntry* pEntry)
     if (pEntry->mRegistered)
       ++sLiveRegistrations;
     else
+    {
       HostLoopTrace("%s: %s cannot register %s id=%d", mOwnerName, mBackend->GetName(), pEntry->mIsFd ? "fd" : "timer", pEntry->mId);
+      static std::atomic<bool> sWarned { false };
+      if (!pEntry->mIsFd && !sWarned.exchange(true))
+        fprintf(stderr, "iPlug2: the host's event loop (%s) refused a timer; it will never fire\n", mBackend->GetName());
+    }
   }
   return pEntry->mId;
 }
