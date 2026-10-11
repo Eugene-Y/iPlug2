@@ -85,11 +85,9 @@ function(_iplug_add_resources target resources)
     MACOSX_PACKAGE_LOCATION Resources
   )
   if(UNIX AND NOT APPLE)
-    # On Linux: copy resources so that IPlugPaths.cpp's LocateResource can find them.
-    #   APP (EXECUTABLE)       -> <bindir>/resources/<type>/<file>
-    #   CLAP (SHARED_LIBRARY, flat)   -> <libdir>/resources/<type>/<file>
-    #   VST3 (SHARED_LIBRARY, bundle) -> <libdir>/../Resources/<type>/<file>
-    #                                    (i.e. Contents/Resources/ in the bundle)
+    # Linux has no bundle for CLAP/APP, so each module gets its own <Name>.resources/ beside it,
+    # never a shared resources/ that two plug-ins in ~/.clap would overwrite. VST3 uses the
+    # bundle's Contents/Resources/. Must match IPlug/Linux/IPlugLinuxPathUtils.h.
     get_target_property(_target_type ${target} TYPE)
     if("${_target_type}" STREQUAL "EXECUTABLE")
       get_target_property(_outdir ${target} RUNTIME_OUTPUT_DIRECTORY)
@@ -99,27 +97,19 @@ function(_iplug_add_resources target resources)
       set(_outdir "")
     endif()
     if(_outdir)
+      get_target_property(_outname ${target} OUTPUT_NAME)
+      if("${_outdir}" MATCHES "-linux$")
+        set(_res_dir "${_outdir}/../Resources")
+      else()
+        set(_res_dir "${_outdir}/${_outname}.resources")
+      endif()
       foreach(_res ${resources})
-        # Resolve to absolute path (resources may be specified relative to the
-        # project source dir, but add_custom_command runs in the build dir).
         get_filename_component(_abs_res "${_res}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
         get_filename_component(_filename "${_abs_res}" NAME)
-        get_filename_component(_ext "${_abs_res}" LAST_EXT)
-        string(TOLOWER "${_ext}" _ext_lower)
-        string(REPLACE "." "" _type "${_ext_lower}")
-        # VST3 bundles place the .so inside Contents/<arch>-linux/; resources go
-        # in the sibling Contents/Resources/ directory (one level up).
-        if("${_outdir}" MATCHES "-linux$")
-          set(_res_dest "${_outdir}/../Resources/${_type}/${_filename}")
-          set(_res_dir  "${_outdir}/../Resources/${_type}")
-        else()
-          set(_res_dest "${_outdir}/resources/${_type}/${_filename}")
-          set(_res_dir  "${_outdir}/resources/${_type}")
-        endif()
         add_custom_command(TARGET ${target} POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E make_directory "${_res_dir}"
-          COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_abs_res}" "${_res_dest}"
-          COMMENT "Copying resource ${_filename} -> ${_res_dest}"
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_abs_res}" "${_res_dir}/${_filename}"
+          COMMENT "Copying resource ${_filename} -> ${_res_dir}"
         )
       endforeach()
     endif()
