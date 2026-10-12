@@ -55,10 +55,9 @@ using namespace igraphics;
 
 namespace
 {
-// KeyPress on our window also takes the keys typed while the pointer is over the editor and the host's window
-// has the focus (X delivers to the window under the pointer when it is inside the focus window). That is how
-// plug-ins get keys in hosts that never forward them (REAPER calls no VST3 onKeyDown); what the editor does not
-// handle is sent on to the host's window.
+// KeyPress on our window gets the keys of our own focus (text entry, the APP), the keys a host forwards with
+// XSendEvent (REAPER does for those it does not use itself; it calls no VST3 onKeyDown), and, in hosts whose focus
+// window contains ours, the keys typed while the pointer is over the editor. Unused ones go on to the host's window.
 constexpr long kWindowEventMask = ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask
                                 | PointerMotionMask | LeaveWindowMask | KeyPressMask | KeyReleaseMask
                                 | FocusChangeMask | PropertyChangeMask;
@@ -833,7 +832,7 @@ void IGraphicsLinux::HandleKey(const XEvent& event)
               key.send_event ? " (sent by a client)" : "", handled ? "handled" : modal ? "kept (edit or menu)" : key.send_event ? "dropped" : "to host");
   if (isPress && (handled || modal))
     keptKeys |= keyBit;
-  // A synthetic key came from an embedder that forwards keys (XEmbed); sending it back would loop.
+  // A synthetic key came from a host that forwards keys (REAPER, XEmbed embedders); sending it back would loop.
   else if (!handled && !modal && !key.send_event)
     ForwardKeyToHost(event);
 }
