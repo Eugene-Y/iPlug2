@@ -92,8 +92,7 @@ public:
 
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
     XEvent event;
-    if (!WaitForEvent(deadline, [&]() { return XCheckTypedWindowEvent(mDisplay, mWindow, SelectionNotify, &event)
-                                               && event.xselection.selection == mClipboard; }))
+    if (!WaitForEvent(deadline, event, &IsOurSelectionNotify))
       return false;
     if (event.xselection.property == None)
       return false;
@@ -207,12 +206,29 @@ private:
   static WDL_String& SharedText() { static WDL_String sText; return sText; }
   static Window& SharedOwner() { static Window sOwner = 0; return sOwner; }
 
-  template <typename Predicate>
-  bool WaitForEvent(std::chrono::steady_clock::time_point deadline, Predicate found)
+  using EventPredicate = Bool (*)(Display*, XEvent*, XPointer);
+
+  static Bool IsOurSelectionNotify(Display*, XEvent* pEvent, XPointer pThis)
+  {
+    const auto* pClipboard = reinterpret_cast<const LinuxClipboard*>(pThis);
+    return pEvent->type == SelectionNotify && pEvent->xselection.requestor == pClipboard->mWindow
+        && pEvent->xselection.selection == pClipboard->mClipboard;
+  }
+
+  static Bool IsNewValueOfOurProperty(Display*, XEvent* pEvent, XPointer pThis)
+  {
+    const auto* pClipboard = reinterpret_cast<const LinuxClipboard*>(pThis);
+    return pEvent->type == PropertyNotify && pEvent->xproperty.window == pClipboard->mWindow
+        && pEvent->xproperty.atom == pClipboard->mProperty && pEvent->xproperty.state == PropertyNewValue;
+  }
+
+  /** Takes the first matching event out of the queue, leaving all others for the editor's event loop.
+   * Polls the connection only when none is queued yet. */
+  bool WaitForEvent(std::chrono::steady_clock::time_point deadline, XEvent& event, EventPredicate predicate)
   {
     for (;;)
     {
-      if (found())
+      if (XCheckIfEvent(mDisplay, &event, predicate, reinterpret_cast<XPointer>(this)))
         return true;
       const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()).count();
       if (remaining <= 0)
@@ -257,9 +273,7 @@ private:
     for (;;)
     {
       XEvent event;
-      if (!WaitForEvent(deadline, [&]() { return XCheckTypedWindowEvent(mDisplay, mWindow, PropertyNotify, &event)
-                                                 && event.xproperty.atom == mProperty
-                                                 && event.xproperty.state == PropertyNewValue; }))
+      if (!WaitForEvent(deadline, event, &IsNewValueOfOurProperty))
         return false;
       const int before = data.GetSize();
       Atom type = None;

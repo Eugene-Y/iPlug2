@@ -227,7 +227,7 @@ void TestClipboard(Display* pDisplay)
   PumpEvents(pDisplay, clipboard, 700);
   Expect(ReadFile("/tmp/iplug-clip-out").find("UTF8_STRING") != std::string::npos, true, "TARGETS lists UTF8_STRING");
 
-  system("printf 'from xclip' | xclip -selection clipboard");
+  system("printf 'from xclip' | xclip -selection clipboard >/dev/null 2>&1");
   PumpEvents(pDisplay, clipboard, 200); // SelectionClear
   WDL_String text;
   Expect(clipboard.GetText(text, 200), true, "read xclip's text");
@@ -240,7 +240,7 @@ void TestClipboard(Display* pDisplay)
     for (size_t i = 0; i < bigSize; ++i)
       big.put(static_cast<char>('a' + i % 26));
   }
-  system("xclip -selection clipboard -i /tmp/iplug-clip-big");
+  system("xclip -selection clipboard -i /tmp/iplug-clip-big >/dev/null 2>&1");
   PumpEvents(pDisplay, clipboard, 200);
   Expect(clipboard.GetText(text, 2000), true, "read an INCR selection (blocking)");
   Expect(static_cast<size_t>(text.GetLength()), bigSize, "INCR size (blocking)");
