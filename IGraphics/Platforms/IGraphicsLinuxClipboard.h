@@ -16,6 +16,7 @@
  */
 
 #include <poll.h>
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 
@@ -173,7 +174,7 @@ public:
       Atom type = None;
       if (!ReadProperty(type, mAsyncData))
         FinishAsyncRead(false);
-      else if (mAsyncData.GetSize() == before)
+      else if (type != None && mAsyncData.GetSize() == before)
         FinishAsyncRead(true);
       return true;
     }
@@ -248,7 +249,8 @@ private:
     return ok;
   }
 
-  /** ICCCM INCR: each new value of the property is a chunk; a zero-length one ends the transfer */
+  /** ICCCM INCR: each new value of the property is a chunk; a zero-length one ends the transfer. The owner's
+   * write of the INCR property itself also left a NewValue event, which finds the property deleted (type None). */
   bool ReadIncremental(std::chrono::steady_clock::time_point deadline, WDL_TypedBuf<char>& data)
   {
     data.Resize(0);
@@ -263,7 +265,7 @@ private:
       Atom type = None;
       if (!ReadProperty(type, data))
         return false;
-      if (data.GetSize() == before)
+      if (type != None && data.GetSize() == before)
         return true;
     }
   }

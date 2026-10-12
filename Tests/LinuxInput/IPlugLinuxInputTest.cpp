@@ -4,14 +4,22 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <X11/XKBlib.h>
 #include <X11/keysym.h>
 
 #include "IGraphicsLinuxKeys.h"
 #include "IGraphicsLinuxFontconfig.h"
+#include "IGraphicsLinuxClipboard.h"
 
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <iostream>
+#include <sstream>
+#include <thread>
 #include <string>
 #include <vector>
 
@@ -169,6 +177,90 @@ void TestFonts()
   Expect(file.size() > 4 && (file.compare(file.size() - 4, 4, ".ttf") == 0 || file.compare(file.size() - 4, 4, ".ttc") == 0), true,
          "Times New Roman substitute is TrueType (" + file + ")");
 }
+bool HaveXclip() { return system("command -v xclip >/dev/null 2>&1") == 0; }
+
+std::string ReadFile(const char* path)
+{
+  std::ifstream file(path, std::ios::binary);
+  std::stringstream text;
+  text << file.rdbuf();
+  return text.str();
+}
+
+void PumpEvents(Display* pDisplay, LinuxClipboard& clipboard, int ms)
+{
+  const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
+  while (std::chrono::steady_clock::now() < end)
+  {
+    while (XPending(pDisplay))
+    {
+      XEvent event;
+      XNextEvent(pDisplay, &event);
+      clipboard.HandleEvent(event);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
+}
+
+// Owning and serving (xclip reads us), reading a small and an INCR-sized selection from xclip, both the blocking
+// way and the asynchronous one.
+void TestClipboard(Display* pDisplay)
+{
+  if (!HaveXclip())
+  {
+    std::cout << "skip: no xclip\n";
+    return;
+  }
+  XSetWindowAttributes attributes {};
+  attributes.event_mask = PropertyChangeMask;
+  Window window = XCreateWindow(pDisplay, DefaultRootWindow(pDisplay), 0, 0, 10, 10, 0, CopyFromParent, InputOutput,
+                                CopyFromParent, CWEventMask, &attributes);
+  LinuxClipboard clipboard;
+  clipboard.Init(pDisplay, window);
+
+  const std::string utf8Text = "h\xc3\xa9llo \xd0\xbc\xd0\xb8\xd1\x80";
+  Expect(clipboard.SetText(utf8Text.c_str(), CurrentTime), true, "own the clipboard");
+  system("rm -f /tmp/iplug-clip-out; (timeout 3 xclip -o -selection clipboard > /tmp/iplug-clip-out 2>&1 &)");
+  PumpEvents(pDisplay, clipboard, 700);
+  Expect(ReadFile("/tmp/iplug-clip-out"), utf8Text, "xclip reads what we own (UTF8_STRING)");
+  system("rm -f /tmp/iplug-clip-out; (timeout 3 xclip -o -selection clipboard -t TARGETS > /tmp/iplug-clip-out 2>&1 &)");
+  PumpEvents(pDisplay, clipboard, 700);
+  Expect(ReadFile("/tmp/iplug-clip-out").find("UTF8_STRING") != std::string::npos, true, "TARGETS lists UTF8_STRING");
+
+  system("printf 'from xclip' | xclip -selection clipboard");
+  PumpEvents(pDisplay, clipboard, 200); // SelectionClear
+  WDL_String text;
+  Expect(clipboard.GetText(text, 200), true, "read xclip's text");
+  Expect(std::string(text.Get()), std::string("from xclip"), "xclip's text");
+
+  // Larger than one request: xclip sends it with INCR.
+  const size_t bigSize = 3 * 1024 * 1024;
+  {
+    std::ofstream big("/tmp/iplug-clip-big", std::ios::binary);
+    for (size_t i = 0; i < bigSize; ++i)
+      big.put(static_cast<char>('a' + i % 26));
+  }
+  system("xclip -selection clipboard -i /tmp/iplug-clip-big");
+  PumpEvents(pDisplay, clipboard, 200);
+  Expect(clipboard.GetText(text, 2000), true, "read an INCR selection (blocking)");
+  Expect(static_cast<size_t>(text.GetLength()), bigSize, "INCR size (blocking)");
+
+  Expect(clipboard.BeginAsyncRead(), true, "start an asynchronous read");
+  bool done = false;
+  const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+  while (!done && std::chrono::steady_clock::now() < end)
+  {
+    PumpEvents(pDisplay, clipboard, 10);
+    done = clipboard.AsyncReadDone();
+  }
+  Expect(done && clipboard.HasAsyncText(), true, "asynchronous INCR read completes");
+  Expect(clipboard.GetText(text, 0), true, "GetText returns the asynchronous result");
+  Expect(static_cast<size_t>(text.GetLength()), bigSize, "INCR size (asynchronous)");
+
+  clipboard.Release();
+  XDestroyWindow(pDisplay, window);
+  std::cout << "clipboard tested\n";
+}
 } // namespace
 
 int main()
@@ -196,6 +288,7 @@ int main()
   else
     std::cout << "skip: no input method\n";
   TestCyrillicGroup(pDisplay, pIC);
+  TestClipboard(pDisplay);
 
   if (pIC)
     XDestroyIC(pIC);
