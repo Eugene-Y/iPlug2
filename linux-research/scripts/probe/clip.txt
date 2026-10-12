@@ -1,0 +1,22 @@
+set-clipboard 55
+dclick 941 437
+wait 1
+shot k1
+key ctrl+v
+wait 0.5
+shot k2
+key Return
+wait 0.5
+expect-param 0 0 ^55
+dclick 941 437
+wait 1
+shot k3
+key ctrl+c
+wait 0.5
+shot k4
+windows
+key Escape
+wait 0.5
+shot k5
+expect-window IPlugControls.*Track 1
+expect-clipboard 55

@@ -9,6 +9,7 @@
 */
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -44,6 +45,13 @@
 
 using namespace iplug;
 using namespace igraphics;
+
+// -DIGRAPHICS_TRACE_LINUX_INPUT: keys, focus and their routing on stderr, for probing hosts.
+#ifdef IGRAPHICS_TRACE_LINUX_INPUT
+  #define TRACE_INPUT(...) fprintf(stderr, "iPlug2 input: " __VA_ARGS__)
+#else
+  #define TRACE_INPUT(...) do {} while (0)
+#endif
 
 namespace
 {
@@ -176,6 +184,11 @@ struct IGraphicsLinux::Impl
   XIM mInputMethod = nullptr;
   XIC mInputContext = nullptr;
   bool mHoldsFocus = false;
+  int mFocusRetries = 0;
+  std::chrono::steady_clock::time_point mFocusTakenAt;
+  unsigned mButtonState = 0; // buttons held, as after the last button event
+  std::chrono::steady_clock::time_point mLastReleaseAt;
+  bool mFocusOnClick = false;
   Window mFocusBefore = None;
   int mRevertBefore = RevertToParent;
   Window mEmbedder = 0; // an XEmbed embedder that announced itself with EMBEDDED_NOTIFY
@@ -353,6 +366,9 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   SetAllControlsDirty();
   DeactivateGLContext();
 
+  // The standalone app's window is the editor's own, so it takes the keys like a focused view on mac.
+  // In a host they stay with the host outside text entry: its shortcuts must keep working.
+  w.mFocusOnClick = pPlug->GetAPI() == kAPIAPP;
   w.mOpen = std::make_shared<bool>(true);
   w.mLoop = &pPlug->GetHostLoop();
   w.mFdId = w.mLoop->AddFd(ConnectionNumber(pDisplay), HostLoop::kFdRead,
@@ -596,6 +612,7 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
       HandleKey(event);
       break;
     case FocusIn:
+      TRACE_INPUT("FocusIn mode %d detail %d\n", event.xfocus.mode, event.xfocus.detail);
       if (w.mInputContext && event.xfocus.window == w.mWindow)
         XSetICFocus(w.mInputContext);
       break;
@@ -628,6 +645,9 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
   // The state is from before the event: a press does not include its own button, a release still does.
   const unsigned buttonMask = button.button == Button1 ? Button1Mask : button.button == Button3 ? Button3Mask : 0;
   const unsigned state = (event.type == ButtonPress) ? (button.state | buttonMask) : (button.state & ~buttonMask);
+  w.mButtonState = state & (Button1Mask | Button2Mask | Button3Mask);
+  if (event.type == ButtonRelease)
+    w.mLastReleaseAt = std::chrono::steady_clock::now();
 
   IMouseInfo info;
   info.x = x;
@@ -664,6 +684,9 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
   {
     w.mCursorX = x;
     w.mCursorY = y;
+    // On the release: the window manager's click-to-focus of the top-level window happens on the press.
+    if (w.mFocusOnClick && w.mWindowAlive)
+      XSetInputFocus(w.mDisplay, w.mWindow, RevertToParent, CurrentTime);
     OnMouseUp({ info });
   }
 }
@@ -764,6 +787,7 @@ void IGraphicsLinux::HandleKey(const XEvent& event)
 
   if (!isPress && (keptKeys & keyBit))
   {
+    TRACE_INPUT("release keycode %u: kept like its press\n", keycode);
     keptKeys &= ~keyBit;
     return;
   }
@@ -789,6 +813,8 @@ void IGraphicsLinux::HandleKey(const XEvent& event)
   if (!*open)
     return;
 
+  TRACE_INPUT("%s keycode %u state 0x%x%s: %s\n", isPress ? "press" : "release", keycode, key.state,
+              key.send_event ? " (sent by a client)" : "", handled ? "handled" : modal ? "kept (edit or menu)" : key.send_event ? "dropped" : "to host");
   if (isPress && (handled || modal))
     keptKeys |= keyBit;
   // A synthetic key came from an embedder that forwards keys (XEmbed); sending it back would loop.
@@ -814,15 +840,30 @@ void IGraphicsLinux::HandleFocusOut(const XEvent& event)
   const XFocusChangeEvent& focus = event.xfocus;
   if (focus.window != w.mWindow)
     return;
-  if (w.mInputContext)
+  TRACE_INPUT("FocusOut mode %d detail %d, holding focus %d\n", focus.mode, focus.detail, w.mHoldsFocus);
+  if (w.mInputContext && !w.mHoldsFocus)
     XUnsetICFocus(w.mInputContext);
-  // Grabs (a menu, the window manager) take the focus only for a while; NotifyInferior/NotifyPointer mean
-  // it stayed inside or below us.
-  const bool focusMovedAway = focus.mode == NotifyNormal && focus.detail != NotifyInferior && focus.detail != NotifyPointer;
-  if (w.mHoldsFocus && focusMovedAway)
+
+  if (!w.mHoldsFocus || focus.mode != NotifyNormal) // grabs (NotifyGrab) take the focus only for a while
+    return;
+
+  // A focus that left for another top-level window (a click elsewhere, alt-tab) ends the edit.
+  if (focus.detail == NotifyNonlinear || focus.detail == NotifyNonlinearVirtual)
   {
     w.mHoldsFocus = false;
     EndTextEntryOnFocusLoss();
+    return;
+  }
+
+  // Into the host's own window (NotifyAncestor) the edit stays open: hosts that forward keys (REAPER) still
+  // deliver most of them. Right after our request it is usually the click that opened the edit, focused late
+  // by the window manager and the host's focus proxy (openbox + GDK in REAPER); ask again then.
+  const bool toAncestor = focus.detail == NotifyAncestor || focus.detail == NotifyVirtual;
+  const bool justTaken = std::chrono::steady_clock::now() - w.mFocusTakenAt < std::chrono::milliseconds(500);
+  if (toAncestor && justTaken && w.mFocusRetries < 2)
+  {
+    w.mFocusRetries++;
+    w.mHoldsFocus = false;
   }
 }
 
@@ -865,15 +906,18 @@ void IGraphicsLinux::UpdateEditingState()
 {
   Impl& w = *mImpl;
   const bool editing = GetControlInTextEntry() != nullptr;
-  if (editing && !w.mHoldsFocus)
+  // Not during the click that opened the edit, nor right after it: the window manager and the host focus their
+  // own window for that click (openbox, then GDK's focus proxy in REAPER), late enough to undo an early request.
+  const bool clickSettled = !w.mButtonState && std::chrono::steady_clock::now() - w.mLastReleaseAt > std::chrono::milliseconds(150);
+  if (editing && !w.mHoldsFocus && clickSettled)
     TakeKeyboardFocus();
   else if (!editing && w.mHoldsFocus)
     ReleaseKeyboardFocus();
   RemoveFinishedStandIns();
 }
 
-// Text entry needs the keys while the pointer is elsewhere too; outside an edit the host keeps its focus,
-// so its shortcuts work whenever the pointer is not over the editor.
+// Text entry asks for the keys while the pointer is elsewhere too (a host may refuse by taking the focus back).
+// Outside an edit the host keeps its focus, so its shortcuts work whenever the pointer is not over the editor.
 void IGraphicsLinux::TakeKeyboardFocus()
 {
   Impl& w = *mImpl;
@@ -881,9 +925,19 @@ void IGraphicsLinux::TakeKeyboardFocus()
     return;
 
   ScopedXErrorTrap trap(w.mDisplay);
-  XGetInputFocus(w.mDisplay, &w.mFocusBefore, &w.mRevertBefore);
+  Window focus = None;
+  int revert = RevertToParent;
+  XGetInputFocus(w.mDisplay, &focus, &revert);
+  TRACE_INPUT("take focus from 0x%lx\n", focus);
+  if (w.mFocusRetries == 0) // a retry sees where the click moved the focus; give back what the edit started from
+  {
+    w.mFocusBefore = focus;
+    w.mRevertBefore = revert;
+  }
   // CurrentTime, not the click's time: a focus change the host made after that click would make the request stale.
   XSetInputFocus(w.mDisplay, w.mWindow, RevertToParent, CurrentTime);
+  if (w.mInputContext)
+    XSetICFocus(w.mInputContext);
   if (w.mEmbedder)
   {
     XEvent request {};
@@ -897,19 +951,24 @@ void IGraphicsLinux::TakeKeyboardFocus()
   }
   XFlush(w.mDisplay);
   w.mHoldsFocus = true;
+  w.mFocusTakenAt = std::chrono::steady_clock::now();
 }
 
 void IGraphicsLinux::ReleaseKeyboardFocus()
 {
   Impl& w = *mImpl;
   w.mHoldsFocus = false;
+  w.mFocusRetries = 0;
+  if (w.mInputContext)
+    XUnsetICFocus(w.mInputContext);
 
   ScopedXErrorTrap trap(w.mDisplay);
   Window focus = None;
   int revert = 0;
   XGetInputFocus(w.mDisplay, &focus, &revert);
+  TRACE_INPUT("release focus: now at 0x%lx, before 0x%lx\n", focus, w.mFocusBefore);
   // Someone else moved the focus meanwhile (the window manager, the host): leave it there.
-  if (focus != w.mWindow)
+  if (focus != w.mWindow || w.mFocusOnClick)
     return;
 
   const bool restorable = w.mFocusBefore != None && w.mFocusBefore != w.mWindow;

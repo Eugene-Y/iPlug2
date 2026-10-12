@@ -1,0 +1,138 @@
+# IPlugControls, the full P3b script for REAPER: mouse, keyboard, focus, IGraphics and stand-in ("OS") menus and
+# text entry, locked-cursor knob drag, clipboard round trips with xclip/xsel, key forwarding to the host.
+# Coordinates relative to the 1024x768 plugin view top-left. Track 0, FX 0: param 0 = Gain, 1 = Mode.
+alive __PROC__
+shot c00-start
+# IVKnobControl hides and locks the cursor while dragging: the value changes, the pointer ends where the drag began
+drag 322 237 322 330
+wait 0.5
+shot c01-knob-drag
+expect-change c00-start c01-knob-drag 262 170 120 130
+expect-pointer 322 237
+expect-param 0 0 ^([0-9]|[1-9][0-9])([.,]|$)
+# IVXYPad drag, IVKeyboard key click
+drag 150 440 220 360
+click 330 560
+wait 0.5
+shot c02-xy-keyboard
+expect-change c01-knob-drag c02-xy-keyboard 137 325 115 130
+# mouse wheel over the IVKnobControl
+click 322 237 4
+click 322 237 4
+click 322 237 4
+wait 0.5
+shot c03-wheel
+expect-change c02-xy-keyboard c03-wheel 262 170 120 130
+# IVMenuButtonControl -> IGraphics popup (the plug-in's own IPopupMenuControl): choose "three"
+click 828 284
+wait 1
+shot c04-popup-igraphics
+expect-change c03-wheel c04-popup-igraphics 760 270 200 150
+click 828 357
+wait 1
+expect-param 0 1 three
+# ICaptionControl enum dropdown: choose "two"
+click 321 99
+wait 1
+shot c05-caption-popup
+expect-change c04-popup-igraphics c05-caption-popup 221 50 300 200
+click 321 144
+wait 1
+expect-param 0 1 two
+# IVNumberBox (Gain) double click -> IGraphics text entry: typed text commits with Return
+dclick 941 437
+wait 1
+shot c06-textentry-igraphics
+type 42
+key Return
+wait 0.5
+shot c07-textentry-committed
+expect-param 0 0 ^42
+# ... and Escape cancels: the value stays, REAPER's FX window stays
+dclick 941 437
+wait 1
+type 13
+key Escape
+wait 0.5
+expect-param 0 0 ^42
+expect-window IPlugControls.*Track 1
+# CLIPBOARD from outside into the text entry (Ctrl+V), and out of it (Ctrl+C), checked with xclip and xsel
+set-clipboard 55
+dclick 941 437
+wait 1
+key ctrl+v
+key Return
+wait 0.5
+expect-param 0 0 ^55
+dclick 941 437
+wait 1
+key ctrl+c
+key Escape
+wait 0.5
+expect-clipboard 55
+# keys stay with the host outside text entry: Space over an empty spot of the editor starts and stops the transport
+move 1010 600
+key space
+wait 0.7
+lua-expect ^1$ out(reaper.GetPlayState() & 1)
+key space
+wait 0.7
+lua-expect ^0$ out(reaper.GetPlayState() & 1)
+alive __PROC__
+# "OS Text Entry" + "OS Menu" toggles: the plug-in removes its IGraphics controls, platform paths take over
+click 224 692
+click 224 720
+wait 0.5
+shot c08-os-toggles
+expect-change c07-textentry-committed c08-os-toggles 200 680 50 50
+click 828 284
+wait 1
+shot c09-popup-os
+expect-change c08-os-toggles c09-popup-os 760 270 200 150
+click 833 358
+wait 1
+expect-param 0 1 four
+dclick 941 437
+wait 1
+shot c10-textentry-os
+expect-change c09-popup-os c10-textentry-os 870 410 110 40
+type 7
+key Return
+wait 1
+expect-param 0 0 ^7
+dclick 941 437
+wait 1
+type 99
+key Escape
+wait 1
+expect-param 0 0 ^7
+expect-window IPlugControls.*Track 1
+alive __PROC__
+# right click on a parameter control: REAPER's own context menu in VST3 (IComponentHandler3), nothing in CLAP
+# (IVKnobControl adds no items); a click elsewhere dismisses it
+rclick 322 237
+wait 1.5
+shot c11-context-menu
+windows
+click 1010 600
+wait 1
+expect-window IPlugControls.*Track 1
+alive __PROC__
+# color swatch and font button: P4 dialogs (cancelled stubs), must not crash
+click 919 388
+wait 1
+click 546 744
+wait 1
+alive __PROC__
+# info button -> IAboutBoxControl, dismissed by a click. (Its Escape never reaches a plug-in in REAPER, which keeps
+# Escape for itself and closes the FX window; the APP script checks it.)
+click 993 737
+wait 1
+shot c12-about
+click 500 400
+wait 1
+shot c13-about-dismissed
+expect-change c12-about c13-about-dismissed 0 0 1024 768
+expect-window IPlugControls.*Track 1
+alive __PROC__
+shot c14-end

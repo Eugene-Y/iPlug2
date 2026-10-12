@@ -10,12 +10,22 @@
 #   alive PROC|PID                     prints ALIVE/DEAD for a process name or pid
 #   windows                            list named top-level windows
 #   expect-change A B X Y W H          shots A and B must differ inside the view rect; else a line in $OUT/xact-fails.txt
+#   expect-same A B X Y W H            shots A and B must be identical inside the view rect
+#   expect-param TRACK PARAM REGEX     REAPER: formatted value of FX 0's PARAM on track TRACK (0-based) matches REGEX
+#   expect-pointer X Y                 the pointer is at view X,Y (within 2 px)
+#   set-clipboard TEXT                 CLIPBOARD := TEXT (xclip)
+#   expect-clipboard TEXT              CLIPBOARD reads TEXT, both with xclip and with xsel
+#   move X Y                           move the pointer (hover)
+#   lua-expect REGEX LUA...            REAPER: what LUA writes with out() matches REGEX
+#   expect-window REGEX                a visible window named REGEX exists
 #   # comment
 # Usage: OUT=<dir> xact.sh < steps.txt
 set -uo pipefail
 OUT="${OUT:-/tmp/xact}"; mkdir -p "$OUT"
 OX=0; OY=0
+HERE="$(cd "$(dirname "$0")" && pwd)"
 log() { echo "[xact] $*"; }
+xfail() { log "FAIL $*"; echo "$*" >> "$OUT/xact-fails.txt"; }
 while read -r cmd a b c d rest; do
   case "$cmd" in
     ''|\#*) continue;;
@@ -41,8 +51,33 @@ while read -r cmd a b c d rest; do
       read -r w h _ <<<"$rest"
       crop="${w}x${h}+$((OX+c))+$((OY+d))"
       ae=$(compare -metric AE <(convert "$OUT/$a.png" -crop "$crop" +repage png:-) <(convert "$OUT/$b.png" -crop "$crop" +repage png:-) null: 2>&1)
-      if [ "${ae%% *}" = 0 ]; then log "UNCHANGED $a -> $b in view rect $c,$d ${w}x${h}"; echo "expect-change: $a -> $b unchanged in view rect $c,$d ${w}x${h}" >> "$OUT/xact-fails.txt"
+      if [ "${ae%% *}" = 0 ]; then xfail "expect-change: $a -> $b unchanged in view rect $c,$d ${w}x${h}"
       else log "changed $a -> $b in view rect $c,$d ${w}x${h} ($ae px)"; fi;;
+    expect-same)
+      read -r w h _ <<<"$rest"
+      crop="${w}x${h}+$((OX+c))+$((OY+d))"
+      ae=$(compare -metric AE <(convert "$OUT/$a.png" -crop "$crop" +repage png:-) <(convert "$OUT/$b.png" -crop "$crop" +repage png:-) null: 2>&1)
+      if [ "${ae%% *}" = 0 ]; then log "same $a -> $b in view rect $c,$d ${w}x${h}"
+      else xfail "expect-same: $a -> $b differ in view rect $c,$d ${w}x${h} ($ae px)"; fi;;
+    expect-param)
+      v=$("$HERE/rpr.sh" "local t=reaper.GetTrack(0,$a); local ok,s=reaper.TrackFX_GetFormattedParamValue(t,0,$b,''); out(s)")
+      if grep -Eq -- "$c" <<<"$v"; then log "param $a/$b = '$v' (matches $c)"; else xfail "expect-param: track $a param $b = '$v', expected /$c/"; fi;;
+    expect-pointer)
+      eval "$(xdotool getmouselocation --shell)"
+      if [ $(( (X-OX-a)*(X-OX-a) + (Y-OY-b)*(Y-OY-b) )) -le 8 ]; then log "pointer at view $((X-OX)),$((Y-OY))"
+      else xfail "expect-pointer: pointer at view $((X-OX)),$((Y-OY)), expected $a,$b"; fi;;
+    set-clipboard) printf '%s' "$a${b:+ $b}${c:+ $c}${d:+ $d}${rest:+ $rest}" | xclip -selection clipboard; log "set-clipboard";;
+    expect-clipboard)
+      want="$a${b:+ $b}${c:+ $c}${d:+ $d}${rest:+ $rest}"
+      got1=$(timeout 3 xclip -o -selection clipboard 2>&1); got2=$(timeout 3 xsel -b -o 2>&1)
+      if [ "$got1" = "$want" ] && [ "$got2" = "$want" ]; then log "clipboard '$want' (xclip, xsel)"
+      else xfail "expect-clipboard: xclip '$got1', xsel '$got2', expected '$want'"; fi;;
+    move) xdotool mousemove $((OX+a)) $((OY+b)); log "move $a $b";;
+    lua-expect)
+      v=$("$HERE/rpr.sh" "$b${c:+ $c}${d:+ $d}${rest:+ $rest}")
+      if grep -Eq -- "$a" <<<"$v"; then log "lua '$v' (matches $a)"; else xfail "lua-expect: '$v', expected /$a/ from: $b $c $d $rest"; fi;;
+    expect-window)
+      if xdotool search --onlyvisible --name "$a" >/dev/null 2>&1; then log "window /$a/ exists"; else xfail "expect-window: no visible window /$a/"; fi;;
     windows) xdotool search --onlyvisible --name '.' getwindowname %@ 2>/dev/null | sort -u | sed 's/^/[xact]   win: /';;
     *) log "unknown step: $cmd";;
   esac
