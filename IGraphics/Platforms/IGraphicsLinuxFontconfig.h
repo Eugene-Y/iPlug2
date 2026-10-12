@@ -101,11 +101,14 @@ private:
   void* mLib = nullptr;
 };
 
-/** Finds the font file for a family name and style. Like Windows' font mapper, a missing family gives the
- * system's substitute (e.g. Liberation Sans for Arial). Only TrueType-outline fonts qualify: NanoVG's stb_truetype
- * (v1.09) cannot draw CFF outlines, which most .otf files have; the best TrueType candidate wins instead.
- * @return true and the file path plus face index (TrueType collections) on success */
-inline bool FindSystemFont(const char* familyName, ETextStyle style, WDL_String& path, int& faceIdx)
+/** Offers the font files for a family name and style, best first, until accept takes one. Like Windows' font
+ * mapper, a missing family gives the system's substitutes (e.g. Liberation Sans for Arial). Only TrueType-outline
+ * faces are offered: NanoVG's stb_truetype (v1.09) cannot draw CFF outlines, which most .otf files have, nor
+ * named instances of variable fonts (fontconfig's index with an instance number above bit 16).
+ * @param accept bool(const char* path, int faceIdx): true when the caller could use that face
+ * @return true when a face was accepted */
+template <typename AcceptFunc>
+bool FindSystemFont(const char* familyName, ETextStyle style, AcceptFunc accept)
 {
   const Fontconfig* pFC = Fontconfig::Get();
   if (!pFC || !familyName || !*familyName)
@@ -128,25 +131,35 @@ inline bool FindSystemFont(const char* familyName, ETextStyle style, WDL_String&
   if (!pFonts)
     return false;
 
-  bool found = false;
-  for (int i = 0; i < pFonts->nfont && !found; ++i)
+  bool accepted = false;
+  for (int i = 0; i < pFonts->nfont && !accepted; ++i)
   {
     const Fontconfig::Pattern* pFont = pFonts->fonts[i];
     unsigned char* pFormat = nullptr;
     unsigned char* pFile = nullptr;
+    int index = 0;
     const bool isTrueType = pFC->PatternGetString(pFont, "fontformat", 0, &pFormat) == Fontconfig::kResultMatch
                          && pFormat && strcmp(reinterpret_cast<const char*>(pFormat), "TrueType") == 0;
     if (!isTrueType || pFC->PatternGetString(pFont, "file", 0, &pFile) != Fontconfig::kResultMatch || !pFile)
       continue;
-    int index = 0;
     if (pFC->PatternGetInteger(pFont, "index", 0, &index) != Fontconfig::kResultMatch)
       index = 0;
-    path.Set(reinterpret_cast<const char*>(pFile));
-    faceIdx = index;
-    found = true;
+    if ((index >> 16) != 0)
+      continue;
+    accepted = accept(reinterpret_cast<const char*>(pFile), index);
   }
   pFC->FontSetDestroy(pFonts);
-  return found;
+  return accepted;
+}
+
+/** The first face FindSystemFont offers */
+inline bool FindSystemFont(const char* familyName, ETextStyle style, WDL_String& path, int& faceIdx)
+{
+  return FindSystemFont(familyName, style, [&](const char* pPath, int index) {
+    path.Set(pPath);
+    faceIdx = index;
+    return true;
+  });
 }
 
 } // namespace linux_fonts
