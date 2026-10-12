@@ -197,6 +197,8 @@ struct IGraphicsLinux::Impl
   unsigned char mKeptKeys[32] = {};
 
   LinuxClipboard mClipboard;
+  bool mPasteKeyPending = false; // Ctrl+V of an edit, replayed once the clipboard's text is here
+  IKeyPress mPasteKey { "v", 'V' };
 
   // IGraphics-drawn controls standing in for platform text entry and menus, removed once they are done
   ITextEntryControl* mStandInTextEntry = nullptr;
@@ -802,6 +804,18 @@ void IGraphicsLinux::HandleKey(const XEvent& event)
     return;
   }
 
+  // Ctrl+V in an edit reads the clipboard without blocking, then replays the key. A blocking read cannot get
+  // text that the host itself owns: its main thread, which would have to answer, is the one waiting.
+  const bool pasteInEdit = isPress && GetControlInTextEntry() && (key.state & ControlMask)
+                        && linux_keys::PhysicalCharacterVirtualKey(w.mDisplay, key.keycode, key.state) == 'V';
+  if (pasteInEdit && !w.mPasteKeyPending && w.mClipboard.BeginAsyncRead())
+  {
+    keptKeys |= keyBit;
+    w.mPasteKeyPending = true;
+    w.mPasteKey = IKeyPress("v", 'V', key.state & ShiftMask, true, key.state & Mod1Mask);
+    return;
+  }
+
   const std::shared_ptr<bool> open = w.mOpen;
   bool handled = false;
   linux_keys::ForEachKeyPress(w.mDisplay, isPress ? w.mInputContext : nullptr, key, [&](const IKeyPress& keyPress) {
@@ -916,6 +930,19 @@ void IGraphicsLinux::UpdateEditingState()
   else if (!editing && w.mHoldsFocus)
     ReleaseKeyboardFocus();
   RemoveFinishedStandIns();
+
+  if (w.mPasteKeyPending && w.mClipboard.AsyncReadDone())
+  {
+    w.mPasteKeyPending = false;
+    if (GetControlInTextEntry() && w.mClipboard.HasAsyncText())
+    {
+      const std::shared_ptr<bool> open = w.mOpen;
+      OnKeyDown(w.mCursorX, w.mCursorY, w.mPasteKey);
+      if (!*open)
+        return;
+    }
+    w.mClipboard.DropAsyncText();
+  }
 }
 
 // Text entry asks for the keys while the pointer is elsewhere too (a host may refuse by taking the focus back).

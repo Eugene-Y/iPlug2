@@ -78,6 +78,17 @@ key ctrl+c
 key Escape
 wait 0.5
 expect-clipboard 55
+# the text entry's own menu (right click): its Paste reads the clipboard with the blocking, bounded wait
+set-clipboard 66
+dclick 941 437
+wait 1
+rclick 941 437
+wait 1
+click 945 494
+wait 0.5
+key Return
+wait 0.5
+expect-param 0 0 ^66
 # keys stay with the host outside text entry: Space over an empty spot of the editor starts and stops the transport
 move 1010 600
 key space

@@ -67,6 +67,12 @@ public:
     str.Set("");
     if (!mDisplay)
       return false;
+    if (mHasAsyncText)
+    {
+      str.Set(mAsyncText.Get());
+      mHasAsyncText = false;
+      return true;
+    }
 
     const Window owner = XGetSelectionOwner(mDisplay, mClipboard);
     if (owner == None)
@@ -102,9 +108,75 @@ public:
     return true;
   }
 
+  /** Starts reading the clipboard without blocking: for an owner that only the host's main thread can serve
+   * (the host's own widgets), which GetText's wait would starve. HandleEvent receives the text; once
+   * AsyncReadDone() says so, the next GetText returns it.
+   * @return false when there is nothing to wait for: no owner, or an editor of this process (GetText reads that at once) */
+  bool BeginAsyncRead()
+  {
+    if (!mDisplay || mAsyncState != kAsyncIdle)
+      return false;
+    const Window owner = XGetSelectionOwner(mDisplay, mClipboard);
+    if (owner == None || owner == SharedOwner())
+      return false;
+    XDeleteProperty(mDisplay, mWindow, mProperty);
+    XConvertSelection(mDisplay, mClipboard, mUTF8String, mProperty, mWindow, CurrentTime);
+    XFlush(mDisplay);
+    mAsyncState = kAsyncWaitingForOwner;
+    mAsyncStart = std::chrono::steady_clock::now();
+    mAsyncData.Resize(0);
+    mHasAsyncText = false;
+    return true;
+  }
+
+  /** @return true once, when an asynchronous read ended (with or without text) or gave up after a second */
+  bool AsyncReadDone()
+  {
+    if (mAsyncState == kAsyncIdle)
+      return false;
+    if (mAsyncState == kAsyncDone)
+    {
+      mAsyncState = kAsyncIdle;
+      return true;
+    }
+    if (std::chrono::steady_clock::now() - mAsyncStart > std::chrono::seconds(1))
+    {
+      mAsyncState = kAsyncIdle;
+      return true;
+    }
+    return false;
+  }
+
+  bool HasAsyncText() const { return mHasAsyncText; }
+
+  /** Forgets text that an asynchronous read delivered and nobody asked for */
+  void DropAsyncText() { mHasAsyncText = false; }
+
   /** @return true when the event belonged to the clipboard */
   bool HandleEvent(const XEvent& event)
   {
+    if (event.type == SelectionNotify && event.xselection.selection == mClipboard && mAsyncState == kAsyncWaitingForOwner)
+    {
+      Atom type = None;
+      if (event.xselection.property == None || !ReadProperty(type, mAsyncData))
+        FinishAsyncRead(false);
+      else if (type == mIncr)
+        mAsyncState = kAsyncIncremental;
+      else
+        FinishAsyncRead(true);
+      return true;
+    }
+    if (event.type == PropertyNotify && mAsyncState == kAsyncIncremental && event.xproperty.window == mWindow
+        && event.xproperty.atom == mProperty && event.xproperty.state == PropertyNewValue)
+    {
+      const int before = mAsyncData.GetSize();
+      Atom type = None;
+      if (!ReadProperty(type, mAsyncData))
+        FinishAsyncRead(false);
+      else if (mAsyncData.GetSize() == before)
+        FinishAsyncRead(true);
+      return true;
+    }
     if (event.type == SelectionRequest && event.xselectionrequest.selection == mClipboard)
     {
       Serve(event.xselectionrequest);
@@ -120,6 +192,17 @@ public:
   }
 
 private:
+  enum EAsyncState { kAsyncIdle, kAsyncWaitingForOwner, kAsyncIncremental, kAsyncDone };
+
+  void FinishAsyncRead(bool ok)
+  {
+    mHasAsyncText = ok;
+    const bool hasData = ok && mAsyncData.GetSize() > 0;
+    mAsyncText.Set(hasData ? mAsyncData.Get() : "", hasData ? mAsyncData.GetSize() : 0);
+    mAsyncData.Resize(0);
+    mAsyncState = kAsyncDone;
+  }
+
   static WDL_String& SharedText() { static WDL_String sText; return sText; }
   static Window& SharedOwner() { static Window sOwner = 0; return sOwner; }
 
@@ -251,6 +334,12 @@ private:
   Atom mText = None;
   Atom mIncr = None;
   Atom mProperty = None;
+
+  EAsyncState mAsyncState = kAsyncIdle;
+  std::chrono::steady_clock::time_point mAsyncStart;
+  WDL_TypedBuf<char> mAsyncData;
+  WDL_String mAsyncText;
+  bool mHasAsyncText = false;
 };
 
 END_IGRAPHICS_NAMESPACE
