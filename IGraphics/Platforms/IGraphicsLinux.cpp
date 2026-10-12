@@ -723,8 +723,10 @@ void IGraphicsLinux::HandleMotion(const XEvent& event)
 
   const std::shared_ptr<bool> open = w.mOpen;
   OnMouseDrag({ info });
-  // A locked cursor goes back after every step; the warp's own motion event then has no delta.
-  if (*open && mCursorLock)
+  // A locked cursor goes back after every step. The warp sends a motion event of its own, without a delta;
+  // warping again on that one would loop.
+  const bool moved = info.dX != 0.f || info.dY != 0.f;
+  if (*open && mCursorLock && moved)
     MoveMouseCursor(w.mHiddenCursorX, w.mHiddenCursorY);
 }
 

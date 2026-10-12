@@ -4,6 +4,8 @@
 # Two instances on two tracks; each cycle toggles both editors. Most cycles leave time for frames and X events
 # while open (timers and fd watches live); every 5th cycle closes again within the same Lua call, before any
 # timer of the new window has fired.
+# EDIT=1 (IPlugControls layout): in the other cycles a text entry is open, holding the keyboard focus, and every
+# other one also owns the CLIPBOARD (Ctrl+C), when the editors close.
 set -uo pipefail
 OUT="$1"; FX="$2"; PLUG="$3"; N="${4:-100}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -29,6 +31,12 @@ for c in $(seq 1 "$N"); do
   else
     out=$(rpr "for i=0,1 do reaper.TrackFX_Show(reaper.GetTrack(0,i),0,3) end; out('ok')"); sleep 0.25
     xdotool mousemove $((300 + c % 200)) 400; sleep 0.1
+    if [ "${EDIT:-0}" = 1 ]; then
+      w=$(xdotool search --onlyvisible --name "${FX#*: }.*Track 2" | tail -1) # opened last, on top
+      read -r vx vy < <(xwininfo -id "$w" -tree | awk '/^ +0x[0-9a-f]+ /{ split($(NF-1),g,"[x+]"); split($NF,a,"+"); if (g[1]*g[2] > best) { best=g[1]*g[2]; r=a[2]" "a[3] } } END { print r }')
+      xdotool mousemove $((vx + 941)) $((vy + 437)) click --repeat 2 --delay 80 1; sleep 0.4
+      [ $((c % 2)) = 0 ] && xdotool key ctrl+c
+    fi
     out=$(rpr "for i=0,1 do reaper.TrackFX_Show(reaper.GetTrack(0,i),0,2) end; out('ok')")
   fi
   grep -q ok <<<"$out" || { echo "cycle $c: $out" | tee -a "$R"; }
