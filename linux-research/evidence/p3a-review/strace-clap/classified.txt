@@ -1,0 +1,10 @@
+# REAPER main thread, 3 s with mouse motion over the editor; editor X fd = new: 8. Calls by shape (count):
+# timeout NULL single-fd = Xlib/xcb waiting on a reply; {fd 3,4/5} timeout 0 = REAPER's GLib loop; editor fd alone with timeout 0 = REAPER's per-tick check of the plug-in fd
+ 106 ppoll([{fd=3, events=POLLIN|POLLOUT}], 1, NULL, NULL, 0) = ready
+  86 ppoll([{fd=3, events=POLLIN}], 1, NULL, NULL, 0) = ready
+  79 ppoll([{fd=8, events=POLLIN}], 1, NULL, NULL, 0) = ready
+  79 ppoll([{fd=8, events=POLLIN|POLLOUT}], 1, NULL, NULL, 0) = ready
+  57 ppoll([{fd=3, events=POLLIN}, {fd=5, events=POLLIN}], 2, {tv_sec=0, tv_nsec=0}, NULL, 0) = 0 (Timeout)
+  38 ppoll([{fd=8, events=POLLIN}], 1, {tv_sec=0, tv_nsec=0}, NULL, 0) = 0 (Timeout)
+   4 ppoll([{fd=3, events=POLLIN}, {fd=5, events=POLLIN}], 2, {tv_sec=0, tv_nsec=0}, NULL, 0) = 1 ([{fd=3, revents=X}], left {tv_sec=0, tv_nsec=0})
+   1 ppoll([{fd=8, events=POLLIN}], 1, {tv_sec=0, tv_nsec=0}, NULL, 0) = 1 ([{fd=8, revents=X}], left {tv_sec=0, tv_nsec=0})

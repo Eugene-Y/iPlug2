@@ -1,0 +1,33 @@
+== fd 4 (Debug + ASan)
+start: fds=5 sockets=1 threads=1
+on_fd=22 on_timer=297 on_main_thread=0
+end: fds=5 sockets=1 threads=1
+HOST ALIVE, exit 0
+EXIT=0
+== parent-death 1 (Debug + ASan)
+start: fds=5 sockets=1 threads=1
+destroying the parent 0x800001 before gui.destroy
+iPlug2: X error ignored: BadDrawable (invalid Pixmap or Window parameter) (request 14.0, resource 0xa00002)
+iPlug2: X error ignored: BadDrawable (invalid Pixmap or Window parameter) (request 130.3, resource 0xa00002)
+iPlug2: X error ignored: BadDrawable (invalid Pixmap or Window parameter) (request 14.0, resource 0xa00002)
+iPlug2: X error ignored: BadWindow (invalid Window parameter) (request 4.0, resource 0xa00002)
+after gui.destroy: timers=1 fds=0
+end: fds=5 sockets=1 threads=1
+HOST ALIVE, exit 0
+EXIT=0
+== two 4 (Debug + ASan)
+start: fds=5 sockets=1 threads=1
+two open: fds=9 sockets=3 threads=27
+a: on_fd=4 on_timer=50  b: on_fd=1 on_timer=49
+two closed: fds=5 sockets=1 threads=1
+end: fds=5 sockets=1 threads=1
+HOST ALIVE, exit 0
+EXIT=0
+== churn 50 (Debug + ASan)
+start: fds=5 sockets=1 threads=1
+after first cycle: fds=5 sockets=1 threads=2
+after churn: fds=5 sockets=1 threads=1
+registrations left: timers=1 fds=0
+end: fds=5 sockets=1 threads=1
+HOST ALIVE, exit 0
+EXIT=0

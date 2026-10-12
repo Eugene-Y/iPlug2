@@ -1,0 +1,9 @@
+sockets before: 3  after: 3 8  new: 8 
+poll-like calls on the main thread in 3s: 450
+calls whose fd set includes fd 8: 197
+--- sample:
+21:31:59.526688 ppoll([{fd=3, events=POLLIN}, {fd=5, events=POLLIN}], 2, {tv_sec=0, tv_nsec=0}, NULL, 0) = 0 (Timeout)
+21:31:59.527719 ppoll([{fd=3, events=POLLIN}, {fd=5, events=POLLIN}], 2, {tv_sec=0, tv_nsec=0}, NULL, 0) = 0 (Timeout)
+21:31:59.528312 ppoll([{fd=8, events=POLLIN|POLLOUT}], 1, NULL, NULL, 0) = 1 ([{fd=8, revents=POLLOUT}])
+21:31:59.528666 ppoll([{fd=8, events=POLLIN}], 1, NULL, NULL, 0) = 1 ([{fd=8, revents=POLLIN}])
+21:31:59.570529 ppoll([{fd=8, events=POLLIN|POLLOUT}], 1, NULL, NULL, 0) = 1 ([{fd=8, revents=POLLOUT}])

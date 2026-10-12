@@ -1,0 +1,48 @@
+== fd 4 (Debug + ASan, round 1)
+start: fds=5 sockets=1 threads=1
+on_fd=22 on_timer=351 on_main_thread=0
+end: fds=5 sockets=1 threads=1
+HOST ALIVE, exit 0
+EXIT=0
+== parent-death 1 (Debug + ASan, round 1)
+start: fds=5 sockets=1 threads=1
+destroying the parent 0x800001 before gui.destroy
+iPlug2: X error ignored: BadDrawable (invalid Pixmap or Window parameter) (request 14.0, resource 0xa00002)
+AddressSanitizer:DEADLYSIGNAL
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+AddressSanitizer:DEADLYSIGNAL
+AddressSanitizer:DEADLYSIGNAL
+AddressSanitizer:DEADLYSIGNAL
+AddressSanitizer:DEADLYSIGNAL
+==2907==ERROR: AddressSanitizer: SEGV on unknown address 0xe370d7594000 (pc 0xe370b0038880 bp 0xe3708d9fd80c sp 0xe3709e8fe0d0 T3)
+==2907==The signal is caused by a READ memory access.
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV (<unknown module>) 
+Thread T3 created by T0 here:
+==2907==ABORTING
+EXIT=1
+== two 4 (Debug + ASan, round 1)
+start: fds=5 sockets=1 threads=1
+two open: fds=9 sockets=3 threads=27
+a: on_fd=5 on_timer=54  b: on_fd=1 on_timer=53
+two closed: fds=5 sockets=1 threads=1
+end: fds=5 sockets=1 threads=1
+HOST ALIVE, exit 0
+EXIT=0
+== churn 50 (Debug + ASan, round 1)
+start: fds=5 sockets=1 threads=1
+after first cycle: fds=5 sockets=1 threads=1
+after churn: fds=5 sockets=1 threads=1
+registrations left: timers=1 fds=0
+end: fds=5 sockets=1 threads=1
+HOST ALIVE, exit 0
+EXIT=0
+== nogl (Release, round 1, libGL.so.1 removed)
+start: fds=5 sockets=1 threads=1
+editor 1024x768 parent=0x200001 set_parent=0 show=1
+iPlug2: no usable libGL.so.1 (libGL.so.1: cannot open shared object file: No such file or directory), the editor cannot open
+on_fd=0 on_timer=49 on_main_thread=0
+end: fds=5 sockets=1 threads=1
+HOST ALIVE, exit 0
+EXIT=0

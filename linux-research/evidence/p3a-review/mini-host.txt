@@ -1,0 +1,18 @@
+== parent-death
+start: fds=5 sockets=1 threads=1
+register_fd fd=4 flags=1
+editor 1024x768 parent=0x400001 set_parent=1 show=0
+destroying the parent 0x400001 before gui.destroy
+unregister_fd fd=4
+after gui.destroy: timers=1 fds=0
+end: fds=5 sockets=1 threads=1
+HOST ALIVE, exit 0
+EXIT=0
+== two
+start: fds=5 sockets=1 threads=1
+register_fd fd=4 flags=1
+editor 1024x768 parent=0x400001 set_parent=1 show=0
+register_fd fd=6 flags=1
+editor 1024x768 parent=0x400002 set_parent=1 show=0
+/Volumes/Storage/code/IPlug2-linux/linux-research/evidence/p3a-review/mini-run.sh: line 13:   416 Segmentation fault      "$HOSTBIN" "$PLUG" "$SC" "$SECS" 2>&1
+EXIT=139

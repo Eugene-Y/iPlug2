@@ -4,7 +4,7 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 
 ## Progress
 
-**P3a done (2026-10-11)**: host-driven X11 editor window, NanoVG on GL2, ec828eacc..HEAD. Details: `notes/11-p3a-window.md`. Evidence: `evidence/p3a/`.
+**P3a done (2026-10-11)**: host-driven X11 editor window, NanoVG on GL2, ec828eacc..HEAD. Details: `notes/11-p3a-window.md`. Evidence: `evidence/p3a/`. Review (accepted, 2 rounds): `notes/12-review-p3a.md`, `evidence/p3a-review/`.
 
 | Commit | What |
 |---|---|
@@ -340,4 +340,5 @@ RR's SWELL/GDK host + RtAudio (ALSA/JACK/Pulse; PipeWire through its shims), dri
 | P2 host loop: design, REAPER IRunLoop finding, acceptance | notes/09-p2-host-loop.md |
 | P2 review: findings, fixes, verdict | notes/10-review-p2.md |
 | P3a editor window: design, GL2 choice, REAPER fd finding, acceptance | notes/11-p3a-window.md |
+| P3a review: findings (destroyed-parent draw crash), fixes, verdict | notes/12-review-p3a.md |
 | Patches used to build each candidate | evidence/*/patches/ |
