@@ -3,9 +3,17 @@
 # Coordinates relative to the 1024x768 plugin view top-left. Track 0, FX 0: param 0 = Gain, 1 = Mode.
 alive __PROC__
 shot c00-start
-# IVKnobControl hides and locks the cursor while dragging: the value changes, the pointer ends where the drag began
-drag 322 237 322 330
+# cursors from the Xcursor theme: the corner resizer's diagonal one, the default elsewhere
+move 1016 760
 wait 0.5
+expect-cursor nwse-resize
+move 500 400
+wait 0.5
+expect-cursor default
+# IVKnobControl hides and locks the cursor while dragging: the value changes, the pointer ends where the drag began
+drag-check 322 237 322 330 expect-cursor blank
+wait 0.5
+expect-cursor default
 shot c01-knob-drag
 expect-change c00-start c01-knob-drag 262 170 120 130
 expect-pointer 322 237

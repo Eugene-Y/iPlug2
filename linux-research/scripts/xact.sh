@@ -18,11 +18,13 @@
 #   move X Y                           move the pointer (hover)
 #   lua-expect REGEX LUA...            REAPER: what LUA writes with out() matches REGEX
 #   expect-window REGEX                a visible window named REGEX exists
+#   expect-cursor NAME|blank           the pointer's cursor has this (theme) name, or no opaque pixel
+#   drag-check X1 Y1 X2 Y2 CHECK...    like drag, and runs the step CHECK... before the release
 #   # comment
 # Usage: OUT=<dir> xact.sh < steps.txt
 set -uo pipefail
 OUT="${OUT:-/tmp/xact}"; mkdir -p "$OUT"
-OX=0; OY=0
+read -r OX OY <<<"${XACT_ORIGIN:-0 0}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 log() { echo "[xact] $*"; }
 xfail() { log "FAIL $*"; echo "$*" >> "$OUT/xact-fails.txt"; }
@@ -36,10 +38,17 @@ while read -r cmd a b c d rest; do
     click) xdotool mousemove $((OX+a)) $((OY+b)) click "${c:-1}"; log "click $a $b";;
     rclick) xdotool mousemove $((OX+a)) $((OY+b)) click 3; log "rclick $a $b";;
     dclick) xdotool mousemove $((OX+a)) $((OY+b)) click --repeat 2 --delay 80 1; log "dclick $a $b";;
-    drag)
+    drag|drag-check)
       xdotool mousemove $((OX+a)) $((OY+b)) mousedown 1
       for i in $(seq 1 10); do xdotool mousemove $((OX+a+(c-a)*i/10)) $((OY+b+(d-b)*i/10)); sleep 0.03; done
+      [ "$cmd" = drag-check ] && echo "$rest" | OX=$OX OY=$OY OUT="$OUT" XACT_ORIGIN="$OX $OY" "$0"
       xdotool mouseup 1; log "drag $a,$b -> $c,$d";;
+    expect-cursor)
+      [ -x /tmp/cursor-probe ] || gcc -O1 -o /tmp/cursor-probe "$HERE/cursor-probe.c" -lX11 -lXfixes
+      read -r cname csize copaque < <(/tmp/cursor-probe)
+      if [ "$a" = blank ] && [ "$copaque" = 0 ]; then log "cursor blank ($csize)"
+      elif [ "$a" = "$cname" ]; then log "cursor $cname ($csize)"
+      else xfail "expect-cursor: '$cname' $csize, $copaque opaque px; expected $a"; fi;;
     key) xdotool key $a $b $c $d $rest; log "key $a $b $c $d $rest";;
     type) xdotool type --delay 40 "$a${b:+ $b}${c:+ $c}${d:+ $d}${rest:+ $rest}"; log "type $a $b";;
     wait) sleep "$a";;
