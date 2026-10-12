@@ -257,8 +257,34 @@ void TestClipboard(Display* pDisplay)
   Expect(clipboard.GetText(text, 0), true, "GetText returns the asynchronous result");
   Expect(static_cast<size_t>(text.GetLength()), bigSize, "INCR size (asynchronous)");
 
+  // The owning editor closes: another open editor takes the clipboard over; with none left the text stays
+  // readable in this process ("orphaned") until something else owns the clipboard.
+  const Atom clipboardAtom = XInternAtom(pDisplay, "CLIPBOARD", False);
+  Window windowB = XCreateWindow(pDisplay, DefaultRootWindow(pDisplay), 0, 0, 10, 10, 0, CopyFromParent, InputOutput,
+                                 CopyFromParent, CWEventMask, &attributes);
+  LinuxClipboard clipboardB;
+  clipboardB.Init(pDisplay, windowB);
+  Expect(clipboard.SetText("rig", CurrentTime), true, "editor A owns the clipboard");
   clipboard.Release();
   XDestroyWindow(pDisplay, window);
+  XSync(pDisplay, False);
+  Expect(XGetSelectionOwner(pDisplay, clipboardAtom) == windowB, true, "editor B took the clipboard over");
+  Expect(clipboardB.GetText(text, 200) && std::string(text.Get()) == "rig", true, "editor B reads A's text");
+
+  clipboardB.Release();
+  XDestroyWindow(pDisplay, windowB);
+  XSync(pDisplay, False);
+  Expect(XGetSelectionOwner(pDisplay, clipboardAtom) == static_cast<Window>(None), true, "no owner after the last editor");
+  Window windowC = XCreateWindow(pDisplay, DefaultRootWindow(pDisplay), 0, 0, 10, 10, 0, CopyFromParent, InputOutput,
+                                 CopyFromParent, CWEventMask, &attributes);
+  LinuxClipboard clipboardC;
+  clipboardC.Init(pDisplay, windowC);
+  Expect(clipboardC.GetText(text, 200) && std::string(text.Get()) == "rig", true, "a later editor reads the orphaned text");
+  system("printf 'newer' | xclip -selection clipboard >/dev/null 2>&1");
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  Expect(clipboardC.GetText(text, 500) && std::string(text.Get()) == "newer", true, "another owner replaces the orphaned text");
+  clipboardC.Release();
+  XDestroyWindow(pDisplay, windowC);
   std::cout << "clipboard tested\n";
 }
 } // namespace

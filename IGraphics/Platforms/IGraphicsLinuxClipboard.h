@@ -21,6 +21,7 @@
 #include <cstring>
 
 #include "wdlstring.h"
+#include "ptrlist.h"
 
 BEGIN_IPLUG_NAMESPACE
 BEGIN_IGRAPHICS_NAMESPACE
@@ -39,13 +40,22 @@ public:
     mText = XInternAtom(pDisplay, "TEXT", False);
     mIncr = XInternAtom(pDisplay, "INCR", False);
     mProperty = XInternAtom(pDisplay, "IPLUG_CLIPBOARD", False);
+    if (OpenEditors().Find(this) < 0)
+      OpenEditors().Add(this);
   }
 
-  /** Before the window goes: the selection dies with it, and its id may come back for another window */
+  /** Before the window goes: the selection would die with it. Another open editor of this process takes it over;
+   * without one the text stays readable here as "orphaned" until something else owns the clipboard. */
   void Release()
   {
+    OpenEditors().DeletePtr(this);
     if (mWindow && SharedOwner() == mWindow)
+    {
       SharedOwner() = 0;
+      LinuxClipboard* pHeir = OpenEditors().Get(0);
+      if (!pHeir || !pHeir->TakeOver())
+        SharedOrphaned() = true;
+    }
     mDisplay = nullptr;
     mWindow = 0;
   }
@@ -55,6 +65,7 @@ public:
     if (!mDisplay || !str)
       return false;
     SharedText().Set(str);
+    SharedOrphaned() = false;
     XSetSelectionOwner(mDisplay, mClipboard, mWindow, time);
     const bool owned = XGetSelectionOwner(mDisplay, mClipboard) == mWindow;
     SharedOwner() = owned ? mWindow : 0;
@@ -77,7 +88,14 @@ public:
 
     const Window owner = XGetSelectionOwner(mDisplay, mClipboard);
     if (owner == None)
-      return false;
+    {
+      if (!SharedOrphaned())
+        return false;
+      str.Set(SharedText().Get());
+      return true;
+    }
+    if (owner != SharedOwner())
+      SharedOrphaned() = false;
     // Any editor of this process: other editors have connections of their own, and this thread would
     // have to serve their SelectionRequest while it waits here.
     if (owner == SharedOwner())
@@ -185,7 +203,10 @@ public:
     if (event.type == SelectionClear && event.xselectionclear.selection == mClipboard)
     {
       if (SharedOwner() == mWindow)
+      {
         SharedOwner() = 0;
+        SharedOrphaned() = false;
+      }
       return true;
     }
     return false;
@@ -205,6 +226,17 @@ private:
 
   static WDL_String& SharedText() { static WDL_String sText; return sText; }
   static Window& SharedOwner() { static Window sOwner = 0; return sOwner; }
+  static bool& SharedOrphaned() { static bool sOrphaned = false; return sOrphaned; }
+  static WDL_PtrList<LinuxClipboard>& OpenEditors() { static WDL_PtrList<LinuxClipboard> sEditors; return sEditors; }
+
+  bool TakeOver()
+  {
+    XSetSelectionOwner(mDisplay, mClipboard, mWindow, CurrentTime);
+    const bool owned = XGetSelectionOwner(mDisplay, mClipboard) == mWindow;
+    if (owned)
+      SharedOwner() = mWindow;
+    return owned;
+  }
 
   using EventPredicate = Bool (*)(Display*, XEvent*, XPointer);
 
