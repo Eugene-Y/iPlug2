@@ -28,8 +28,11 @@ nohup /opt/REAPER/reaper -nosplash -new > /tmp/reaper.log 2>&1 &
 echo $! > /tmp/reaper.pid
 for i in $(seq 100); do xdotool search --name '^REAPER v' >/dev/null 2>&1 && break; sleep 0.2; done
 sleep 2
-# dismiss the evaluation "About" nag
-for w in $(xdotool search --name '^About REAPER' 2>/dev/null); do xdotool windowclose "$w" 2>/dev/null || xdotool key --window "$w" Escape; done
+# dismiss the evaluation "About" nag. `xdotool windowclose` is XDestroyWindow on REAPER's window: on GNOME/X11 it
+# kills mutter-x11-frames, after which every new window stays Iconic (unmapped). A polite WM close where we can.
+for w in $(xdotool search --name '^About REAPER' 2>/dev/null); do
+  if command -v wmctrl >/dev/null; then wmctrl -i -c "$w"; else xdotool windowclose "$w" 2>/dev/null || xdotool key --window "$w" Escape; fi
+done
 # a project reset right after startup can swallow early script edits: wait until REAPER answers, then settle
 "$(dirname "$0")/rpr.sh" 'out("ready")' >/dev/null; sleep 2
 echo "REAPER up: $(xdotool search --name '^REAPER v' getwindowname %@ 2>/dev/null | head -1)"

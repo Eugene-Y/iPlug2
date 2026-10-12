@@ -14,7 +14,7 @@ docker build --build-arg UBUNTU=22.04 -t iplug2-linux:22.04 linux-research/docke
 The 24.04 image has:
 - Toolchain: gcc 13, clang 18, cmake 3.28, ninja.
 - X11, GL, GTK3, ALSA, JACK and Pulse dev packages, plus the xcb packages the bindernews branch needs.
-- Test display: Xvfb, openbox, xdotool, ImageMagick, dbus, zenity.
+- Test display: Xvfb, openbox, xdotool, ImageMagick, dbus, zenity; xclip and xsel (P3b clipboard checks, own last layer).
 - Debugging: gdb and strace.
 - Audio: jackd2, so a dummy audio backend is available.
 - Validators: `clap-validator` 0.4.1 (built with cargo) and the VST3 SDK v3.8.1 `validator` and `editorhost`.

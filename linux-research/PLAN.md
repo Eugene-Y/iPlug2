@@ -4,6 +4,27 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 
 ## Progress
 
+**P3b done (2026-10-12)**: keyboard, focus/XEmbed, text entry, cursors, clipboard, menus, fonts by name, 7bed217fd..HEAD. Details: `notes/13-p3b-input.md`. Evidence: `evidence/p3b/`. Linux-only files; no shared file changed.
+
+| What | Where |
+|---|---|
+| Keysym → `kVK_*` (physical key for letters/digits across XKB groups), UTF-8 via Xlib's built-in IM, key routing, unused real keys forwarded to the parent, kept-key releases | `IGraphicsLinuxKeys.h`, `IGraphicsLinux::HandleKey` |
+| Focus: host keeps it outside edits; an edit takes it after the opening click settles (≥150 ms, 2 retries), restores it after; APP focuses on click; `_XEMBED` EMBEDDED_NOTIFY / REQUEST_FOCUS / FOCUS_OUT | `IGraphicsLinux.cpp` |
+| Platform text entry and menus = IGraphics `ITextEntryControl` / `IPopupMenuControl` attached per use ("stand-ins"), async, removed when done; no GTK | `CreatePlatformTextEntry`, `CreatePlatformPopupMenu` |
+| Xcursor theme cursors (libXcursor `dlopen`ed) + cursor font fallback; hidden/locked cursor for drags | `IGraphicsLinuxCursors.h` |
+| CLIPBOARD owner/server, bounded blocking read, async read for Ctrl+V in edits, INCR receive | `IGraphicsLinuxClipboard.h` |
+| Fonts by name: fontconfig `dlopen`ed, best TrueType-outline candidate | `IGraphicsLinuxFontconfig.h` |
+| Tests and harness: `Tests/LinuxInput`; xact checks (param, pointer, cursor, clipboard, window); full P3b steps for REAPER and APP; thread checks; host-clipboard probe; churn `EDIT=1`; Dockerfile layer `xclip xsel`; `-DIGRAPHICS_TRACE_LINUX_INPUT` | `scripts/`, `docker/` |
+
+**Results** [R]: full IPlugControls script PASS in REAPER for CLAP and VST3 (locked knob drag, theme cursors, IGraphics and stand-in menus and text entry, commit/Escape, clipboard both ways with xclip/xsel, host keys still work, about box, reopen ×5, 2 instances); APP script PASS (keys, text entry, about box Escape); paste of REAPER-owned clipboard PASS; all new paths on the main thread (CLAP, VST3, APP); 100× churn PASS, also with an edit holding the focus at every close; validators identical to P3a; NEEDED unchanged (`libX11.so.6` + libc/libm), 22.04 GLIBC 2.34.
+
+**Findings** (notes/13): REAPER keeps X focus on GDK's focus proxy and forwards keys itself with `XSendEvent`, keeping Space and Escape (no VST3 `onKeyDown`); its VST3 `IContextMenu::popup` shows nothing on Linux; GDK3 apps ignore synthetic keys; host-owned clipboard needs the async read; NanoVG's stb_truetype v1.09 cannot draw CFF fonts.
+
+**Deviations**: the "OS" text entry/menu are IGraphics controls (as planned), not a native widget; the right-click ungrab for host menus was tried and dropped (no effect in REAPER); tooltips stay a no-op; no mac build (nothing mac-visible changed).
+
+**Next:** P4 dialogs. Carried: key delivery and context menus in Bitwig/Carla/Ardour (trace build), blocking clipboard reads of host-owned text, tooltips.
+
+---
 **P3a done (2026-10-11)**: host-driven X11 editor window, NanoVG on GL2, ec828eacc..HEAD. Details: `notes/11-p3a-window.md`. Evidence: `evidence/p3a/`. Review (accepted, 2 rounds): `notes/12-review-p3a.md`, `evidence/p3a-review/`.
 
 | Commit | What |
@@ -64,9 +85,9 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 
 **Next:** P3 (IGraphicsLinux, host-driven): register the X fd with `GetHostLoop().AddFd(...)` and the frame timer with `AddTimer` from `OpenWindow`; drain `XPending` in both. The VST3 view already picks the loop before `OpenWindow`.
 
-**Open decisions for the user**
+**Decisions closed**
 
-- RR 360d84011 `StringToValue` change: not applied; optional (`notes/08`, "Open decision").
+- RR 360d84011 `StringToValue` change (numeric fallback for enum/bool): not taken, rejected by user 2026-10-12; see notes/08.
 
 ---
 
@@ -341,4 +362,5 @@ RR's SWELL/GDK host + RtAudio (ALSA/JACK/Pulse; PipeWire through its shims), dri
 | P2 review: findings, fixes, verdict | notes/10-review-p2.md |
 | P3a editor window: design, GL2 choice, REAPER fd finding, acceptance | notes/11-p3a-window.md |
 | P3a review: findings (destroyed-parent draw crash), fixes, verdict | notes/12-review-p3a.md |
+| P3b input: keys/focus in REAPER, stand-in text entry and menus, clipboard, cursors, fonts | notes/13-p3b-input.md |
 | Patches used to build each candidate | evidence/*/patches/ |

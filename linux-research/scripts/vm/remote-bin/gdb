@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Ubuntu's Yama ptrace_scope=1 forbids attaching to a non-child process. Instead of lowering that system-wide,
+# the harness runs gdb as root (passwordless sudo); vm-x.sh puts this directory first on PATH.
+exec sudo -n /usr/bin/gdb "$@"
