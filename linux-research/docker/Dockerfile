@@ -68,4 +68,8 @@ ENV LIBGL_ALWAYS_SOFTWARE=1 \
     XDG_RUNTIME_DIR=/tmp/xdg \
     NO_AT_BRIDGE=1
 RUN mkdir -p /tmp/xdg && chmod 700 /tmp/xdg
+
+# P3b: clipboard round-trip checks (a separate layer, so the layers above stay cached)
+RUN apt-get update && apt-get install -y --no-install-recommends xclip xsel \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /work

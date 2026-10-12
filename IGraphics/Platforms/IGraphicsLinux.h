@@ -39,11 +39,13 @@ public:
 
   const char* GetPlatformAPIStr() override { return "X11"; }
 
-  void HideMouseCursor(bool hide, bool lock) override {}
-  void MoveMouseCursor(float x, float y) override {}
+  void HideMouseCursor(bool hide, bool lock) override;
+  void MoveMouseCursor(float x, float y) override;
+  ECursor SetMouseCursor(ECursor cursorType) override;
   void GetMouseLocation(float& x, float& y) const override;
 
-  void ForceEndUserEdit() override {}
+  void ForceEndUserEdit() override;
+  // No tooltips on Linux yet: X has no native ones, and an IGraphics-drawn one is left for later.
   void UpdateTooltips() override {}
 
   EMsgBoxResult ShowMessageBox(const char* str, const char* title, EMsgBoxType type, IMsgBoxCompletionHandlerFunc completionHandler) override;
@@ -54,19 +56,19 @@ public:
   bool OpenURL(const char* url, const char* msgWindowTitle, const char* confirmMsg, const char* errMsgOnFailure) override;
   bool RevealPathInExplorerOrFinder(WDL_String& path, bool select) override;
 
-  bool GetTextFromClipboard(WDL_String& str) override { str.Set(""); return false; }
-  bool SetTextInClipboard(const char* str) override { return false; }
+  bool GetTextFromClipboard(WDL_String& str) override;
+  bool SetTextInClipboard(const char* str) override;
 
 protected:
-  IPopupMenu* CreatePlatformPopupMenu(IPopupMenu& menu, const IRECT bounds, bool& isAsync) override { return nullptr; }
-  void CreatePlatformTextEntry(int paramIdx, const IText& text, const IRECT& bounds, int length, const char* str) override {}
+  IPopupMenu* CreatePlatformPopupMenu(IPopupMenu& menu, const IRECT bounds, bool& isAsync) override;
+  void CreatePlatformTextEntry(int paramIdx, const IText& text, const IRECT& bounds, int length, const char* str) override;
 
   void ActivateGLContext() override;
   void DeactivateGLContext() override;
 
 private:
   PlatformFontPtr LoadPlatformFont(const char* fontID, const char* fileNameOrResID) override;
-  PlatformFontPtr LoadPlatformFont(const char* fontID, const char* fontName, ETextStyle style) override { return nullptr; }
+  PlatformFontPtr LoadPlatformFont(const char* fontID, const char* fontName, ETextStyle style) override;
   PlatformFontPtr LoadPlatformFont(const char* fontID, void* pData, int dataSize) override;
   void CachePlatformFont(const char* fontID, const PlatformFontPtr& font) override {}
 
@@ -78,6 +80,16 @@ private:
   void HandleButton(const _XEvent& event);
   void HandleMotion(const _XEvent& event);
   void HandleConfigure(const _XEvent& event);
+  void HandleKey(const _XEvent& event);
+  void HandleFocusOut(const _XEvent& event);
+  void HandleClientMessage(const _XEvent& event);
+  void ForwardKeyToHost(const _XEvent& event);
+  /** Keyboard focus and stand-in controls follow the editing state after every event and frame */
+  void UpdateEditingState();
+  void TakeKeyboardFocus();
+  void ReleaseKeyboardFocus();
+  void EndTextEntryOnFocusLoss();
+  void RemoveFinishedStandIns();
   void DrawDirtyControls();
   bool IsHostResizeEnabled();
   void DestroyWindowResources();

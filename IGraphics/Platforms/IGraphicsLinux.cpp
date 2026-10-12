@@ -16,6 +16,8 @@
 
 #include "IGraphicsLinux.h"
 #include "IPlugAPIBase.h"
+#include "IPopupMenuControl.h"
+#include "ITextEntryControl.h"
 #include "Linux/IPlugLinuxHostLoop.h"
 #include "Linux/IPlugLinuxOpen.h"
 
@@ -29,23 +31,39 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
+#include <X11/XKBlib.h>
+#include <X11/keysym.h>
+#include <X11/cursorfont.h>
 #include <GL/glx.h>
 
 #include "IGraphicsLinuxGLX.h"
+#include "IGraphicsLinuxKeys.h"
+#include "IGraphicsLinuxClipboard.h"
+#include "IGraphicsLinuxCursors.h"
+#include "IGraphicsLinuxFontconfig.h"
 
 using namespace iplug;
 using namespace igraphics;
 
 namespace
 {
+// KeyPress on our window also takes the keys typed while the pointer is over the editor and the host's window
+// has the focus (X delivers to the window under the pointer when it is inside the focus window). That is how
+// plug-ins get keys in hosts that never forward them (REAPER calls no VST3 onKeyDown); what the editor does not
+// handle is sent on to the host's window.
 constexpr long kWindowEventMask = ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask
-                                | PointerMotionMask | LeaveWindowMask;
+                                | PointerMotionMask | LeaveWindowMask | KeyPressMask | KeyReleaseMask
+                                | FocusChangeMask | PropertyChangeMask;
 constexpr Time kDoubleClickMs = 400;
 constexpr float kDoubleClickSlop = 4.f;
 constexpr unsigned kWheelUp = Button4;
 constexpr unsigned kWheelDown = Button5;
 constexpr long kXEmbedVersion = 0;
 constexpr long kXEmbedMapped = 1;
+constexpr long kXEmbedEmbeddedNotify = 0;
+constexpr long kXEmbedRequestFocus = 3;
+constexpr long kXEmbedFocusOut = 5;
+constexpr int kClipboardTimeoutMs = 200;
 
 bool HasGLXExtension(const char* extensions, const char* name)
 {
@@ -83,14 +101,34 @@ private:
   IFontDataPtr mData;
 };
 
-PlatformFontPtr MakeFont(const void* pData, int dataSize)
+PlatformFontPtr MakeFont(const void* pData, int dataSize, int faceIdx = 0)
 {
   if (!pData || dataSize <= 0)
     return nullptr;
-  IFontDataPtr data(new IFontData(pData, dataSize, 0));
+  IFontDataPtr data(new IFontData(pData, dataSize, faceIdx));
   if (!data->IsValid())
     return nullptr;
   return PlatformFontPtr(new LinuxFont(std::move(data)));
+}
+
+PlatformFontPtr MakeFontFromFile(const char* path, int faceIdx)
+{
+  FILE* pFile = fopen(path, "rb");
+  if (!pFile)
+    return nullptr;
+
+  WDL_TypedBuf<unsigned char> data;
+  if (fseek(pFile, 0, SEEK_END) == 0)
+  {
+    const long size = ftell(pFile);
+    if (size > 0 && fseek(pFile, 0, SEEK_SET) == 0 && data.ResizeOK(static_cast<int>(size)))
+    {
+      if (fread(data.Get(), 1, static_cast<size_t>(size), pFile) != static_cast<size_t>(size))
+        data.Resize(0);
+    }
+  }
+  fclose(pFile);
+  return MakeFont(data.Get(), data.GetSize(), faceIdx);
 }
 } // namespace
 
@@ -129,6 +167,28 @@ struct IGraphicsLinux::Impl
 
   float mCursorX = 0.f;
   float mCursorY = 0.f;
+  float mHiddenCursorX = 0.f;
+  float mHiddenCursorY = 0.f;
+  ECursor mCursorType = ECursor::ARROW;
+  LinuxCursors mCursors;
+  Time mLastEventTime = CurrentTime;
+
+  XIM mInputMethod = nullptr;
+  XIC mInputContext = nullptr;
+  bool mHoldsFocus = false;
+  Window mFocusBefore = None;
+  int mRevertBefore = RevertToParent;
+  Window mEmbedder = 0; // an XEmbed embedder that announced itself with EMBEDDED_NOTIFY
+  Atom mXEmbed = None;
+  // Keys whose press the editor kept: their releases are kept too, all other releases go on to the host.
+  unsigned char mKeptKeys[32] = {};
+
+  LinuxClipboard mClipboard;
+
+  // IGraphics-drawn controls standing in for platform text entry and menus, removed once they are done
+  ITextEntryControl* mStandInTextEntry = nullptr;
+  IPopupMenuControl* mStandInPopup = nullptr;
+
   Time mLastClickTime = 0;
   unsigned mLastClickButton = 0;
   float mLastClickX = 0.f;
@@ -225,6 +285,18 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
                             CWColormap | CWEventMask | CWBorderPixel | CWBackPixel, &attributes);
 
   w.mWindowAlive = w.mWindow != 0;
+  w.mXEmbed = XInternAtom(pDisplay, "_XEMBED", False);
+  w.mClipboard.Init(pDisplay, w.mWindow);
+  w.mCursors.Init(pDisplay);
+  // Per connection: key repeat then sends presses only, not release + press pairs.
+  XkbSetDetectableAutoRepeat(pDisplay, True, nullptr);
+  // Xlib's built-in input method (compose and dead keys, UTF-8 text). Neither the locale nor XMODIFIERS is
+  // touched: both are process-wide and belong to the host.
+  if ((w.mInputMethod = XOpenIM(pDisplay, nullptr, nullptr, nullptr)))
+  {
+    w.mInputContext = XCreateIC(w.mInputMethod, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+                                XNClientWindow, w.mWindow, XNFocusWindow, w.mWindow, nullptr);
+  }
 
   const long xembedInfo[] = { kXEmbedVersion, kXEmbedMapped };
   const Atom xembedInfoAtom = XInternAtom(pDisplay, "_XEMBED_INFO", False);
@@ -333,6 +405,14 @@ void IGraphicsLinux::DestroyWindowResources()
         w.mGLX->MakeCurrent(w.mDisplay, None, nullptr);
       w.mGLX->DestroyContext(w.mDisplay, w.mGLContext);
     }
+    if (w.mHoldsFocus && w.mWindowAlive)
+      ReleaseKeyboardFocus();
+    if (w.mInputContext)
+      XDestroyIC(w.mInputContext);
+    if (w.mInputMethod)
+      XCloseIM(w.mInputMethod);
+    w.mClipboard.Release();
+    w.mCursors.Free();
     if (w.mWindow && w.mWindowAlive)
       XDestroyWindow(w.mDisplay, w.mWindow);
     if (w.mColormap)
@@ -412,8 +492,12 @@ void IGraphicsLinux::OnXConnectionReadable(int flags)
 
 void IGraphicsLinux::OnDisplayTimer()
 {
-  if (ProcessXEvents())
-    DrawDirtyControls();
+  if (!ProcessXEvents())
+    return;
+  // Animations (a menu collapsing, the text cursor) end in IsDirty, outside any X event.
+  DrawDirtyControls();
+  if (mImpl->mOpen && *mImpl->mOpen)
+    UpdateEditingState();
 }
 
 bool IGraphicsLinux::ProcessXEvents()
@@ -428,7 +512,11 @@ bool IGraphicsLinux::ProcessXEvents()
   {
     XEvent event;
     XNextEvent(pDisplay, &event);
+    if (mImpl->mInputContext && XFilterEvent(&event, None))
+      continue;
     HandleXEvent(event);
+    if (*open)
+      UpdateEditingState();
   }
   return *open;
 }
@@ -468,6 +556,9 @@ void IGraphicsLinux::DrawNow()
 void IGraphicsLinux::HandleXEvent(const XEvent& event)
 {
   Impl& w = *mImpl;
+  if (w.mClipboard.HandleEvent(event))
+    return;
+
   switch (event.type)
   {
     case Expose:
@@ -497,7 +588,19 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
       break;
     case ButtonPress:
     case ButtonRelease:
+      w.mLastEventTime = event.xbutton.time;
       HandleButton(event);
+      break;
+    case KeyPress:
+    case KeyRelease:
+      HandleKey(event);
+      break;
+    case FocusIn:
+      if (w.mInputContext && event.xfocus.window == w.mWindow)
+        XSetICFocus(w.mInputContext);
+      break;
+    case FocusOut:
+      HandleFocusOut(event);
       break;
     case MotionNotify:
       HandleMotion(event);
@@ -507,10 +610,7 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
         OnMouseOut();
       break;
     case ClientMessage:
-      // Only a top-level fallback window gets WM_DELETE_WINDOW. The editor's lifetime belongs to the host,
-      // so hide the window instead of closing the editor under it.
-      if (w.mWMDeleteWindow && static_cast<Atom>(event.xclient.data.l[0]) == w.mWMDeleteWindow)
-        XUnmapWindow(w.mDisplay, w.mWindow);
+      HandleClientMessage(event);
       break;
     default:
       break;
@@ -592,10 +692,17 @@ void IGraphicsLinux::HandleMotion(const XEvent& event)
   w.mCursorX = info.x;
   w.mCursorY = info.y;
 
-  if (info.ms.L || info.ms.R)
-    OnMouseDrag({ info });
-  else
+  if (!info.ms.L && !info.ms.R)
+  {
     OnMouseOver(info.x, info.y, info.ms);
+    return;
+  }
+
+  const std::shared_ptr<bool> open = w.mOpen;
+  OnMouseDrag({ info });
+  // A locked cursor goes back after every step; the warp's own motion event then has no delta.
+  if (*open && mCursorLock)
+    MoveMouseCursor(w.mHiddenCursorX, w.mHiddenCursorY);
 }
 
 void IGraphicsLinux::HandleConfigure(const XEvent& event)
@@ -640,6 +747,219 @@ void IGraphicsLinux::HandleConfigure(const XEvent& event)
   GetDelegate()->OnParentWindowResize(configure.width, configure.height);
 }
 
+void IGraphicsLinux::HandleKey(const XEvent& event)
+{
+  Impl& w = *mImpl;
+  XKeyEvent key = event.xkey;
+  w.mLastEventTime = key.time;
+  const bool isPress = key.type == KeyPress;
+  const unsigned keycode = key.keycode & 0xff;
+  const unsigned char keyBit = static_cast<unsigned char>(1u << (keycode & 7));
+  unsigned char& keptKeys = w.mKeptKeys[keycode >> 3];
+
+  IPopupMenuControl* pPopup = GetPopupMenuControl();
+  const bool menuOpen = pPopup && pPopup->GetState() != IPopupMenuControl::kCollapsed;
+  // Keys of an edit or an open menu never reach the host: its Escape or Return would close the window under them.
+  const bool modal = GetControlInTextEntry() || menuOpen;
+
+  if (!isPress && (keptKeys & keyBit))
+  {
+    keptKeys &= ~keyBit;
+    return;
+  }
+
+  if (isPress && menuOpen && pPopup->GetExpanded() && XLookupKeysym(&key, 0) == XK_Escape)
+  {
+    keptKeys |= keyBit;
+    // IPopupMenuControl has no key handling; a click outside its panels dismisses it without a choice.
+    pPopup->OnMouseDown(-1.f, -1.f, IMouseMod());
+    return;
+  }
+
+  const std::shared_ptr<bool> open = w.mOpen;
+  bool handled = false;
+  linux_keys::ForEachKeyPress(w.mDisplay, isPress ? w.mInputContext : nullptr, key, [&](const IKeyPress& keyPress) {
+    if (!*open)
+      return;
+    float x, y;
+    GetMouseLocation(x, y);
+    const bool keyHandled = isPress ? OnKeyDown(x, y, keyPress) : OnKeyUp(x, y, keyPress);
+    handled = handled || keyHandled;
+  });
+  if (!*open)
+    return;
+
+  if (isPress && (handled || modal))
+    keptKeys |= keyBit;
+  // A synthetic key came from an embedder that forwards keys (XEmbed); sending it back would loop.
+  else if (!handled && !modal && !key.send_event)
+    ForwardKeyToHost(event);
+}
+
+void IGraphicsLinux::ForwardKeyToHost(const XEvent& event)
+{
+  Impl& w = *mImpl;
+  if (!w.mParent)
+    return;
+  XEvent forwarded = event;
+  forwarded.xkey.window = w.mParent;
+  forwarded.xkey.subwindow = None;
+  XSendEvent(w.mDisplay, w.mParent, True, event.type == KeyPress ? KeyPressMask : KeyReleaseMask, &forwarded);
+  XFlush(w.mDisplay);
+}
+
+void IGraphicsLinux::HandleFocusOut(const XEvent& event)
+{
+  Impl& w = *mImpl;
+  const XFocusChangeEvent& focus = event.xfocus;
+  if (focus.window != w.mWindow)
+    return;
+  if (w.mInputContext)
+    XUnsetICFocus(w.mInputContext);
+  // Grabs (a menu, the window manager) take the focus only for a while; NotifyInferior/NotifyPointer mean
+  // it stayed inside or below us.
+  const bool focusMovedAway = focus.mode == NotifyNormal && focus.detail != NotifyInferior && focus.detail != NotifyPointer;
+  if (w.mHoldsFocus && focusMovedAway)
+  {
+    w.mHoldsFocus = false;
+    EndTextEntryOnFocusLoss();
+  }
+}
+
+void IGraphicsLinux::HandleClientMessage(const XEvent& event)
+{
+  Impl& w = *mImpl;
+  const XClientMessageEvent& message = event.xclient;
+
+  // Only a top-level fallback window gets WM_DELETE_WINDOW. The editor's lifetime belongs to the host,
+  // so hide the window instead of closing the editor under it.
+  if (w.mWMDeleteWindow && static_cast<Atom>(message.data.l[0]) == w.mWMDeleteWindow)
+  {
+    XUnmapWindow(w.mDisplay, w.mWindow);
+    return;
+  }
+
+  if (message.message_type != w.mXEmbed || message.format != 32)
+    return;
+
+  // Hosts implement XEmbed partially at best (REAPER and Bitwig not at all), so nothing depends on it:
+  // the embedder is remembered for focus requests, and its focus-out ends an edit like a real one.
+  switch (message.data.l[1])
+  {
+    case kXEmbedEmbeddedNotify:
+      w.mEmbedder = static_cast<Window>(message.data.l[3]);
+      break;
+    case kXEmbedFocusOut:
+      if (w.mHoldsFocus)
+      {
+        w.mHoldsFocus = false;
+        EndTextEntryOnFocusLoss();
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+void IGraphicsLinux::UpdateEditingState()
+{
+  Impl& w = *mImpl;
+  const bool editing = GetControlInTextEntry() != nullptr;
+  if (editing && !w.mHoldsFocus)
+    TakeKeyboardFocus();
+  else if (!editing && w.mHoldsFocus)
+    ReleaseKeyboardFocus();
+  RemoveFinishedStandIns();
+}
+
+// Text entry needs the keys while the pointer is elsewhere too; outside an edit the host keeps its focus,
+// so its shortcuts work whenever the pointer is not over the editor.
+void IGraphicsLinux::TakeKeyboardFocus()
+{
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive || !w.mMapped)
+    return;
+
+  ScopedXErrorTrap trap(w.mDisplay);
+  XGetInputFocus(w.mDisplay, &w.mFocusBefore, &w.mRevertBefore);
+  // CurrentTime, not the click's time: a focus change the host made after that click would make the request stale.
+  XSetInputFocus(w.mDisplay, w.mWindow, RevertToParent, CurrentTime);
+  if (w.mEmbedder)
+  {
+    XEvent request {};
+    request.xclient.type = ClientMessage;
+    request.xclient.window = w.mEmbedder;
+    request.xclient.message_type = w.mXEmbed;
+    request.xclient.format = 32;
+    request.xclient.data.l[0] = static_cast<long>(w.mLastEventTime);
+    request.xclient.data.l[1] = kXEmbedRequestFocus;
+    XSendEvent(w.mDisplay, w.mEmbedder, False, NoEventMask, &request);
+  }
+  XFlush(w.mDisplay);
+  w.mHoldsFocus = true;
+}
+
+void IGraphicsLinux::ReleaseKeyboardFocus()
+{
+  Impl& w = *mImpl;
+  w.mHoldsFocus = false;
+
+  ScopedXErrorTrap trap(w.mDisplay);
+  Window focus = None;
+  int revert = 0;
+  XGetInputFocus(w.mDisplay, &focus, &revert);
+  // Someone else moved the focus meanwhile (the window manager, the host): leave it there.
+  if (focus != w.mWindow)
+    return;
+
+  const bool restorable = w.mFocusBefore != None && w.mFocusBefore != w.mWindow;
+  const Window target = restorable ? w.mFocusBefore : (w.mParent ? w.mParent : PointerRoot);
+  XSetInputFocus(w.mDisplay, target, restorable ? w.mRevertBefore : RevertToParent, CurrentTime);
+  XSync(w.mDisplay, False);
+  if (trap.GetErrorCount() > 0) // the window that had the focus is gone
+    XSetInputFocus(w.mDisplay, PointerRoot, RevertToPointerRoot, CurrentTime);
+  XFlush(w.mDisplay);
+}
+
+// Like losing first responder on mac: what was typed is kept.
+void IGraphicsLinux::EndTextEntryOnFocusLoss()
+{
+  ITextEntryControl* pTextEntry = GetTextEntryControl();
+  if (pTextEntry && pTextEntry->EditInProgress())
+    pTextEntry->CommitEdit();
+}
+
+void IGraphicsLinux::RemoveFinishedStandIns()
+{
+  Impl& w = *mImpl;
+  const bool textEntryDone = w.mStandInTextEntry && !w.mStandInTextEntry->EditInProgress();
+  const bool popupDone = w.mStandInPopup && w.mStandInPopup->GetState() == IPopupMenuControl::kCollapsed;
+  if (!textEntryDone && !popupDone)
+    return;
+
+  // IGraphics may still point at the control as the mouse-over or captured one, and the removal does not clear that.
+  IControl* finished[] = { textEntryDone ? w.mStandInTextEntry : nullptr, popupDone ? w.mStandInPopup : nullptr };
+  for (IControl* pControl : finished)
+  {
+    if (pControl && ControlIsCaptured(pControl))
+      ReleaseMouseCapture();
+  }
+  OnMouseOut();
+
+  if (textEntryDone)
+  {
+    if (GetTextEntryControl() == w.mStandInTextEntry)
+      RemoveTextEntryControl();
+    w.mStandInTextEntry = nullptr;
+  }
+  if (popupDone)
+  {
+    if (GetPopupMenuControl() == w.mStandInPopup)
+      RemovePopupMenuControl();
+    w.mStandInPopup = nullptr;
+  }
+}
+
 bool IGraphicsLinux::IsHostResizeEnabled()
 {
   auto* pPlug = dynamic_cast<IPlugAPIBase*>(GetDelegate());
@@ -671,28 +991,121 @@ void IGraphicsLinux::GetMouseLocation(float& x, float& y) const
   y = mImpl->mCursorY;
 }
 
+void IGraphicsLinux::HideMouseCursor(bool hide, bool lock)
+{
+  Impl& w = *mImpl;
+  if (mCursorHidden == hide)
+    return;
+
+  if (hide)
+  {
+    w.mHiddenCursorX = w.mCursorX;
+    w.mHiddenCursorY = w.mCursorY;
+    mCursorHidden = true;
+    mCursorLock = lock;
+  }
+  else
+  {
+    mCursorHidden = false;
+    if (mCursorLock)
+      MoveMouseCursor(w.mHiddenCursorX, w.mHiddenCursorY);
+    mCursorLock = false;
+  }
+
+  if (!w.mWindowAlive)
+    return;
+  ScopedXErrorTrap trap(w.mDisplay);
+  XDefineCursor(w.mDisplay, w.mWindow, hide ? w.mCursors.GetBlank(w.mWindow) : w.mCursors.Get(w.mCursorType));
+  XFlush(w.mDisplay);
+}
+
+void IGraphicsLinux::MoveMouseCursor(float x, float y)
+{
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive)
+    return;
+  const float scale = GetTotalScale();
+  ScopedXErrorTrap trap(w.mDisplay);
+  XWarpPointer(w.mDisplay, None, w.mWindow, 0, 0, 0, 0, static_cast<int>(std::lround(x * scale)), static_cast<int>(std::lround(y * scale)));
+  XFlush(w.mDisplay);
+  w.mCursorX = x;
+  w.mCursorY = y;
+}
+
+ECursor IGraphicsLinux::SetMouseCursor(ECursor cursorType)
+{
+  Impl& w = *mImpl;
+  const ECursor previous = IGRAPHICS_DRAW_CLASS::SetMouseCursor(cursorType);
+  w.mCursorType = cursorType;
+  if (w.mWindowAlive && !mCursorHidden)
+  {
+    ScopedXErrorTrap trap(w.mDisplay);
+    XDefineCursor(w.mDisplay, w.mWindow, w.mCursors.Get(cursorType));
+    XFlush(w.mDisplay);
+  }
+  return previous;
+}
+
+bool IGraphicsLinux::SetTextInClipboard(const char* str)
+{
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive)
+    return false;
+  ScopedXErrorTrap trap(w.mDisplay);
+  return w.mClipboard.SetText(str, w.mLastEventTime);
+}
+
+bool IGraphicsLinux::GetTextFromClipboard(WDL_String& str)
+{
+  Impl& w = *mImpl;
+  str.Set("");
+  if (!w.mWindowAlive)
+    return false;
+  ScopedXErrorTrap trap(w.mDisplay);
+  return w.mClipboard.GetText(str, kClipboardTimeoutMs);
+}
+
+// X has no text field or menu without a toolkit, and GTK is not allowed in the plug-in: IGraphics' own controls
+// stand in, attached for this one edit or menu (IsInPlatformTextEntry() is false meanwhile). Both return at once
+// and complete later, which is what IGraphics::CreateTextEntry and DoCreatePopupMenu expect.
+void IGraphicsLinux::CreatePlatformTextEntry(int paramIdx, const IText& text, const IRECT& bounds, int length, const char* str)
+{
+  AttachTextEntryControl();
+  mImpl->mStandInTextEntry = GetTextEntryControl();
+  mImpl->mStandInTextEntry->CreateTextEntry(paramIdx, text, bounds, length, str);
+}
+
+IPopupMenu* IGraphicsLinux::CreatePlatformPopupMenu(IPopupMenu& menu, const IRECT bounds, bool& isAsync)
+{
+  AttachPopupMenuControl();
+  mImpl->mStandInPopup = GetPopupMenuControl();
+  mImpl->mStandInPopup->CreatePopupMenu(menu, bounds);
+  isAsync = true;
+  return nullptr;
+}
+
+void IGraphicsLinux::ForceEndUserEdit()
+{
+  ITextEntryControl* pTextEntry = GetTextEntryControl();
+  if (pTextEntry && pTextEntry->EditInProgress())
+    pTextEntry->DismissEdit();
+}
+
 PlatformFontPtr IGraphicsLinux::LoadPlatformFont(const char* fontID, const char* fileNameOrResID)
 {
   WDL_String fullPath;
   if (LocateResource(fileNameOrResID, "ttf", fullPath, GetBundleID(), GetWinModuleHandle(), GetSharedResourcesSubPath()) != EResourceLocation::kAbsolutePath)
     return nullptr;
+  return MakeFontFromFile(fullPath.Get(), 0);
+}
 
-  FILE* pFile = fopen(fullPath.Get(), "rb");
-  if (!pFile)
+PlatformFontPtr IGraphicsLinux::LoadPlatformFont(const char* fontID, const char* fontName, ETextStyle style)
+{
+  WDL_String path;
+  int faceIdx = 0;
+  if (!linux_fonts::FindSystemFont(fontName, style, path, faceIdx))
     return nullptr;
-
-  WDL_TypedBuf<unsigned char> data;
-  if (fseek(pFile, 0, SEEK_END) == 0)
-  {
-    const long size = ftell(pFile);
-    if (size > 0 && fseek(pFile, 0, SEEK_SET) == 0 && data.ResizeOK(static_cast<int>(size)))
-    {
-      if (fread(data.Get(), 1, static_cast<size_t>(size), pFile) != static_cast<size_t>(size))
-        data.Resize(0);
-    }
-  }
-  fclose(pFile);
-  return MakeFont(data.Get(), data.GetSize());
+  return MakeFontFromFile(path.Get(), faceIdx);
 }
 
 PlatformFontPtr IGraphicsLinux::LoadPlatformFont(const char* fontID, void* pData, int dataSize)
