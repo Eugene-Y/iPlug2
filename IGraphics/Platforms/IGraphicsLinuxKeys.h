@@ -189,11 +189,12 @@ inline void ForEachKeyPress(Display* pDisplay, XIC pIC, XKeyEvent& event, KeyPre
   {
     XKeyEvent plain = event;
     plain.state &= ~(ControlMask | Mod1Mask);
-    char latin1[8];
-    XLookupString(&plain, latin1, sizeof(latin1), &sym, nullptr);
+    char latin1[8] = {};
+    const int latin1Length = XLookupString(&plain, latin1, sizeof(latin1), &sym, nullptr);
     if (textLength == 0)
     {
-      EncodeUtf8(KeySymToUnicode(sym), text);
+      // XLookupString's text is Latin-1 and covers the keypad; KeySymToUnicode covers Unicode keysyms
+      EncodeUtf8(latin1Length == 1 ? static_cast<unsigned char>(latin1[0]) : KeySymToUnicode(sym), text);
       textLength = static_cast<int>(strlen(text));
     }
   }
