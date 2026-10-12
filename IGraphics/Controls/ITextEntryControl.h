@@ -88,6 +88,7 @@ private:
   STB_TexteditState mEditState;
   WDL_TypedBuf<float> mCharWidths;
   std::u16string mEditString;
+  IPopupMenu mEditMenu;
 };
 
 END_IGRAPHICS_NAMESPACE

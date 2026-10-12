@@ -59,8 +59,19 @@ using namespace igraphics;
 #include "stb_textedit.h"
 
 
+// The menu is a member: a function-local static would keep calling the first control it was ever built for,
+// after that control (and its editor) is gone.
 ITextEntryControl::ITextEntryControl()
 : IControl(IRECT())
+, mEditMenu("", {"Cut", "Copy", "Paste"}, [this](IPopupMenu* pMenu) {
+    switch (pMenu->GetChosenItemIdx()) {
+      case 0: Cut(); break;
+      case 1: CopySelection(); break;
+      case 2: Paste(); break;
+      default:
+        break;
+    }
+  })
 {
   stb_textedit_initialize_state(&mEditState, true);
   
@@ -159,18 +170,7 @@ void ITextEntryControl::OnMouseDown(float x, float y, const IMouseMod& mod)
   
   if(mod.R)
   {
-    static IPopupMenu menu {"", {"Cut", "Copy", "Paste"}, [&](IPopupMenu* pMenu) {
-      switch (pMenu->GetChosenItemIdx()) {
-        case 0: Cut(); break;
-        case 1: CopySelection(); break;
-        case 2: Paste(); break;
-        default:
-          break;
-      }
-    }
-    };
-    
-    GetUI()->CreatePopupMenu(*this, menu, x, y);
+    GetUI()->CreatePopupMenu(*this, mEditMenu, x, y);
   }
 }
 
