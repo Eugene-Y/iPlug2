@@ -16,6 +16,7 @@
  */
 
 #include <dlfcn.h>
+#include <cstring>
 
 #include "wdlstring.h"
 
@@ -30,6 +31,12 @@ struct Fontconfig
 {
   struct Pattern;
   struct Config;
+  struct FontSet
+  {
+    int nfont;
+    int sfont;
+    Pattern** fonts;
+  };
   static constexpr int kMatchPattern = 0;
   static constexpr int kResultMatch = 0;
   static constexpr int kWeightRegular = 80;
@@ -42,7 +49,8 @@ struct Fontconfig
   int (*PatternAddInteger)(Pattern*, const char*, int) = nullptr;
   int (*ConfigSubstitute)(Config*, Pattern*, int) = nullptr;
   void (*DefaultSubstitute)(Pattern*) = nullptr;
-  Pattern* (*FontMatch)(Config*, Pattern*, int*) = nullptr;
+  FontSet* (*FontSort)(Config*, Pattern*, int, void*, int*) = nullptr;
+  void (*FontSetDestroy)(FontSet*) = nullptr;
   void (*PatternDestroy)(Pattern*) = nullptr;
   int (*PatternGetString)(const Pattern*, const char*, int, unsigned char**) = nullptr;
   int (*PatternGetInteger)(const Pattern*, const char*, int, int*) = nullptr;
@@ -78,7 +86,8 @@ private:
     load(PatternAddInteger, "FcPatternAddInteger");
     load(ConfigSubstitute, "FcConfigSubstitute");
     load(DefaultSubstitute, "FcDefaultSubstitute");
-    load(FontMatch, "FcFontMatch");
+    load(FontSort, "FcFontSort");
+    load(FontSetDestroy, "FcFontSetDestroy");
     load(PatternDestroy, "FcPatternDestroy");
     load(PatternGetString, "FcPatternGetString");
     load(PatternGetInteger, "FcPatternGetInteger");
@@ -93,7 +102,8 @@ private:
 };
 
 /** Finds the font file for a family name and style. Like Windows' font mapper, a missing family gives the
- * system's substitute (e.g. Liberation Sans for Arial), never no font.
+ * system's substitute (e.g. Liberation Sans for Arial). Only TrueType-outline fonts qualify: NanoVG's stb_truetype
+ * (v1.09) cannot draw CFF outlines, which most .otf files have; the best TrueType candidate wins instead.
  * @return true and the file path plus face index (TrueType collections) on success */
 inline bool FindSystemFont(const char* familyName, ETextStyle style, WDL_String& path, int& faceIdx)
 {
@@ -112,23 +122,30 @@ inline bool FindSystemFont(const char* familyName, ETextStyle style, WDL_String&
   pFC->DefaultSubstitute(pPattern);
 
   int result = -1;
-  Fontconfig::Pattern* pMatch = pFC->FontMatch(nullptr, pPattern, &result);
+  // Untrimmed: trimming drops candidates that add no characters, which would hide the TrueType fallbacks.
+  Fontconfig::FontSet* pFonts = pFC->FontSort(nullptr, pPattern, 0, nullptr, &result);
   pFC->PatternDestroy(pPattern);
-  if (!pMatch)
+  if (!pFonts)
     return false;
 
   bool found = false;
-  unsigned char* pFile = nullptr;
-  if (pFC->PatternGetString(pMatch, "file", 0, &pFile) == Fontconfig::kResultMatch && pFile)
+  for (int i = 0; i < pFonts->nfont && !found; ++i)
   {
+    const Fontconfig::Pattern* pFont = pFonts->fonts[i];
+    unsigned char* pFormat = nullptr;
+    unsigned char* pFile = nullptr;
+    const bool isTrueType = pFC->PatternGetString(pFont, "fontformat", 0, &pFormat) == Fontconfig::kResultMatch
+                         && pFormat && strcmp(reinterpret_cast<const char*>(pFormat), "TrueType") == 0;
+    if (!isTrueType || pFC->PatternGetString(pFont, "file", 0, &pFile) != Fontconfig::kResultMatch || !pFile)
+      continue;
     int index = 0;
-    if (pFC->PatternGetInteger(pMatch, "index", 0, &index) != Fontconfig::kResultMatch)
+    if (pFC->PatternGetInteger(pFont, "index", 0, &index) != Fontconfig::kResultMatch)
       index = 0;
     path.Set(reinterpret_cast<const char*>(pFile));
     faceIdx = index;
     found = true;
   }
-  pFC->PatternDestroy(pMatch);
+  pFC->FontSetDestroy(pFonts);
   return found;
 }
 

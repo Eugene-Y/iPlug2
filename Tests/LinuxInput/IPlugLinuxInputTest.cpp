@@ -163,6 +163,11 @@ void TestFonts()
   Expect(linux_fonts::FindSystemFont("No Such Family 12345", ETextStyle::Normal, path, faceIdx), true, "a missing family gets a substitute");
   Expect(path.GetLength() > 0, true, "substitute path");
   Expect(linux_fonts::FindSystemFont("", ETextStyle::Normal, path, faceIdx), false, "empty name");
+  // fontconfig maps Times New Roman to Nimbus Roman, a CFF .otf that NanoVG cannot draw: a TrueType font instead
+  Expect(linux_fonts::FindSystemFont("Times New Roman", ETextStyle::Normal, path, faceIdx), true, "Times New Roman");
+  const std::string file = path.get_filepart();
+  Expect(file.size() > 4 && (file.compare(file.size() - 4, 4, ".ttf") == 0 || file.compare(file.size() - 4, 4, ".ttc") == 0), true,
+         "Times New Roman substitute is TrueType (" + file + ")");
 }
 } // namespace
 

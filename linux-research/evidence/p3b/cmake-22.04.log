@@ -1,0 +1,198 @@
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found X11: /usr/include   
+-- Looking for XOpenDisplay in /usr/lib/aarch64-linux-gnu/libX11.so;/usr/lib/aarch64-linux-gnu/libXext.so
+-- Looking for XOpenDisplay in /usr/lib/aarch64-linux-gnu/libX11.so;/usr/lib/aarch64-linux-gnu/libXext.so - found
+-- Looking for gethostbyname
+-- Looking for gethostbyname - found
+-- Looking for connect
+-- Looking for connect - found
+-- Looking for remove
+-- Looking for remove - found
+-- Looking for shmat
+-- Looking for shmat - found
+-- Looking for IceConnectionNumber in ICE
+-- Looking for IceConnectionNumber in ICE - found
+-- Found OpenGL: /usr/lib/aarch64-linux-gnu/libOpenGL.so   
+-- IGraphics: NANOVG/GL2 -> iPlug2::IGraphics::NanoVG
+-- VST2 SDK not found at /Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST2_SDK. VST2 targets will not be available.
+-- AAX SDK not found at /Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/AAX_SDK. AAX targets will not be available.
+-- Found PkgConfig: /usr/bin/pkg-config (found version "0.29.2") 
+-- Checking for module 'gdk-3.0'
+--   Found gdk-3.0, version 3.24.33
+-- Checking for module 'gio-2.0'
+--   Found gio-2.0, version 2.72.4
+-- Checking for module 'freetype2'
+--   Found freetype2, version 24.1.18
+-- Checking for module 'alsa'
+--   Found alsa, version 1.2.6.1
+-- Checking for module 'jack'
+--   Found jack, version 1.9.20
+-- Checking for modules 'libpulse;libpulse-simple'
+--   Found libpulse, version 15.99.1
+--   Found libpulse-simple, version 15.99.1
+-- Found iPlug2: /Volumes/Storage/code/IPlug2-linux  
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /Volumes/Storage/code/IPlug2-linux/linux-research/build/p3b-2204
+=== BUILD IPlugControls-clap
+[1/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/IPlugTimer.cpp.o
+[2/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/IPlugPaths.cpp.o
+[3/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/IPlugParameter.cpp.o
+[4/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/IPlugProcessor.cpp.o
+[5/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/IPlugAPIBase.cpp.o
+[6/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/IPlugPluginBase.cpp.o
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp: In member function 'bool iplug::IPluginBase::LoadPresetFromFXP(const char*)':
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:843:12: warning: ignoring return value of 'size_t fread(void*, size_t, size_t, FILE*)' declared with attribute 'warn_unused_result' [-Wunused-result]
+  843 |       fread(pgm.GetData(), fileSize, 1, fp);
+      |       ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp: In member function 'bool iplug::IPluginBase::LoadStateFromFXP(const char*)':
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:930:8: warning: ignoring return value of 'size_t fread(void*, size_t, size_t, FILE*)' declared with attribute 'warn_unused_result' [-Wunused-result]
+  930 |   fread(pgm.GetData(), fileSize, 1, fp);
+      |   ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp: In member function 'bool iplug::IPluginBase::LoadBankFromFXB(const char*)':
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:998:12: warning: ignoring return value of 'size_t fread(void*, size_t, size_t, FILE*)' declared with attribute 'warn_unused_result' [-Wunused-result]
+  998 |       fread(bnk.GetData(), fileSize, 1, fp);
+      |       ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/cstring:42,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:19,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsEditorDelegate.h:15,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugDelegate_select.h:28,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.h:18,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:16:
+In function 'char* strstr(char*, const char*)',
+    inlined from 'void MakeDefaultUserPresetName(WDL_PtrList<iplug::IPreset>*, char*)' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:391:15,
+    inlined from 'bool iplug::IPluginBase::_ZN5iplug11IPluginBase13RestorePresetEi.part.0(int)' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:434:32:
+/usr/include/string.h:339:27: warning: 'char* __builtin_strstr(const char*, const char*)' reading 1 or more bytes from a region of size 0 [-Wstringop-overread]
+  339 |   return __builtin_strstr (__haystack, __needle);
+      |          ~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp: In member function 'bool iplug::IPluginBase::RestorePreset(const char*)':
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:460:18: warning: 'int strcmp(const char*, const char*)' reading 1 or more bytes from a region of size 0 [-Wstringop-overread]
+  460 |       if (!strcmp(pPreset->mName, name))
+      |            ~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+[7/21] Building C object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/Dependencies/IGraphics/glad_GL2/src/glad.c.o
+[8/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/Linux/IPlugLinuxHostLoop.cpp.o
+[9/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/Linux/IPlugLinuxTimer.cpp.o
+[10/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/CLAP/IPlugCLAP.cpp.o
+[11/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IPlug/Linux/IPlugLinuxPaths.cpp.o
+[12/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IGraphics/IControl.cpp.o
+[13/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IGraphics/IGraphicsEditorDelegate.cpp.o
+[14/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IGraphics/Controls/IPopupMenuControl.cpp.o
+[15/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IGraphics/Controls/ITextEntryControl.cpp.o
+[16/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/IPlugControls.cpp.o
+[17/21] Building C object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/Dependencies/IGraphics/NanoVG/src/nanovg.c.o
+[18/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IGraphics/Controls/IControls.cpp.o
+[19/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IGraphics/IGraphics.cpp.o
+[20/21] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-clap.dir/__/__/IGraphics/Platforms/IGraphicsLinux.cpp.o
+[21/21] Linking CXX shared module out/IPlugControls.clap
+=== RESULT IPlugControls-clap PASS
+=== BUILD IPlugControls-vst3
+[1/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/base/source/baseiids.cpp.o
+[2/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/base/source/fdebug.cpp.o
+[3/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/base/source/fobject.cpp.o
+[4/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/base/source/timer.cpp.o
+[5/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/pluginterfaces/base/funknown.cpp.o
+[6/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/base/source/updatehandler.cpp.o
+[7/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/base/thread/source/flock.cpp.o
+[8/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/common/pluginview.cpp.o
+[9/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/VST3/IPlugVST3_ProcessorBase.cpp.o
+[10/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/pluginterfaces/base/coreiids.cpp.o
+[11/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/common/commoniids.cpp.o
+[12/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/vst/vstcomponentbase.cpp.o
+[13/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/vst/vstinitiids.cpp.o
+[14/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/vst/vstbus.cpp.o
+[15/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/VST3/IPlugVST3.cpp.o
+[16/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/pluginterfaces/base/ustring.cpp.o
+/Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST3_SDK/pluginterfaces/base/ustring.cpp: In member function 'bool Steinberg::UString::scanInt(Steinberg::int64&) const':
+/Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST3_SDK/pluginterfaces/base/ustring.cpp:228:41: warning: format '%lld' expects argument of type 'long long int*', but argument 3 has type 'Steinberg::int64*' {aka 'long int*'} [-Wformat=]
+  228 |         return sscanf (str.data (), "%lld", &value) == 1;
+      |                                      ~~~^   ~~~~~~
+      |                                         |   |
+      |                                         |   Steinberg::int64* {aka long int*}
+      |                                         long long int*
+      |                                      %ld
+/Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST3_SDK/pluginterfaces/base/ustring.cpp: In member function 'bool Steinberg::UString::printInt(Steinberg::int64)':
+/Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST3_SDK/pluginterfaces/base/ustring.cpp:256:56: warning: format '%lld' expects argument of type 'long long int', but argument 4 has type 'Steinberg::int64' {aka 'long int'} [-Wformat=]
+  256 |         auto len = snprintf (utf8Buffer, thisSize, "%lld", value);
+      |                                                     ~~~^   ~~~~~
+      |                                                        |   |
+      |                                                        |   Steinberg::int64 {aka long int}
+      |                                                        long long int
+      |                                                     %ld
+[17/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/base/source/fstring.cpp.o
+/Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST3_SDK/base/source/fstring.cpp: In static member function 'static bool Steinberg::ConstString::scanInt64_8(const char8*, Steinberg::int64&, bool)':
+/Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST3_SDK/base/source/fstring.cpp:1389:35: warning: format '%lld' expects argument of type 'long long int*', but argument 3 has type 'Steinberg::int64*' {aka 'long int*'} [-Wformat=]
+ 1389 |                 if (sscanf (text, "%" FORMAT_INT64A, &value) == 1)
+      |                                   ^                  ~~~~~~
+      |                                                      |
+      |                                                      Steinberg::int64* {aka long int*}
+/Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST3_SDK/base/source/fstring.cpp: In static member function 'static bool Steinberg::ConstString::scanUInt64_8(const char8*, Steinberg::uint64&, bool)':
+/Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/VST3_SDK/base/source/fstring.cpp:1415:35: warning: format '%llu' expects argument of type 'long long unsigned int*', but argument 3 has type 'Steinberg::uint64*' {aka 'long unsigned int*'} [-Wformat=]
+ 1415 |                 if (sscanf (text, "%" FORMAT_UINT64A, &value) == 1)
+      |                                   ^                   ~~~~~~
+      |                                                       |
+      |                                                       Steinberg::uint64* {aka long unsigned int*}
+[18/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/main/linuxmain.cpp.o
+[19/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/vst/vstcomponent.cpp.o
+[20/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/vst/vstparameters.cpp.o
+[21/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/main/pluginfactory.cpp.o
+[22/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/IPlugPaths.cpp.o
+[23/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/IPlugAPIBase.cpp.o
+[24/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IPlug/VST3_SDK/public.sdk/source/vst/vstsinglecomponenteffect.cpp.o
+[25/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/IPlugParameter.cpp.o
+[26/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/IPlugTimer.cpp.o
+[27/42] Building C object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IGraphics/glad_GL2/src/glad.c.o
+[28/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/IPlugProcessor.cpp.o
+[29/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/IPlugPluginBase.cpp.o
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp: In member function 'bool iplug::IPluginBase::LoadPresetFromFXP(const char*)':
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:843:12: warning: ignoring return value of 'size_t fread(void*, size_t, size_t, FILE*)' declared with attribute 'warn_unused_result' [-Wunused-result]
+  843 |       fread(pgm.GetData(), fileSize, 1, fp);
+      |       ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp: In member function 'bool iplug::IPluginBase::LoadStateFromFXP(const char*)':
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:930:8: warning: ignoring return value of 'size_t fread(void*, size_t, size_t, FILE*)' declared with attribute 'warn_unused_result' [-Wunused-result]
+  930 |   fread(pgm.GetData(), fileSize, 1, fp);
+      |   ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp: In member function 'bool iplug::IPluginBase::LoadBankFromFXB(const char*)':
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:998:12: warning: ignoring return value of 'size_t fread(void*, size_t, size_t, FILE*)' declared with attribute 'warn_unused_result' [-Wunused-result]
+  998 |       fread(bnk.GetData(), fileSize, 1, fp);
+      |       ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/cstring:42,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugEditorDelegate.h:19,
+                 from /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsEditorDelegate.h:15,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugDelegate_select.h:28,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.h:18,
+                 from /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:16:
+In function 'char* strstr(char*, const char*)',
+    inlined from 'void MakeDefaultUserPresetName(WDL_PtrList<iplug::IPreset>*, char*)' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:391:15,
+    inlined from 'bool iplug::IPluginBase::_ZN5iplug11IPluginBase13RestorePresetEi.part.0(int)' at /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:434:32:
+/usr/include/string.h:339:27: warning: 'char* __builtin_strstr(const char*, const char*)' reading 1 or more bytes from a region of size 0 [-Wstringop-overread]
+  339 |   return __builtin_strstr (__haystack, __needle);
+      |          ~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp: In member function 'bool iplug::IPluginBase::RestorePreset(const char*)':
+/Volumes/Storage/code/IPlug2-linux/IPlug/IPlugPluginBase.cpp:460:18: warning: 'int strcmp(const char*, const char*)' reading 1 or more bytes from a region of size 0 [-Wstringop-overread]
+  460 |       if (!strcmp(pPreset->mName, name))
+      |            ~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+[30/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/Linux/IPlugLinuxHostLoop.cpp.o
+[31/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/Linux/IPlugLinuxTimer.cpp.o
+[32/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/IPlugControls.cpp.o
+[33/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IPlug/Linux/IPlugLinuxPaths.cpp.o
+[34/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IGraphics/IGraphicsEditorDelegate.cpp.o
+[35/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IGraphics/Controls/IPopupMenuControl.cpp.o
+[36/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IGraphics/IControl.cpp.o
+[37/42] Building C object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/Dependencies/IGraphics/NanoVG/src/nanovg.c.o
+[38/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IGraphics/Controls/ITextEntryControl.cpp.o
+[39/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IGraphics/Controls/IControls.cpp.o
+[40/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IGraphics/Platforms/IGraphicsLinux.cpp.o
+[41/42] Building CXX object Examples/IPlugControls/CMakeFiles/IPlugControls-vst3.dir/__/__/IGraphics/IGraphics.cpp.o
+[42/42] Linking CXX shared module out/IPlugControls.vst3/Contents/aarch64-linux/IPlugControls.so
+=== RESULT IPlugControls-vst3 PASS
