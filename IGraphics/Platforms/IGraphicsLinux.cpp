@@ -183,6 +183,7 @@ struct IGraphicsLinux::Impl
   XIM mInputMethod = nullptr;
   XIC mInputContext = nullptr;
   bool mHoldsFocus = false;
+  bool mFocusDeclined = false; // the focus left for another window during this edit or menu: do not take it back
   int mFocusRetries = 0;
   std::chrono::steady_clock::time_point mFocusTakenAt;
   unsigned mButtonState = 0; // buttons held, as after the last button event
@@ -385,6 +386,10 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
 void IGraphicsLinux::CloseWindow()
 {
   Impl& w = *mImpl;
+  // Once per open window (not again from the destructor), while the controls are still whole: an open menu's
+  // owner began a host gesture on its mouse down, and only the menu's completion ends it.
+  if (w.mOpen && *w.mOpen)
+    DismissOpenMenu();
   if (w.mLoop)
   {
     w.mLoop->RemoveTimer(w.mTimerId);
@@ -784,9 +789,9 @@ void IGraphicsLinux::HandleKey(const XEvent& event)
   unsigned char& keptKeys = w.mKeptKeys[keycode >> 3];
 
   IPopupMenuControl* pPopup = GetPopupMenuControl();
-  const bool menuOpen = pPopup && pPopup->GetState() != IPopupMenuControl::kCollapsed;
+  const bool menuOpen = IsMenuOpen();
   // Keys of an edit or an open menu never reach the host: its Escape or Return would close the window under them.
-  const bool modal = GetControlInTextEntry() || menuOpen;
+  const bool modal = IsEditing() || menuOpen;
 
   if (!isPress && (keptKeys & keyBit))
   {
@@ -795,19 +800,25 @@ void IGraphicsLinux::HandleKey(const XEvent& event)
     return;
   }
 
+  // IPopupMenuControl has no key handling of its own
   if (isPress && menuOpen && pPopup->GetExpanded() && XLookupKeysym(&key, 0) == XK_Escape)
   {
     keptKeys |= keyBit;
-    // IPopupMenuControl has no key handling; a click outside its panels dismisses it without a choice.
-    pPopup->OnMouseDown(-1.f, -1.f, IMouseMod());
+    DismissOpenMenu();
     return;
   }
 
   // Ctrl+V in an edit reads the clipboard without blocking, then replays the key. A blocking read cannot get
   // text that the host itself owns: its main thread, which would have to answer, is the one waiting.
-  const bool pasteInEdit = isPress && GetControlInTextEntry() && (key.state & ControlMask)
+  const bool pasteInEdit = isPress && IsEditing() && (key.state & ControlMask)
                         && linux_keys::PhysicalCharacterVirtualKey(w.mDisplay, key.keycode, key.state) == 'V';
-  if (pasteInEdit && !w.mPasteKeyPending && w.mClipboard.BeginAsyncRead())
+  // Another Ctrl+V (key repeat) would start a blocking read on the same property; the replay pastes once.
+  if (pasteInEdit && w.mPasteKeyPending)
+  {
+    keptKeys |= keyBit;
+    return;
+  }
+  if (pasteInEdit && w.mClipboard.BeginAsyncRead())
   {
     keptKeys |= keyBit;
     w.mPasteKeyPending = true;
@@ -866,6 +877,7 @@ void IGraphicsLinux::HandleFocusOut(const XEvent& event)
   if (focus.detail == NotifyNonlinear || focus.detail == NotifyNonlinearVirtual)
   {
     w.mHoldsFocus = false;
+    w.mFocusDeclined = true;
     EndTextEntryOnFocusLoss();
     return;
   }
@@ -909,6 +921,7 @@ void IGraphicsLinux::HandleClientMessage(const XEvent& event)
       if (w.mHoldsFocus)
       {
         w.mHoldsFocus = false;
+        w.mFocusDeclined = true;
         EndTextEntryOnFocusLoss();
       }
       break;
@@ -920,20 +933,28 @@ void IGraphicsLinux::HandleClientMessage(const XEvent& event)
 void IGraphicsLinux::UpdateEditingState()
 {
   Impl& w = *mImpl;
-  const bool editing = GetControlInTextEntry() != nullptr;
+  RemoveFinishedStandIns();
+  // IGraphics keeps the edited control when its text entry control goes without ending the edit (a plug-in's
+  // RemoveAllControls or RemoveTextEntryControl mid-edit); every key would then count as an edit's forever.
+  if (GetControlInTextEntry() && !IsEditing())
+    ClearInTextEntryControl();
+
+  // An open menu takes the keys too, so that Escape closes it rather than (in REAPER) the host's window.
+  const bool wantsKeys = IsEditing() || IsMenuOpen();
+  if (!wantsKeys)
+    w.mFocusDeclined = false;
   // Not during the click that opened the edit, nor right after it: the window manager and the host focus their
   // own window for that click (openbox, then GDK's focus proxy in REAPER), late enough to undo an early request.
   const bool clickSettled = !w.mButtonState && std::chrono::steady_clock::now() - w.mLastReleaseAt > std::chrono::milliseconds(150);
-  if (editing && !w.mHoldsFocus && clickSettled)
+  if (wantsKeys && !w.mHoldsFocus && !w.mFocusDeclined && clickSettled)
     TakeKeyboardFocus();
-  else if (!editing && w.mHoldsFocus)
+  else if (!wantsKeys && w.mHoldsFocus)
     ReleaseKeyboardFocus();
-  RemoveFinishedStandIns();
 
   if (w.mPasteKeyPending && w.mClipboard.AsyncReadDone())
   {
     w.mPasteKeyPending = false;
-    if (GetControlInTextEntry() && w.mClipboard.HasAsyncText())
+    if (IsEditing() && w.mClipboard.HasAsyncText())
     {
       const std::shared_ptr<bool> open = w.mOpen;
       OnKeyDown(w.mCursorX, w.mCursorY, w.mPasteKey);
@@ -1019,7 +1040,14 @@ void IGraphicsLinux::EndTextEntryOnFocusLoss()
 void IGraphicsLinux::RemoveFinishedStandIns()
 {
   Impl& w = *mImpl;
-  const bool textEntryDone = w.mStandInTextEntry && !w.mStandInTextEntry->EditInProgress();
+  // A plug-in may remove them itself (RemoveAllControls in a layout, RemovePopupMenuControl): then they are gone.
+  if (w.mStandInTextEntry && GetTextEntryControl() != w.mStandInTextEntry)
+    w.mStandInTextEntry = nullptr;
+  if (w.mStandInPopup && GetPopupMenuControl() != w.mStandInPopup)
+    w.mStandInPopup = nullptr;
+
+  // The edit's own right-click menu refers to its text entry control: that one stays while the menu does.
+  const bool textEntryDone = w.mStandInTextEntry && !w.mStandInTextEntry->EditInProgress() && !IsMenuOpen();
   const bool popupDone = w.mStandInPopup && w.mStandInPopup->GetState() == IPopupMenuControl::kCollapsed;
   if (!textEntryDone && !popupDone)
     return;
@@ -1035,15 +1063,46 @@ void IGraphicsLinux::RemoveFinishedStandIns()
 
   if (textEntryDone)
   {
-    if (GetTextEntryControl() == w.mStandInTextEntry)
-      RemoveTextEntryControl();
+    RemoveTextEntryControl();
     w.mStandInTextEntry = nullptr;
   }
   if (popupDone)
   {
-    if (GetPopupMenuControl() == w.mStandInPopup)
-      RemovePopupMenuControl();
+    RemovePopupMenuControl();
     w.mStandInPopup = nullptr;
+  }
+}
+
+bool IGraphicsLinux::IsEditing()
+{
+  ITextEntryControl* pTextEntry = GetTextEntryControl();
+  return GetControlInTextEntry() && pTextEntry && pTextEntry->EditInProgress();
+}
+
+bool IGraphicsLinux::IsMenuOpen()
+{
+  IPopupMenuControl* pPopup = GetPopupMenuControl();
+  return pPopup && pPopup->GetState() != IPopupMenuControl::kCollapsed;
+}
+
+// As if the menu were dismissed by a click outside it: no choice, and the menu's owner gets its completion.
+void IGraphicsLinux::DismissOpenMenu()
+{
+  IPopupMenuControl* pPopup = GetPopupMenuControl();
+  if (!pPopup)
+    return;
+  switch (pPopup->GetState())
+  {
+    case IPopupMenuControl::kExpanded:
+      pPopup->OnMouseDown(-1.f, -1.f, IMouseMod());
+      break;
+    // Still fading in: the panels cannot take a click yet, the completion goes straight to the owner.
+    case IPopupMenuControl::kExpanding:
+    case IPopupMenuControl::kSubMenuAppearing:
+      SetControlValueAfterPopupMenu(nullptr);
+      break;
+    default: // collapsing: the completion has been sent
+      break;
   }
 }
 
@@ -1188,11 +1247,12 @@ PlatformFontPtr IGraphicsLinux::LoadPlatformFont(const char* fontID, const char*
 
 PlatformFontPtr IGraphicsLinux::LoadPlatformFont(const char* fontID, const char* fontName, ETextStyle style)
 {
-  WDL_String path;
-  int faceIdx = 0;
-  if (!linux_fonts::FindSystemFont(fontName, style, path, faceIdx))
-    return nullptr;
-  return MakeFontFromFile(path.Get(), faceIdx);
+  PlatformFontPtr font;
+  linux_fonts::FindSystemFont(fontName, style, [&](const char* path, int faceIdx) {
+    font = MakeFontFromFile(path, faceIdx);
+    return font != nullptr;
+  });
+  return font;
 }
 
 PlatformFontPtr IGraphicsLinux::LoadPlatformFont(const char* fontID, void* pData, int dataSize)

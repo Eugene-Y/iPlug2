@@ -90,6 +90,9 @@ private:
   void ReleaseKeyboardFocus();
   void EndTextEntryOnFocusLoss();
   void RemoveFinishedStandIns();
+  bool IsEditing();
+  bool IsMenuOpen();
+  void DismissOpenMenu();
   void DrawDirtyControls();
   bool IsHostResizeEnabled();
   void DestroyWindowResources();
