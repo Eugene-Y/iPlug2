@@ -68,6 +68,29 @@ wait 1
 shot a08-textentry-os
 expect-change a07-popup-chosen a08-textentry-os 870 410 110 40
 alive __PROC__
+# right-click Paste in stand-in edits, twice: the edit menu must belong to the current text entry control, not to
+# the first one ever right-clicked (a function-local static in ITextEntryControl did, a use-after-free here)
+set-clipboard 33
+dclick 941 437
+wait 1
+rclick 941 437
+wait 1
+click 945 481
+wait 0.5
+key Return
+wait 0.5
+shot a08b-pasted-33
+set-clipboard 44
+dclick 941 437
+wait 1
+rclick 941 437
+wait 1
+click 945 481
+wait 0.5
+key Return
+wait 0.5
+shot a08c-pasted-44
+expect-change a08b-pasted-33 a08c-pasted-44 870 410 110 40
 # a key outside text entry: the editor has the focus since the last click (APP only), so the about box gets Escape
 click 993 737
 wait 1

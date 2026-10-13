@@ -127,6 +127,28 @@ wait 1
 expect-param 0 0 ^7
 expect-window IPlugControls.*Track 1
 alive __PROC__
+# right-click Paste in stand-in edits, twice: the edit menu must belong to the current text entry control, not to
+# the first one ever right-clicked (a function-local static in ITextEntryControl did, a use-after-free here)
+set-clipboard 33
+dclick 941 437
+wait 1
+rclick 941 437
+wait 1
+click 945 481
+wait 0.5
+key Return
+wait 0.5
+expect-param 0 0 ^33
+set-clipboard 44
+dclick 941 437
+wait 1
+rclick 941 437
+wait 1
+click 945 481
+wait 0.5
+key Return
+wait 0.5
+expect-param 0 0 ^44
 # right click on a parameter control: REAPER's own context menu in VST3 (IComponentHandler3), nothing in CLAP
 # (IVKnobControl adds no items); a click elsewhere dismisses it
 rclick 322 237
