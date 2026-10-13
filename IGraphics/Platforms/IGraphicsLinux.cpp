@@ -1029,9 +1029,13 @@ void IGraphicsLinux::ReleaseKeyboardFocus()
   XFlush(w.mDisplay);
 }
 
-// Like losing first responder on mac: what was typed is kept.
+// Like losing first responder on mac: what was typed is kept. An open menu closes without a choice first, as
+// native menus do; it may be the edit's own right-click menu, whose items act on the edit.
 void IGraphicsLinux::EndTextEntryOnFocusLoss()
 {
+  IPopupMenuControl* pPopup = GetPopupMenuControl();
+  if (pPopup && pPopup->GetExpanded())
+    DismissOpenMenu();
   ITextEntryControl* pTextEntry = GetTextEntryControl();
   if (pTextEntry && pTextEntry->EditInProgress())
     pTextEntry->CommitEdit();
