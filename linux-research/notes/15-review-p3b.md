@@ -1,4 +1,4 @@
-# Review of P3b: keyboard, focus, text entry, cursors, clipboard, menus, fonts (2026-10-13)
+# Review of P3b: keyboard, focus, text entry, cursors, clipboard, menus, fonts (2026-10-12 to 10-14)
 
 Range reviewed: `7bed217fd..f6b57f595` (notes/13). Fix round 1: `8f9617ca2`, `971a73599`, `0142d81e8`, `98ad30601`,
 `20a8b0681`, `b8504b006`. Reviewer evidence: `evidence/p3b-review/`.
@@ -94,7 +94,7 @@ attached. So neither exercised a stand-in after its first use. That is why H1 an
 - Comments are WHY-only (X/ICCCM quirks, host findings, lifetime rules). The one stale comment about the menu's Escape handling was replaced in round 1.
 - Linux code lives in new headers. The single shared change (H1) is a genuine cross-platform bug fix.
 
-## Round 1 results (`r1/` at 70fc65719, `r2/` at b8504b006)
+## Round 1 results (`r1/` at 70fc65719, `r2/` at b8504b006, `final/` at e21ebc5f1)
 
 | Check | Result |
 |---|---|
@@ -105,6 +105,7 @@ attached. So neither exercised a stand-in after its first use. That is why H1 an
 | 100× churn `EDIT=1`, CLAP + VST3 | PASS ×2, fds/sockets/threads equal before/after [R] |
 | `Tests/LinuxInput` ASan, `us` + `us,ru`, incl. clipboard hand-over/orphan | PASS [U] |
 | mac IPlugEffect CLAP Debug with the changed `ITextEntryControl` | BUILD SUCCEEDED, scratchpad build dirs, no tracked file changed (`macos/mac-CLAP.txt`) [M] |
+| **Final re-verification**, fresh build dirs (`build/final-p3b*`), code unchanged since b8504b006 (`final-verify.sh`, `final/final-verify.log`) | S1/S2/S3 ASan: no report. Full scripts CLAP + VST3: PASS, all `Draw`/`ProcessXEvents` on tid 1. APP script: no failed check. `EDIT=1` churn ×100 CLAP + VST3: PASS (fds 6/10, sockets 1/3, threads 14/40 before = after). `Tests/LinuxInput` ASan `us` + `us,ru`: PASS. This run regenerated `evidence/p3b/` (84dc38c5e): the implementer's own re-verification had hung on dead containers, leaving partial files [R][A][U] |
 
 ## Verdict
 
