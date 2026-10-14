@@ -148,6 +148,7 @@ struct IGraphicsLinux::Impl
   Colormap mColormap = 0;
   GLXContext mGLContext = nullptr;
   bool mViewInitialized = false;
+  bool mMenuFontLoaded = false; // into this view's drawing context
   bool mMapped = false;
   // Destroying an ancestor sends our window DestroyNotify only, never UnmapNotify: without this flag every frame
   // would draw and swap into a dead drawable, which crashes llvmpipe.
@@ -422,6 +423,7 @@ void IGraphicsLinux::DestroyWindowResources()
       OnViewDestroyed();
       DeactivateGLContext();
       w.mViewInitialized = false;
+      w.mMenuFontLoaded = false;
     }
     if (w.mGLContext)
     {
@@ -1247,9 +1249,20 @@ void IGraphicsLinux::CreatePlatformTextEntry(int paramIdx, const IText& text, co
   mImpl->mStandInTextEntry->CreateTextEntry(paramIdx, text, bounds, length, str);
 }
 
+// Platform menus on mac/win draw with the system UI font, and a plug-in need not load DEFAULT_FONT (NanoVG then
+// draws no text at all, and asserts in debug builds): the stand-in menu uses the system sans-serif face too.
+IText IGraphicsLinux::StandInMenuText()
+{
+  static constexpr const char* kMenuFontID = "iPlug2-Linux-menu";
+  Impl& w = *mImpl;
+  if (!w.mMenuFontLoaded)
+    w.mMenuFontLoaded = LoadFont(kMenuFontID, "sans-serif", ETextStyle::Normal);
+  return w.mMenuFontLoaded ? DEFAULT_TEXT.WithFont(kMenuFontID) : DEFAULT_TEXT;
+}
+
 IPopupMenu* IGraphicsLinux::CreatePlatformPopupMenu(IPopupMenu& menu, const IRECT bounds, bool& isAsync)
 {
-  AttachPopupMenuControl();
+  AttachPopupMenuControl(StandInMenuText());
   mImpl->mStandInPopup = GetPopupMenuControl();
   mImpl->mStandInPopup->CreatePopupMenu(menu, bounds);
   isAsync = true;

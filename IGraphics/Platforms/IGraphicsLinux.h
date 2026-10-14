@@ -75,6 +75,7 @@ private:
   void OnDisplayTimer();
   void OnXConnectionReadable(int flags);
   void TellHostTheOpenedSize();
+  IText StandInMenuText();
   /** @return false when the window closed while handling an event: the caller must return without touching this. */
   bool ProcessXEvents();
   void HandleXEvent(const _XEvent& event);
