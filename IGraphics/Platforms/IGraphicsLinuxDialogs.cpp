@@ -68,6 +68,12 @@ const char* DefaultTitle(EKind kind)
 
 #pragma mark - Paths and extensions
 
+/** Owns its strings */
+struct StringList : WDL_PtrList<WDL_String>
+{
+  ~StringList() { Empty(true); }
+};
+
 /** "fxp", "wav aif", ".wav .aif", "*.wav;*.aif" -> wav, aif */
 void SplitExtensions(const char* list, WDL_PtrList<WDL_String>& extensions)
 {
@@ -304,7 +310,7 @@ void BuildZenityArgs(const LinuxDialogRequest& request, ArgList& args)
     args.Add("--modal");
   }
 
-  WDL_PtrList<WDL_String> extensions;
+  StringList extensions;
   SplitExtensions(request.extensions.Get(), extensions);
 
   switch (request.kind)
@@ -435,7 +441,7 @@ void BuildKDialogArgs(const LinuxDialogRequest& request, ArgList& args)
     args.Add(windowId);
   }
 
-  WDL_PtrList<WDL_String> extensions;
+  StringList extensions;
   SplitExtensions(request.extensions.Get(), extensions);
   WDL_String filter;
   if (extensions.GetSize())
@@ -531,7 +537,7 @@ void GetBackendOrder(WDL_TypedBuf<EBackend>& order)
   const char* pOverride = getenv("IPLUG_LINUX_DIALOGS");
   if (pOverride && pOverride[0])
   {
-    WDL_PtrList<WDL_String> names;
+    StringList names;
     SplitExtensions(pOverride, names);
     for (int i = 0; i < names.GetSize(); i++)
     {
@@ -540,7 +546,6 @@ void GetBackendOrder(WDL_TypedBuf<EBackend>& order)
       else if (!strcmp(pName, "zenity")) order.Add(EBackend::Zenity);
       else if (!strcmp(pName, "kdialog")) order.Add(EBackend::KDialog);
     }
-    names.Empty(true);
     return;
   }
 
@@ -689,7 +694,7 @@ void PortalFileChooser::SendFileChooserCall()
     return;
   }
 
-  WDL_PtrList<WDL_String> extensions;
+  StringList extensions;
   SplitExtensions(mRequest.extensions.Get(), extensions);
 
   char parent[64] = "";
@@ -768,7 +773,6 @@ void PortalFileChooser::SendFileChooserCall()
   }
 
   mDBus->message_iter_close_container(&args, &options);
-  extensions.Empty(true);
   Send(pMessage, EStep::Call);
 }
 
@@ -1099,7 +1103,7 @@ struct LinuxDialogs::Job
       return;
 
     // Like the save panels on macOS and Windows: the name gets the dialog's extension if it has none of them.
-    WDL_PtrList<WDL_String> extensions;
+    StringList extensions;
     SplitExtensions(mRequest.extensions.Get(), extensions);
     if (extensions.GetSize() && !HasOneOfExtensions(answer.path.Get(), extensions))
     {
@@ -1107,8 +1111,7 @@ struct LinuxDialogs::Job
       if (PathExists(mResult.path.Get()))
         AskOverwrite();
     }
-    extensions.Empty(true);
-  }
+    }
 
   void AskOverwrite()
   {
