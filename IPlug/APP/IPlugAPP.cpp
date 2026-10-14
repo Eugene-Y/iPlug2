@@ -84,6 +84,18 @@ bool IPlugAPP::EditorResize(int viewWidth, int viewHeight)
         parentResized = true;
       }
     }
+    #elif defined OS_LINUX
+    if (gHWND)
+    {
+      // IGraphicsLinux sizes only the editor's own X window, not the SWELL window that holds it.
+      RECT rcClient, rcWindow;
+      GetClientRect(gHWND, &rcClient);
+      GetWindowRect(gHWND, &rcWindow);
+      const int frameWidth = (rcWindow.right - rcWindow.left) - rcClient.right;
+      const int frameHeight = (rcWindow.bottom - rcWindow.top) - rcClient.bottom;
+      SetWindowPos(gHWND, 0, rcWindow.left, rcWindow.top, viewWidth + frameWidth, viewHeight + frameHeight, SWP_NOZORDER);
+      parentResized = true;
+    }
     #elif defined NO_IGRAPHICS
     {
       RECT rcClient, rcWindow;
