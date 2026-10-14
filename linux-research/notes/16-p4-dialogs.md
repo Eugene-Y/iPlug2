@@ -115,3 +115,27 @@ $R/scripts/dock.sh -- bash -c 'cmake -S ../Tests/LinuxDialogs -B build/t002-dial
   launcher's `waitpid` (a shell that only forks), `dbus_connection_flush` of the portal's `Close` on dismissal, and the
   `XQueryTree` walk for the parent window.
 - Portal response 2 ("other") is reported as a cancel with a stderr line, not retried with zenity.
+- zenity that cannot open its window (no display) exits 1 like a user's cancel: no kdialog fallback then, and its
+  message went to /dev/null.
+- `ShowMessageBox` returns `kNoResult`; a caller that uses the return value instead of the handler sees nothing
+  (allowed by `IGraphicsConstants.h`, the same as iOS and web). With no editor open no box is shown at all.
+- `PromptForColor` calls `func` once, when the colour is chosen; macOS calls it on every change in its panel.
+- With the fallback host-loop backend (a host without timer support) `Show` and `Poll` would run on different threads,
+  like everything else of the editor there (notes/11 known issue).
+
+## Review round 1 (fresh-eyes subagent, no High findings)
+
+| # | Finding | Fix |
+|---|---|---|
+| M1 | Colour alpha followed the host's `LC_NUMERIC`: `%.3f`/`%f` write and read a decimal comma under a German locale, so zenity got an unparsable colour and the answer's alpha read as 0 | Alpha written with integer arithmetic, read by a small parser; unit case under `de_DE.UTF-8` |
+| L2 | A backend's fd was closed before its watch was removed; with hosts that unregister by fd number (CLAP) a reused number could keep or drop the wrong watch; `mFdFailed` was never reset | Each job owns its watch and removes it before closing the fd (`LinuxBackgroundProcess::CloseOutput` separated from `Pump`); `mFdFailed` reset per backend. The unit test's fake backend now fails on any watch whose fd changed identity (dev/inode) |
+| L3 | `Kill()` could signal a process group whose members had all exited | `Kill` reads first and signals only while the status line has not arrived; the status line itself ends a program (a child of it holding the pipe no longer delays the answer) |
+| L4 | `Request.Close` and a blocking flush were sent after the Response | skipped once answered |
+| L5 | Two-part extensions (`tar.gz`) were compared by their last part only | whole-suffix, case-insensitive comparison |
+| L6 | zenity's display failure reads as cancel | documented (Known issues) |
+| L7 | Style: several statements per `case` line, a misleading reuse of `SplitExtensions` for backend names, `fileName` carrying the path to confirm, one shared warning flag | `ArgList::Add({ ... })`, `SplitList`, `mPathToConfirm`, a flag per method |
+| I8–I12 | `kNoResult`, colour callback count, fallback-thread races, blocking `connect()`, `<unistd.h>` in the test block | documented; the test block's POSIX calls are Linux-only now |
+
+All six new unit cases fail on the code before the fixes and pass after (mutation check in a throwaway worktree). Re-run
+after the fixes: unit test 88 checks PASS under ASan/UBSan; Docker `dialog-test.sh` CLAP + VST3, churn 50× CLAP + VST3,
+APP, gdb thread check PASS; VM portal CLAP + VST3, portal churn 30×, APP, zenity forced, thread check: see the task log.
