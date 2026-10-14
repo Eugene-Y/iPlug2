@@ -1,0 +1,10 @@
+process IPlugControls not found
+1 /sbin/docker-init -- bash -c    Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp >/tmp/xvfb.log 2>&1 &   for i in $(seq 50); do xdpyinfo -display :99 >/dev/null 2>&1 && break; sleep 0.1; done   export DISPLAY=:99   eval "$(dbus-launch --sh-syntax)"; echo "$DBUS_SESSION_BUS_ADDRESS" > /tmp/dbus.addr   openbox >/tmp/openbox.log 2>&1 &   xsetroot -solid "#303040" 2>/dev/null || true   sleep infinity
+7 sleep infinity
+8 Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp
+28 /usr/bin/dbus-daemon --syslog --fork --print-pid 5 --print-address 7 --session
+29 openbox
+61 jackd --no-realtime -d dummy -r 48000 -p 256
+3395 xclip -selection clipboard
+3454 bash /Volumes/Storage/code/IPlug2-linux/linux-research/scripts/threads.sh IPlugControls 10
+3463 tail -20

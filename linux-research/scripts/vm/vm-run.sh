@@ -14,6 +14,7 @@ VMHOME=$(vm 'echo $HOME')
 ARGS=(); for a in "$@"; do case "$a" in "~/"*) ARGS+=("$VMHOME/${a#\~/}");; *) ARGS+=("$a");; esac; done
 mkdir -p "$(dirname "$LR/$OUT")"
 vm "rm -rf ~/$VM_HARNESS/linux-research/$OUT; mkdir -p ~/$VM_HARNESS/linux-research/$OUT"
+VM_NOSYNC=1 "$(dirname "$0")/vm-x.sh" bash -c vm_close_overview
 VM_NOSYNC=1 "$(dirname "$0")/vm-x.sh" timeout "${VM_TIMEOUT:-1200}" "scripts/$SCRIPT" "$OUT" ${ARGS[@]+"${ARGS[@]}"} 2>&1 \
   | tee "$LR/$OUT.run.log.tmp"
 rc=${PIPESTATUS[0]}

@@ -1,0 +1,139 @@
+pid=18046 cmd=build/rev-p3b-r1-asan/out/IPlugControls --no-io 
+--- threads (count name)
+      1 IPlugCo:disk$0
+      7 IPlugControls
+      1 llvmpipe-0
+      1 llvmpipe-1
+      1 llvmpipe-2
+      1 llvmpipe-3
+      1 llvmpipe-4
+      1 llvmpipe-5
+--- backtraces
+Thread 14 (Thread 0xed48ab62ed40 (LWP 18047) "llvmpipe-0"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b659012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48be862000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 13 (Thread 0xed48aae1ed40 (LWP 18048) "llvmpipe-1"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b659012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48be812000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 12 (Thread 0xed48a9b05d40 (LWP 18049) "llvmpipe-2"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b659012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48be682000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 11 (Thread 0xed48a92f5d40 (LWP 18050) "llvmpipe-3"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b659012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48be5f2000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 10 (Thread 0xed48a74d3d40 (LWP 18051) "llvmpipe-4"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b659012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48be262000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 9 (Thread 0xed48a61bad40 (LWP 18052) "llvmpipe-5"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b659012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48be182000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 8 (Thread 0xed48a4ea1d40 (LWP 18053) "IPlugControls"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b658bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48be052000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 7 (Thread 0xed48a3b88d40 (LWP 18054) "IPlugControls"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b658bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48bdfd2000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 6 (Thread 0xed48a3378d40 (LWP 18055) "IPlugControls"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b658bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48bdfa2000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 5 (Thread 0xed48a205fd40 (LWP 18056) "IPlugControls"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b658bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48bdf32000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 4 (Thread 0xed48a0d46d40 (LWP 18057) "IPlugControls"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b658bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48bdd62000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 3 (Thread 0xed48a0536d40 (LWP 18058) "IPlugControls"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b658bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48bdd32000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 2 (Thread 0xed489cfc1d40 (LWP 18059) "IPlugCo:disk$0"):
+#0  0x0000ed48bd9a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ed48bd9a49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ed48b62eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ed48b62c8cdc [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ed48b62eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ed48bec1f3d4 [PAC] in asan_thread_start (arg=0xed48bdc32000) at ../../../../src/libsanitizer/asan/asan_interceptors.cpp:234
+#6  0x0000ed48bd9a582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000ed48bda0bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 1 (Thread 0xed48bea9a780 (LWP 18046) "IPlugControls"):
+#0  __asan::FakeStack::ModuloNumberOfFrames (stack_size_log=<optimized out>, class_id=<optimized out>, n=<optimized out>) at ../../../../src/libsanitizer/asan/asan_fake_stack.cpp:97
+#1  __asan::FakeStack::Allocate (this=0xed48b9cf7000, stack_size_log=20, class_id=0, real_stack=281474778601984) at ../../../../src/libsanitizer/asan/asan_fake_stack.cpp:97
+#2  __asan::OnMalloc (class_id=0, size=<optimized out>) at ../../../../src/libsanitizer/asan/asan_fake_stack.cpp:229
+#3  __asan_stack_malloc_0 (size=<optimized out>) at ../../../../src/libsanitizer/asan/asan_fake_stack.cpp:273
+#4  0x0000bf453e693c34 [PAC] in std::function<void(iplug::igraphics::IControl*)>::operator() (this=0xfffff4311b50, __args#0=0x0) at /usr/include/c++/13/bits/std_function.h:587
+#5  0x0000bf453e6ca3a0 in iplug::igraphics::IGraphics::ForStandardControlsFunc (this=0x51a000000680, func=...) at /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.cpp:574
+#6  0x0000bf453e6ca4a8 in iplug::igraphics::IGraphics::ForAllControlsFunc (this=0x51a000000680, func=...) at /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.cpp:579
+#7  0x0000bf453e6ccde8 in iplug::igraphics::IGraphics::IsDirty (this=0x51a000000680, rects=...) at /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.cpp:867
+#8  0x0000bf453e7cccc8 in iplug::igraphics::IGraphicsLinux::DrawDirtyControls (this=0x51a000000680) at /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:554
+#9  0x0000bf453e7cc554 in iplug::igraphics::IGraphicsLinux::OnDisplayTimer (this=0x51a000000680) at /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:520

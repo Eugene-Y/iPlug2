@@ -1,0 +1,43 @@
+# P3b review, IPlugControls APP: stand-in lifetimes (run against the Debug+ASan APP; stderr shows any ASan report)
+alive __PROC__
+# stand-ins on: the plug-in removes its own text entry and popup controls
+click 224 692
+click 224 720
+wait 0.5
+shot v00-standins
+# S1: the text entry's right-click menu in two successive stand-in edits. ITextEntryControl::OnMouseDown builds that
+# menu as a function-local static whose callback captured the first control's `this`.
+set-clipboard 66
+dclick 941 437
+wait 1
+rclick 941 437
+wait 1
+click 945 478
+wait 0.5
+key Return
+wait 1
+shot v01-first-paste
+set-clipboard 77
+dclick 941 437
+wait 1
+rclick 941 437
+wait 1
+shot v02-second-menu
+click 945 478
+wait 0.5
+key Return
+wait 1
+shot v03-second-paste
+alive __PROC__
+# S2: the plug-in removes the popup control while the stand-in menu is still collapsing ("OS Menu" off, then on:
+# Attach is a no-op on the stand-in, Remove deletes it)
+click 828 284
+wait 1
+click 833 358
+click 224 720
+click 230 721
+wait 1
+shot v04-menu-removed
+move 500 400
+wait 0.5
+alive __PROC__

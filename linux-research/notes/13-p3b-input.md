@@ -5,8 +5,9 @@ openbox, llvmpipe, container `p3b`); **[U]** = unit test against Xvfb (`Tests/Li
 
 ## What was built
 
-All of it is Linux-only: `IGraphicsLinux.{h,cpp}` plus four new headers, no shared file changed
-(`git diff --stat 51d211663 -- . ':!linux-research'`). mac/win cannot see any of it.
+Linux-only: `IGraphicsLinux.{h,cpp}` plus four new headers. One shared fix came with the review (H1):
+`ITextEntryControl`'s right-click menu is a member instead of a function-local static (platform-neutral; mac
+IPlugEffect CLAP Debug builds, `evidence/p3b/review-fixes/macos/`, diff against `hvoya` in `review-fixes/`).
 
 | Topic | Choice |
 |---|---|
@@ -14,11 +15,11 @@ All of it is Linux-only: `IGraphicsLinux.{h,cpp}` plus four new headers, no shar
 | Routing | `KeyPress`/`KeyRelease` → `IGraphics::OnKeyDown/OnKeyUp` at the pointer position. Keys pressed during an edit or an open menu are always kept (Escape/Return must not reach the host). Unused real keys are sent on to the parent window (`XSendEvent`); their releases follow their presses (a 256-bit kept-keys set). Synthetic keys (sent by a host) are never sent back: loops |
 | Focus | Plug-ins: the host keeps the X focus outside text entry. During an edit the editor takes it (`XSetInputFocus`, after the opening click has settled, see finding 2), restores the previous focus on commit/Escape, and ends the edit (commit) when the focus leaves for another top-level window. APP: focus on click (the editor is the app's content) |
 | XEmbed | `_XEMBED`: `EMBEDDED_NOTIFY` remembers the embedder, which then also gets `REQUEST_FOCUS` when an edit takes the focus; `FOCUS_OUT` ends an edit. `WINDOW_ACTIVATE` etc. ignored. Nothing depends on XEmbed (REAPER sends none) |
-| Text entry | `CreatePlatformTextEntry` attaches IGraphics' `ITextEntryControl` for this one edit ("stand-in") and returns at once; the control commits later (Return, a click outside, focus loss) and is removed after the edit, with mouse-over/capture cleared first. No GTK. `ForceEndUserEdit` dismisses. Ctrl+V in an edit reads the clipboard **asynchronously** and replays the key (finding 4) |
-| Menus | `CreatePlatformPopupMenu` attaches `IPopupMenuControl` likewise (`isAsync = true`), removed once collapsed. Escape on an expanded menu dismisses it without a choice |
+| Text entry | `CreatePlatformTextEntry` attaches IGraphics' `ITextEntryControl` for this one edit ("stand-in") and returns at once; the control commits later (Return, a click outside, focus loss) and is removed after the edit and after any menu has collapsed, with mouse-over/capture cleared first. A stand-in the plug-in removed itself (`RemoveAllControls` in a layout, `Remove*Control`) is only forgotten; an edit whose control vanished is cleared (`ClearInTextEntryControl`), or every key would count as an edit's. No GTK. `ForceEndUserEdit` dismisses. Ctrl+V in an edit reads the clipboard **asynchronously** and replays the key (finding 4); further Ctrl+V while one is pending are dropped |
+| Menus | `CreatePlatformPopupMenu` attaches `IPopupMenuControl` likewise (`isAsync = true`), removed once collapsed. An open menu (stand-in or the plug-in's own) takes the keyboard focus like an edit, so Escape reaches it: dismissed without a choice. Closing the editor with a menu open completes it first (no choice), so the gesture its owner began on the host is ended. A focus loss to another window dismisses an expanded menu, then commits an edit |
 | Cursors | `IGraphicsLinuxCursors.h`: Xcursor theme by CSS name, then legacy names (`XcursorLibraryLoadCursor`, libXcursor `dlopen`ed), else the X cursor font; cached per editor. `HideMouseCursor(hide, lock)`: blank pixmap cursor; with lock, each drag step warps back to where the drag began (not on the warp's own motion event, which would loop) and the release puts the pointer there, as on Windows |
-| Clipboard | `IGraphicsLinuxClipboard.h`: CLIPBOARD owner with `UTF8_STRING`/`TEXT`/`STRING`(ASCII)/`TARGETS`, served from the event loop. Text owned by any editor of the process is read directly (a blocking read would starve the other editor's connection). Reading: `XConvertSelection` and a bounded wait (200 ms) on our own Display, taking only its own event (`XCheckIfEvent`); INCR received (blocking and async); serving refuses texts over one request (no INCR sending) |
-| Fonts | `IGraphicsLinuxFontconfig.h`: fontconfig `dlopen`ed; `FcFontSort` for family/weight/slant, the first **TrueType-outline** candidate wins, file + face index → `IFontData`. A missing family gets the system's substitute, like Windows |
+| Clipboard | `IGraphicsLinuxClipboard.h`: CLIPBOARD owner with `UTF8_STRING`/`TEXT`/`STRING`(ASCII)/`TARGETS`, served from the event loop. Text owned by any editor of the process is read directly (a blocking read would starve the other editor's connection). When the owning editor closes, another open editor of the process takes ownership; with none, the text stays readable in the process ("orphaned") until something else owns CLIPBOARD (Gneiss: copy a rig in A, close A, paste in B). Reading: `XConvertSelection` and a bounded wait (200 ms) on our own Display, taking only its own event (`XCheckIfEvent`); INCR received (blocking and async); serving refuses texts over one request (no INCR sending) |
+| Fonts | `IGraphicsLinuxFontconfig.h`: fontconfig `dlopen`ed; `FcFontSort` for family/weight/slant; TrueType-outline candidates in order, variable-font named instances skipped (stb cannot select them), and the first face `IFontData` accepts wins. A missing family gets the system's substitute, like Windows |
 | Tooltips | `UpdateTooltips` stays a no-op (no native X tooltips; an IGraphics-drawn one is left for later) |
 | Trace | `-DIGRAPHICS_TRACE_LINUX_INPUT`: every key (handled / kept / to host / dropped), FocusIn/Out, focus take/release on stderr. For probing hosts in P10 |
 
@@ -74,7 +75,7 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
 | 5 | 100× open/close, 2 instances; plain and `EDIT=1` (an edit holding the focus at every close, every other one also owning CLIPBOARD) | fds 6/10, sockets 1/3, threads 14/40 equal before/after, PASS ×4 [R] (`churn-*`) |
 | 6 | Unit test: key tables, events with/without IM, Cyrillic group (`setxkbmap us,ru`), fontconfig, clipboard serve/read/INCR | PASS [U] (`input-test.txt`) |
 | 7 | Validators | identical to P3a: clap-validator Controls 33/3, Effect 35/3; VST3 Controls 537/537, Effect 536/537 (`validators/`) |
-| 8 | macOS | untouched: only Linux-only files changed (above); no mac build needed |
+| 8 | macOS | IPlugEffect CLAP Debug BUILD SUCCEEDED with the shared `ITextEntryControl` fix (`review-fixes/macos/`), nothing installed into `~/Library`, no `.rc_mac` changed [M] |
 
 ## Harness
 
@@ -95,3 +96,21 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
   The clipboard dies with the editor window (no hand-over to a clipboard manager).
 - No tooltips. Host context menus: see finding 5.
 - Fonts by name: TrueType outlines only until NanoVG's stb_truetype is updated.
+- Focus retries: after two retries `mHoldsFocus` means "requested", not "held"; keys then come only as the host
+  forwards them. Alternatives in notes/15.
+- A menu requested while a stand-in menu is still fading out (≈400 ms after a choice) is ignored by
+  `IPopupMenuControl::CreatePopupMenu` (it expands only when collapsed); its owner keeps `mInPopupMenu` and the
+  host gesture begun on its mouse down until the next menu. Same as a plug-in's own popup control on mac/win.
+- No SAVE_TARGETS hand-over to a clipboard manager: an orphaned text is readable in this process only.
+
+## Review round 1 (notes/15)
+
+| # | Fix |
+|---|---|
+| H1 | `ITextEntryControl`'s right-click menu was a function-local static whose callback kept the first control's `this`: Cut/Copy/Paste after that control died (every stand-in edit after the first, any editor reopen, a 2nd instance, on every platform) used freed memory. Now a member built with `[this]` (shared, platform-neutral). Stand-in text entries stay while any menu is open (the menu refers to them). The P3b scripts paste through the stand-in's right-click menu twice |
+| H2 | Stand-in pointers are checked against `GetTextEntryControl()`/`GetPopupMenuControl()` before any use, and forgotten when the plug-in removed them; a vanished edit is cleared |
+| M1 | `CloseWindow` (once, not from the destructor) completes an open menu: expanded → as a click outside, still fading in → `SetControlValueAfterPopupMenu(nullptr)` |
+| M2 | Clipboard hand-over / orphaned text, unit-tested |
+| M3 | Variable-font instances skipped; the caller validates each face and falls through |
+| L1 | Ctrl+V while an async read is pending is dropped |
+| S3 | New: focus loss while the stand-in edit's menu is expanded (`app-focus-loss-menu.sh`, ASan APP): the menu is dismissed, then the edit commits; no report |

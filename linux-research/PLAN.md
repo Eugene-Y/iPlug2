@@ -4,7 +4,7 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 
 ## Progress
 
-**P3b done (2026-10-12)**: keyboard, focus/XEmbed, text entry, cursors, clipboard, menus, fonts by name, 7bed217fd..HEAD. Details: `notes/13-p3b-input.md`. Evidence: `evidence/p3b/`. Linux-only files; no shared file changed.
+**P3b done (2026-10-12)**: keyboard, focus/XEmbed, text entry, cursors, clipboard, menus, fonts by name, 7bed217fd..HEAD. Details: `notes/13-p3b-input.md`. Evidence: `evidence/p3b/`. Linux-only files, plus one shared fix from review round 1 (`ITextEntryControl`'s right-click menu was a function-local static: use-after-free on every platform; mac CLAP builds). Review: notes/15 (reviewer); fixes in notes/13 "Review round 1": stand-in lifetimes, menus completed on close and focused while open, clipboard hand-over/orphaned text, variable fonts skipped.
 
 | What | Where |
 |---|---|

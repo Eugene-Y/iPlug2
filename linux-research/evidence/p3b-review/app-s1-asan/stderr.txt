@@ -1,0 +1,130 @@
+=================================================================
+==3317==ERROR: AddressSanitizer: heap-use-after-free on address 0x5210004d5a20 at pc 0xc654df3ec5c0 bp 0xffffc7a054c0 sp 0xffffc7a054b0
+READ of size 8 at 0x5210004d5a20 thread T0
+    #0 0xc654df3ec5bc in iplug::igraphics::IControl::GetUI() /Volumes/Storage/code/IPlug2-linux/IGraphics/IControl.h:482
+    #1 0xc654df8be0e8 in iplug::igraphics::ITextEntryControl::Paste() /Volumes/Storage/code/IPlug2-linux/IGraphics/Controls/ITextEntryControl.cpp:344
+    #2 0xc654df8bba64 in operator() /Volumes/Storage/code/IPlug2-linux/IGraphics/Controls/ITextEntryControl.cpp:166
+    #3 0xc654df8c34c8 in __invoke_impl<void, iplug::igraphics::ITextEntryControl::OnMouseDown(float, float, const iplug::igraphics::IMouseMod&)::<lambda(iplug::igraphics::IPopupMenu*)>&, iplug::igraphics::IPopupMenu*> /usr/include/c++/13/bits/invoke.h:61
+    #4 0xc654df8c30cc in __invoke_r<void, iplug::igraphics::ITextEntryControl::OnMouseDown(float, float, const iplug::igraphics::IMouseMod&)::<lambda(iplug::igraphics::IPopupMenu*)>&, iplug::igraphics::IPopupMenu*> /usr/include/c++/13/bits/invoke.h:111
+    #5 0xc654df8c2aa8 in _M_invoke /usr/include/c++/13/bits/std_function.h:290
+    #6 0xc654df8a76f0 in std::function<void (iplug::igraphics::IPopupMenu*)>::operator()(iplug::igraphics::IPopupMenu*) const /usr/include/c++/13/bits/std_function.h:591
+    #7 0xc654df8a72bc in iplug::igraphics::IPopupMenu::ExecFunction() /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphicsPopupMenu.h:374
+    #8 0xc654df8a198c in iplug::igraphics::IPopupMenuControl::CollapseEverything() /Volumes/Storage/code/IPlug2-linux/IGraphics/Controls/IPopupMenuControl.cpp:825
+    #9 0xc654df8983d0 in iplug::igraphics::IPopupMenuControl::OnMouseDown(float, float, iplug::igraphics::IMouseMod const&) /Volumes/Storage/code/IPlug2-linux/IGraphics/Controls/IPopupMenuControl.cpp:176
+    #10 0xc654df7eacbc in iplug::igraphics::IGraphics::OnMouseDown(std::vector<iplug::igraphics::IMouseInfo, std::allocator<iplug::igraphics::IMouseInfo> > const&) /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.cpp:1093
+    #11 0xc654df8ec824 in iplug::igraphics::IGraphicsLinux::HandleButton(_XEvent const&) /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:682
+    #12 0xc654df8eb710 in iplug::igraphics::IGraphicsLinux::HandleXEvent(_XEvent const&) /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:609
+    #13 0xc654df8ea864 in iplug::igraphics::IGraphicsLinux::ProcessXEvents() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:534
+    #14 0xc654df8ea578 in iplug::igraphics::IGraphicsLinux::OnDisplayTimer() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:512
+    #15 0xc654df8e6614 in operator() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:378
+    #16 0xc654df8f767c in __invoke_impl<void, iplug::igraphics::IGraphicsLinux::OpenWindow(void*)::<lambda()>&> /usr/include/c++/13/bits/invoke.h:61
+    #17 0xc654df8f7338 in __invoke_r<void, iplug::igraphics::IGraphicsLinux::OpenWindow(void*)::<lambda()>&> /usr/include/c++/13/bits/invoke.h:111
+    #18 0xc654df8f6f38 in _M_invoke /usr/include/c++/13/bits/std_function.h:290
+    #19 0xc654df6f4f98 in std::function<void ()>::operator()() const /usr/include/c++/13/bits/std_function.h:591
+    #20 0xc654df6eff6c in iplug::HostLoop::Dispatch(bool, unsigned long, int) /Volumes/Storage/code/IPlug2-linux/IPlug/Linux/IPlugLinuxHostLoop.cpp:230
+    #21 0xc654df44b754 in iplug::GLibHostLoopBackend::OnTimeout(void*) (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x20b754) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+    #22 0xfcfcd3260924  (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0x60924) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #23 0xfcfcd325f7ec  (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0x5f7ec) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #24 0xfcfcd32c1c34  (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0xc1c34) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #25 0xfcfcd325ebc4 in g_main_context_iteration (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0x5ebc4) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #26 0xc654df5e21d4 in SWELL_RunEvents() /Volumes/Storage/code/IPlug2-linux/WDL/swell/swell-generic-gdk.cpp:1931
+    #27 0xc654df4f3780 in SWELL_RunMessageLoop() /Volumes/Storage/code/IPlug2-linux/WDL/swell/swell-wnd-generic.cpp:868
+    #28 0xc654df48700c in main /Volumes/Storage/code/IPlug2-linux/IPlug/APP/IPlugAPP_main.cpp:580
+    #29 0xfcfcd26c84c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #30 0xfcfcd26c8594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #31 0xc654df399f6c in _start (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x159f6c) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+
+0x5210004d5a20 is located 288 bytes inside of 4176-byte region [0x5210004d5900,0x5210004d6950)
+freed by thread T0 here:
+    #0 0xfcfcd3a29444 in operator delete(void*, unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:164
+    #1 0xc654df8c57f8 in iplug::igraphics::ITextEntryControl::~ITextEntryControl() /Volumes/Storage/code/IPlug2-linux/IGraphics/Controls/ITextEntryControl.h:38
+    #2 0xc654df82d9b0 in std::default_delete<iplug::igraphics::ITextEntryControl>::operator()(iplug::igraphics::ITextEntryControl*) const (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x5ed9b0) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+    #3 0xc654df82f91c in std::__uniq_ptr_impl<iplug::igraphics::ITextEntryControl, std::default_delete<iplug::igraphics::ITextEntryControl> >::reset(iplug::igraphics::ITextEntryControl*) /usr/include/c++/13/bits/unique_ptr.h:211
+    #4 0xc654df82eb78 in std::unique_ptr<iplug::igraphics::ITextEntryControl, std::default_delete<iplug::igraphics::ITextEntryControl> >::reset(iplug::igraphics::ITextEntryControl*) (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x5eeb78) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+    #5 0xc654df827e8c in std::unique_ptr<iplug::igraphics::ITextEntryControl, std::default_delete<iplug::igraphics::ITextEntryControl> >::operator=(decltype(nullptr)) (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x5e7e8c) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+    #6 0xc654df7e558c in iplug::igraphics::IGraphics::RemoveTextEntryControl() /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.cpp:413
+    #7 0xc654df8f2f7c in iplug::igraphics::IGraphicsLinux::RemoveFinishedStandIns() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:1039
+    #8 0xc654df8f16e8 in iplug::igraphics::IGraphicsLinux::UpdateEditingState() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:931
+    #9 0xc654df8ea8d4 in iplug::igraphics::IGraphicsLinux::ProcessXEvents() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:536
+    #10 0xc654df8ea578 in iplug::igraphics::IGraphicsLinux::OnDisplayTimer() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:512
+    #11 0xc654df8e6614 in operator() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:378
+    #12 0xc654df8f767c in __invoke_impl<void, iplug::igraphics::IGraphicsLinux::OpenWindow(void*)::<lambda()>&> /usr/include/c++/13/bits/invoke.h:61
+    #13 0xc654df8f7338 in __invoke_r<void, iplug::igraphics::IGraphicsLinux::OpenWindow(void*)::<lambda()>&> /usr/include/c++/13/bits/invoke.h:111
+    #14 0xc654df8f6f38 in _M_invoke /usr/include/c++/13/bits/std_function.h:290
+    #15 0xc654df6f4f98 in std::function<void ()>::operator()() const /usr/include/c++/13/bits/std_function.h:591
+    #16 0xc654df6eff6c in iplug::HostLoop::Dispatch(bool, unsigned long, int) /Volumes/Storage/code/IPlug2-linux/IPlug/Linux/IPlugLinuxHostLoop.cpp:230
+    #17 0xc654df44b754 in iplug::GLibHostLoopBackend::OnTimeout(void*) (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x20b754) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+    #18 0xfcfcd3260924  (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0x60924) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #19 0xfcfcd325f7ec  (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0x5f7ec) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #20 0xfcfcd32c1c34  (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0xc1c34) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #21 0xfcfcd325ebc4 in g_main_context_iteration (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0x5ebc4) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #22 0xc654df5e21d4 in SWELL_RunEvents() /Volumes/Storage/code/IPlug2-linux/WDL/swell/swell-generic-gdk.cpp:1931
+    #23 0xc654df4f3780 in SWELL_RunMessageLoop() /Volumes/Storage/code/IPlug2-linux/WDL/swell/swell-wnd-generic.cpp:868
+    #24 0xc654df48700c in main /Volumes/Storage/code/IPlug2-linux/IPlug/APP/IPlugAPP_main.cpp:580
+    #25 0xfcfcd26c84c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #26 0xfcfcd26c8594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #27 0xc654df399f6c in _start (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x159f6c) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+
+previously allocated by thread T0 here:
+    #0 0xfcfcd3a28324 in operator new(unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:95
+    #1 0xc654df8289e8 in std::__detail::_MakeUniq<iplug::igraphics::ITextEntryControl>::__single_object std::make_unique<iplug::igraphics::ITextEntryControl>() (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x5e89e8) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+    #2 0xc654df7e54a8 in iplug::igraphics::IGraphics::AttachTextEntryControl() /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.cpp:406
+    #3 0xc654df8f4f58 in iplug::igraphics::IGraphicsLinux::CreatePlatformTextEntry(int, iplug::igraphics::IText const&, iplug::igraphics::IRECT const&, int, char const*) /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:1160
+    #4 0xc654df7f2620 in iplug::igraphics::IGraphics::CreateTextEntry(iplug::igraphics::IControl&, iplug::igraphics::IText const&, iplug::igraphics::IRECT const&, char const*, int) /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.cpp:1977
+    #5 0xc654df40d9a4 in iplug::igraphics::IVNumberBoxControl::OnMouseDblClick(float, float, iplug::igraphics::IMouseMod const&) (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x1cd9a4) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+    #6 0xc654df7ed1f8 in iplug::igraphics::IGraphics::OnMouseDblClick(float, float, iplug::igraphics::IMouseMod const&) /Volumes/Storage/code/IPlug2-linux/IGraphics/IGraphics.cpp:1256
+    #7 0xc654df8ec64c in iplug::igraphics::IGraphicsLinux::HandleButton(_XEvent const&) /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:680
+    #8 0xc654df8eb710 in iplug::igraphics::IGraphicsLinux::HandleXEvent(_XEvent const&) /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:609
+    #9 0xc654df8ea864 in iplug::igraphics::IGraphicsLinux::ProcessXEvents() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:534
+    #10 0xc654df8ea558 in iplug::igraphics::IGraphicsLinux::OnXConnectionReadable(int) /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:507
+    #11 0xc654df8e65d0 in operator() /Volumes/Storage/code/IPlug2-linux/IGraphics/Platforms/IGraphicsLinux.cpp:376
+    #12 0xc654df8f75ac in __invoke_impl<void, iplug::igraphics::IGraphicsLinux::OpenWindow(void*)::<lambda(int, int)>&, int, int> /usr/include/c++/13/bits/invoke.h:61
+    #13 0xc654df8f7120 in __invoke_r<void, iplug::igraphics::IGraphicsLinux::OpenWindow(void*)::<lambda(int, int)>&, int, int> /usr/include/c++/13/bits/invoke.h:111
+    #14 0xc654df8f6de0 in _M_invoke /usr/include/c++/13/bits/std_function.h:290
+    #15 0xc654df6f4eb4 in std::function<void (int, int)>::operator()(int, int) const /usr/include/c++/13/bits/std_function.h:591
+    #16 0xc654df6eff5c in iplug::HostLoop::Dispatch(bool, unsigned long, int) /Volumes/Storage/code/IPlug2-linux/IPlug/Linux/IPlugLinuxHostLoop.cpp:228
+    #17 0xc654df44b80c in iplug::GLibHostLoopBackend::OnFd(int, GIOCondition, void*) (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x20b80c) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+    #18 0xfcfcd325f7ec  (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0x5f7ec) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #19 0xfcfcd32c1c34  (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0xc1c34) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #20 0xfcfcd325ebc4 in g_main_context_iteration (/lib/aarch64-linux-gnu/libglib-2.0.so.0+0x5ebc4) (BuildId: c1a3727b895b1c60f4cf9e4c4d9345d98120775b)
+    #21 0xc654df5e21d4 in SWELL_RunEvents() /Volumes/Storage/code/IPlug2-linux/WDL/swell/swell-generic-gdk.cpp:1931
+    #22 0xc654df4f3780 in SWELL_RunMessageLoop() /Volumes/Storage/code/IPlug2-linux/WDL/swell/swell-wnd-generic.cpp:868
+    #23 0xc654df48700c in main /Volumes/Storage/code/IPlug2-linux/IPlug/APP/IPlugAPP_main.cpp:580
+    #24 0xfcfcd26c84c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #25 0xfcfcd26c8594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #26 0xc654df399f6c in _start (/Volumes/Storage/code/IPlug2-linux/linux-research/build/rev-p3b-asan/out/IPlugControls+0x159f6c) (BuildId: cdd1b825406b51d72a08dfdaf8da87eacd42c431)
+
+SUMMARY: AddressSanitizer: heap-use-after-free /Volumes/Storage/code/IPlug2-linux/IGraphics/IControl.h:482 in iplug::igraphics::IControl::GetUI()
+Shadow bytes around the buggy address:
+  0x5210004d5780: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x5210004d5800: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x5210004d5880: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x5210004d5900: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x5210004d5980: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+=>0x5210004d5a00: fd fd fd fd[fd]fd fd fd fd fd fd fd fd fd fd fd
+  0x5210004d5a80: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x5210004d5b00: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x5210004d5b80: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x5210004d5c00: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x5210004d5c80: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==3317==ABORTING
+EXIT=1
