@@ -48,7 +48,9 @@ test block in IPlugControls behind `IPLUG_TEST_DIALOGS`.
 3. **GNOME's portal dialog** (xdg-desktop-portal-gnome, GTK 4) is transient for the REAPER FX window (`WM_TRANSIENT_FOR`
    = the FX window, checked with xprop), attached modally under Mutter, and shows the proposed name, the folder and the
    `*.fxp` filter (`vm-portal-clap/d01-save-dialog.png`). `Request.Close` takes it away when the editor closes, and the
-   portal drops it when the process exits (APP). [V]
+   portal drops it when the process exits (APP). It preselects only the base name of the proposed `test preset.fxp`,
+   so typing a name keeps the extension, and GTK asks about an existing file itself: the "save onto an existing name"
+   step got GTK's question on the VM (`vm-portal-clap/sheet.png`, d02), our own one only with zenity. [V]
 4. **REAPER loads no GTK at all**: its maps hold `libgdk-3` and `libgdk_pixbuf` (SWELL draws with GDK only), no
    `libgtk*`. While a zenity or portal dialog shows, the set of GTK/GDK libraries in REAPER's process is unchanged
    (`gtk-libs-before.txt` = `gtk-libs-dialog-open.txt` in every run). The plug-in's NEEDED is unchanged:
