@@ -159,6 +159,7 @@ struct IGraphicsLinux::Impl
   unsigned long mResizeSerial = 0; // request serial of our last XResizeWindow
   int mParentW = 0;
   int mParentH = 0;
+  bool mHostSizeUnconfirmed = false; // the editor may have changed size while OpenWindow kept the host out
 
   HostLoop* mLoop = nullptr;
   int mTimerId = 0;
@@ -379,6 +380,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mTimerId = w.mLoop->AddTimer(frameMs, [this]() { OnDisplayTimer(); });
 
   XFlush(pDisplay);
+  w.mHostSizeUnconfirmed = true;
   mInOpenWindow = false;
   return reinterpret_cast<void*>(static_cast<uintptr_t>(w.mWindow));
 }
@@ -516,10 +518,30 @@ void IGraphicsLinux::OnDisplayTimer()
 {
   if (!ProcessXEvents())
     return;
+  if (mImpl->mHostSizeUnconfirmed)
+  {
+    const std::shared_ptr<bool> open = mImpl->mOpen;
+    mImpl->mHostSizeUnconfirmed = false;
+    TellHostTheOpenedSize();
+    if (!*open)
+      return;
+  }
   // Animations (a menu collapsing, the text cursor) end in IsDirty, outside any X event.
   DrawDirtyControls();
   if (mImpl->mOpen && *mImpl->mOpen)
     UpdateEditingState();
+}
+
+// While OpenWindow runs the host hears of no resize (mInOpenWindow), and an X11 host sizes the embed from
+// get_size/getSize, never from our window. A size the editor took while opening (a layout chosen from the
+// plug-in's state) reaches the host from here, the first frame after the open, outside its open call.
+void IGraphicsLinux::TellHostTheOpenedSize()
+{
+  const int windowWidth = WindowWidth() * GetPlatformWindowScale();
+  const int windowHeight = WindowHeight() * GetPlatformWindowScale();
+  IGEditorDelegate* pDelegate = GetDelegate();
+  if (windowWidth != pDelegate->GetEditorWidth() || windowHeight != pDelegate->GetEditorHeight())
+    pDelegate->EditorResizeFromUI(windowWidth, windowHeight, true);
 }
 
 bool IGraphicsLinux::ProcessXEvents()
