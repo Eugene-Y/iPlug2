@@ -80,7 +80,22 @@ colima status || colima start --cpu 6 --memory 8 --disk 50 --vm-type vz --vz-ros
    - Keep a **Log** section at the bottom of the task file, updated as you go: what is done, the commit, what's next. If you are interrupted, the next instance continues from it.
    - Commit often.
    - **One subagent at a time** if you delegate — limits kill parallel agents and lose work.
-4. **Self-review before handing over.** Run a separate reviewer pass (a fresh subagent, or yourself with fresh eyes) against the task's acceptance list and §2. Fix what it finds. Record the verdict in the task file.
+4. **Independent review before handing over (mandatory).** When your work is done, start a **separate reviewer subagent** with fresh context — never review your own work in the same context.
+   - **Give it:**
+     - the task file;
+     - the commit range (`git log hvoya-linux..linux/T-NNN`);
+     - your results and evidence paths;
+     - this file (AGENTS.md).
+   - **It checks:**
+     - the diff against the task's acceptance list and §2;
+     - that the evidence really shows what the Log claims — it opens screenshots itself;
+     - that the key tests still pass, re-run by itself;
+     - code quality and the shared-code / mac-win rule.
+
+     It writes its findings with severities into the task file's Log, or into `notes/NN-review-T-NNN.md` for larger tasks.
+   - **You fix the findings**, then the reviewer re-checks: at most 2 rounds.
+   - Run the reviewer **after** your own work, not in parallel with it, and keep only one subagent running at a time.
+   - Record the final verdict in the task file.
 5. **Hand over.** Set Status `review-done`, and list commits, evidence paths and open issues in the task file. Remove your Docker containers, release your locks, and leave the worktree in place. The **coordinator** merges `linux/T-NNN` into `hvoya-linux` (`--no-ff`), re-runs smoke tests, updates `tasks/README.md` and PLAN Progress, and removes the worktree.
 6. **After an interruption** (limits, sleep):
    - `git status`;
