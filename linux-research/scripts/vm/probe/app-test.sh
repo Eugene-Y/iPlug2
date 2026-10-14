@@ -23,7 +23,13 @@ log "render stddev $sd"
 wpctl status 2>/dev/null | grep -iE "$NAME|alsa_playback|ALSA plug-in" | sed 's/^/pipewire: /' | tee -a "$R"
 pw-dump 2>/dev/null | grep -o "\"application.name\": \"[^\"]*\"" | sort -u | sed 's/^/pw-client: /' | tee -a "$R"
 if [ -n "$STEPS" ]; then
+  # every X focus change during the steps, with the windows' names, for runs where a key went astray
+  gcc -O1 -include stdlib.h -o /tmp/focuswatch "$HERE/probe/focuswatch.c" -lX11 2>/dev/null
+  date +%T.%N > "$OUT/focus-trail-start.txt"; timeout 400 /tmp/focuswatch 390 > "$OUT/focus-trail.txt" 2>&1 & FW=$!
+  # straight into the file: xclip (set-clipboard) stays behind serving the selection and would hold a pipe open
   (echo "origin $OX $OY"; sed "s/__PROC__/$PID/" "$STEPS") | OUT="$OUT" "$HERE/xact.sh" > "$OUT/xact.log" 2>&1
+  kill "$FW" 2>/dev/null
+  log "windows in the focus trail: $(awk '{print $3}' "$OUT/focus-trail.txt" | sort -u | while read -r w; do printf '%s=%s; ' "$w" "$(xdotool getwindowname "$w" 2>/dev/null || echo '?')"; done)"
   grep -E "changed|FAIL|DEAD|ALIVE" "$OUT/xact.log" | tee -a "$R"
 fi
 "$HERE/threads.sh" "$PID" 10 > "$OUT/threads.txt" 2>&1
