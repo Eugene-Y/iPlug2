@@ -1,7 +1,7 @@
 # T-007 — P5: HiDPI / scaling on Linux
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** in-progress
+- **Owner:** worker instance (coordinator-launched), 2026-10-14
 - **Branch/worktree:** `linux/T-007` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-007`.
 - **Depends on:** T-002 (merged).
 - **Conflicts:** `IGraphics/Platforms/IGraphicsLinux*`, which T-008 also touches — don't run them in parallel. Also CLAP/VST3 GUI scale code (shared files; Linux-only branches).
@@ -43,3 +43,6 @@ Correct UI scale on HiDPI Linux desktops:
 - [ ] Self-review; evidence in `evidence/t007/`; Log complete.
 
 ## Log
+
+- 2026-10-14, worker instance. Worktree `/Volumes/Storage/code/IPlug2-T-007`, container `t007`, build dirs
+  `build/t007-*`, evidence `evidence/t007/`. Lock `T-007` held by the coordinator.
