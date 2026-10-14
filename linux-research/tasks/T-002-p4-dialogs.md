@@ -1,8 +1,8 @@
 # T-002 — P4: file, message and colour dialogs without GTK
 
-- **Status:** ready
-- **Owner:** coordinator (next after T-001)
-- **Branch/worktree:** `linux/T-002` from `hvoya-linux`.
+- **Status:** in-progress
+- **Owner:** worker instance (spawned by the coordinator, 2026-10-14)
+- **Branch/worktree:** `linux/T-002` from `hvoya-linux`, worktree `/Volumes/Storage/code/IPlug2-T-002`.
 - **Depends on:** —
 - **Conflicts:** `IGraphics/Platforms/IGraphicsLinux*.{h,cpp}` (T-007, T-008)
 
