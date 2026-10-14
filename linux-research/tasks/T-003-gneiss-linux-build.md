@@ -1,7 +1,7 @@
 # T-003 — Gneiss: Linux CMake build (CLAP, VST3, APP)
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** in-progress
+- **Owner:** Claude instance (T-003 session, 2026-10-14)
 - **Branches/worktrees:**
   - Gneiss repo: `linux-experiment` in `/Volumes/Storage/code/hvoya/Gneiss-linux` (local only, never push).
   - iPlug2: `linux/T-003` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-003`, and only if iPlug2 changes are needed.
