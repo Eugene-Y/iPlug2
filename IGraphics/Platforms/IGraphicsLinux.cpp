@@ -17,6 +17,7 @@
 
 #include "IGraphicsLinux.h"
 #include "IGraphicsLinuxDialogs.h"
+#include "IGraphicsLinuxScale.h"
 #include "IPlugAPIBase.h"
 #include "IPopupMenuControl.h"
 #include "ITextEntryControl.h"
@@ -140,6 +141,17 @@ PlatformFontPtr MakeFontFromFile(const char* path, int faceIdx)
 }
 } // namespace
 
+float iplug::igraphics::linux_scale::QueryDesktopScale()
+{
+  Display* pDisplay = XOpenDisplay(nullptr);
+  // Xft's own lookup: the server's RESOURCE_MANAGER property, else ~/.Xdefaults
+  const char* xftDpi = pDisplay ? XGetDefault(pDisplay, "Xft", "dpi") : nullptr;
+  const float scale = DesktopScale(xftDpi, getenv("GDK_SCALE"), getenv("QT_SCALE_FACTOR"));
+  if (pDisplay)
+    XCloseDisplay(pDisplay);
+  return scale;
+}
+
 struct IGraphicsLinux::Impl
 {
   const GLXFunctions* mGLX = nullptr;
@@ -158,6 +170,7 @@ struct IGraphicsLinux::Impl
   int mWindowW = 0; // physical size of our X window: last requested, or last seen when someone else resized it
   int mWindowH = 0;
   unsigned long mResizeSerial = 0; // request serial of our last XResizeWindow
+  bool mHostSizeUnconfirmed = false; // the open may have changed the size the host was told before it
   int mParentW = 0;
   int mParentH = 0;
 
@@ -217,6 +230,11 @@ IGraphicsLinux::IGraphicsLinux(IGEditorDelegate& dlg, int w, int h, int fps, flo
 : IGRAPHICS_DRAW_CLASS(dlg, w, h, fps, scale)
 , mImpl(std::make_unique<Impl>())
 {
+  // Before anything sizes the editor (a restored size, the layout). The host already has the editor's size at this
+  // scale (CLAP get_size, VST3 getSize), so it is not told again; nothing is open to resize either.
+  mInOpenWindow = true;
+  SetScreenScale(dlg.GetEditorScreenScale());
+  mInOpenWindow = false;
 }
 
 IGraphicsLinux::~IGraphicsLinux()
@@ -381,6 +399,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   const uint32_t frameMs = static_cast<uint32_t>(std::max(1, 1000 / std::max(1, FPS())));
   w.mTimerId = w.mLoop->AddTimer(frameMs, [this]() { OnDisplayTimer(); });
   w.mDialogs = std::make_unique<LinuxDialogs>(*w.mLoop);
+  w.mHostSizeUnconfirmed = true;
 
   XFlush(pDisplay);
   mInOpenWindow = false;
@@ -522,6 +541,8 @@ void IGraphicsLinux::OnDisplayTimer()
 {
   if (!ProcessXEvents())
     return;
+  if (mImpl->mHostSizeUnconfirmed && !TellHostTheOpenedSize())
+    return;
   // Animations (a menu collapsing, the text cursor) end in IsDirty, outside any X event.
   DrawDirtyControls();
   if (mImpl->mOpen && *mImpl->mOpen)
@@ -546,6 +567,21 @@ bool IGraphicsLinux::ProcessXEvents()
     if (*open)
       UpdateEditingState();
   }
+  return *open;
+}
+
+// The host asked for the editor's size before the open, which can still change it (a restored size, a plug-in's own
+// draw scale). It is told the opened size here, outside the open: the open does not tell it, because a host that
+// reacts synchronously could close the editor under it.
+bool IGraphicsLinux::TellHostTheOpenedSize()
+{
+  Impl& w = *mImpl;
+  w.mHostSizeUnconfirmed = false;
+  IGEditorDelegate* pDelegate = GetDelegate();
+  if (pDelegate->GetEditorWidth() == w.mWindowW && pDelegate->GetEditorHeight() == w.mWindowH)
+    return true;
+  const std::shared_ptr<bool> open = w.mOpen;
+  pDelegate->EditorResizeFromUI(w.mWindowW, w.mWindowH, true);
   return *open;
 }
 

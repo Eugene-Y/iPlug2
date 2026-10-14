@@ -98,6 +98,8 @@ private:
   bool IsMenuOpen();
   void DismissOpenMenu();
   void DrawDirtyControls();
+  /** @return false when the host closed the editor meanwhile */
+  bool TellHostTheOpenedSize();
   bool IsHostResizeEnabled();
   unsigned long GetDialogParentWindow();
   /** @return false when the editor is not open: then no dialog shows and the handler never runs */

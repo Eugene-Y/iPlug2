@@ -347,6 +347,12 @@ public:
    * @param scale The new screen scale*/
   virtual void SetScreenScale(float scale) {}
 
+#ifdef OS_LINUX
+  /** Called right before a host first asks for the editor's size (CLAP gui.create, VST3 createView, the APP's
+   * window). X11 sizes are physical pixels, so an editor that scales to the desktop updates its size here. */
+  virtual void UpdateEditorSizeForScreenScale() {}
+#endif
+
   friend class IPlugAPP;
   friend class IPlugAAX;
   friend class IPlugVST2;
