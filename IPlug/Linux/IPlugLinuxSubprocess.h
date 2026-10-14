@@ -41,11 +41,14 @@ public:
    * @return false if it could not be started */
   bool Start(const char* const* argv);
 
-  /** The read end of the stdout pipe, non-blocking; -1 when not running */
+  /** The read end of the stdout pipe, non-blocking; open until CloseOutput(), Kill() or the next Start() */
   int GetOutputFd() const { return mFd; }
 
   /** Reads whatever the program has written so far. @return true once it has finished */
   bool Pump();
+
+  /** Closes the pipe once finished. Separate from Pump() so that whoever watches the fd can stop watching it first. */
+  void CloseOutput();
 
   bool IsFinished() const { return mFinished; }
 
@@ -56,7 +59,7 @@ public:
   /** Everything the program wrote to stdout, with one trailing newline removed */
   const char* GetOutput() const { return mOutput.Get(); }
 
-  /** Terminates the program (and anything it started) and stops reading. Nothing is reported afterwards. */
+  /** Terminates the program (and anything it started) unless it has finished, and closes the pipe */
   void Kill();
 
   /** @return true if name is an absolute executable path, or an executable found in PATH */
@@ -64,6 +67,7 @@ public:
 
 private:
   void Finish();
+  bool HasCompleteExitLine() const;
 
   int mFd = -1;
   int mProcessGroup = 0;

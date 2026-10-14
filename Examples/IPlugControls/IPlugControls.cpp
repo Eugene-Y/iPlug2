@@ -3,11 +3,9 @@
 #include "IPlugPaths.h"
 #include "IconsForkAwesome.h"
 #include "IconsFontaudio.h"
-#ifdef IPLUG_TEST_DIALOGS
+#if defined IPLUG_TEST_DIALOGS && defined OS_LINUX
   #include <unistd.h>
-  #ifdef OS_LINUX
-    #include "Linux/IPlugLinuxHostLoop.h"
-  #endif
+  #include "Linux/IPlugLinuxHostLoop.h"
 #endif
 
 IPlugControls::IPlugControls(const InstanceInfo& info)
@@ -521,10 +519,12 @@ IPlugControls::IPlugControls(const InstanceInfo& info)
       auto report = [pGraphics, kTagTestResult](const char* what, const char* first, const char* second) {
   #ifdef OS_LINUX
         const long tid = HostLoopThreadId();
+        const bool onMainThread = tid == (long) getpid();
   #else
         const long tid = 0;
+        const bool onMainThread = true;
   #endif
-        fprintf(stderr, "IPLUG_TEST_DIALOG %s tid=%ld main=%d first='%s' second='%s'\n", what, tid, tid == (long) getpid(), first, second);
+        fprintf(stderr, "IPLUG_TEST_DIALOG %s tid=%ld main=%d first='%s' second='%s'\n", what, tid, onMainThread, first, second);
         fflush(stderr);
         WDL_String str;
         str.SetFormatted(1024, "%s: %s %s", what, first, second);

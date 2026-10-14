@@ -161,7 +161,7 @@ bool LinuxBackgroundProcess::Start(const char* const* argv)
 
 bool LinuxBackgroundProcess::Pump()
 {
-  if (mFd < 0)
+  if (mFinished || mFd < 0)
     return mFinished;
 
   char buffer[4096];
@@ -176,19 +176,23 @@ bool LinuxBackgroundProcess::Pump()
     }
     if (count < 0 && errno == EINTR)
       continue;
-    if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+    if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && !HasCompleteExitLine())
       return false;
+    // The status line ends it even if something the program started still holds the pipe open.
     Finish();
     return true;
   }
 }
 
+bool LinuxBackgroundProcess::HasCompleteExitLine() const
+{
+  const char* pMarker = FindLast(mOutput.Get(), kExitMarker);
+  return pMarker && strchr(pMarker + 1, '\n');
+}
+
 void LinuxBackgroundProcess::Finish()
 {
-  close(mFd);
-  mFd = -1;
   mFinished = true;
-
   if (const char* pMarker = FindLast(mOutput.Get(), kExitMarker))
   {
     mExitCode = atoi(pMarker + strlen(kExitMarker));
@@ -199,14 +203,21 @@ void LinuxBackgroundProcess::Finish()
   }
 }
 
+void LinuxBackgroundProcess::CloseOutput()
+{
+  if (mFd >= 0)
+    close(mFd);
+  mFd = -1;
+}
+
 void LinuxBackgroundProcess::Kill()
 {
   if (mFd < 0)
     return;
-  // Still reading means the subshell still holds the pipe, so the group (and its id) still exists.
-  kill(-mProcessGroup, SIGTERM);
-  close(mFd);
-  mFd = -1;
+  // The subshell writes the status line just before it exits: until it has, the group (and its id) still exists.
+  if (!Pump())
+    kill(-mProcessGroup, SIGTERM);
+  CloseOutput();
   mFinished = true;
 }
 

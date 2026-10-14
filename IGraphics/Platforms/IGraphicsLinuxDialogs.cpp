@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <initializer_list>
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -74,8 +75,8 @@ struct StringList : WDL_PtrList<WDL_String>
   ~StringList() { Empty(true); }
 };
 
-/** "fxp", "wav aif", ".wav .aif", "*.wav;*.aif" -> wav, aif */
-void SplitExtensions(const char* list, WDL_PtrList<WDL_String>& extensions)
+/** Items separated by spaces, commas, semicolons or tabs */
+void SplitList(const char* list, WDL_PtrList<WDL_String>& items)
 {
   auto isSeparator = [](char c) { return c == ' ' || c == ',' || c == ';' || c == '\t'; };
   for (const char* p = list ? list : ""; *p;)
@@ -85,10 +86,23 @@ void SplitExtensions(const char* list, WDL_PtrList<WDL_String>& extensions)
     const char* pStart = p;
     while (*p && !isSeparator(*p))
       p++;
-    while (pStart < p && (*pStart == '*' || *pStart == '.'))
-      pStart++;
     if (pStart < p)
-      extensions.Add(new WDL_String(pStart, static_cast<int>(p - pStart)));
+      items.Add(new WDL_String(pStart, static_cast<int>(p - pStart)));
+  }
+}
+
+/** "fxp", "wav aif", ".wav .aif", "*.wav;*.aif" -> wav, aif */
+void SplitExtensions(const char* list, WDL_PtrList<WDL_String>& extensions)
+{
+  StringList items;
+  SplitList(list, items);
+  for (int i = 0; i < items.GetSize(); i++)
+  {
+    const char* pExtension = items.Get(i)->Get();
+    while (*pExtension == '*' || *pExtension == '.')
+      pExtension++;
+    if (*pExtension)
+      extensions.Add(new WDL_String(pExtension));
   }
 }
 
@@ -125,16 +139,20 @@ void AppendPlainGlobs(WDL_String& globs, const WDL_PtrList<WDL_String>& extensio
   }
 }
 
+/** Compares whole suffixes, so "tar.gz" matches "x.tar.gz"; a bare ".fxp" is a hidden file without one */
 bool HasOneOfExtensions(const char* path, const WDL_PtrList<WDL_String>& extensions)
 {
   const char* pName = strrchr(path, '/');
   pName = pName ? pName + 1 : path;
-  const char* pDot = strrchr(pName, '.');
-  if (!pDot || pDot == pName)
-    return false;
+  const size_t nameLength = strlen(pName);
   for (int i = 0; i < extensions.GetSize(); i++)
   {
-    if (strcasecmp(pDot + 1, extensions.Get(i)->Get()) == 0)
+    const char* pExtension = extensions.Get(i)->Get();
+    const size_t suffixLength = strlen(pExtension) + 1;
+    if (nameLength <= suffixLength)
+      continue;
+    const char* pSuffix = pName + nameLength - suffixLength;
+    if (pSuffix[0] == '.' && strcasecmp(pSuffix + 1, pExtension) == 0)
       return true;
   }
   return false;
@@ -212,16 +230,37 @@ bool PathFromFileURI(const char* uri, WDL_String& path)
   return path.GetLength() > 0;
 }
 
+/** "0.5" -> 0.5, with '.' whatever the host's LC_NUMERIC says (scanf would follow it) */
+bool ParseDecimal(const char* text, float& value)
+{
+  if (!isdigit(static_cast<unsigned char>(*text)))
+    return false;
+  value = 0.f;
+  for (; isdigit(static_cast<unsigned char>(*text)); text++)
+    value = value * 10.f + (*text - '0');
+  if (*text == '.')
+  {
+    float scale = 0.1f;
+    for (text++; isdigit(static_cast<unsigned char>(*text)); text++, scale *= 0.1f)
+      value += (*text - '0') * scale;
+  }
+  return *text == ')';
+}
+
 /** "rgb(1,2,3)", "rgba(1,2,3,0.5)" (zenity), "#010203" (kdialog) */
 bool ParseColor(const char* text, IColor& color)
 {
-  int r = 0, g = 0, b = 0;
-  float a = 1.f;
+  int r = 0, g = 0, b = 0, alphaAt = 0;
+  float alpha = 1.f;
   unsigned int rgb = 0;
-  if (sscanf(text, "rgba(%d,%d,%d,%f)", &r, &g, &b, &a) == 4 || sscanf(text, "rgb(%d,%d,%d)", &r, &g, &b) == 3)
+  if (sscanf(text, "rgba(%d,%d,%d,%n", &r, &g, &b, &alphaAt) == 3 && alphaAt > 0 && ParseDecimal(text + alphaAt, alpha))
   {
-    const int alpha = strncmp(text, "rgba", 4) == 0 ? static_cast<int>(a * 255.f + 0.5f) : color.A;
-    color = IColor(Clip(alpha, 0, 255), Clip(r, 0, 255), Clip(g, 0, 255), Clip(b, 0, 255));
+    color = IColor(Clip(static_cast<int>(alpha * 255.f + 0.5f), 0, 255), Clip(r, 0, 255), Clip(g, 0, 255), Clip(b, 0, 255));
+    return true;
+  }
+  if (sscanf(text, "rgb(%d,%d,%d)", &r, &g, &b) == 3)
+  {
+    color = IColor(color.A, Clip(r, 0, 255), Clip(g, 0, 255), Clip(b, 0, 255));
     return true;
   }
   if (sscanf(text, "#%6x", &rgb) == 1 && strlen(text) >= 7)
@@ -247,6 +286,12 @@ public:
   ~ArgList() { mArgs.Empty(true); }
 
   void Add(const char* arg) { mArgs.Add(new WDL_String(arg)); }
+
+  void Add(std::initializer_list<const char*> args)
+  {
+    for (const char* pArg : args)
+      Add(pArg);
+  }
 
   void Add(const char* option, const char* value)
   {
@@ -356,17 +401,11 @@ void BuildZenityArgs(const LinuxDialogRequest& request, ArgList& args)
       switch (request.messageType)
       {
         case kMB_OK: args.Add("--info"); break;
-        case kMB_OKCANCEL: args.Add("--question"); args.Add("--ok-label=OK"); args.Add("--cancel-label=Cancel"); break;
-        case kMB_YESNO: args.Add("--question"); args.Add("--ok-label=Yes"); args.Add("--cancel-label=No"); break;
-        case kMB_RETRYCANCEL: args.Add("--warning"); args.Add("--ok-label=Retry"); args.Add("--extra-button=Cancel"); break;
+        case kMB_OKCANCEL: args.Add({ "--question", "--ok-label=OK", "--cancel-label=Cancel" }); break;
+        case kMB_YESNO: args.Add({ "--question", "--ok-label=Yes", "--cancel-label=No" }); break;
+        case kMB_RETRYCANCEL: args.Add({ "--warning", "--ok-label=Retry", "--extra-button=Cancel" }); break;
         // The answer is the button's label on stdout; Escape prints nothing, which reads as Cancel, as on macOS.
-        case kMB_YESNOCANCEL:
-          args.Add("--question");
-          args.Add("--switch");
-          args.Add("--extra-button=Yes");
-          args.Add("--extra-button=No");
-          args.Add("--extra-button=Cancel");
-          break;
+        case kMB_YESNOCANCEL: args.Add({ "--question", "--switch", "--extra-button=Yes", "--extra-button=No", "--extra-button=Cancel" }); break;
       }
       args.Add("--no-markup");
       args.Add("--text=", request.text.Get());
@@ -374,8 +413,10 @@ void BuildZenityArgs(const LinuxDialogRequest& request, ArgList& args)
     }
     case EKind::Color:
     {
+      // Integer arithmetic: printf's %f would write a decimal comma in a host running in, say, a German locale.
+      const int alphaThousandths = (request.color.A * 1000 + 127) / 255;
       char color[64];
-      snprintf(color, sizeof(color), "rgba(%d,%d,%d,%.3f)", request.color.R, request.color.G, request.color.B, request.color.A / 255.f);
+      snprintf(color, sizeof(color), "rgba(%d,%d,%d,%d.%03d)", request.color.R, request.color.G, request.color.B, alphaThousandths / 1000, alphaThousandths % 1000);
       args.Add("--color-selection");
       args.Add("--color=", color);
       break;
@@ -476,11 +517,11 @@ void BuildKDialogArgs(const LinuxDialogRequest& request, ArgList& args)
       const char* pText = KDialogText(request.text.Get(), storage);
       switch (request.messageType)
       {
-        case kMB_OK: args.Add("--msgbox"); args.Add(pText); break;
-        case kMB_OKCANCEL: args.Add("--yesno"); args.Add(pText); args.Add("--yes-label"); args.Add("OK"); args.Add("--no-label"); args.Add("Cancel"); break;
-        case kMB_YESNO: args.Add("--yesno"); args.Add(pText); break;
-        case kMB_RETRYCANCEL: args.Add("--warningyesno"); args.Add(pText); args.Add("--yes-label"); args.Add("Retry"); args.Add("--no-label"); args.Add("Cancel"); break;
-        case kMB_YESNOCANCEL: args.Add("--yesnocancel"); args.Add(pText); break;
+        case kMB_OK: args.Add({ "--msgbox", pText }); break;
+        case kMB_OKCANCEL: args.Add({ "--yesno", pText, "--yes-label", "OK", "--no-label", "Cancel" }); break;
+        case kMB_YESNO: args.Add({ "--yesno", pText }); break;
+        case kMB_RETRYCANCEL: args.Add({ "--warningyesno", pText, "--yes-label", "Retry", "--no-label", "Cancel" }); break;
+        case kMB_YESNOCANCEL: args.Add({ "--yesnocancel", pText }); break;
       }
       break;
     }
@@ -538,7 +579,7 @@ void GetBackendOrder(WDL_TypedBuf<EBackend>& order)
   if (pOverride && pOverride[0])
   {
     StringList names;
-    SplitExtensions(pOverride, names);
+    SplitList(pOverride, names);
     for (int i = 0; i < names.GetSize(); i++)
     {
       const char* pName = names.Get(i)->Get();
@@ -600,6 +641,7 @@ private:
   WDL_String mToken;
   WDL_String mRequestPath; // where the portal will put the request, from our unique name and the token
   WDL_String mHandle;      // where it says it put it (older portals ignore the token)
+  bool mAnswered = false;  // the Response came: the request object is gone, nothing to close
 };
 
 bool PortalFileChooser::Start(const LinuxDialogRequest& request)
@@ -832,6 +874,7 @@ PortalFileChooser::EState PortalFileChooser::Handle(dbus::Message* pMessage, Lin
     if (callSent && ours && !strcmp(pInterface, kRequestInterface) && !strcmp(pMember, "Response"))
     {
       ParseResponse(pMessage, result);
+      mAnswered = true;
       return EState::Done;
     }
   }
@@ -953,7 +996,7 @@ void PortalFileChooser::Dismiss()
   if (!mConnection)
     return;
   const bool callSent = mStep == EStep::Call || mStep == EStep::Response;
-  if (callSent && mDBus->connection_get_is_connected(mConnection))
+  if (callSent && !mAnswered && mDBus->connection_get_is_connected(mConnection))
   {
     // The portal also closes it when our connection goes, but not every version does so at once.
     const char* pPath = mHandle.GetLength() ? mHandle.Get() : mRequestPath.Get();
@@ -987,13 +1030,24 @@ void WarnNoDialog(const LinuxDialogRequest& request)
 #pragma mark - LinuxDialogs::Job
 
 /** One dialog from Show() to its handler: the backends in order until one answers, then, for a save whose name
- * got its extension added, an overwrite question if that file exists. */
+ * got its extension added, an overwrite question if that file exists.
+ * Each backend's fd is unwatched before it is closed: hosts that unregister by fd number (CLAP) would otherwise
+ * drop or keep the wrong watch once the number is reused. */
 struct LinuxDialogs::Job
 {
   enum class EStage { Ask, ConfirmOverwrite };
 
+  explicit Job(HostLoop& loop) : mLoop(loop) {}
+  ~Job()
+  {
+    StopWatching();
+    Dismiss();
+  }
+
+  HostLoop& mLoop;
   LinuxDialogRequest mRequest;
   LinuxDialogRequest mConfirmRequest;
+  WDL_String mPathToConfirm;
   Handler mHandler;
   EStage mStage = EStage::Ask;
   WDL_TypedBuf<EBackend> mBackends;
@@ -1007,13 +1061,27 @@ struct LinuxDialogs::Job
   bool mDone = false;
 
   int mFdId = 0;
-  int mWatchedFd = -1;
-  bool mFdFailed = false;
+  bool mFdFailed = false; // the current backend's fd hung up: the poll timer alone finishes it
 
   const LinuxDialogRequest& Asked() const { return mStage == EStage::Ask ? mRequest : mConfirmRequest; }
 
+  int GetFd() const
+  {
+    if (mPortal)
+      return mPortal->GetFd();
+    return mProgram ? mProcess.GetOutputFd() : -1;
+  }
+
+  void StopWatching()
+  {
+    if (mFdId)
+      mLoop.RemoveFd(mFdId);
+    mFdId = 0;
+  }
+
   void StartNextBackend()
   {
+    mFdFailed = false;
     while (mNextBackend < mBackends.GetSize())
     {
       const EBackend backend = mBackends.Get()[mNextBackend++];
@@ -1060,6 +1128,7 @@ struct LinuxDialogs::Job
       const PortalFileChooser::EState state = mPortal->Pump(answer);
       if (state == PortalFileChooser::EState::Running)
         return;
+      StopWatching();
       mPortal.reset();
       if (state == PortalFileChooser::EState::Unavailable)
         StartNextBackend();
@@ -1072,6 +1141,8 @@ struct LinuxDialogs::Job
     {
       if (!mProcess.Pump())
         return;
+      StopWatching();
+      mProcess.CloseOutput();
       const DialogProgram* pProgram = mProgram;
       mProgram = nullptr;
       if (!pProgram->mParse(Asked(), mProcess.GetExitCode(), mProcess.GetOutput(), answer))
@@ -1091,7 +1162,7 @@ struct LinuxDialogs::Job
       if (answer.message == kYES)
       {
         mResult.accepted = true;
-        mResult.path.Set(mConfirmRequest.fileName.Get());
+        mResult.path.Set(mPathToConfirm.Get());
       }
       mDone = true;
       return;
@@ -1111,17 +1182,17 @@ struct LinuxDialogs::Job
       if (PathExists(mResult.path.Get()))
         AskOverwrite();
     }
-    }
+  }
 
   void AskOverwrite()
   {
-    const char* pName = strrchr(mResult.path.Get(), '/');
+    mPathToConfirm.Set(mResult.path.Get());
+    const char* pName = strrchr(mPathToConfirm.Get(), '/');
     mConfirmRequest = LinuxDialogRequest();
     mConfirmRequest.kind = EKind::Message;
     mConfirmRequest.messageType = kMB_YESNO;
     mConfirmRequest.title.Set(mRequest.title.Get());
-    mConfirmRequest.text.SetFormatted(1024, "\xE2\x80\x9C%s\xE2\x80\x9D already exists. Do you want to replace it?", pName ? pName + 1 : mResult.path.Get());
-    mConfirmRequest.fileName.Set(mResult.path.Get());
+    mConfirmRequest.text.SetFormatted(1024, "\xE2\x80\x9C%s\xE2\x80\x9D already exists. Do you want to replace it?", pName ? pName + 1 : mPathToConfirm.Get());
     mConfirmRequest.parentWindow = mRequest.parentWindow;
     mResult = LinuxDialogResult();
     mStage = EStage::ConfirmOverwrite;
@@ -1130,15 +1201,9 @@ struct LinuxDialogs::Job
     StartNextBackend();
   }
 
-  int GetFd() const
-  {
-    if (mPortal)
-      return mPortal->GetFd();
-    return mProgram ? mProcess.GetOutputFd() : -1;
-  }
-
   void Dismiss()
   {
+    StopWatching();
     mPortal.reset();
     mProcess.Kill();
     mProgram = nullptr;
@@ -1162,7 +1227,7 @@ LinuxDialogs::~LinuxDialogs()
 
 void LinuxDialogs::Show(const LinuxDialogRequest& request, Handler handler)
 {
-  Job* pJob = new Job();
+  Job* pJob = new Job(mLoop);
   pJob->mRequest = request;
   if (!pJob->mRequest.title.GetLength())
     pJob->mRequest.title.Set(DefaultTitle(request.kind));
@@ -1179,8 +1244,6 @@ void LinuxDialogs::DismissAll()
   {
     std::unique_ptr<Job> job(mJobs.Get(0));
     mJobs.Delete(0);
-    if (job->mFdId)
-      mLoop.RemoveFd(job->mFdId);
     job->Dismiss();
   }
   UpdateWatches();
@@ -1199,21 +1262,14 @@ void LinuxDialogs::UpdateWatches()
   for (int i = 0; i < mJobs.GetSize(); i++)
   {
     Job* pJob = mJobs.Get(i);
-    const int fd = pJob->mDone || pJob->mFdFailed ? -1 : pJob->GetFd();
-    if (fd == pJob->mWatchedFd)
-      continue;
-    if (pJob->mFdId)
-      mLoop.RemoveFd(pJob->mFdId);
-    pJob->mFdId = 0;
-    pJob->mWatchedFd = fd;
-    if (fd < 0)
+    const int fd = pJob->GetFd();
+    if (pJob->mFdId || pJob->mDone || pJob->mFdFailed || fd < 0)
       continue;
     pJob->mFdId = mLoop.AddFd(fd, HostLoop::kFdRead, [this, pJob](int, int flags) {
       if ((flags & HostLoop::kFdError) && mJobs.Find(pJob) >= 0)
       {
-        // Hung up: the timer reads the end of it; watching on would fire forever.
-        mLoop.RemoveFd(pJob->mFdId);
-        pJob->mFdId = 0;
+        // Hung up: the poll timer reads the end of it; watching on would fire forever.
+        pJob->StopWatching();
         pJob->mFdFailed = true;
       }
       Poll();
@@ -1237,13 +1293,10 @@ void LinuxDialogs::Poll()
     }
     std::unique_ptr<Job> job(mJobs.Get(i));
     mJobs.Delete(i);
-    if (job->mFdId)
-      mLoop.RemoveFd(job->mFdId);
-    UpdateWatches();
-
     const Handler handler = std::move(job->mHandler);
     const LinuxDialogResult result = job->mResult;
     job.reset();
+    UpdateWatches();
     if (handler)
       handler(result);
     if (!*alive)

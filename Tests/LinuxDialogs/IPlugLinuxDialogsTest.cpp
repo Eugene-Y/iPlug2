@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <clocale>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -29,6 +30,7 @@ using EKind = LinuxDialogRequest::EKind;
 namespace
 {
 int gFailures = 0;
+int gStaleWatches = 0;
 
 void Check(bool condition, const std::string& label)
 {
@@ -51,7 +53,10 @@ public:
   bool Register(HostLoopEntry& entry) override
   {
     entry.mHandle = ++mNextHandle;
-    mEntries.push_back({ entry.mIsFd, entry.mHandle, entry.mFd });
+    struct stat info {};
+    if (entry.mIsFd)
+      fstat(entry.mFd, &info);
+    mEntries.push_back({ entry.mIsFd, entry.mHandle, entry.mFd, info.st_dev, info.st_ino });
     return true;
   }
   void Unregister(HostLoopEntry& entry) override
@@ -70,9 +75,18 @@ public:
     const std::vector<Registration> entries = mEntries; // callbacks add and remove entries
     for (const Registration& r : entries)
     {
+      if (!IsRegistered(r))
+        continue;
       if (!r.isFd)
       {
         mLoop.Dispatch(false, r.handle);
+        continue;
+      }
+      // Like hosts that key watches by fd number: a watch whose fd was closed (and maybe reused) is a bug.
+      struct stat info {};
+      if (fstat(r.fd, &info) != 0 || info.st_dev != r.dev || info.st_ino != r.ino)
+      {
+        gStaleWatches++;
         continue;
       }
       pollfd p { r.fd, POLLIN, 0 };
@@ -83,7 +97,18 @@ public:
   size_t GetCount() const { return mEntries.size(); }
 
 private:
-  struct Registration { bool isFd; uintptr_t handle; int fd; };
+  struct Registration;
+  bool IsRegistered(const Registration& r) const
+  {
+    for (const Registration& e : mEntries)
+    {
+      if (e.isFd == r.isFd && e.handle == r.handle)
+        return true;
+    }
+    return false;
+  }
+
+  struct Registration { bool isFd; uintptr_t handle; int fd; dev_t dev; ino_t ino; };
   std::vector<Registration> mEntries;
   uintptr_t mNextHandle = 0;
 };
@@ -303,6 +328,44 @@ void TestFallbackChain()
   setenv("PATH", path.c_str(), 1);
 }
 
+void TestExtensionsAndSlowExit()
+{
+  WriteScript("zenity", "printf '%s\\n' \"$ANSWER\"\n");
+  Fixture f;
+  LinuxDialogResult result;
+  setenv("ANSWER", "/x/a.tar.gz", 1);
+  Check(f.Run(FileRequest(EKind::SaveFile, "tar.gz"), result) && std::string(result.path.Get()) == "/x/a.tar.gz", "two-part extension kept");
+  setenv("ANSWER", "/x/a.TAR.GZ", 1);
+  Check(f.Run(FileRequest(EKind::SaveFile, "tar.gz"), result) && std::string(result.path.Get()) == "/x/a.TAR.GZ", "extension compared without case");
+  setenv("ANSWER", "/x.d/a", 1);
+  Check(f.Run(FileRequest(EKind::SaveFile, "fxp"), result) && std::string(result.path.Get()) == "/x.d/a.fxp", "a dot in the folder is no extension");
+
+  // Something the program started keeps the pipe open: the status line still ends the dialog.
+  WriteScript("zenity", "/bin/sleep 5 &\nprintf '/quick\\n'\n");
+  const auto start = std::chrono::steady_clock::now();
+  Check(f.Run(FileRequest(EKind::OpenFile), result) && std::string(result.path.Get()) == "/quick", "answer while a child holds the pipe");
+  Check(std::chrono::steady_clock::now() - start < std::chrono::seconds(2), "no wait for the pipe's end");
+}
+
+void TestColourWithDecimalComma()
+{
+  if (!setlocale(LC_NUMERIC, "de_DE.UTF-8"))
+  {
+    std::cerr << "skip decimal comma: no de_DE.UTF-8 locale (locale-gen de_DE.UTF-8)\n";
+    return;
+  }
+  WriteScript("zenity", "for a in \"$@\"; do printf '%s\\n' \"$a\"; done > \"$ARGS_FILE\"\nprintf 'rgba(1,2,3,0.5)\\n'\n");
+  Fixture f;
+  LinuxDialogResult result;
+  LinuxDialogRequest request;
+  request.kind = EKind::Color;
+  request.color = IColor(255, 10, 200, 30);
+  f.Run(request, result);
+  Check(ReadFile(getenv("ARGS_FILE")).find("--color=rgba(10,200,30,1.000)\n") != std::string::npos, "decimal comma locale: colour sent with a point");
+  Check(result.accepted && result.color == IColor(128, 1, 2, 3), "decimal comma locale: alpha read with a point");
+  setlocale(LC_NUMERIC, "C");
+}
+
 void TestDismiss()
 {
   const std::string pidFile = gTempDir + "/pid";
@@ -424,11 +487,14 @@ int main()
   TestOverwriteQuestion();
   TestMessagesAndColour();
   TestFallbackChain();
+  TestExtensionsAndSlowExit();
+  TestColourWithDecimalComma();
   TestDismiss();
   TestHandlerDestroysDialogs();
   TestChildLocale();
   TestPortalUnavailable();
 
+  Check(gStaleWatches == 0, "no fd watch outlived its fd (" + std::to_string(gStaleWatches) + " stale)");
   std::cerr << (gFailures ? "FAILED: " : "PASSED") << (gFailures ? std::to_string(gFailures) : "") << "\n";
   return gFailures ? 1 : 0;
 }

@@ -1323,12 +1323,11 @@ bool IGraphicsLinux::ShowDialog(LinuxDialogRequest& request, std::function<void(
 
 // Linux dialogs are asynchronous only, like on iOS: a blocking one would stall the host's main thread, whose loop
 // is not ours to run nested. A call without a handler gets an empty answer at once.
-static void WarnBlockingDialogCall(const char* method)
+static void WarnBlockingDialogCall(const char* method, bool& warned)
 {
-  static bool sWarned = false;
-  if (!sWarned)
+  if (!warned)
     fprintf(stderr, "iPlug2: %s without a completion handler cannot block on Linux, returned empty. Pass a handler.\n", method);
-  sWarned = true;
+  warned = true;
 }
 
 EMsgBoxResult IGraphicsLinux::ShowMessageBox(const char* str, const char* title, EMsgBoxType type, IMsgBoxCompletionHandlerFunc completionHandler)
@@ -1351,8 +1350,9 @@ void IGraphicsLinux::PromptForFile(WDL_String& fileName, WDL_String& path, EFile
 {
   if (!WindowIsOpen() || !completionHandler)
   {
+    static bool sWarned = false;
     if (WindowIsOpen())
-      WarnBlockingDialogCall("PromptForFile");
+      WarnBlockingDialogCall("PromptForFile", sWarned);
     fileName.Set("");
     return;
   }
@@ -1381,8 +1381,9 @@ void IGraphicsLinux::PromptForDirectory(WDL_String& dir, IFileDialogCompletionHa
 {
   if (!WindowIsOpen() || !completionHandler)
   {
+    static bool sWarned = false;
     if (WindowIsOpen())
-      WarnBlockingDialogCall("PromptForDirectory");
+      WarnBlockingDialogCall("PromptForDirectory", sWarned);
     dir.Set("");
     return;
   }
@@ -1405,7 +1406,8 @@ bool IGraphicsLinux::PromptForColor(IColor& color, const char* str, IColorPicker
   ReleaseMouseCapture();
   if (!func)
   {
-    WarnBlockingDialogCall("PromptForColor");
+    static bool sWarned = false;
+    WarnBlockingDialogCall("PromptForColor", sWarned);
     return false;
   }
 
