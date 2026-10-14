@@ -8,6 +8,8 @@
 #   synchronous call (empty at once), Cyrillic and spaces in every path, every handler on REAPER's main thread,
 #   the editor closed with a dialog open (dialog gone, no handler, REAPER alive, dialogs work after reopening),
 #   no GTK library added to REAPER's process while a dialog shows, the dialog program not REAPER's child.
+# EXPECT_PORTAL=1 (the VM): file and folder dialogs must come from xdg-desktop-portal (no zenity while they show),
+#   transient for REAPER's FX window; closing the editor must take the portal's dialog away too.
 set -uo pipefail
 OUT="$1"; FX="$2"; PLUG="$3"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -62,8 +64,16 @@ click t-save; w=$(wait_window "Save File") && {
   gtk_libs > "$OUT/gtk-libs-dialog-open.txt"
   if diff -q "$OUT/gtk-libs-before.txt" "$OUT/gtk-libs-dialog-open.txt" >/dev/null; then pass "no GTK library added to REAPER while the dialog shows ($(wc -l < "$OUT/gtk-libs-before.txt") GTK/GDK files are REAPER's own)"
   else fail "GTK libraries changed in REAPER's process: $(diff "$OUT/gtk-libs-before.txt" "$OUT/gtk-libs-dialog-open.txt" | tr '\n' ' ')"; fi
-  zp=$(pgrep -x zenity | head -1); pp=$(ps -o ppid= -p "$zp" | tr -d ' ')
-  if [ -n "$zp" ] && [ "$pp" != "$RPID" ]; then pass "zenity pid $zp, parent $pp ($(ps -o comm= -p "$pp")), not REAPER"; else fail "zenity pid '$zp' parent '$pp'"; fi
+  if [ "${EXPECT_PORTAL:-0}" = 1 ]; then
+    owner=$(ps -o args= -p "$(xdotool getwindowpid "$w" 2>/dev/null)" 2>/dev/null)
+    transient=$(xprop -id "$w" WM_TRANSIENT_FOR 2>/dev/null | awk '{print $NF}')
+    parentName=$(xdotool getwindowname "$transient" 2>/dev/null)
+    [ -z "$(helpers)" ] && grep -q portal <<<"$owner" && pass "save dialog shown by '$owner', no zenity" || fail "save dialog owner '$owner', helpers: $(helpers | tr '\n' ' ')"
+    grep -q "${FX#*: }.*Track 1" <<<"$parentName" && pass "dialog transient for $transient '$parentName'" || fail "WM_TRANSIENT_FOR '$transient' is '$parentName', not the FX window"
+  else
+    zp=$(pgrep -x zenity | head -1); pp=$(ps -o ppid= -p "$zp" | tr -d ' ')
+    if [ -n "$zp" ] && [ "$pp" != "$RPID" ]; then pass "zenity pid $zp, parent $pp ($(ps -o comm= -p "$pp")), not REAPER"; else fail "zenity pid '$zp' parent '$pp'"; fi
+  fi
   xdotool type --delay 50 "новый пресет"; sleep 0.3; xdotool key Return; }
 expect save "save .* first='$D/новый пресет\.fxp' second='$D/'"
 
@@ -90,7 +100,7 @@ expect dir-cancel "dir .* first='' second=''"
 # message boxes
 click t-ync; w=$(wait_window "Dialog test") && {
   shot d05-msg-yesnocancel
-  eval "$(xdotool getwindowgeometry --shell "$w")"; xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT - 22)) click 1; }
+  xdotool key Tab Return; } # focus moves from Yes to No (GTK 4 client-side shadows make clicking by geometry unreliable)
 expect msg-no "msg-ync .*first='NO'"
 click t-ync; w=$(wait_window "Dialog test") && xdotool key Escape
 expect msg-escape "msg-ync .*first='CANCEL'"
@@ -117,6 +127,7 @@ for kind in t-save t-ync t-color; do
   "$HERE/rpr.sh" "reaper.TrackFX_Show(reaper.GetTrack(0,0),0,2)" >/dev/null
   sleep 1.5
   if [ -n "$(helpers)" ]; then fail "close-mid-dialog $kind: dialog program still running: $(helpers | tr '\n' ' ')"; else pass "close-mid-dialog $kind: dialog program gone"; fi
+  xdotool search --onlyvisible --name "^$title\$" >/dev/null 2>&1 && fail "close-mid-dialog $kind: a '$title' window is still showing" || pass "close-mid-dialog $kind: no '$title' window left"
   expect_none "close-mid-dialog $kind"
   alive && pass "close-mid-dialog $kind: REAPER alive" || { fail "REAPER died"; break; }
   "$HERE/rpr.sh" "reaper.TrackFX_Show(reaper.GetTrack(0,0),0,3)" >/dev/null; sleep 2.5

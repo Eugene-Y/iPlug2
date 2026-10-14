@@ -40,6 +40,8 @@ for c in $(seq 1 "$N"); do
   sleep 0.8
   left=$(pgrep -xc 'zenity|kdialog')
   [ "$left" = 0 ] || { echo "cycle $c: $left dialog programs still running after close" | tee -a "$R"; bad=1; }
+  # a portal's dialog lives in the portal's process: its window must go as well
+  xdotool search --onlyvisible --name "^${TITLES[$k]}\$" >/dev/null 2>&1 && { echo "cycle $c: '${TITLES[$k]}' still showing after close" | tee -a "$R"; bad=1; }
   st=$(ps -o stat= -p "$RPID" 2>/dev/null); [[ -n "$st" && "$st" != Z* ]] || { echo "REAPER DEAD at cycle $c" | tee -a "$R"; exit 1; }
   [ $((c % 10)) = 0 ] && census "after-$c-closed"
 done

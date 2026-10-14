@@ -29,11 +29,13 @@ check 2 "msg-ync .*first='CANCEL'"
 # the APP's window closed with a dialog open: the APP exits, the dialog goes with it
 xdotool mousemove $((OX + 889)) $((OY + 628)) click 1
 wait_window "Save File"
-w=$(xdotool search --onlyvisible --name "^$NAME\$" | head -1)
-# a polite WM close (openbox: Alt+F4); XDestroyWindow would kill the APP through a GDK X error instead
-xdotool windowactivate --sync "$w"; sleep 0.3; xdotool key alt+F4
+# a polite WM close: wmctrl's _NET_CLOSE_WINDOW (GNOME), else Alt+F4 (openbox). XDestroyWindow would kill the APP
+# through a GDK X error instead, and Alt+F4 would close a modal dialog attached to it.
+if command -v wmctrl >/dev/null; then wmctrl -F -c "$NAME"
+else w=$(xdotool search --onlyvisible --name "^$NAME\$" | head -1); xdotool windowactivate --sync "$w"; sleep 0.3; xdotool key alt+F4; fi
 sleep 3
 kill -0 "$APID" 2>/dev/null && { fail "APP still running after its window closed"; kill "$APID"; } || pass "APP exited ($(tail -1 "$OUT/stderr.txt"))"
 [ "$(pgrep -xc zenity)" = 0 ] && pass "dialog program gone with the APP" || fail "zenity left running: $(pgrep -a zenity)"
+xdotool search --onlyvisible --name "^Save File\$" >/dev/null 2>&1 && fail "a Save File window is still showing (portal)" || pass "no Save File window left"
 [ "$(grep -ac '^IPLUG_TEST_DIALOG' "$OUT/stderr.txt")" = 2 ] && pass "no handler after close" || fail "handler after close"
 if [ "$FAILS" = 0 ]; then echo "RESULT: PASS" | tee "$OUT/RESULT.txt"; else echo "RESULT: FAIL ($FAILS)" | tee "$OUT/RESULT.txt"; fi
