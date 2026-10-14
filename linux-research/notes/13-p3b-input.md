@@ -93,7 +93,6 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
 - While an edit is open in REAPER and the user clicks into REAPER's own window, the focus may stay with the edit
   (no FocusOut leaves the host); Return/Escape/a click in the editor end it.
 - Blocking clipboard reads of host-owned text return nothing (finding 4); serving large texts (INCR) is not done.
-  The clipboard dies with the editor window (no hand-over to a clipboard manager).
 - No tooltips. Host context menus: see finding 5.
 - Fonts by name: TrueType outlines only until NanoVG's stb_truetype is updated.
 - Focus retries: after two retries `mHoldsFocus` means "requested", not "held"; keys then come only as the host

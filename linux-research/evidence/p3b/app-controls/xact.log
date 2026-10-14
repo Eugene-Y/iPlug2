@@ -4,31 +4,31 @@
 [xact] move 1016 760
 [xact] cursor nwse-resize (24x24)
 [xact] move 500 400
-[xact] FAIL expect-cursor: 'left_ptr' 24x24, 254 opaque px; expected default
-[xact] FAIL expect-cursor: '(unnamed)' 32x32, 44 opaque px; expected blank
+[xact] cursor default (24x24)
+[xact] cursor blank (1x1)
 [xact] drag 322,237 -> 322,330
-[xact] FAIL expect-cursor: '(unnamed)' 16x16, 87 opaque px; expected default
+[xact] cursor default (24x24)
 [xact] shot a01-knob-drag
-[xact] changed a00-start -> a01-knob-drag in view rect 262,170 120x130 (15591 px)
-[xact] FAIL expect-pointer: pointer at view 12,247, expected 322,237
+[xact] changed a00-start -> a01-knob-drag in view rect 262,170 120x130 (5703 px)
+[xact] pointer at view 322,237
 [xact] dclick 941 437
 [xact] shot a02-textentry-open
 [xact] type 42 
 [xact] key Return    
 [xact] shot a03-textentry-committed
-[xact] FAIL expect-change: a02-textentry-open -> a03-textentry-committed unchanged in view rect 870,410 110x40
+[xact] changed a02-textentry-open -> a03-textentry-committed in view rect 870,410 110x40 (2459 px)
 [xact] dclick 941 437
 [xact] type 13 
 [xact] key Escape    
 [xact] shot a04-textentry-cancelled
-[xact] FAIL expect-same: a03-textentry-committed -> a04-textentry-cancelled differ in view rect 870,410 110x40 (116 px)
+[xact] same a03-textentry-committed -> a04-textentry-cancelled in view rect 870,410 110x40
 [xact] ALIVE IPlugControls
 [xact] set-clipboard
 [xact] dclick 941 437
 [xact] key ctrl+v    
 [xact] key Return    
 [xact] shot a05-pasted
-[xact] changed a04-textentry-cancelled -> a05-pasted in view rect 870,410 110x40 (82 px)
+[xact] changed a04-textentry-cancelled -> a05-pasted in view rect 870,410 110x40 (88 px)
 [xact] dclick 941 437
 [xact] key ctrl+c    
 [xact] key Escape    
@@ -44,7 +44,7 @@
 [xact] type 7 
 [xact] key Return    
 [xact] shot a08-textentry-os
-[xact] changed a07-popup-chosen -> a08-textentry-os in view rect 870,410 110x40 (118 px)
+[xact] changed a07-popup-chosen -> a08-textentry-os in view rect 870,410 110x40 (78 px)
 [xact] ALIVE IPlugControls
 [xact] set-clipboard
 [xact] dclick 941 437
@@ -63,5 +63,5 @@
 [xact] shot a09-about
 [xact] key Escape    
 [xact] shot a10-about-dismissed
-[xact] changed a09-about -> a10-about-dismissed in view rect 0,0 1024x768 (784941 px)
+[xact] changed a09-about -> a10-about-dismissed in view rect 0,0 1024x768 (771459 px)
 [xact] ALIVE IPlugControls
