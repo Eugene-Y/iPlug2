@@ -1,0 +1,9 @@
+# T-007 at 9708e246f (shared files: IGraphics.cpp, IGraphicsEditorDelegate.{h,cpp}, IPlugEditorDelegate.h, IPlugCLAP.cpp,
+# IPlugVST3_View.h, IPlugAPP_dialog.cpp; every change inside #ifdef OS_LINUX, or OS_WIN || OS_LINUX)
+# xcodebuild -workspace Examples/IPlugEffect/IPlugEffect.xcworkspace -scheme macOS-{CLAP,VST3} -configuration Debug -arch arm64,
+# DerivedData/SYMROOT/OBJROOT/DSTROOT and every *_PATH (VST2/VST3/CLAP/AU/AAX/APP/REAPER_EXT) in the scratchpad
+IPlugEffect CLAP: ** BUILD SUCCEEDED **
+IPlugEffect VST3: ** BUILD SUCCEEDED **
+Nothing installed under ~/Library; no .rc_mac file regenerated; git status afterwards: only the SDK README that the Linux SDK
+install changes (not committed). IPlugAPP_dialog.cpp's change sits in its OS_LINUX branch (the mac APP target fails in
+IPlugAPP.cpp before this task, P0).
