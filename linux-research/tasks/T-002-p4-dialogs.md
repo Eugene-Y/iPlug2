@@ -43,3 +43,20 @@ They are stubs today ("cancelled"). Gneiss needs them for presets, morph rigs an
 - [ ] Review pass; Log complete.
 
 ## Log
+
+- 2026-10-14, worker instance. Worktree `/Volumes/Storage/code/IPlug2-T-002`, Docker container `t002`, build dirs
+  `build/t002-*`. Notes: `notes/16-p4-dialogs.md` (design, findings, acceptance table, known issues). Evidence:
+  `evidence/p4/`.
+- 1a249af60: claim; `build-cmake.sh`/`build-skia-linux.sh` tracked (the `build-*` ignore rule hid them from every
+  worktree but the main one).
+- 961e342a0: `LinuxDialogs` (portal FileChooser via `dlopen`ed libdbus, zenity/kdialog fallback, all async on the
+  HostLoop), `LinuxBackgroundProcess`, `linux_dbus`; IGraphicsLinux overrides; IPlugControls `IPLUG_TEST_DIALOGS`.
+- c531c43da: zenity 4 starts inside the folder; UTF-8 `LC_CTYPE` for helper programs (REAPER in C locale got `?`s);
+  `dialog-test.sh`. Docker CLAP PASS.
+- following commits: VST3 PASS, churn 50× CLAP + VST3 PASS, APP PASS (Docker); kdialog probe (throwaway container);
+  VM: portal CLAP + VST3 PASS, portal churn 30× PASS, APP PASS, zenity forced PASS, gdb thread check; unit test
+  `Tests/LinuxDialogs` (found and fixed a leak of the extension lists); mac builds; 22.04 floor 2.34; validators
+  unchanged.
+- Acceptance: Docker zenity path [x], VM portal [x], no GTK in the process [x] (REAPER has no libgtk at all; the set of
+  GTK/GDK libraries is unchanged while dialogs show), review pass: see below.
+- VM lock taken 17:00, released after the VM runs.

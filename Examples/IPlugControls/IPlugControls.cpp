@@ -3,9 +3,11 @@
 #include "IPlugPaths.h"
 #include "IconsForkAwesome.h"
 #include "IconsFontaudio.h"
-#if defined IPLUG_TEST_DIALOGS && defined OS_LINUX
+#ifdef IPLUG_TEST_DIALOGS
   #include <unistd.h>
-  #include "Linux/IPlugLinuxHostLoop.h"
+  #ifdef OS_LINUX
+    #include "Linux/IPlugLinuxHostLoop.h"
+  #endif
 #endif
 
 IPlugControls::IPlugControls(const InstanceInfo& info)
