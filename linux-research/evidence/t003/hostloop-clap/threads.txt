@@ -1,0 +1,120 @@
+pid=23824 cmd=/opt/REAPER/reaper -nosplash -new 
+--- threads (count name)
+      1 reaper
+      1 reaper/audio_dm
+      5 reaper/livefx
+      6 reaper/mediaafx
+      1 reaper/video
+--- backtraces
+Thread 14 (Thread 0xee047b9b7160 (LWP 23840) "reaper/video"):
+#0  0x0000ee047dd2bd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dd360bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dd5b5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000ee047a73ff38 in ??? () at /opt/REAPER/Plugins/reaper_video.so
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 13 (Thread 0xee047a5af160 (LWP 23841) "reaper/audio_dm"):
+#0  0x0000ee047dd2bd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dd360bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dd5b5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000000000a31268 in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 12 (Thread 0xee0479c1f160 (LWP 23842) "reaper/mediaafx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 11 (Thread 0xee047940f160 (LWP 23843) "reaper/mediaafx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 10 (Thread 0xee0478bff160 (LWP 23844) "reaper/mediaafx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 9 (Thread 0xee0473fff160 (LWP 23845) "reaper/mediaafx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 8 (Thread 0xee04737ef160 (LWP 23846) "reaper/mediaafx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 7 (Thread 0xee0472fdf160 (LWP 23847) "reaper/mediaafx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 6 (Thread 0xee04727cf160 (LWP 23848) "reaper/livefx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 5 (Thread 0xee0471fbf160 (LWP 23849) "reaper/livefx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 4 (Thread 0xee04717af160 (LWP 23850) "reaper/livefx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 3 (Thread 0xee0470f9f160 (LWP 23851) "reaper/livefx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 2 (Thread 0xee047078f160 (LWP 23852) "reaper/livefx"):
+#0  0x0000ee047dcf1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dcf4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dbacc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000ee047dbad25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ee047dcf582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ee047dd5bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 1 (Thread 0xee047e362460 (LWP 23824) "reaper"):
+#0  0x0000ee047dd2bd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ee047dd360bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ee047dd5b5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x000000000040b698 in ??? ()
+#4  0x0000ee047dc984c4 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#5  0x0000ee047dc98598 in __libc_start_main () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000000000418ee8 in _start ()

@@ -1,0 +1,113 @@
+iPlug2: the host provides no event loop; timers (OnIdle) run on a plug-in thread
+=================================================================
+==37==ERROR: AddressSanitizer: heap-use-after-free on address 0x525000016900 at pc 0xf6dc7e7f3e34 bp 0xffffc9e87660 sp 0xffffc9e87650
+WRITE of size 8 at 0x525000016900 thread T0
+    #0 0xf6dc7e7f3e30 in hiir::Upsampler2xFPU<4, double>::process_sample(double&, double&, double) /Volumes/Storage/code/IPlug2-T-003/IPlug/Extras/HIIR/FPUUpsampler2x.h:133
+    #1 0xf6dc7e7f3e30 in hiir::Upsampler2xFPU<4, double>::process_block(double*, double const*, long) /Volumes/Storage/code/IPlug2-T-003/IPlug/Extras/HIIR/FPUUpsampler2x.h:148
+    #2 0xf6dc7e843fb8 in hvoya::Oversampler::upsample(hvoya::AudioBuffer const&, hvoya::AudioBuffer&) /Volumes/Storage/code/IPlug2-T-003/hvoya/hvoya/utils/oversampler.hpp:176
+    #3 0xf6dc7e7bcce4 in Gneiss::processChunk(hvoya::AudioBuffer&, hvoya::AudioBuffer&, int) /Volumes/Storage/code/hvoya/Gneiss-linux/Gneiss.cpp:821
+    #4 0xf6dc7e7c0374 in Gneiss::ProcessBlock(double**, double**, int) /Volumes/Storage/code/hvoya/Gneiss-linux/Gneiss.cpp:676
+    #5 0xf6dc7eaf9dc0 in iplug::IPlugProcessor::ProcessBuffers(double, int) /Volumes/Storage/code/IPlug2-T-003/IPlug/IPlugProcessor.cpp:525
+    #6 0xf6dc7eaf9dc0 in iplug::IPlugProcessor::ProcessBuffers(float, int) /Volumes/Storage/code/IPlug2-T-003/IPlug/IPlugProcessor.cpp:530
+    #7 0xf6dc7ea6dd40 in iplug::IPlugVST3ProcessorBase::Process(Steinberg::Vst::ProcessData&, Steinberg::Vst::ProcessSetup&, Steinberg::Vst::BusList const&, Steinberg::Vst::BusList const&, iplug::IPlugQueue<iplug::IMidiMsg>&, iplug::IPlugQueue<iplug::IMidiMsg>&, iplug::IPlugQueue<iplug::SysExData>&, iplug::SysExData&) /Volumes/Storage/code/IPlug2-T-003/IPlug/VST3/IPlugVST3_ProcessorBase.cpp:432
+    #8 0xf6dc7ea56410 in non-virtual thunk to iplug::IPlugVST3::process(Steinberg::Vst::ProcessData&) (/Volumes/Storage/code/IPlug2-T-003/linux-research/build/t003-gneiss-asan/out/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so+0x3a6410) (BuildId: 85ad0d648a94bd55c8626ace65066318dbbefae1)
+    #9 0xc4dd5e22ff94 in Steinberg::Vst::ProcessTest::run(Steinberg::ITestResult*) (/usr/local/bin/validator+0x2ff94) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #10 0xc4dd5e23cc64 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cc64) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #11 0xc4dd5e23cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #12 0xc4dd5e23cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #13 0xc4dd5e2435d0 in Steinberg::Vst::Validator::testModule(std::shared_ptr<VST3::Hosting::Module>, Steinberg::Vst::Validator::ModuleTestConfig const&) (/usr/local/bin/validator+0x435d0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #14 0xc4dd5e245930 in Steinberg::Vst::Validator::run() (/usr/local/bin/validator+0x45930) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #15 0xc4dd5e23ab8c in run(int, char**) (/usr/local/bin/validator+0x3ab8c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #16 0xf6dc818784c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #17 0xf6dc81878594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #18 0xc4dd5e2103ec in _start (/usr/local/bin/validator+0x103ec) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+
+0x525000016900 is located 0 bytes inside of 8192-byte region [0x525000016900,0x525000018900)
+freed by thread T0 here:
+    #0 0xf6dc81e79444 in operator delete(void*, unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:164
+    #1 0xf6dc7ec99af4 in std::__new_allocator<double>::deallocate(double*, unsigned long) /usr/include/c++/13/bits/new_allocator.h:172
+    #2 0xf6dc7ec99af4 in std::allocator<double>::deallocate(double*, unsigned long) /usr/include/c++/13/bits/allocator.h:210
+    #3 0xf6dc7ec99af4 in std::allocator_traits<std::allocator<double> >::deallocate(std::allocator<double>&, double*, unsigned long) /usr/include/c++/13/bits/alloc_traits.h:517
+    #4 0xf6dc7ec99af4 in std::_Vector_base<double, std::allocator<double> >::_M_deallocate(double*, unsigned long) /usr/include/c++/13/bits/stl_vector.h:390
+    #5 0xf6dc7ec99af4 in std::vector<double, std::allocator<double> >::reserve(unsigned long) /usr/include/c++/13/bits/vector.tcc:93
+    #6 0xf6dc7ec99af4 in hvoya::AudioBuffer::reserve(unsigned long, unsigned long) /Volumes/Storage/code/IPlug2-T-003/hvoya/hvoya/utils/audio_buffer.cpp:213
+    #7 0xf6dc7e7b3d1c in Gneiss::prepareAudioBuffers() /Volumes/Storage/code/hvoya/Gneiss-linux/Gneiss.cpp:1767
+    #8 0xf6dc7e7c5f8c in Gneiss::Gneiss(iplug::InstanceInfo const&) /Volumes/Storage/code/hvoya/Gneiss-linux/Gneiss.cpp:189
+    #9 0xf6dc7e7cad34 in iplug::MakePlug(iplug::InstanceInfo const&) /Volumes/Storage/code/IPlug2-T-003/IPlug/IPlug_include_in_plug_src.h:472
+    #10 0xf6dc7e7caf54 in createInstance /Volumes/Storage/code/IPlug2-T-003/IPlug/IPlug_include_in_plug_src.h:137
+    #11 0xf6dc7eac8e50 in Steinberg::CPluginFactory::createInstance(char const*, char const*, void**) /Volumes/Storage/code/IPlug2-T-003/Dependencies/IPlug/VST3_SDK/public.sdk/source/main/pluginfactory.cpp:235
+    #12 0xc4dd5e226c08 in Steinberg::Vst::PlugProvider::setupPlugin(Steinberg::FUnknown*) (/usr/local/bin/validator+0x26c08) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #13 0xc4dd5e2270c0 in non-virtual thunk to Steinberg::Vst::PlugProvider::getComponent() (/usr/local/bin/validator+0x270c0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #14 0xc4dd5e235e70 in Steinberg::Vst::TestBase::setup() (/usr/local/bin/validator+0x35e70) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #15 0xc4dd5e23cd9c in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cd9c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #16 0xc4dd5e23cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #17 0xc4dd5e23cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #18 0xc4dd5e2435d0 in Steinberg::Vst::Validator::testModule(std::shared_ptr<VST3::Hosting::Module>, Steinberg::Vst::Validator::ModuleTestConfig const&) (/usr/local/bin/validator+0x435d0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #19 0xc4dd5e245930 in Steinberg::Vst::Validator::run() (/usr/local/bin/validator+0x45930) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #20 0xc4dd5e23ab8c in run(int, char**) (/usr/local/bin/validator+0x3ab8c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #21 0xf6dc818784c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #22 0xf6dc81878594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #23 0xc4dd5e2103ec in _start (/usr/local/bin/validator+0x103ec) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+
+previously allocated by thread T0 here:
+    #0 0xf6dc81e78324 in operator new(unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:95
+    #1 0xf6dc7eca16bc in std::__new_allocator<double>::allocate(unsigned long, void const*) /usr/include/c++/13/bits/new_allocator.h:151
+    #2 0xf6dc7eca16bc in std::allocator<double>::allocate(unsigned long) /usr/include/c++/13/bits/allocator.h:198
+    #3 0xf6dc7eca16bc in std::allocator_traits<std::allocator<double> >::allocate(std::allocator<double>&, unsigned long) /usr/include/c++/13/bits/alloc_traits.h:482
+    #4 0xf6dc7eca16bc in std::_Vector_base<double, std::allocator<double> >::_M_allocate(unsigned long) /usr/include/c++/13/bits/stl_vector.h:381
+    #5 0xf6dc7eca16bc in std::_Vector_base<double, std::allocator<double> >::_M_allocate(unsigned long) /usr/include/c++/13/bits/stl_vector.h:378
+    #6 0xf6dc7eca16bc in std::vector<double, std::allocator<double> >::_M_fill_insert(__gnu_cxx::__normal_iterator<double*, std::vector<double, std::allocator<double> > >, unsigned long, double const&) /usr/include/c++/13/bits/vector.tcc:587
+    #7 0xf6dc7ec9e19c in std::vector<double, std::allocator<double> >::resize(unsigned long, double const&) /usr/include/c++/13/bits/stl_vector.h:1037
+    #8 0xf6dc7ec9e19c in std::vector<double, std::allocator<double> >::resize(unsigned long, double const&) /usr/include/c++/13/bits/stl_vector.h:1034
+    #9 0xf6dc7ec9e19c in hvoya::AudioBuffer::resize() /Volumes/Storage/code/IPlug2-T-003/hvoya/hvoya/utils/audio_buffer.cpp:100
+    #10 0xf6dc7ec9e648 in hvoya::AudioBuffer::AudioBuffer(unsigned long, unsigned long) /Volumes/Storage/code/IPlug2-T-003/hvoya/hvoya/utils/audio_buffer.cpp:50
+    #11 0xf6dc7e7c4408 in Gneiss::Gneiss(iplug::InstanceInfo const&) /Volumes/Storage/code/hvoya/Gneiss-linux/Gneiss.cpp:137
+    #12 0xf6dc7e7cad34 in iplug::MakePlug(iplug::InstanceInfo const&) /Volumes/Storage/code/IPlug2-T-003/IPlug/IPlug_include_in_plug_src.h:472
+    #13 0xf6dc7e7caf54 in createInstance /Volumes/Storage/code/IPlug2-T-003/IPlug/IPlug_include_in_plug_src.h:137
+    #14 0xf6dc7eac8e50 in Steinberg::CPluginFactory::createInstance(char const*, char const*, void**) /Volumes/Storage/code/IPlug2-T-003/Dependencies/IPlug/VST3_SDK/public.sdk/source/main/pluginfactory.cpp:235
+    #15 0xc4dd5e226c08 in Steinberg::Vst::PlugProvider::setupPlugin(Steinberg::FUnknown*) (/usr/local/bin/validator+0x26c08) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #16 0xc4dd5e2270c0 in non-virtual thunk to Steinberg::Vst::PlugProvider::getComponent() (/usr/local/bin/validator+0x270c0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #17 0xc4dd5e235e70 in Steinberg::Vst::TestBase::setup() (/usr/local/bin/validator+0x35e70) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #18 0xc4dd5e23cd9c in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cd9c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #19 0xc4dd5e23cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #20 0xc4dd5e23cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #21 0xc4dd5e2435d0 in Steinberg::Vst::Validator::testModule(std::shared_ptr<VST3::Hosting::Module>, Steinberg::Vst::Validator::ModuleTestConfig const&) (/usr/local/bin/validator+0x435d0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #22 0xc4dd5e245930 in Steinberg::Vst::Validator::run() (/usr/local/bin/validator+0x45930) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #23 0xc4dd5e23ab8c in run(int, char**) (/usr/local/bin/validator+0x3ab8c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #24 0xf6dc818784c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #25 0xf6dc81878594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #26 0xc4dd5e2103ec in _start (/usr/local/bin/validator+0x103ec) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+
+SUMMARY: AddressSanitizer: heap-use-after-free /Volumes/Storage/code/IPlug2-T-003/IPlug/Extras/HIIR/FPUUpsampler2x.h:133 in hiir::Upsampler2xFPU<4, double>::process_sample(double&, double&, double)
+Shadow bytes around the buggy address:
+  0x525000016680: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x525000016700: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x525000016780: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x525000016800: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x525000016880: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x525000016900:[fd]fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x525000016980: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x525000016a00: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x525000016a80: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x525000016b00: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x525000016b80: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==37==ABORTING
