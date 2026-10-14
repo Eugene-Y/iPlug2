@@ -65,7 +65,7 @@ Cross-platform C++ audio plugin framework with two main components:
 - When building standalone app targets only debug builds have the debug menu with screenshot capabilities
 ## Linux port (in progress, separate branch)
 
-Linux support (CLAP/VST3/APP with IGraphics) is being developed on branch `hvoya-linux` (remote `gene`),
-local worktree `/Volumes/Storage/code/IPlug2-linux` — this checkout stays on `hvoya` because Gneiss builds
-against it. To continue: read `linux-research/PLAN.md` on that branch (`git show hvoya-linux:linux-research/PLAN.md`);
-human summary in `LINUX_PORT_RESEARCH.md` there. Port branches are always cut from `hvoya`, never upstream.
+You are on (or near) branch `hvoya-linux`. **For any Linux-port work, read `linux-research/AGENTS.md` first.**
+It has the shared instructions (rules, Docker/VM tools, locks, workflow), and `linux-research/tasks/` holds
+self-contained task files. The main checkout `/Volumes/Storage/code/IPlug2` stays on `hvoya` (Gneiss builds
+against it) — never modify it from Linux work.
