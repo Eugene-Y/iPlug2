@@ -359,6 +359,21 @@ Goal: a developer on Linux opens a project in an IDE and builds/debugs any forma
 - **One-command flows** (scripts): configure+build all formats; deploy to `~/.clap`, `~/.vst3`; launch REAPER with the plugin; package (VST3 bundle, CLAP, tarball/AppImage-style APP) in the old-glibc container.
 - **Docs:** a short "Linux development" guide in the repo.
 
+### P12. LV2 (last phase, after P11; decided with the user 2026-10-14)
+
+Why it is optional:
+- CLAP + VST3 cover REAPER, Bitwig, Renoise and Carla, and Ardour via VST3.
+- LV2 adds LMMS, distro packaging, and LV2-only hardware (MOD Devices, Zynthian). The hardware is DSP-only: they bring their own web UI, so no IGraphics there.
+
+Work:
+- An LV2 wrapper. The old upstream `upstrem/linux` has an outdated `IPlug/LV2` as reference.
+- TTL metadata generated at build time: ports from the param list, presets.
+- LV2 state, atom MIDI, latency port.
+- The UI as `ui:X11UI` on our IGraphicsLinux, with the host loop driven through LV2 idle/`ui:idleInterface`.
+- Testing in Ardour, Carla, jalv, and the MOD SDK if targeting MOD.
+
+Estimate: 5–10 d.
+
 ## 4. Risks to probe first
 
 1. VST3 hosts without `IRunLoop` while the editor is closed → decides how much Gneiss fallback is needed. REAPER: has it (factory context, notes/09). Bitwig, Ardour, Carla: probe with `-DIPLUG_TRACE_HOST_LOOP`.
