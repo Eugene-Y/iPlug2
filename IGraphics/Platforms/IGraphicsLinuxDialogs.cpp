@@ -321,6 +321,12 @@ void BuildZenityArgs(const LinuxDialogRequest& request, ArgList& args)
         args.Add("--confirm-overwrite"); // zenity 3 only; GTK 4 always asks
         start.Append(ProposedFileName(request, extensions).Get());
       }
+      else
+      {
+        // GTK 4 shows a bare folder selected in its parent; a name inside it opens the folder itself. The name
+        // need not exist, and an existing one is merely preselected.
+        start.Append(request.fileName.GetLength() ? request.fileName.Get() : ".iplug2-start-folder");
+      }
       if (request.kind == EKind::Directory)
         args.Add("--directory");
       args.Add("--filename=", start.Get());

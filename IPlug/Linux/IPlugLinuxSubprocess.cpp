@@ -22,6 +22,7 @@
 #include <unistd.h>
 
 #include "heapbuf.h"
+#include "ptrlist.h"
 
 extern char** environ;
 
@@ -35,6 +36,43 @@ constexpr int kMaxOutputBytes = 1 << 16;
 // Run in the background so this shell exits at once and the program is reparented away from the host; the
 // subshell waits for the program and reports its status on the pipe, after anything the program printed.
 constexpr const char* kLauncherScript = "{ \"$@\"; printf '\\nIPLUG_EXIT=%d\\n' \"$?\"; } &";
+
+bool NamesUTF8Locale(const char* locale)
+{
+  return locale && (strcasestr(locale, "UTF-8") || strcasestr(locale, "utf8"));
+}
+
+/** The host's environment, with a UTF-8 character type if the host runs in another one (often "C"): iPlug's
+ * strings are UTF-8, and GLib programs convert arguments and output through the locale's charset, which turns
+ * every non-ASCII character into '?'. The other categories (messages, numbers) stay as they were. */
+void MakeChildEnvironment(WDL_TypedBuf<char*>& env, WDL_PtrList<WDL_String>& storage)
+{
+  const char* pAll = getenv("LC_ALL");
+  const char* pCType = getenv("LC_CTYPE");
+  const char* pLang = getenv("LANG");
+  const char* pEffective = pAll && pAll[0] ? pAll : pCType && pCType[0] ? pCType : pLang;
+  const bool keep = NamesUTF8Locale(pEffective);
+
+  for (char** ppVar = environ; *ppVar; ppVar++)
+  {
+    if (!keep && (!strncmp(*ppVar, "LC_ALL=", 7) || !strncmp(*ppVar, "LC_CTYPE=", 9) || (pAll && pAll[0] && !strncmp(*ppVar, "LANG=", 5))))
+      continue;
+    env.Add(*ppVar);
+  }
+  if (!keep)
+  {
+    storage.Add(new WDL_String("LC_CTYPE=C.UTF-8"));
+    // LC_ALL overrode every category: LANG carries it on for all but the character type
+    if (pAll && pAll[0])
+    {
+      storage.Add(new WDL_String("LANG="));
+      storage.Get(storage.GetSize() - 1)->Append(pAll);
+    }
+    for (int i = 0; i < storage.GetSize(); i++)
+      env.Add(storage.Get(i)->Get());
+  }
+  env.Add(nullptr);
+}
 
 const char* FindLast(const char* haystack, const char* needle)
 {
@@ -94,8 +132,13 @@ bool LinuxBackgroundProcess::Start(const char* const* argv)
   sigfillset(&signals);
   posix_spawnattr_setsigdefault(&attributes, &signals);
 
+  WDL_TypedBuf<char*> env;
+  WDL_PtrList<WDL_String> envStorage;
+  MakeChildEnvironment(env, envStorage);
+
   pid_t pid = 0;
-  const int spawnError = posix_spawn(&pid, shell, &actions, &attributes, shellArgv.Get(), environ);
+  const int spawnError = posix_spawn(&pid, shell, &actions, &attributes, shellArgv.Get(), env.Get());
+  envStorage.Empty(true);
   posix_spawn_file_actions_destroy(&actions);
   posix_spawnattr_destroy(&attributes);
   close(fds[1]);

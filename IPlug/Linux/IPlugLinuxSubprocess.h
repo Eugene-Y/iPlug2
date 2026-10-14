@@ -25,7 +25,8 @@ BEGIN_IPLUG_NAMESPACE
  * subreaper) reaps it, and its exit status comes back as the last line of the pipe. That keeps two things out of
  * the host's way: no zombie is left when the editor closes while the program runs, and a host whose SIGCHLD
  * handler reaps every child (or ignores SIGCHLD) cannot swallow the status. The arguments reach the program as
- * the shell's positional parameters, so the shell never parses them.
+ * the shell's positional parameters, so the shell never parses them. Arguments and output are UTF-8: a host
+ * running in a non-UTF-8 locale passes the program a UTF-8 LC_CTYPE.
  *
  * Not thread-safe; one owner thread (the host main thread for dialogs). */
 class LinuxBackgroundProcess
