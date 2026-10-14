@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "IGraphicsLinux.h"
+#include "IGraphicsLinuxDialogs.h"
 #include "IPlugAPIBase.h"
 #include "IPopupMenuControl.h"
 #include "ITextEntryControl.h"
@@ -204,6 +205,8 @@ struct IGraphicsLinux::Impl
   ITextEntryControl* mStandInTextEntry = nullptr;
   IPopupMenuControl* mStandInPopup = nullptr;
 
+  std::unique_ptr<LinuxDialogs> mDialogs;
+
   Time mLastClickTime = 0;
   unsigned mLastClickButton = 0;
   float mLastClickX = 0.f;
@@ -377,6 +380,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
                            [this](int, int flags) { OnXConnectionReadable(flags); });
   const uint32_t frameMs = static_cast<uint32_t>(std::max(1, 1000 / std::max(1, FPS())));
   w.mTimerId = w.mLoop->AddTimer(frameMs, [this]() { OnDisplayTimer(); });
+  w.mDialogs = std::make_unique<LinuxDialogs>(*w.mLoop);
 
   XFlush(pDisplay);
   mInOpenWindow = false;
@@ -390,6 +394,8 @@ void IGraphicsLinux::CloseWindow()
   // owner began a host gesture on its mouse down, and only the menu's completion ends it.
   if (w.mOpen && *w.mOpen)
     DismissOpenMenu();
+  // Their handlers belong to an editor that is going away: the dialogs close and no handler runs.
+  w.mDialogs.reset();
   if (w.mLoop)
   {
     w.mLoop->RemoveTimer(w.mTimerId);
@@ -1264,30 +1270,154 @@ PlatformFontPtr IGraphicsLinux::LoadPlatformFont(const char* fontID, void* pData
   return MakeFont(pData, dataSize);
 }
 
-EMsgBoxResult IGraphicsLinux::ShowMessageBox(const char* str, const char* title, EMsgBoxType type, IMsgBoxCompletionHandlerFunc completionHandler)
+#pragma mark - Dialogs
+
+/** The client top-level that contains our window (the one with WM_STATE), else the outermost ancestor below the
+ * root: dialogs are made transient for it, which the window manager only honours for top-levels. */
+unsigned long IGraphicsLinux::GetDialogParentWindow()
 {
-  const EMsgBoxResult result = EMsgBoxResult::kCANCEL;
-  if (completionHandler)
-    completionHandler(result);
-  return result;
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive)
+    return 0;
+
+  ScopedXErrorTrap trap(w.mDisplay);
+  const Atom wmState = XInternAtom(w.mDisplay, "WM_STATE", False);
+  Window window = w.mWindow;
+  Window outermost = w.mWindow;
+  for (int depth = 0; depth < 64; depth++)
+  {
+    Atom type = None;
+    int format = 0;
+    unsigned long count = 0, remaining = 0;
+    unsigned char* pData = nullptr;
+    if (XGetWindowProperty(w.mDisplay, window, wmState, 0, 0, False, AnyPropertyType, &type, &format, &count, &remaining, &pData) == Success)
+    {
+      if (pData)
+        XFree(pData);
+      if (type != None)
+        return window;
+    }
+
+    Window root = 0, parent = 0;
+    Window* pChildren = nullptr;
+    unsigned int childCount = 0;
+    if (!XQueryTree(w.mDisplay, window, &root, &parent, &pChildren, &childCount))
+      break;
+    if (pChildren)
+      XFree(pChildren);
+    if (!parent || parent == root)
+      break;
+    window = outermost = parent;
+  }
+  return trap.GetErrorCount() ? 0 : outermost;
 }
 
-// No dialog yet: behave like a cancelled one (mac/win), so async callers still get their callback.
+bool IGraphicsLinux::ShowDialog(LinuxDialogRequest& request, std::function<void(const LinuxDialogResult&)> handler)
+{
+  if (!mImpl->mDialogs)
+    return false;
+  request.parentWindow = GetDialogParentWindow();
+  mImpl->mDialogs->Show(request, std::move(handler));
+  return true;
+}
+
+// Linux dialogs are asynchronous only, like on iOS: a blocking one would stall the host's main thread, whose loop
+// is not ours to run nested. A call without a handler gets an empty answer at once.
+static void WarnBlockingDialogCall(const char* method)
+{
+  static bool sWarned = false;
+  if (!sWarned)
+    fprintf(stderr, "iPlug2: %s without a completion handler cannot block on Linux, returned empty. Pass a handler.\n", method);
+  sWarned = true;
+}
+
+EMsgBoxResult IGraphicsLinux::ShowMessageBox(const char* str, const char* title, EMsgBoxType type, IMsgBoxCompletionHandlerFunc completionHandler)
+{
+  ReleaseMouseCapture();
+
+  LinuxDialogRequest request;
+  request.kind = LinuxDialogRequest::EKind::Message;
+  request.text.Set(str ? str : "");
+  request.title.Set(title ? title : "");
+  request.messageType = type;
+  ShowDialog(request, [completionHandler](const LinuxDialogResult& result) {
+    if (completionHandler)
+      completionHandler(result.message);
+  });
+  return kNoResult;
+}
+
 void IGraphicsLinux::PromptForFile(WDL_String& fileName, WDL_String& path, EFileAction action, const char* ext, IFileDialogCompletionHandlerFunc completionHandler)
 {
+  if (!WindowIsOpen() || !completionHandler)
+  {
+    if (WindowIsOpen())
+      WarnBlockingDialogCall("PromptForFile");
+    fileName.Set("");
+    return;
+  }
+
+  LinuxDialogRequest request;
+  request.kind = action == EFileAction::Save ? LinuxDialogRequest::EKind::SaveFile : LinuxDialogRequest::EKind::OpenFile;
+  request.folder.Set(path.Get());
+  request.fileName.Set(fileName.Get());
+  request.extensions.Set(ext ? ext : "");
   fileName.Set("");
-  if (completionHandler)
-    completionHandler(fileName, path);
+
+  // As on macOS and Windows: the full path as the file name, its folder with a trailing separator as the path.
+  ShowDialog(request, [completionHandler](const LinuxDialogResult& result) {
+    WDL_String chosenFile, chosenFolder;
+    if (result.accepted)
+    {
+      chosenFile.Set(result.path.Get());
+      chosenFolder.Set(result.path.Get());
+      chosenFolder.remove_filepart(true);
+    }
+    completionHandler(chosenFile, chosenFolder);
+  });
 }
 
 void IGraphicsLinux::PromptForDirectory(WDL_String& dir, IFileDialogCompletionHandlerFunc completionHandler)
 {
-  dir.Set("");
-  if (completionHandler)
+  if (!WindowIsOpen() || !completionHandler)
   {
-    WDL_String fileName;
-    completionHandler(fileName, dir);
+    if (WindowIsOpen())
+      WarnBlockingDialogCall("PromptForDirectory");
+    dir.Set("");
+    return;
   }
+
+  LinuxDialogRequest request;
+  request.kind = LinuxDialogRequest::EKind::Directory;
+  request.folder.Set(dir.Get());
+  ShowDialog(request, [completionHandler](const LinuxDialogResult& result) {
+    WDL_String noFile, chosenFolder;
+    if (result.accepted)
+      chosenFolder.Set(result.path.Get());
+    completionHandler(noFile, chosenFolder);
+  });
+}
+
+// zenity's or kdialog's colour chooser (the portal has none). The colour arrives through func; false tells a caller
+// that expects a synchronous answer that color is unchanged.
+bool IGraphicsLinux::PromptForColor(IColor& color, const char* str, IColorPickerHandlerFunc func)
+{
+  ReleaseMouseCapture();
+  if (!func)
+  {
+    WarnBlockingDialogCall("PromptForColor");
+    return false;
+  }
+
+  LinuxDialogRequest request;
+  request.kind = LinuxDialogRequest::EKind::Color;
+  request.title.Set(str ? str : "");
+  request.color = color;
+  ShowDialog(request, [func](const LinuxDialogResult& result) {
+    if (result.accepted)
+      func(result.color);
+  });
+  return false;
 }
 
 bool IGraphicsLinux::OpenURL(const char* url, const char* msgWindowTitle, const char* confirmMsg, const char* errMsgOnFailure)

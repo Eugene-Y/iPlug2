@@ -3,6 +3,10 @@
 #include "IPlugPaths.h"
 #include "IconsForkAwesome.h"
 #include "IconsFontaudio.h"
+#if defined IPLUG_TEST_DIALOGS && defined OS_LINUX
+  #include <unistd.h>
+  #include "Linux/IPlugLinuxHostLoop.h"
+#endif
 
 IPlugControls::IPlugControls(const InstanceInfo& info)
 : iplug::Plugin(info, MakeConfig(kNumParams, kNumPresets))
@@ -507,6 +511,70 @@ IPlugControls::IPlugControls(const InstanceInfo& info)
     
     pGraphics->AttachControl(new IVButtonControl(sameCell().SubRectVertical(5, 4).FracRectHorizontal(0.5f, true), SplashClickActionFunc, "font...", style.WithDrawShadows(false)))->SetAnimationEndActionFunction(promptValueFont);
     
+#ifdef IPLUG_TEST_DIALOGS
+    // Linux dialog harness (linux-research/scripts/dialog-test.sh): every answer goes to stderr with the thread
+    // it arrived on. IPLUG_TEST_DIALOG_DIR is where the file and folder dialogs start.
+    {
+      const int kTagTestResult = kCtrlTags;
+      auto report = [pGraphics, kTagTestResult](const char* what, const char* first, const char* second) {
+  #ifdef OS_LINUX
+        const long tid = HostLoopThreadId();
+  #else
+        const long tid = 0;
+  #endif
+        fprintf(stderr, "IPLUG_TEST_DIALOG %s tid=%ld main=%d first='%s' second='%s'\n", what, tid, tid == (long) getpid(), first, second);
+        fflush(stderr);
+        WDL_String str;
+        str.SetFormatted(1024, "%s: %s %s", what, first, second);
+        if (auto* pText = pGraphics->GetControlWithTag(kTagTestResult))
+          pText->As<ITextControl>()->SetStr(str.Get());
+      };
+      auto startDir = []() { const char* pDir = getenv("IPLUG_TEST_DIALOG_DIR"); return WDL_String(pDir ? pDir : ""); };
+
+      const IRECT area = IRECT(b.R - 330.f, b.B - 155.f, b.R - 70.f, b.B - 5.f);
+      const IVStyle testStyle = style.WithDrawShadows(false).WithLabelText(style.labelText.WithSize(11.f));
+      auto addButton = [&](int idx, const char* label, IActionFunction func) {
+        pGraphics->AttachControl(new IVButtonControl(area.GetGridCell(idx, 5, 2), func, label, testStyle, true));
+      };
+
+      addButton(0, "t-open", [pGraphics, report, startDir](IControl*) {
+        WDL_String fileName, path = startDir();
+        pGraphics->PromptForFile(fileName, path, EFileAction::Open, "fxp txt", [report](const WDL_String& f, const WDL_String& p) { report("open", f.Get(), p.Get()); });
+      });
+      addButton(1, "t-save", [pGraphics, report, startDir](IControl*) {
+        WDL_String fileName("test preset"), path = startDir();
+        pGraphics->PromptForFile(fileName, path, EFileAction::Save, "fxp", [report](const WDL_String& f, const WDL_String& p) { report("save", f.Get(), p.Get()); });
+      });
+      addButton(2, "t-dir", [pGraphics, report, startDir](IControl*) {
+        WDL_String dir = startDir();
+        pGraphics->PromptForDirectory(dir, [report](const WDL_String& f, const WDL_String& p) { report("dir", f.Get(), p.Get()); });
+      });
+      addButton(3, "t-ync", [pGraphics, report](IControl*) {
+        pGraphics->ShowMessageBox("Save changes? <b>&", "Dialog test", kMB_YESNOCANCEL, [report](EMsgBoxResult r) { report("msg-ync", kMessageResultStrs[r], ""); });
+      });
+      addButton(4, "t-ok", [pGraphics, report](IControl*) {
+        pGraphics->ShowMessageBox("Информация: done", "Dialog test", kMB_OK, [report](EMsgBoxResult r) { report("msg-ok", kMessageResultStrs[r], ""); });
+      });
+      addButton(5, "t-okc", [pGraphics, report](IControl*) {
+        pGraphics->ShowMessageBox("Proceed?", "Dialog test", kMB_OKCANCEL, [report](EMsgBoxResult r) { report("msg-okc", kMessageResultStrs[r], ""); });
+      });
+      addButton(6, "t-color", [pGraphics, report](IControl*) {
+        IColor color(255, 10, 200, 30);
+        pGraphics->PromptForColor(color, "Dialog test colour", [report](const IColor& c) {
+          WDL_String rgba;
+          rgba.SetFormatted(64, "%d,%d,%d,%d", c.R, c.G, c.B, c.A);
+          report("color", rgba.Get(), "");
+        });
+      });
+      addButton(7, "t-sync", [pGraphics, report](IControl*) {
+        WDL_String fileName, path;
+        pGraphics->PromptForFile(fileName, path);
+        report("sync", fileName.Get(), path.Get());
+      });
+      pGraphics->AttachControl(new ITextControl(area.GetGridCell(4, 0, 5, 1), "dialog result", IText(11.f, EAlign::Near)), kTagTestResult);
+    }
+#endif
+
 #pragma mark - About Box
     pGraphics->AttachControl(new IVButtonControl(b.GetPadded(-5).GetFromBRHC(50, 50), SplashClickActionFunc, ICON_FK_INFO_CIRCLE, style.WithLabelText(forkAwesomeText.WithSize(40.f)).WithDrawFrame(false).WithDrawShadows(false), true))
     ->SetAnimationEndActionFunction([pGraphics](IControl* pCaller){

@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
 
 #include "IGraphics_select.h"
@@ -18,6 +19,9 @@ union _XEvent;
 
 BEGIN_IPLUG_NAMESPACE
 BEGIN_IGRAPHICS_NAMESPACE
+
+struct LinuxDialogRequest;
+struct LinuxDialogResult;
 
 /** IGraphics platform class for Linux: an X11 child window of the host's window, drawn with GLX.
  * Host-driven: X events and frames are pumped by the plug-in instance's HostLoop (host main thread);
@@ -51,7 +55,7 @@ public:
   EMsgBoxResult ShowMessageBox(const char* str, const char* title, EMsgBoxType type, IMsgBoxCompletionHandlerFunc completionHandler) override;
   void PromptForFile(WDL_String& fileName, WDL_String& path, EFileAction action, const char* ext, IFileDialogCompletionHandlerFunc completionHandler) override;
   void PromptForDirectory(WDL_String& dir, IFileDialogCompletionHandlerFunc completionHandler) override;
-  bool PromptForColor(IColor& color, const char* str, IColorPickerHandlerFunc func) override { return false; }
+  bool PromptForColor(IColor& color, const char* str, IColorPickerHandlerFunc func) override;
 
   bool OpenURL(const char* url, const char* msgWindowTitle, const char* confirmMsg, const char* errMsgOnFailure) override;
   bool RevealPathInExplorerOrFinder(WDL_String& path, bool select) override;
@@ -95,6 +99,9 @@ private:
   void DismissOpenMenu();
   void DrawDirtyControls();
   bool IsHostResizeEnabled();
+  unsigned long GetDialogParentWindow();
+  /** @return false when the editor is not open: then no dialog shows and the handler never runs */
+  bool ShowDialog(LinuxDialogRequest& request, std::function<void(const LinuxDialogResult&)> handler);
   void DestroyWindowResources();
 
   struct Impl;
