@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # What REAPER tells an editor about scale and size, and the sizes of the windows that result.
 # Runs INSIDE the GUI container (gx.sh), aarch64 only (reads arguments from registers).
-# Usage: scale-probe.sh <outdir> <FX e.g. "CLAP: IPlugEffect"> <plugin> [Xft.dpi, or - for none]
+# Usage: scale-probe.sh <outdir> <FX e.g. "CLAP: IPlugEffect"> <plugin> [Xft.dpi, - for none, keep (default)]
 # Writes calls.txt (host calls with their arguments, editor size updates), tree.txt (xwininfo), open.png.
 set -uo pipefail
-OUT="$1"; FX="$2"; PLUG="$3"; DPI="${4:--}"
+OUT="$1"; FX="$2"; PLUG="$3"; DPI="${4:-keep}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$OUT"
-"$HERE/xft-dpi.sh" "$DPI" > "$OUT/resources.txt" 2>&1
+if [ "$DPI" = keep ]; then xprop -root RESOURCE_MANAGER; else "$HERE/xft-dpi.sh" "$DPI"; fi > "$OUT/resources.txt" 2>&1
 "$HERE/reaper-up.sh" "$PLUG"
 RPID=$(cat /tmp/reaper.pid)
 
@@ -40,7 +40,8 @@ sleep 4
 sleep 5
 import -window root "$OUT/open.png"
 xwininfo -root -tree > "$OUT/tree.txt"
-pkill -INT -f "gdb -q -batch -p $RPID" 2>/dev/null; wait $GDB 2>/dev/null
+# on the VM gdb runs as root through sudo (scripts/vm/remote-bin/gdb): signal the sudo, which forwards it
+pkill -INT -f "gdb -q -batch -p $RPID" 2>/dev/null; pkill -INT -f "^sudo -n /usr/bin/gdb -q -batch -p $RPID" 2>/dev/null; wait $GDB 2>/dev/null
 grep -vE '^\[|^Breakpoint|^Reading|^Download|^$|^Using|^warning|^Function .* not defined|clock_nanosleep|^Thread .* SIGINT' "$OUT/calls-raw.txt" > "$OUT/calls.txt"
 W=$(xdotool search --onlyvisible --name "${FX#*: }.*Track 1" | tail -1)
 [ -n "$W" ] && xwininfo -id "$W" -tree > "$OUT/fx-window.txt"
