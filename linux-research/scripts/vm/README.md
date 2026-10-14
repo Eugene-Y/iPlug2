@@ -19,7 +19,7 @@ scripts on a real desktop: GNOME Shell (Mutter 46) on **X11**, Xorg, Mesa **virg
 | `vm-shot.sh <out.png> [window]` | screenshot of the VM's screen into a PNG on the Mac |
 | `vm-run.sh <script> <out> [args...]` | run `scripts/<script> <out> args` on the VM, copy `<out>` back to the same path here (replacing it), write `<out>/run.log`. Closes the GNOME overview first; stops REAPER and jackd afterwards unless `VM_KEEP=1`. Args starting with `~/` are VM paths |
 | `vm-reaper-test.sh <out> "<FMT: Name>" <plugin> [steps]` | `vm-run.sh reaper-plugin-test.sh ...` |
-| `probe/*.sh` | VM-only probes run through `vm-run.sh vm/probe/<x>.sh`: `cpu-fps.sh` (pidstat + Draw/s idle and while dragging), `wm-behaviour.sh` (focus, stacking, moves, minimize/restore, Draws while minimized), `swap-interval.sh` (interval in effect while drawing), `nvg-balance.sh` (NanoVG texture create/delete per open/close), `rss-open.sh`, `app-test.sh` (standalone APP with PipeWire audio), `glx-churn.c` (GL-only RSS churn, no iPlug) |
+| `probe/*` | VM-only probes, run through `vm-run.sh vm/probe/<x>.sh <out> ...` unless noted. P3a: `cpu-fps.sh` (pidstat + Draw/s idle and while dragging), `wm-behaviour.sh` (focus, stacking, moves, minimize/restore, Draws while minimized), `swap-interval.sh` (interval in effect while drawing), `nvg-balance.sh` (NanoVG texture create/delete per open/close), `rss-open.sh`, `app-test.sh` (standalone APP with PipeWire audio, optional steps, X focus trail), `glx-churn.c` (GL-only RSS churn, no iPlug). P3b: `focus-edit.sh` (N edits + Escape from an unfocused FX window, focus trail, trace log), `focus-ts.sh` + `focus-ts-probe.c` (focus request timing vs. Mutter + a GDK-like proxy, no iPlug), `app-focus.sh` (APP: does Escape after a click reach the editor or SWELL), `gnome-clip.sh` (clipboard with zenity and gnome-text-editor; removes the editor's draft state it created), `clip-owner.c` (who owns CLIPBOARD), `menu-edges.sh` (menus with the editor dragged partly off screen), `ctx-menu.sh`/`ctx-close.sh` (REAPER's VST3 context menu: shows? blocks? host actions meanwhile), `fc-probe.cpp` (fonts by name; built in Docker, see notes/14) |
 
 On the VM the harness lives in `~/iplug-harness/linux-research/` (`scripts/` is re-synced on every call; evidence is
 written under it and pulled back). `scripts/vm/remote-bin/` holds the VM-side helpers: `vm-display-env` (sourced) and
@@ -62,4 +62,15 @@ are reproducible and the seeded profile stays for manual use (`~/opt/REAPER/reap
 - `linux_audio_mode=2` is REAPER's dummy audio; the harness's `jackd` dummy is started but unused. The APP opens ALSA
   `default`, which is PipeWire here.
 - `vm-env.sh` must be sourced from bash (it refuses otherwise): under zsh `BASH_SOURCE` is empty and the paths go wrong.
+- **`xdotool click` presses and releases in the same millisecond.** That ties X focus-request timestamps (a WM's
+  WM_TAKE_FOCUS then wins or loses by arrival order) and makes GTK menus close on the release. Probes that model a
+  person hold the button: `mousedown 1; sleep 0.08; mouseup 1`.
+- **`xclip` (xact's `set-clipboard`) stays behind as the selection owner with the caller's stdout open.** A pipe or an
+  ssh session then waits until something else takes the clipboard. `vm-x.sh` ends the session on a status line
+  (`__VMX_RC=`) printed after the command, so leftover daemons (xclip, jackd, REAPER) no longer hold it; scripts on
+  the VM should write xact's output to a file, not into a pipe.
+- `scripts/probe/focuswatch.c` lacks `<stdlib.h>` for `atof`: build it with `gcc -include stdlib.h`, or its run time
+  is garbage.
+- gnome-text-editor asks to save even an emptied draft and keeps drafts in `~/.local/share/org.gnome.TextEditor`;
+  `gnome-clip.sh` cancels, quits it and removes that state if the run created it.
 - macOS `rsync` is openrsync, which ignores `--delete` for these pulls; `vm_pull` removes the local `<out>` first.
