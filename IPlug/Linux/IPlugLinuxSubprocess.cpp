@@ -1,0 +1,250 @@
+/*
+ ==============================================================================
+
+ This file is part of the iPlug 2 library. Copyright (C) the iPlug 2 developers.
+
+ See LICENSE.txt for  more info.
+
+ ==============================================================================
+*/
+
+#include "IPlugLinuxSubprocess.h"
+
+#include <cerrno>
+#include <csignal>
+#include <cstdlib>
+#include <cstring>
+
+#include <fcntl.h>
+#include <spawn.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include "heapbuf.h"
+#include "ptrlist.h"
+
+extern char** environ;
+
+using namespace iplug;
+
+namespace
+{
+constexpr const char* kExitMarker = "\nIPLUG_EXIT=";
+constexpr int kMaxOutputBytes = 1 << 16;
+
+// Run in the background so this shell exits at once and the program is reparented away from the host; the
+// subshell waits for the program and reports its status on the pipe, after anything the program printed.
+constexpr const char* kLauncherScript = "{ \"$@\"; printf '\\nIPLUG_EXIT=%d\\n' \"$?\"; } &";
+
+bool NamesUTF8Locale(const char* locale)
+{
+  return locale && (strcasestr(locale, "UTF-8") || strcasestr(locale, "utf8"));
+}
+
+/** The host's environment, with a UTF-8 character type if the host runs in another one (often "C"): iPlug's
+ * strings are UTF-8, and GLib programs convert arguments and output through the locale's charset, which turns
+ * every non-ASCII character into '?'. The other categories (messages, numbers) stay as they were. */
+void MakeChildEnvironment(WDL_TypedBuf<char*>& env, WDL_PtrList<WDL_String>& storage)
+{
+  const char* pAll = getenv("LC_ALL");
+  const char* pCType = getenv("LC_CTYPE");
+  const char* pLang = getenv("LANG");
+  const char* pEffective = pAll && pAll[0] ? pAll : pCType && pCType[0] ? pCType : pLang;
+  const bool keep = NamesUTF8Locale(pEffective);
+
+  for (char** ppVar = environ; *ppVar; ppVar++)
+  {
+    if (!keep && (!strncmp(*ppVar, "LC_ALL=", 7) || !strncmp(*ppVar, "LC_CTYPE=", 9) || (pAll && pAll[0] && !strncmp(*ppVar, "LANG=", 5))))
+      continue;
+    env.Add(*ppVar);
+  }
+  if (!keep)
+  {
+    storage.Add(new WDL_String("LC_CTYPE=C.UTF-8"));
+    // LC_ALL overrode every category: LANG carries it on for all but the character type
+    if (pAll && pAll[0])
+    {
+      storage.Add(new WDL_String("LANG="));
+      storage.Get(storage.GetSize() - 1)->Append(pAll);
+    }
+    for (int i = 0; i < storage.GetSize(); i++)
+      env.Add(storage.Get(i)->Get());
+  }
+  env.Add(nullptr);
+}
+
+const char* FindLast(const char* haystack, const char* needle)
+{
+  const char* last = nullptr;
+  for (const char* p = haystack; (p = strstr(p, needle)); p++)
+    last = p;
+  return last;
+}
+} // namespace
+
+bool LinuxBackgroundProcess::Start(const char* const* argv)
+{
+  Kill();
+  mOutput.Set("");
+  mFinished = false;
+  mExitCode = -1;
+
+  if (!argv || !argv[0])
+    return false;
+
+  int fds[2];
+  if (pipe2(fds, O_CLOEXEC) != 0)
+    return false;
+
+  WDL_TypedBuf<char*> shellArgv;
+  char shell[] = "/bin/sh";
+  char dashC[] = "-c";
+  char shellName[] = "sh";
+  shellArgv.Add(shell);
+  shellArgv.Add(dashC);
+  shellArgv.Add(const_cast<char*>(kLauncherScript));
+  shellArgv.Add(shellName);
+  for (const char* const* pArg = argv; *pArg; pArg++)
+    shellArgv.Add(const_cast<char*>(*pArg));
+  shellArgv.Add(nullptr);
+
+  posix_spawn_file_actions_t actions;
+  posix_spawn_file_actions_init(&actions);
+  posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, "/dev/null", O_RDONLY, 0);
+  posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+  // GTK and deprecation warnings of the helper would land in the host's log
+  posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+#if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 34))
+  // The host's own descriptors without O_CLOEXEC (audio devices, sockets) must not stay open in the helper.
+  posix_spawn_file_actions_addclosefrom_np(&actions, STDERR_FILENO + 1);
+#endif
+
+  // Its own process group, so Kill() reaches the program behind the launcher shell. Signal state reset: a host
+  // may block signals on its main thread or ignore SIGCHLD, which would break the subshell's wait.
+  posix_spawnattr_t attributes;
+  posix_spawnattr_init(&attributes);
+  posix_spawnattr_setflags(&attributes, POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF);
+  posix_spawnattr_setpgroup(&attributes, 0);
+  sigset_t signals;
+  sigemptyset(&signals);
+  posix_spawnattr_setsigmask(&attributes, &signals);
+  sigfillset(&signals);
+  posix_spawnattr_setsigdefault(&attributes, &signals);
+
+  WDL_TypedBuf<char*> env;
+  WDL_PtrList<WDL_String> envStorage;
+  MakeChildEnvironment(env, envStorage);
+
+  pid_t pid = 0;
+  const int spawnError = posix_spawn(&pid, shell, &actions, &attributes, shellArgv.Get(), env.Get());
+  envStorage.Empty(true);
+  posix_spawn_file_actions_destroy(&actions);
+  posix_spawnattr_destroy(&attributes);
+  close(fds[1]);
+
+  if (spawnError != 0)
+  {
+    close(fds[0]);
+    return false;
+  }
+
+  // The launcher only forks the background subshell, then exits.
+  int status = 0;
+  while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+
+  fcntl(fds[0], F_SETFL, fcntl(fds[0], F_GETFL) | O_NONBLOCK);
+  mFd = fds[0];
+  mProcessGroup = pid;
+  return true;
+}
+
+bool LinuxBackgroundProcess::Pump()
+{
+  if (mFinished || mFd < 0)
+    return mFinished;
+
+  char buffer[4096];
+  for (;;)
+  {
+    const ssize_t count = read(mFd, buffer, sizeof(buffer));
+    if (count > 0)
+    {
+      if (mOutput.GetLength() < kMaxOutputBytes)
+        mOutput.Append(buffer, static_cast<int>(count));
+      continue;
+    }
+    if (count < 0 && errno == EINTR)
+      continue;
+    if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && !HasCompleteExitLine())
+      return false;
+    // The status line ends it even if something the program started still holds the pipe open.
+    Finish();
+    return true;
+  }
+}
+
+bool LinuxBackgroundProcess::HasCompleteExitLine() const
+{
+  const char* pMarker = FindLast(mOutput.Get(), kExitMarker);
+  return pMarker && strchr(pMarker + 1, '\n');
+}
+
+void LinuxBackgroundProcess::Finish()
+{
+  mFinished = true;
+  if (const char* pMarker = FindLast(mOutput.Get(), kExitMarker))
+  {
+    mExitCode = atoi(pMarker + strlen(kExitMarker));
+    mOutput.SetLen(static_cast<int>(pMarker - mOutput.Get()));
+    const int length = mOutput.GetLength();
+    if (length > 0 && mOutput.Get()[length - 1] == '\n')
+      mOutput.SetLen(length - 1);
+  }
+}
+
+void LinuxBackgroundProcess::CloseOutput()
+{
+  if (mFd >= 0)
+    close(mFd);
+  mFd = -1;
+}
+
+void LinuxBackgroundProcess::Kill()
+{
+  if (mFd < 0)
+    return;
+  // The subshell writes the status line just before it exits: until it has, the group (and its id) still exists.
+  if (!Pump())
+    kill(-mProcessGroup, SIGTERM);
+  CloseOutput();
+  mFinished = true;
+}
+
+bool LinuxBackgroundProcess::IsExecutableAvailable(const char* name)
+{
+  if (!name || !name[0])
+    return false;
+  if (strchr(name, '/'))
+    return access(name, X_OK) == 0;
+
+  const char* pPath = getenv("PATH");
+  if (!pPath || !pPath[0])
+    pPath = "/usr/local/bin:/usr/bin:/bin";
+
+  WDL_String candidate;
+  while (*pPath)
+  {
+    const char* pEnd = strchr(pPath, ':');
+    const int length = pEnd ? static_cast<int>(pEnd - pPath) : static_cast<int>(strlen(pPath));
+    candidate.Set(length ? pPath : ".", length ? length : 1);
+    candidate.Append("/");
+    candidate.Append(name);
+    if (access(candidate.Get(), X_OK) == 0)
+      return true;
+    pPath += length;
+    if (*pPath == ':')
+      pPath++;
+  }
+  return false;
+}

@@ -132,8 +132,10 @@ if(NOT TARGET iPlug2::IPlug)
     target_link_options(iPlug2::IPlug INTERFACE -static-libstdc++ -static-libgcc LINKER:--no-undefined)
     target_link_libraries(iPlug2::IPlug INTERFACE pthread dl)
     target_sources(iPlug2::IPlug INTERFACE
+      ${IPLUG_DIR}/Linux/IPlugLinuxDBus.cpp
       ${IPLUG_DIR}/Linux/IPlugLinuxHostLoop.cpp
       ${IPLUG_DIR}/Linux/IPlugLinuxPaths.cpp
+      ${IPLUG_DIR}/Linux/IPlugLinuxSubprocess.cpp
       ${IPLUG_DIR}/Linux/IPlugLinuxTimer.cpp
     )
   endif()

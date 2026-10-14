@@ -43,7 +43,10 @@ if(NOT TARGET iPlug2::IGraphics)
       ${IGRAPHICS_DIR}/Platforms/IGraphicsCoreText.mm
     )
   elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
-    list(APPEND IGRAPHICS_SRC ${IGRAPHICS_DIR}/Platforms/IGraphicsLinux.cpp)
+    list(APPEND IGRAPHICS_SRC
+      ${IGRAPHICS_DIR}/Platforms/IGraphicsLinux.cpp
+      ${IGRAPHICS_DIR}/Platforms/IGraphicsLinuxDialogs.cpp
+    )
   endif()
 
   target_sources(iPlug2::IGraphics INTERFACE ${IGRAPHICS_SRC})
