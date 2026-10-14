@@ -340,6 +340,25 @@ RR's SWELL/GDK host + RtAudio (ALSA/JACK/Pulse; PipeWire through its shims), dri
   - Wayland session via XWayland (VM, manual).
 - Known open item: clap-validator `state-reproducibility-*` fails on hvoya-based builds. Check whether the mac CLAP of Gneiss fails it too — shared code?
 
+### P11. Linux developer experience — production-ready (requested by the user 2026-10-14)
+
+Goal: a developer on Linux opens a project in an IDE and builds/debugs any format without hand-writing CMake.
+
+- **IDE research.** Compare free, good IDEs for C++/CMake on Linux and pick a primary + secondary:
+  - **CLion**: free only for **non-commercial** use since 2025. hvoya sells plugins, so check the licence terms; it likely needs a paid licence.
+  - **VS Code** + CMake Tools + clangd + CodeLLDB/cppdbg: free.
+  - **Qt Creator** (Community): free, native CMake/CMakePresets support; the IDE's licence does not affect the output.
+  - **KDevelop**.
+
+  Criteria: CMakePresets support, multi-target debugging of a plugin inside REAPER/Carla, clangd quality, arm64 + x86_64 availability.
+- **Checked-in configs.**
+  - `CMakePresets.json` with Linux presets for Debug/Release × formats; CLion and Qt Creator read it natively.
+  - VS Code `.vscode/` (`settings.json`, `launch.json` with "debug in REAPER" / "debug standalone"), or equivalents for the chosen IDE.
+- **Projects to configure:** IPlugEffect, IPlugControls, **Gneiss**, **Sand** (`/Volumes/Storage/code/hvoya/Sand`). Gneiss/Sand changes go to local experiment branches only (Gneiss: `linux-experiment` worktree), unless the user approves otherwise.
+- **Duplication.** Extend `Examples/duplicate.py` (and/or a CMake template) so a duplicated project gets a working Linux `CMakeLists.txt` + presets + IDE config with no manual CMake editing. Ideally the per-project CMakeLists is a thin call into `iplug_add_plugin(...)` with sources/resources listed once, shared with the mac/win project generators where feasible.
+- **One-command flows** (scripts): configure+build all formats; deploy to `~/.clap`, `~/.vst3`; launch REAPER with the plugin; package (VST3 bundle, CLAP, tarball/AppImage-style APP) in the old-glibc container.
+- **Docs:** a short "Linux development" guide in the repo.
+
 ## 4. Risks to probe first
 
 1. VST3 hosts without `IRunLoop` while the editor is closed → decides how much Gneiss fallback is needed. REAPER: has it (factory context, notes/09). Bitwig, Ardour, Carla: probe with `-DIPLUG_TRACE_HOST_LOOP`.
