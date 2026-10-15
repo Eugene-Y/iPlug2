@@ -15,7 +15,7 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | [T-004](T-004-app-no-audio.md) | P8: standalone APP robustness (no audio device, devices, settings) | **ready — good for a 2nd instance** | — | — | — |
 | [T-005](T-005-ide-research.md) | P11a: IDE research + presets/IDE configs for examples | **ready — good for a 2nd instance** | — | — | T-011 later |
 | [T-006](T-006-clap-state-repro.md) | clap-validator `state-reproducibility` failures (Linux and mac) | **ready — good for a 2nd instance** | — | — | — |
-| [T-007](T-007-hidpi.md) | P5: HiDPI (CLAP set_scale, VST3 content scale, Xft.dpi) | ready | — | — | T-008 (IGraphicsLinux*): not in parallel |
+| [T-007](T-007-hidpi.md) | P5: HiDPI (CLAP set_scale, VST3 content scale, Xft.dpi) | in-progress (reviewing) | coordinator | — | T-008 (IGraphicsLinux*): not in parallel |
 | [T-008](T-008-p3-polish.md) | P3 polish from the VM run (notes/14), listed below the table | ready | — | — | T-007 (IGraphicsLinux*): not in parallel |
 | T-009 | P6: Gneiss visual parity vs macOS | todo (unblocked; needs task file) | — | — | — |
 | T-010 | P9: Gneiss-side changes (deferred `SetLatency`, menus, `openFolder`) | todo (unblocked; needs task file; see CROSS_PLATFORM_FINDINGS for what NOT to mix in) | — | — | Gneiss repo |
