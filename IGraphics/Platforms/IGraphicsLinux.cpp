@@ -170,7 +170,9 @@ struct IGraphicsLinux::Impl
   int mWindowW = 0; // physical size of our X window: last requested, or last seen when someone else resized it
   int mWindowH = 0;
   unsigned long mResizeSerial = 0; // request serial of our last XResizeWindow
-  bool mHostSizeUnconfirmed = false; // the open may have changed the size the host was told before it
+  bool mHostSizeUnconfirmed = false; // the open changed the size the host was told before it
+  int mOpenedW = 0; // the window's size at the end of the open
+  int mOpenedH = 0;
   int mParentW = 0;
   int mParentH = 0;
 
@@ -399,7 +401,9 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   const uint32_t frameMs = static_cast<uint32_t>(std::max(1, 1000 / std::max(1, FPS())));
   w.mTimerId = w.mLoop->AddTimer(frameMs, [this]() { OnDisplayTimer(); });
   w.mDialogs = std::make_unique<LinuxDialogs>(*w.mLoop);
-  w.mHostSizeUnconfirmed = true;
+  w.mOpenedW = w.mWindowW;
+  w.mOpenedH = w.mWindowH;
+  w.mHostSizeUnconfirmed = GetDelegate()->GetEditorWidth() != w.mWindowW || GetDelegate()->GetEditorHeight() != w.mWindowH;
 
   XFlush(pDisplay);
   mInOpenWindow = false;
@@ -572,16 +576,15 @@ bool IGraphicsLinux::ProcessXEvents()
 
 // The host asked for the editor's size before the open, which can still change it (a restored size, a plug-in's own
 // draw scale). It is told the opened size here, outside the open: the open does not tell it, because a host that
-// reacts synchronously could close the editor under it.
+// reacts synchronously could close the editor under it. A window resized since then has the host's size already.
 bool IGraphicsLinux::TellHostTheOpenedSize()
 {
   Impl& w = *mImpl;
   w.mHostSizeUnconfirmed = false;
-  IGEditorDelegate* pDelegate = GetDelegate();
-  if (pDelegate->GetEditorWidth() == w.mWindowW && pDelegate->GetEditorHeight() == w.mWindowH)
+  if (w.mWindowW != w.mOpenedW || w.mWindowH != w.mOpenedH)
     return true;
   const std::shared_ptr<bool> open = w.mOpen;
-  pDelegate->EditorResizeFromUI(w.mWindowW, w.mWindowH, true);
+  GetDelegate()->EditorResizeFromUI(w.mOpenedW, w.mOpenedH, true);
   return *open;
 }
 

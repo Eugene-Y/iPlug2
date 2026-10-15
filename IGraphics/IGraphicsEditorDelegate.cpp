@@ -13,7 +13,6 @@
 #include "IControl.h"
 
 #ifdef OS_LINUX
-  #include <cmath>
   #include "IGraphicsLinuxScale.h"
 #endif
 
@@ -116,13 +115,17 @@ void IGEditorDelegate::UpdateEditorSizeForScreenScale()
 }
 
 // The same arithmetic as IGraphics' own window size, so that the host is told exactly the size the editor opens at.
+// Unscaled sizes are kept, never recovered by dividing a scaled one: that drifts by a pixel over repeated rescales.
 void IGEditorDelegate::RescaleClosedEditorSize(float screenScale)
 {
+  if (!mConfiguredEditorWidth)
+  {
+    mConfiguredEditorWidth = GetEditorWidth();
+    mConfiguredEditorHeight = GetEditorHeight();
+  }
   const bool hasLastSize = mLastWidth && mLastHeight && mLastScale > 0.f;
-  const int windowWidth = hasLastSize ? static_cast<int>(static_cast<float>(mLastWidth) * mLastScale)
-                                      : static_cast<int>(std::lround(GetEditorWidth() / mEditorScreenScale));
-  const int windowHeight = hasLastSize ? static_cast<int>(static_cast<float>(mLastHeight) * mLastScale)
-                                       : static_cast<int>(std::lround(GetEditorHeight() / mEditorScreenScale));
+  const int windowWidth = hasLastSize ? static_cast<int>(static_cast<float>(mLastWidth) * mLastScale) : mConfiguredEditorWidth;
+  const int windowHeight = hasLastSize ? static_cast<int>(static_cast<float>(mLastHeight) * mLastScale) : mConfiguredEditorHeight;
   SetEditorSize(static_cast<int>(windowWidth * screenScale), static_cast<int>(windowHeight * screenScale));
   mEditorScreenScale = screenScale;
 }

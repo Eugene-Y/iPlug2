@@ -2,7 +2,8 @@
 # The editor opens at another size than the host asked for (get_size) before the open: IPlugEffect keeps its UI
 # draw scale in its state and applies it in its graphics factory. Corner-resize instance 1, copy it (with its state) to
 # a 2nd track, open the copy; log every resize call and the sizes of REAPER's container and the editor.
-# Runs INSIDE the GUI container (gx.sh), aarch64 only. Usage: restore-size-probe.sh <outdir> <FX> <plugin> <scale>
+# Runs INSIDE the GUI container (gx.sh), aarch64 only. IPlugEffect only: the corner resizer's coordinates are its own.
+# Usage: restore-size-probe.sh <outdir> <FX> <plugin> <scale>
 set -uo pipefail
 OUT="$1"; FX="$2"; PLUG="$3"; SCALE="$4"
 HERE="$(cd "$(dirname "$0")" && pwd)"

@@ -66,7 +66,8 @@ inline float QuantizeScale(double scale)
 }
 
 /** @param xftDpi the X resource Xft.dpi, as Xft itself reads it (nullptr if unset)
- * @param gdkScale @param qtScaleFactor the environment variables GDK_SCALE and QT_SCALE_FACTOR (nullptr if unset)
+ * @param gdkScale the environment variable GDK_SCALE (nullptr if unset)
+ * @param qtScaleFactor the environment variable QT_SCALE_FACTOR (nullptr if unset)
  * @return the first of Xft.dpi / 96, GDK_SCALE, QT_SCALE_FACTOR that is set to a positive number, else 1 */
 inline float DesktopScale(const char* xftDpi, const char* gdkScale, const char* qtScaleFactor)
 {

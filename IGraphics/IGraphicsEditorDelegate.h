@@ -89,7 +89,6 @@ public:
    * @param startPos The start position in the chunk where editor size data is stored
    * @return The new chunk position (endPos) */
   int UnserializeEditorSize(const IByteChunk& chunk, int startPos);
-
 #ifdef OS_LINUX
   void UpdateEditorSizeForScreenScale() override;
 
@@ -97,7 +96,7 @@ public:
    * the host's if it gave one (CLAP gui.set_scale, VST3 setContentScaleFactor), else the desktop's */
   float GetEditorScreenScale() const { return mEditorScreenScale; }
 #endif
-
+    
 protected:
   std::function<IGraphics*()> mMakeGraphicsFunc = nullptr;
   std::function<void(IGraphics* pGraphics)> mLayoutFunc = nullptr;
@@ -114,6 +113,9 @@ private:
 
   float mHostScreenScale = 0.f; // 0 until the host gives a scale; from then on the desktop's no longer counts
   float mEditorScreenScale = 1.f; // the configured editor size is logical, i.e. physical at scale 1
+  // The configured size, taken before the first rescale: the size of an editor that has not been open yet
+  int mConfiguredEditorWidth = 0;
+  int mConfiguredEditorHeight = 0;
 #endif
 };
 

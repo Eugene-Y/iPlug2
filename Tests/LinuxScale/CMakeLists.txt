@@ -14,5 +14,5 @@ target_include_directories(iplug-linux-scale-test PRIVATE
 target_compile_options(iplug-linux-scale-test PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
 target_link_options(iplug-linux-scale-test PRIVATE -fsanitize=address,undefined)
 
-# No X display needed: the X lookup itself is checked by the REAPER/APP runs (linux-research/notes/17).
+# No X display needed: the X lookup (QueryDesktopScale in IGraphicsLinux.cpp) is not part of this test.
 add_test(NAME iplug-linux-scale COMMAND iplug-linux-scale-test)
