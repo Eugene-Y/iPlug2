@@ -2,7 +2,7 @@
 # Run a command inside the iplug2-linux container with the repo mounted at its host path.
 # Usage: dock.sh [-i image] [-p platform] [-n name] [-d] -- cmd args...
 #   -d  detached (prints container id); default is interactive-less foreground run
-# Env passthrough: anything in DOCK_ENV="A=1 B=2".
+# Env passthrough: anything in DOCK_ENV="A=1 B=2". Extra mounts: DOCK_MOUNTS (below).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
@@ -27,6 +27,13 @@ case "$GITCOMMON" in
   ""|"$REPO"/*) ;;
   *) MOUNTS+=(-v "$GITCOMMON:$GITCOMMON") ;;
 esac
+# Extra trees (e.g. a plug-in repo outside iPlug2): DOCK_MOUNTS="/abs/path[:ro] ...", mounted at the same path.
+for m in ${DOCK_MOUNTS:-}; do
+  case "$m" in
+    *:ro) MOUNTS+=(-v "${m%:ro}:${m%:ro}:ro") ;;
+    *)    MOUNTS+=(-v "$m:$m") ;;
+  esac
+done
 # no core dumps (a REAPER crash otherwise drops ~580 MB into the cwd); shm + ptrace for gdb; repo mounted at the identical path so worktree .git links resolve.
 exec docker run --rm --init $DETACH $NAME $PLATFORM \
   --ulimit core=0 --shm-size=512m --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \

@@ -149,6 +149,7 @@ struct IGraphicsLinux::Impl
   Colormap mColormap = 0;
   GLXContext mGLContext = nullptr;
   bool mViewInitialized = false;
+  bool mMenuFontLoaded = false; // into this view's drawing context
   bool mMapped = false;
   // Destroying an ancestor sends our window DestroyNotify only, never UnmapNotify: without this flag every frame
   // would draw and swap into a dead drawable, which crashes llvmpipe.
@@ -160,6 +161,7 @@ struct IGraphicsLinux::Impl
   unsigned long mResizeSerial = 0; // request serial of our last XResizeWindow
   int mParentW = 0;
   int mParentH = 0;
+  bool mHostSizeUnconfirmed = false; // the editor may have changed size while OpenWindow kept the host out
 
   HostLoop* mLoop = nullptr;
   int mTimerId = 0;
@@ -383,6 +385,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mDialogs = std::make_unique<LinuxDialogs>(*w.mLoop);
 
   XFlush(pDisplay);
+  w.mHostSizeUnconfirmed = true;
   mInOpenWindow = false;
   return reinterpret_cast<void*>(static_cast<uintptr_t>(w.mWindow));
 }
@@ -426,6 +429,7 @@ void IGraphicsLinux::DestroyWindowResources()
       OnViewDestroyed();
       DeactivateGLContext();
       w.mViewInitialized = false;
+      w.mMenuFontLoaded = false;
     }
     if (w.mGLContext)
     {
@@ -522,10 +526,30 @@ void IGraphicsLinux::OnDisplayTimer()
 {
   if (!ProcessXEvents())
     return;
+  if (mImpl->mHostSizeUnconfirmed)
+  {
+    const std::shared_ptr<bool> open = mImpl->mOpen;
+    mImpl->mHostSizeUnconfirmed = false;
+    TellHostTheOpenedSize();
+    if (!*open)
+      return;
+  }
   // Animations (a menu collapsing, the text cursor) end in IsDirty, outside any X event.
   DrawDirtyControls();
   if (mImpl->mOpen && *mImpl->mOpen)
     UpdateEditingState();
+}
+
+// While OpenWindow runs the host hears of no resize (mInOpenWindow), and an X11 host sizes the embed from
+// get_size/getSize, never from our window. A size the editor took while opening (a layout chosen from the
+// plug-in's state) reaches the host from here, the first frame after the open, outside its open call.
+void IGraphicsLinux::TellHostTheOpenedSize()
+{
+  const int windowWidth = WindowWidth() * GetPlatformWindowScale();
+  const int windowHeight = WindowHeight() * GetPlatformWindowScale();
+  IGEditorDelegate* pDelegate = GetDelegate();
+  if (windowWidth != pDelegate->GetEditorWidth() || windowHeight != pDelegate->GetEditorHeight())
+    pDelegate->EditorResizeFromUI(windowWidth, windowHeight, true);
 }
 
 bool IGraphicsLinux::ProcessXEvents()
@@ -1231,9 +1255,20 @@ void IGraphicsLinux::CreatePlatformTextEntry(int paramIdx, const IText& text, co
   mImpl->mStandInTextEntry->CreateTextEntry(paramIdx, text, bounds, length, str);
 }
 
+// Platform menus on mac/win draw with the system UI font, and a plug-in need not load DEFAULT_FONT (NanoVG then
+// draws no text at all, and asserts in debug builds): the stand-in menu uses the system sans-serif face too.
+IText IGraphicsLinux::StandInMenuText()
+{
+  static constexpr const char* kMenuFontID = "iPlug2-Linux-menu";
+  Impl& w = *mImpl;
+  if (!w.mMenuFontLoaded)
+    w.mMenuFontLoaded = LoadFont(kMenuFontID, "sans-serif", ETextStyle::Normal);
+  return w.mMenuFontLoaded ? DEFAULT_TEXT.WithFont(kMenuFontID) : DEFAULT_TEXT;
+}
+
 IPopupMenu* IGraphicsLinux::CreatePlatformPopupMenu(IPopupMenu& menu, const IRECT bounds, bool& isAsync)
 {
-  AttachPopupMenuControl();
+  AttachPopupMenuControl(StandInMenuText());
   mImpl->mStandInPopup = GetPopupMenuControl();
   mImpl->mStandInPopup->CreatePopupMenu(menu, bounds);
   isAsync = true;

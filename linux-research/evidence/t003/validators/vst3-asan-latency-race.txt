@@ -1,0 +1,24 @@
+iPlug2: the host provides no event loop; timers (OnIdle) run on a plug-in thread
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==94==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000000 (pc 0xf98bc6ef98b4 bp 0xfffff0383610 sp 0xfffff0383610 T0)
+==94==The signal is caused by a READ memory access.
+==94==Hint: address points to the zero page.
+    #0 0xf98bc6ef98b4 in iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) /Volumes/Storage/code/IPlug2-T-003/IPlug/Extras/NChanDelay.h:51
+    #1 0xf98bc6ef98b4 in iplug::IPlugProcessor::PassThroughBuffers(double, int) /Volumes/Storage/code/IPlug2-T-003/IPlug/IPlugProcessor.cpp:500
+    #2 0xf98bc6e6dd40 in iplug::IPlugVST3ProcessorBase::Process(Steinberg::Vst::ProcessData&, Steinberg::Vst::ProcessSetup&, Steinberg::Vst::BusList const&, Steinberg::Vst::BusList const&, iplug::IPlugQueue<iplug::IMidiMsg>&, iplug::IPlugQueue<iplug::IMidiMsg>&, iplug::IPlugQueue<iplug::SysExData>&, iplug::SysExData&) /Volumes/Storage/code/IPlug2-T-003/IPlug/VST3/IPlugVST3_ProcessorBase.cpp:432
+    #3 0xf98bc6e56410 in non-virtual thunk to iplug::IPlugVST3::process(Steinberg::Vst::ProcessData&) (/Volumes/Storage/code/IPlug2-T-003/linux-research/build/t003-gneiss-asan/out/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so+0x3a6410) (BuildId: 85ad0d648a94bd55c8626ace65066318dbbefae1)
+    #4 0xc36d8ba0ff94 in Steinberg::Vst::ProcessTest::run(Steinberg::ITestResult*) (/usr/local/bin/validator+0x2ff94) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #5 0xc36d8ba1cc64 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cc64) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #6 0xc36d8ba1cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #7 0xc36d8ba1cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #8 0xc36d8ba235d0 in Steinberg::Vst::Validator::testModule(std::shared_ptr<VST3::Hosting::Module>, Steinberg::Vst::Validator::ModuleTestConfig const&) (/usr/local/bin/validator+0x435d0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #9 0xc36d8ba25930 in Steinberg::Vst::Validator::run() (/usr/local/bin/validator+0x45930) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #10 0xc36d8ba1ab8c in run(int, char**) (/usr/local/bin/validator+0x3ab8c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #11 0xf98bc9d784c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #12 0xf98bc9d78594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #13 0xc36d8b9f03ec in _start (/usr/local/bin/validator+0x103ec) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV /Volumes/Storage/code/IPlug2-T-003/IPlug/Extras/NChanDelay.h:51 in iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int)
+==94==ABORTING

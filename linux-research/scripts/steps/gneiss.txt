@@ -1,0 +1,42 @@
+# Gneiss smoke steps. Origin = editor view at 1x; the top 940x200 is the same with morph on (620 tall) and off (200).
+# Report the morph state (it decides the editor height: 200 off, 620 on).
+lua-expect . local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="morph active" or n=="main hz" or n=="oversampling" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out(i,n,v) end end
+shot g00-start
+# Main hz knob: vertical drag
+drag 524 110 524 50
+wait 0.5
+shot g01-knob
+expect-change g00-start g01-knob 0 0 940 200
+lua-expect . local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="main hz" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out(i,n,v) end end
+# "os 1x" is a click-to-cycle button
+click 104 171
+wait 0.8
+shot g02-os-cycle
+expect-change g01-knob g02-os-cycle 90 160 70 25
+# MORPH off: relayout (RemoveAllControls) and the editor shrinks 620 -> 200
+click 104 82
+wait 2
+shot g04-morph-off
+lua-expect . local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="morph active" or n=="main hz" or n=="preFlt A hz" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out(i,n,v) end end
+# Context menu on the A hz knob: IGraphics stand-in popup with the MIDI CC submenu. Only with morph
+# off: morph on without a selected point disables the knobs, and a disabled control has no menu.
+# REAPER takes Escape (it closes the FX window), so a click on an empty spot dismisses the menu.
+rclick 200 59
+wait 1
+shot g04b-context-menu
+expect-change g04-morph-off g04b-context-menu 0 0 940 200
+click 880 190
+wait 0.8
+shot g04c-menu-dismissed
+# Next preset (">" in the preset strip; navigation is blocked while morph is on)
+click 406 9
+wait 1.5
+shot g05-next-preset
+expect-change g04c-menu-dismissed g05-next-preset 0 30 940 170
+lua-expect . local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="morph active" or n=="main hz" or n=="preFlt A hz" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out(i,n,v) end end
+# MORPH on again: grows back to 620 with the morph pad
+click 104 82
+wait 2
+shot g06-morph-on
+expect-change g05-next-preset g06-morph-on 0 0 940 200
+alive __PROC__

@@ -1,0 +1,14 @@
+# Gneiss standalone (--no-io). Origin = editor view, 940x200/620 layout at 1x.
+wait 2
+shot a00-open
+drag 524 110 524 50
+wait 0.5
+shot a01-knob
+expect-change a00-open a01-knob 0 0 940 200
+click 104 82
+wait 2
+shot a02-morph-toggle
+click 104 82
+wait 2
+shot a03-morph-toggle-back
+alive __PROC__
