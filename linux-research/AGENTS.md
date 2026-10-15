@@ -28,6 +28,12 @@ Several Claude instances work on this port in parallel; none of them shares memo
   - No plugin-owned UI threads.
   - No `XInitThreads`.
 - **No GTK inside the plugin process.**
+- **Minimal footprint on business logic and other platforms** (the user's explicit requirement):
+  - A port to Linux of a product (Gneiss, Sand) or an example (IPlugEffect, IPlugControls) **adds** a Linux build. It must not change how the product behaves or builds on macOS/Windows/iOS/web.
+  - Do not modify the Xcode/VS projects, `config.h`, xcconfig/props or their flags, presets or state formats. Do not move Xcode/VS settings into CMake in a way that the other builds then depend on. The Linux CMake is an **additional** build description, not a replacement.
+  - Touch business-logic sources only when the Linux build cannot compile or run otherwise. Typical cases: GCC rejects code that clang/MSVC accept, or undefined behaviour that GCC exposes. Make the smallest behaviour-neutral change, and explain it in the commit message.
+  - **Bugs you find that are not Linux-specific** (they would happen on mac/win too): **report, don't fix** in the port branch. Write each one in the task file's Log and in a "Cross-platform findings" section: severity, repro, file:line. The coordinator turns them into decisions for the user.
+  - **Read the product repo's own docs first** — Gneiss has `CLAUDE.md`, `ARCHITECTURE.md`, `docs/`, `BACKLOG.md` — and follow its rules (e.g. param enum order, comment rules, commit rules).
 - **Keep Linux code in new files** (`IPlug/Linux/`, `IGraphics/Platforms/IGraphicsLinux*`), with thin `#ifdef OS_LINUX` hooks in shared files.
 - **Shared code must not change mac/win behaviour.** If you touch a shared file, prove macOS still builds: IPlugEffect CLAP via xcodebuild, with DerivedData and install paths in your scratchpad, **never `~/Library`**. Restore the `.rc_mac` files that Xcode regenerates, after a snapshot.
 - **Code style.**

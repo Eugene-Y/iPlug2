@@ -14,6 +14,9 @@ Pick the recommended free IDE(s) for Linux development of iPlug2 plugins. Make I
 - Configure "solutions/projects" for IPlugEffect, IPlugControls (here), and later Gneiss and Sand (T-003/T-012 will reuse your setup).
 - Developers must not have to hand-write CMake lists.
 
+## Constraint
+Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**: the existing Xcode/VS projects, `common-*.xcconfig`/`.props`, `config.h` and the macOS/Windows CMake presets keep working unchanged, and nothing in them may start depending on the new files.
+
 ## Steps
 1. **Research.** Cover each candidate below, with sources and dates:
    - Candidates:

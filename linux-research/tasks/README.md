@@ -1,6 +1,9 @@
 # Task board
 
-Read `../AGENTS.md` first. Statuses: `ready` · `claimed` · `in-progress` · `review-done` (awaiting merge) · `merged` · `blocked` (dependency not met) · `todo` (no task file yet).
+Read `../AGENTS.md` first. **Every port task (Gneiss, Sand, IPlugEffect, IPlugControls, templates) follows AGENTS §2 "Minimal footprint":**
+- add a Linux build without changing mac/win/iOS behaviour or their projects/flags;
+- touch business logic only when the Linux build cannot work otherwise;
+- report cross-platform bugs, don't fix them in the port branch. Statuses: `ready` · `claimed` · `in-progress` · `review-done` (awaiting merge) · `merged` · `blocked` (dependency not met) · `todo` (no task file yet).
 
 The coordinator keeps this table current. A worker updates only its own task file, in its own branch.
 
