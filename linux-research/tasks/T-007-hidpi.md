@@ -1,7 +1,7 @@
 # T-007 — P5: HiDPI / scaling on Linux
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** review-done
+- **Owner:** worker instance (coordinator-launched), 2026-10-14
 - **Branch/worktree:** `linux/T-007` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-007`.
 - **Depends on:** T-002 (merged).
 - **Conflicts:** `IGraphics/Platforms/IGraphicsLinux*`, which T-008 also touches — don't run them in parallel. Also CLAP/VST3 GUI scale code (shared files; Linux-only branches).
@@ -36,10 +36,39 @@ Correct UI scale on HiDPI Linux desktops:
 5. Make sure plugin-initiated resize (IPlugEffect corner resizer) still works at scale ≠ 1.
 
 ## Acceptance
-- [ ] Scale picked up from the host when offered, else `Xft.dpi`; crisp text at 1.5 and 2.0 (screenshots reviewed by eye).
-- [ ] Mouse hit-testing correct at 1.5/2.0 (knob drag changes the right control).
-- [ ] Resize works at scale ≠ 1; no resize loop with REAPER.
-- [ ] Main-thread check and validators unchanged; mac build proof if shared files are touched.
-- [ ] Self-review; evidence in `evidence/t007/`; Log complete.
+- [x] Scale picked up from the host when offered, else `Xft.dpi`; crisp text at 1.5 and 2.0 (screenshots reviewed by eye).
+- [x] Mouse hit-testing correct at 1.5/2.0 (knob drag changes the right control).
+- [x] Resize works at scale ≠ 1; no resize loop with REAPER.
+- [x] Main-thread check and validators unchanged; mac build proof if shared files are touched.
+- [x] Self-review; evidence in `evidence/t007/`; Log complete.
 
 ## Log
+
+- 2026-10-14, worker instance. Worktree `/Volumes/Storage/code/IPlug2-T-007`, container `t007`, build dirs
+  `build/t007-*`, evidence `evidence/t007/`. Lock `T-007` held by the coordinator.
+- Notes: `notes/17-p5-hidpi.md` (model, findings, acceptance table, harness, known issues).
+- e0ff5b42b: scale model. `IGraphicsLinuxScale.h` (Xft.dpi via `XGetDefault`, GDK_SCALE, QT_SCALE_FACTOR; eighths,
+  [1, 4]); `IGEditorDelegate` keeps the host's scale and rescales the closed editor's size (Linux-only hook
+  `UpdateEditorSizeForScreenScale()` from CLAP `gui.create`, the VST3 view constructor, the APP); VST3
+  `setContentScaleFactor` on Linux; `IGraphicsLinux` takes the scale in its constructor and tells the host a size the
+  open changed on the first frame; VST3 context menu in physical pixels.
+- 8b3284876: harness (`xact.sh scale`, `XVFB_SCREEN`, `REAPER_UI_SCALE`, probes, VM scale scripts), `Tests/LinuxScale`.
+- bcc44227d, 38d903eaf, e09de685e: evidence. Docker: REAPER IPlugEffect CLAP+VST3 at 1/1.5/2 PASS x6, IPlugControls
+  full P3b steps at 1.5/2 PASS x4, APP P3b at Xft.dpi 144/192, mini host matrix, resize/restore/context-menu probes.
+  VM: GNOME 200 % and Large Text PASS; fractional 150 % sizes verified, no screenshot (virgl hang, notes/17 issue 6).
+  Validators and NEEDED unchanged; mac IPlugEffect CLAP+VST3 build.
+- Finding: REAPER passes SWELL's `ui_scale` to every plug-in (CLAP and VST3), 1 by default, GDK's integer scale with
+  `ui_scale_auto`; so in REAPER the editor always matches REAPER's UI.
+- VM lock taken 21:42-22:15, released. **The VM screen was left at 1920x863 (was 1440x863)** after the Mutter
+  modesets: UTM's preferred size changed; scale 1 and the experimental features are restored.
+- Evidence screenshots were replaced by contact sheets (`sheet.jpg`) plus 1:1 crops; history rewritten on this branch
+  only (soft reset before any merge) to keep 35 MB of full-screen PNGs out of it.
+- Independent review (fresh subagent, notes/18-review-T-007.md). Round 1: accept after fixing findings 1-2 (Medium:
+  closed-editor size drifted by 1 px over two rescales; 1:1 crops not committed) plus Lows/nits; all fixed in
+  3ae56b76e, with re-runs. Round 2 (fresh build of 3ae56b7): **accept**, no regressions; every acceptance item Pass.
+  Non-blocking nits left: no unit test of the rescale arithmetic itself (covered by the mini-host drift matrix).
+- VM restored 2026-10-15 02:29: GNOME scale 100 %, text 1.0, no experimental features, screen back at 1440x863,
+  desktop responsive (screenshot checked); VM lock released. Containers t007, t007b removed.
+- Hand-over: commits 11af162f9..HEAD on linux/T-007. Evidence `evidence/t007/`, notes/17 (design, results, known
+  issues 1-8), notes/18 (review). Open issues: notes/17 Known issues.
+

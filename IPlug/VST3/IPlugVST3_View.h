@@ -29,6 +29,10 @@ public:
   : mOwner(owner)
   {
     mOwner.addRef();
+#ifdef OS_LINUX
+    if (mOwner.HasUI())
+      mOwner.UpdateEditorSizeForScreenScale();
+#endif
   }
   
   ~IPlugVST3View()
@@ -159,7 +163,7 @@ public:
 
   Steinberg::tresult PLUGIN_API setContentScaleFactor(ScaleFactor factor) override
   {
-#ifdef OS_WIN
+#if defined OS_WIN || defined OS_LINUX
     mOwner.SetScreenScale(factor);
 #endif
 

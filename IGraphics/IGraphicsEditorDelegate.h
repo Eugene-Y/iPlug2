@@ -89,6 +89,13 @@ public:
    * @param startPos The start position in the chunk where editor size data is stored
    * @return The new chunk position (endPos) */
   int UnserializeEditorSize(const IByteChunk& chunk, int startPos);
+#ifdef OS_LINUX
+  void UpdateEditorSizeForScreenScale() override;
+
+  /** The screen scale the editor opens at, and that GetEditorWidth() and GetEditorHeight() are physical pixels at:
+   * the host's if it gave one (CLAP gui.set_scale, VST3 setContentScaleFactor), else the desktop's */
+  float GetEditorScreenScale() const { return mEditorScreenScale; }
+#endif
     
 protected:
   std::function<IGraphics*()> mMakeGraphicsFunc = nullptr;
@@ -101,6 +108,15 @@ private:
   bool mClosing = false; // used to prevent re-entrancy on closing
   bool mOpening = false; // set while the platform OpenWindow runs; a CloseWindow arriving during
                          // it is host view churn and is swallowed (see OpenWindow/CloseWindow)
+#ifdef OS_LINUX
+  void RescaleClosedEditorSize(float screenScale);
+
+  float mHostScreenScale = 0.f; // 0 until the host gives a scale; from then on the desktop's no longer counts
+  float mEditorScreenScale = 1.f; // the configured editor size is logical, i.e. physical at scale 1
+  // The configured size, taken before the first rescale: the size of an editor that has not been open yet
+  int mConfiguredEditorWidth = 0;
+  int mConfiguredEditorHeight = 0;
+#endif
 };
 
 END_IGRAPHICS_NAMESPACE

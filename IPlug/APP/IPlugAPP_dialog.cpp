@@ -579,6 +579,7 @@ WDL_DLGRET IPlugAPPHost::MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPA
       // child window is created — otherwise Mutter constrains the child to the
       // dialog's initial (template) size.
       ShowWindow(hwndDlg, SW_SHOW);
+      pPlug->UpdateEditorSizeForScreenScale();
       ClientResize(hwndDlg, pPlug->GetEditorWidth(), pPlug->GetEditorHeight());
       PostMessage(hwndDlg, WM_USER_OPENWINDOW, 0, 0);
 #else

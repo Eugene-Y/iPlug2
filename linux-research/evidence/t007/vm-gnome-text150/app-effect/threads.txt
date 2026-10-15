@@ -1,0 +1,21 @@
+pid=88739 cmd=/home/gene/iplug-apps/IPlugEffect --no-io 
+--- threads (count name)
+      1 IPlugEf:disk$0
+      1 IPlugEffect
+--- backtraces
+Thread 2 (Thread 0xeb478b75dde0 (LWP 88740) "IPlugEf:disk$0"):
+#0  0x0000eb479b041d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xbd8ae6c55300) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0xbd8ae6c55300) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0xbd8ae6c55300, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:
+#3  0x0000eb479b0449f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0xbd8ae6c552a0, cond=0xbd8ae6c552d8) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0xbd8ae6c552d8, mutex=0xbd8ae6c552a0) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000eb479687ed20 in ?? from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#6  0x0000eb4796858cdc [PAC] in ?? from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#7  0x0000eb479687ebe0 [PAC] in ?? from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#8  0x0000eb479b04582c [PAC] in start_thread (arg=0xeb479be27200) at ./nptl/pthread_create.c:447
+#9  0x0000eb479b0abb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 1 (Thread 0xeb479be26ac0 (LWP 88739) "IPlugEffect"):
+#0  0x0000eb479b0a0bdc in __GI___poll (fds=0xbd8ae76b1720, nfds=3, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000eb479bb31b7c in ?? from /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000eb479bacebc8 [PAC] in g_main_context_iteration from /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000bd8ad4637c0c [PAC] in main ()

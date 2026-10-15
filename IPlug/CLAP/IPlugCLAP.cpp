@@ -914,6 +914,10 @@ bool IPlugCLAP::implementsGui() const noexcept
 
 bool IPlugCLAP::guiCreate(const char* api, bool isFloating) noexcept
 {
+#ifdef OS_LINUX
+  if (HasUI())
+    UpdateEditorSizeForScreenScale();
+#endif
   return HasUI();
 }
 

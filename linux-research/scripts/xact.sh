@@ -2,6 +2,7 @@
 # Tiny xdotool DSL for GUI tests. Runs INSIDE the GUI container. Reads steps from stdin, one per line.
 # Coordinates are relative to ORIGIN (set with `origin X Y` or `origin-win <window-name-regex>`).
 #   origin X Y | origin-win REGEX      set coordinate origin (plugin view top-left on screen)
+#   scale S                            view coordinates and rect sizes in the steps that follow are logical: times S
 #   click X Y [button] | dclick X Y | rclick X Y
 #   drag X1 Y1 X2 Y2                   press, move in 10 steps, release
 #   key KEYS... | type TEXT...
@@ -25,13 +26,21 @@
 set -uo pipefail
 OUT="${OUT:-/tmp/xact}"; mkdir -p "$OUT"
 read -r OX OY <<<"${XACT_ORIGIN:-0 0}"
+SCALE="${XACT_SCALE:-1}"
+sc() { awk -v v="$1" -v s="$SCALE" 'BEGIN { p = v * s; printf "%d", (p < 0 ? -int(-p + 0.5) : int(p + 0.5)) }'; }
 HERE="$(cd "$(dirname "$0")" && pwd)"
 log() { echo "[xact] $*"; }
 xfail() { log "FAIL $*"; echo "$*" >> "$OUT/xact-fails.txt"; }
 while read -r cmd a b c d rest; do
   case "$cmd" in
+    click|dclick|rclick|drag|drag-check|move|expect-pointer) a=$(sc "$a"); b=$(sc "$b")
+      case "$cmd" in drag|drag-check) c=$(sc "$c"); d=$(sc "$d");; esac;;
+    expect-change|expect-same) c=$(sc "$c"); d=$(sc "$d"); read -r w h <<<"$rest"; rest="$(sc "$w") $(sc "$h")";;
+  esac
+  case "$cmd" in
     ''|\#*) continue;;
     origin) OX=$a; OY=$b; log "origin $OX,$OY";;
+    scale) SCALE=$a; log "scale $SCALE";;
     origin-win)
       w=$(xdotool search --onlyvisible --name "$a" | tail -1)
       eval "$(xdotool getwindowgeometry --shell "$w")"; OX=$X; OY=$Y; log "origin-win '$a' -> $OX,$OY (${WIDTH}x${HEIGHT})";;
@@ -41,7 +50,7 @@ while read -r cmd a b c d rest; do
     drag|drag-check)
       xdotool mousemove $((OX+a)) $((OY+b)) mousedown 1
       for i in $(seq 1 10); do xdotool mousemove $((OX+a+(c-a)*i/10)) $((OY+b+(d-b)*i/10)); sleep 0.03; done
-      [ "$cmd" = drag-check ] && echo "$rest" | OX=$OX OY=$OY OUT="$OUT" XACT_ORIGIN="$OX $OY" "$0"
+      [ "$cmd" = drag-check ] && echo "$rest" | OX=$OX OY=$OY OUT="$OUT" XACT_ORIGIN="$OX $OY" XACT_SCALE="$SCALE" "$0"
       xdotool mouseup 1; log "drag $a,$b -> $c,$d";;
     expect-cursor)
       [ -x /tmp/cursor-probe ] || gcc -O1 -o /tmp/cursor-probe "$HERE/cursor-probe.c" -lX11 -lXfixes

@@ -1509,7 +1509,7 @@ void IGraphics::PopupHostContextMenuForParam(IControl* pControl, int paramIdx, f
       
       populateFunc(&contextMenu);
      
-#ifdef OS_WIN
+#if defined OS_WIN || defined OS_LINUX
       x *= GetTotalScale();
       y *= GetTotalScale();
 #else
