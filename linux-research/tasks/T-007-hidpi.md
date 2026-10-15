@@ -1,6 +1,6 @@
 # T-007 — P5: HiDPI / scaling on Linux
 
-- **Status:** in-progress
+- **Status:** review-done
 - **Owner:** worker instance (coordinator-launched), 2026-10-14
 - **Branch/worktree:** `linux/T-007` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-007`.
 - **Depends on:** T-002 (merged).
@@ -40,7 +40,7 @@ Correct UI scale on HiDPI Linux desktops:
 - [x] Mouse hit-testing correct at 1.5/2.0 (knob drag changes the right control).
 - [x] Resize works at scale ≠ 1; no resize loop with REAPER.
 - [x] Main-thread check and validators unchanged; mac build proof if shared files are touched.
-- [ ] Self-review; evidence in `evidence/t007/`; Log complete.
+- [x] Self-review; evidence in `evidence/t007/`; Log complete.
 
 ## Log
 
@@ -63,4 +63,12 @@ Correct UI scale on HiDPI Linux desktops:
   modesets: UTM's preferred size changed; scale 1 and the experimental features are restored.
 - Evidence screenshots were replaced by contact sheets (`sheet.jpg`) plus 1:1 crops; history rewritten on this branch
   only (soft reset before any merge) to keep 35 MB of full-screen PNGs out of it.
+- Independent review (fresh subagent, notes/18-review-T-007.md). Round 1: accept after fixing findings 1-2 (Medium:
+  closed-editor size drifted by 1 px over two rescales; 1:1 crops not committed) plus Lows/nits; all fixed in
+  3ae56b76e, with re-runs. Round 2 (fresh build of 3ae56b7): **accept**, no regressions; every acceptance item Pass.
+  Non-blocking nits left: no unit test of the rescale arithmetic itself (covered by the mini-host drift matrix).
+- VM restored 2026-10-15 02:29: GNOME scale 100 %, text 1.0, no experimental features, screen back at 1440x863,
+  desktop responsive (screenshot checked); VM lock released. Containers t007, t007b removed.
+- Hand-over: commits 11af162f9..HEAD on linux/T-007. Evidence `evidence/t007/`, notes/17 (design, results, known
+  issues 1-8), notes/18 (review). Open issues: notes/17 Known issues.
 

@@ -191,3 +191,41 @@ today. Fix: add it to notes/17's known issues next to issue 4, for whoever enabl
 | Resize at scale ≠ 1, no loop with REAPER | **Pass** (re-run at 2: 1130×764; evidence at 1.5); finding 3 for host-resize plug-ins |
 | Main thread, validators, mac proof | **Pass** (tid 1 in my runs; validators per log; mac code identical to the proven commit) |
 | Self-review, evidence, Log | **Open**: findings 1–2, then record this verdict in the task Log |
+
+## Round 2 (fixes in `3ae56b76e`), 2026-10-15
+
+I rebuilt IPlugEffect CLAP + VST3 at `3ae56b7` into `build/t007-rev`. The embedded build info now reads `3ae56b7`,
+so the stray `plug_build_info.hpp` is gone. Container `t007-rev` re-created and removed.
+
+| Finding | Status | How verified |
+|---|---|---|
+| 1 drift | **Fixed** | Mini host at Xft.dpi 132, host scale 1 / 1.25 / 1.5 / 2: get_size = parent = editor (450×305, 562×381, 675×457, 900×610) with no `request_resize`. Also checked with no host scale (618×419), rescale to 2 while open (one `request_resize 900x610`) and reopen at 1.25. Output: `build/t007-rev-mini/drift-r2.txt`. In REAPER at ui_scale 1.5 and Xft.dpi 132, the extra `EditorResizeFromUI` from round 1 is gone (`build/t007-rev2-probe-dpi132`) |
+| 2 crops | **Fixed** | Whitelisted in `.gitignore` and committed (15 PNGs) |
+| 3 first-frame check | **Fixed** | Decided at the end of `OpenWindow`; the first frame skips it if the window was resized meanwhile (code read). Restore-size probe at 1.5 still sends exactly one `EditorResizeFromUI 847 x 573`, and REAPER's container follows (`build/t007-rev2-restore`) |
+| 4 notes wording | **Fixed** | notes/17 row 3 |
+| 5 build-info header | **Fixed** | File deleted; the rebuild embeds the right hash |
+| 6 harness | **Fixed** | `xft-dpi.sh` sets, overrides, removes, removes again when already absent, and refuses a display that carries other resources |
+| 7 constraint units | **Recorded** | notes/17 known issue 8 |
+| 8 nits | **Fixed** | The shared header's diff against `hvoya-linux` is now only the two `#ifdef OS_LINUX` blocks |
+
+Regression check:
+- REAPER CLAP IPlugEffect at scale 2 with p3a steps: RESULT PASS (`build/t007-rev2-effect-clap-x2`). The knob goes
+  to −60.0, the corner resize reaches 1130×764 with container = editor, Draw and ProcessXEvents run on tid 1, and
+  the shot is crisp.
+- Shared-code rule still holds: the new members and logic are inside `OS_LINUX`.
+
+Left as nits, not blocking:
+- No unit test sweeps the rescale arithmetic. The member-based code no longer divides, so the risk is low.
+- notes/17 row 3 has a comma splice: "…cuts the drag differently, the locked-cursor drag returns…".
+
+### Final acceptance
+
+| Item | Verdict |
+|---|---|
+| Host scale, else Xft.dpi; crisp text at 1.5 / 2 | **Pass** |
+| Mouse hit-testing at 1.5 / 2 | **Pass** |
+| Resize at scale ≠ 1, no loop with REAPER | **Pass** |
+| Main thread, validators, mac proof | **Pass** (mac rebuild per implementer; changes are `OS_LINUX`-only) |
+| Self-review, evidence, Log | **Pass** once this verdict is recorded in the task Log |
+
+**Verdict: accept T-007.**
