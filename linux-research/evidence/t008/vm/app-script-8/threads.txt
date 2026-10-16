@@ -1,0 +1,55 @@
+pid=121481 cmd=/home/gene/iplug-apps/IPlugControls 
+--- threads (count name)
+      1 alsa-pipewire
+      1 IPlugCo:disk$0
+      2 IPlugControls
+      1 module-rt
+      1 pw-data-loop
+--- backtraces
+Thread 6 (Thread 0xe4bd0016ede0 (LWP 121502) "module-rt"):
+#0  0x0000e4bd0227be74 in __GI_epoll_pwait (epfd=18, events=0xe4bd0016e060, maxevents=32, timeout=-1, set=0x0) at ../sysdeps/unix/sysv/linux/epoll_pwait.c:40
+#1  0x0000e4bd00214cf0 in ?? from /usr/lib/aarch64-linux-gnu/spa-0.2/support/libspa-support.so
+#2  0x0000e4bd0020784c [PAC] in ?? from /usr/lib/aarch64-linux-gnu/spa-0.2/support/libspa-support.so
+#3  0x0000e4bd002ceab0 [PAC] in ?? from /lib/aarch64-linux-gnu/libpipewire-0.3.so.0
+#4  0x0000e4bd0221582c [PAC] in start_thread (arg=0xe4bd02fb7200) at ./nptl/pthread_create.c:447
+#5  0x0000e4bd0227bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 5 (Thread 0xe4bcff7aede0 (LWP 121503) "pw-data-loop"):
+#0  0x0000e4bd0227be74 in __GI_epoll_pwait (epfd=13, events=0xe4bcff7adf80, maxevents=32, timeout=-1, set=0x0) at ../sysdeps/unix/sysv/linux/epoll_pwait.c:40
+#1  0x0000e4bd00214cf0 in ?? from /usr/lib/aarch64-linux-gnu/spa-0.2/support/libspa-support.so
+#2  0x0000e4bd0020784c [PAC] in ?? from /usr/lib/aarch64-linux-gnu/spa-0.2/support/libspa-support.so
+#3  0x0000e4bd002843c0 [PAC] in ?? from /lib/aarch64-linux-gnu/libpipewire-0.3.so.0
+#4  0x0000e4bd0221582c [PAC] in start_thread (arg=0xe4bd02fb7200) at ./nptl/pthread_create.c:447
+#5  0x0000e4bd0227bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 4 (Thread 0xe4bcfef9ede0 (LWP 121504) "alsa-pipewire"):
+#0  0x0000e4bd0227be74 in __GI_epoll_pwait (epfd=9, events=0xe4bcfef9e060, maxevents=32, timeout=-1, set=0x0) at ../sysdeps/unix/sysv/linux/epoll_pwait.c:40
+#1  0x0000e4bd00214cf0 in ?? from /usr/lib/aarch64-linux-gnu/spa-0.2/support/libspa-support.so
+#2  0x0000e4bd0020784c [PAC] in ?? from /usr/lib/aarch64-linux-gnu/spa-0.2/support/libspa-support.so
+#3  0x0000e4bd002ceab0 [PAC] in ?? from /lib/aarch64-linux-gnu/libpipewire-0.3.so.0
+#4  0x0000e4bd0221582c [PAC] in start_thread (arg=0xe4bd02fb7200) at ./nptl/pthread_create.c:447
+#5  0x0000e4bd0227bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 3 (Thread 0xe4bcfe653de0 (LWP 121506) "IPlugControls"):
+#0  0x0000e4bd02270bdc in __GI___poll (fds=0xe4bcfe653290, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000e4bd028a46c8 in ?? from /lib/aarch64-linux-gnu/libasound.so.2
+#2  0x0000e4bd028a5708 [PAC] in ?? from /lib/aarch64-linux-gnu/libasound.so.2
+#3  0x0000e4bd028a5e14 [PAC] in snd_pcm_mmap_writen from /lib/aarch64-linux-gnu/libasound.so.2
+#4  0x0000e4bd028a5ea8 [PAC] in ?? from /lib/aarch64-linux-gnu/libasound.so.2
+#5  0x0000c91ca01f71a0 [PAC] in RtApiAlsa::callbackEvent() ()
+#6  0x0000c91ca01f752c in alsaCallbackHandler(void*) ()
+#7  0x0000e4bd0221582c in start_thread (arg=0xe4bd02fb7200) at ./nptl/pthread_create.c:447
+#8  0x0000e4bd0227bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 2 (Thread 0xe4bcfd52dde0 (LWP 121507) "IPlugCo:disk$0"):
+#0  0x0000e4bd02211d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xc91cbcffa0a0) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0xc91cbcffa0a0) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0xc91cbcffa0a0, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:
+#3  0x0000e4bd022149f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0xc91cbcffa040, cond=0xc91cbcffa078) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0xc91cbcffa078, mutex=0xc91cbcffa040) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000e4bcf56eed20 in ?? from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#6  0x0000e4bcf56c8cdc [PAC] in ?? from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#7  0x0000e4bcf56eebe0 [PAC] in ?? from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#8  0x0000e4bd0221582c [PAC] in start_thread (arg=0xe4bd02fb7200) at ./nptl/pthread_create.c:447
+#9  0x0000e4bd0227bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 1 (Thread 0xe4bd02fb6ac0 (LWP 121481) "IPlugControls"):
+#0  0x0000e4bd02270bdc in __GI___poll (fds=0xc91cbdaeed70, nfds=3, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000e4bd02d11b7c in ?? from /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000e4bd02caebc8 [PAC] in g_main_context_iteration from /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000c91ca01b9f6c [PAC] in main ()

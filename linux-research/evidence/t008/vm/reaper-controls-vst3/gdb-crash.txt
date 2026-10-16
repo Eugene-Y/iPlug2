@@ -1,0 +1,159 @@
+[New LWP 127356]
+[New LWP 127298]
+[New LWP 127297]
+[New LWP 127296]
+[New LWP 127295]
+[New LWP 127294]
+[New LWP 127293]
+[New LWP 127292]
+[New LWP 127291]
+[New LWP 127290]
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+0x0000f0f0ff78bd90 in __GI___clock_nanosleep (clock_id=<optimized out>, clock_id@entry=0, flags=flags@entry=0, req=req@entry=0xffffee792988, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/clock_nanosleep.c:78
+
+warning: 78	../sysdeps/unix/sysv/linux/clock_nanosleep.c: No such file or directory
+[Detaching after vfork from child process 128065]
+[Thread 0xf0f0e721e160 (LWP 127356) exited]
+[New Thread 0xf0f0e721e160 (LWP 128268)]
+[Thread 0xf0f0e721e160 (LWP 128268) exited]
+[New Thread 0xf0f0e721e160 (LWP 128494)]
+[Thread 0xf0f0e721e160 (LWP 128494) exited]
+[New Thread 0xf0f0e721e160 (LWP 128716)]
+[Thread 0xf0f0e721e160 (LWP 128716) exited]
+[New Thread 0xf0f0e721e160 (LWP 128939)]
+[Thread 0xf0f0e721e160 (LWP 128939) exited]
+[New Thread 0xf0f0e721e160 (LWP 129161)]
+[New Thread 0xf0f0e5cef160 (LWP 129291)]
+
+Thread 1 "reaper" received signal SIGINT, Interrupt.
+0x0000f0f0ff78bd90 in __GI___clock_nanosleep (clock_id=<optimized out>, clock_id@entry=0, flags=flags@entry=0, req=req@entry=0xffffee792988, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/clock_nanosleep.c:78
+78	in ../sysdeps/unix/sysv/linux/clock_nanosleep.c
+pc             0xf0f0ff78bd90      0xf0f0ff78bd90 <__GI___clock_nanosleep+256>
+#0  0x0000f0f0ff78bd90 in __GI___clock_nanosleep (clock_id=<optimized out>, clock_id@entry=0, flags=flags@entry=0, req=req@entry=0xffffee792988, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/clock_nanosleep.c:78
+#1  0x0000f0f0ff7960bc in __GI___nanosleep (req=req@entry=0xffffee792988, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/nanosleep.c:25
+#2  0x0000f0f0ff7bb5b8 in usleep (useconds=<optimized out>) at ../sysdeps/posix/usleep.c:31
+#3  0x000000000040b698 in ?? ()
+#4  0x0000f0f0ff6f84c4 in __libc_start_call_main (main=main@entry=0x40a9d0, argc=argc@entry=3, argv=argv@entry=0xffffee792f98) at ../sysdeps/nptl/libc_start_call_main.h:58
+#5  0x0000f0f0ff6f8598 in __libc_start_main_impl (main=0x40a9d0, argc=3, argv=0xffffee792f98, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=<optimized out>) at ../csu/libc-start.c:360
+#6  0x0000000000418ee8 in _start ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+
+Thread 17 (Thread 0xf0f0e5cef160 (LWP 129291) "reaper:disk$0"):
+#0  0x0000f0f0ff751d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0x2970a780) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0x2970a780) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x2970a780, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f0f0ff7549f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0x2970a720, cond=0x2970a758) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0x2970a758, mutex=0x2970a720) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000f0f0dd6eed20 in ?? () from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#6  0x0000f0f0dd6c8cdc [PAC] in ?? () from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#7  0x0000f0f0dd6eebe0 [PAC] in ?? () from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 16 (Thread 0xf0f0e721e160 (LWP 129161) "reaper:disk$0"):
+#0  0x0000f0f0ff751d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0x293736a0) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0x293736a0) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x293736a0, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f0f0ff7549f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0x29373640, cond=0x29373678) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0x29373678, mutex=0x29373640) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000f0f0dd6eed20 in ?? () from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#6  0x0000f0f0dd6c8cdc [PAC] in ?? () from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#7  0x0000f0f0dd6eebe0 [PAC] in ?? () from /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 11 (Thread 0xf0f0fccff160 (LWP 127290) "reaper/video"):
+#0  0x0000f0f0ff78bd90 in __GI___clock_nanosleep (clock_id=<optimized out>, clock_id@entry=0, flags=flags@entry=0, req=req@entry=0xf0f0fccfe798, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/clock_nanosleep.c:78
+#1  0x0000f0f0ff7960bc in __GI___nanosleep (req=req@entry=0xf0f0fccfe798, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/nanosleep.c:25
+#2  0x0000f0f0ff7bb5b8 in usleep (useconds=<optimized out>) at ../sysdeps/posix/usleep.c:31
+#3  0x0000f0f0f7ebff38 in ?? () from /home/gene/opt/REAPER/Plugins/reaper_video.so
+#4  0x0000f0f0ff60d25c in ?? () from /home/gene/opt/REAPER/libSwell.so
+#5  0x0000f0f0ff75582c in start_thread (arg=0xf0f0ffddeba0) at ./nptl/pthread_create.c:447
+#6  0x0000f0f0ff7bbb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+
+Thread 10 (Thread 0xf0f0ede2f160 (LWP 127291) "reaper/audio_dm"):
+#0  0x0000f0f0ff78bd94 in __GI___clock_nanosleep (clock_id=<optimized out>, clock_id@entry=0, flags=flags@entry=0, req=req@entry=0xf0f0ede2e7e8, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/clock_nanosleep.c:78
+#1  0x0000f0f0ff7960bc in __GI___nanosleep (req=req@entry=0xf0f0ede2e7e8, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/nanosleep.c:25
+#2  0x0000f0f0ff7bb5b8 in usleep (useconds=<optimized out>) at ../sysdeps/posix/usleep.c:31
+#3  0x0000000000a31268 in ?? ()
+#4  0x0000f0f0ff60d25c in ?? () from /home/gene/opt/REAPER/libSwell.so
+#5  0x0000f0f0ff75582c in start_thread (arg=0xf0f0ffddeba0) at ./nptl/pthread_create.c:447
+#6  0x0000f0f0ff7bbb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+
+Thread 9 (Thread 0xf0f0ed49f160 (LWP 127292) "reaper/mediaafx"):
+#0  0x0000f0f0ff751d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0xf0f0ed49e710, op=137, expected=0, futex_word=0x2922ddb0) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0xf0f0ed49e710, clockid=0, expected=0, futex_word=0x2922ddb0) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x2922ddb0, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0xf0f0ed49e710, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f0f0ff754d20 in __pthread_cond_wait_common (abstime=0xf0f0ed49e710, clockid=1, mutex=0x2922dd58, cond=0x2922dd88) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_timedwait64 (cond=0x2922dd88, mutex=0x2922dd58, abstime=0xf0f0ed49e710) at ./nptl/pthread_cond_wait.c:652
+#5  0x0000f0f0ff60cc2c in ?? () from /home/gene/opt/REAPER/libSwell.so
+#6  0x000000000070217c in ?? ()
+#7  0x0000f0f0ff60d25c in ?? () from /home/gene/opt/REAPER/libSwell.so
+
+Thread 8 (Thread 0xf0f0ecc8f160 (LWP 127293) "reaper/mediaafx"):
+#0  0x0000f0f0ff751d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0xf0f0ecc8e710, op=137, expected=0, futex_word=0x299952a4) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0xf0f0ecc8e710, clockid=0, expected=0, futex_word=0x299952a4) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x299952a4, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0xf0f0ecc8e710, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f0f0ff754d20 in __pthread_cond_wait_common (abstime=0xf0f0ecc8e710, clockid=1, mutex=0x29995248, cond=0x29995278) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_timedwait64 (cond=0x29995278, mutex=0x29995248, abstime=0xf0f0ecc8e710) at ./nptl/pthread_cond_wait.c:652
+#5  0x0000f0f0ff60cc2c in ?? () from /home/gene/opt/REAPER/libSwell.so
+#6  0x000000000070217c in ?? ()
+#7  0x0000f0f0ff60d25c in ?? () from /home/gene/opt/REAPER/libSwell.so
+
+Thread 7 (Thread 0xf0f0ec47f160 (LWP 127294) "reaper/mediaafx"):
+#0  0x0000f0f0ff751d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0xf0f0ec47e710, op=137, expected=0, futex_word=0x2a2b5410) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0xf0f0ec47e710, clockid=0, expected=0, futex_word=0x2a2b5410) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x2a2b5410, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0xf0f0ec47e710, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f0f0ff754d20 in __pthread_cond_wait_common (abstime=0xf0f0ec47e710, clockid=1, mutex=0x2a2b53b8, cond=0x2a2b53e8) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_timedwait64 (cond=0x2a2b53e8, mutex=0x2a2b53b8, abstime=0xf0f0ec47e710) at ./nptl/pthread_cond_wait.c:652
+#5  0x0000f0f0ff60cc2c in ?? () from /home/gene/opt/REAPER/libSwell.so
+#6  0x000000000070217c in ?? ()
+#7  0x0000f0f0ff60d25c in ?? () from /home/gene/opt/REAPER/libSwell.so
+
+Thread 6 (Thread 0xf0f0ebc6f160 (LWP 127295) "reaper/mediaafx"):
+#0  0x0000f0f0ff751d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0xf0f0ebc6e710, op=137, expected=0, futex_word=0x2a2b5764) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0xf0f0ebc6e710, clockid=0, expected=0, futex_word=0x2a2b5764) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x2a2b5764, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0xf0f0ebc6e710, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f0f0ff754d20 in __pthread_cond_wait_common (abstime=0xf0f0ebc6e710, clockid=1, mutex=0x2a2b5708, cond=0x2a2b5738) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_timedwait64 (cond=0x2a2b5738, mutex=0x2a2b5708, abstime=0xf0f0ebc6e710) at ./nptl/pthread_cond_wait.c:652
+#5  0x0000f0f0ff60cc2c in ?? () from /home/gene/opt/REAPER/libSwell.so
+#6  0x000000000070217c in ?? ()
+#7  0x0000f0f0ff60d25c in ?? () from /home/gene/opt/REAPER/libSwell.so
+
+Thread 5 (Thread 0xf0f0eb45f160 (LWP 127296) "reaper/livefx"):
+#0  0x0000f0f0ff751d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0xf0f0eb45e710, op=137, expected=0, futex_word=0x2a2b5ab4) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0xf0f0eb45e710, clockid=0, expected=0, futex_word=0x2a2b5ab4) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x2a2b5ab4, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0xf0f0eb45e710, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f0f0ff754d20 in __pthread_cond_wait_common (abstime=0xf0f0eb45e710, clockid=1, mutex=0x2a2b5a58, cond=0x2a2b5a88) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_timedwait64 (cond=0x2a2b5a88, mutex=0x2a2b5a58, abstime=0xf0f0eb45e710) at ./nptl/pthread_cond_wait.c:652
+#5  0x0000f0f0ff60cc2c in ?? () from /home/gene/opt/REAPER/libSwell.so
+#6  0x0000000000701d2c in ?? ()
+#7  0x0000f0f0ff60d25c in ?? () from /home/gene/opt/REAPER/libSwell.so
+
+Thread 4 (Thread 0xf0f0eac4f160 (LWP 127297) "reaper/livefx"):
+#0  0x0000f0f0ff751d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0xf0f0eac4e710, op=137, expected=0, futex_word=0x2a2b5bb4) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0xf0f0eac4e710, clockid=0, expected=0, futex_word=0x2a2b5bb4) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x2a2b5bb4, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0xf0f0eac4e710, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f0f0ff754d20 in __pthread_cond_wait_common (abstime=0xf0f0eac4e710, clockid=1, mutex=0x2a2b5b58, cond=0x2a2b5b88) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_timedwait64 (cond=0x2a2b5b88, mutex=0x2a2b5b58, abstime=0xf0f0eac4e710) at ./nptl/pthread_cond_wait.c:652
+#5  0x0000f0f0ff60cc2c in ?? () from /home/gene/opt/REAPER/libSwell.so
+#6  0x0000000000701d2c in ?? ()
+#7  0x0000f0f0ff60d25c in ?? () from /home/gene/opt/REAPER/libSwell.so
+
+Thread 3 (Thread 0xf0f0ea43f160 (LWP 127298) "reaper/livefx"):
+#0  0x0000f0f0ff751d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0xf0f0ea43e710, op=137, expected=0, futex_word=0x29192d34) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0xf0f0ea43e710, clockid=0, expected=0, futex_word=0x29192d34) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x29192d34, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0xf0f0ea43e710, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f0f0ff754d20 in __pthread_cond_wait_common (abstime=0xf0f0ea43e710, clockid=1, mutex=0x29192cd8, cond=0x29192d08) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_timedwait64 (cond=0x29192d08, mutex=0x29192cd8, abstime=0xf0f0ea43e710) at ./nptl/pthread_cond_wait.c:652
+#5  0x0000f0f0ff60cc2c in ?? () from /home/gene/opt/REAPER/libSwell.so
+#6  0x0000000000701d2c in ?? ()
+#7  0x0000f0f0ff60d25c in ?? () from /home/gene/opt/REAPER/libSwell.so
+
+Thread 1 (Thread 0xf0f0ffdde460 (LWP 127278) "reaper"):
+#0  0x0000f0f0ff78bd90 in __GI___clock_nanosleep (clock_id=<optimized out>, clock_id@entry=0, flags=flags@entry=0, req=req@entry=0xffffee792988, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/clock_nanosleep.c:78
+#1  0x0000f0f0ff7960bc in __GI___nanosleep (req=req@entry=0xffffee792988, rem=rem@entry=0x0) at ../sysdeps/unix/sysv/linux/nanosleep.c:25
+#2  0x0000f0f0ff7bb5b8 in usleep (useconds=<optimized out>) at ../sysdeps/posix/usleep.c:31
+#3  0x000000000040b698 in ?? ()
+#4  0x0000f0f0ff6f84c4 in __libc_start_call_main (main=main@entry=0x40a9d0, argc=argc@entry=3, argv=argv@entry=0xffffee792f98) at ../sysdeps/nptl/libc_start_call_main.h:58
+#5  0x0000f0f0ff6f8598 in __libc_start_main_impl (main=0x40a9d0, argc=3, argv=0xffffee792f98, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=<optimized out>) at ../csu/libc-start.c:360
+#6  0x0000000000418ee8 in _start ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+[Inferior 1 (process 127278) detached]
