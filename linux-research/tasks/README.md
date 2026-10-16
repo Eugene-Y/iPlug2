@@ -15,7 +15,7 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | [T-004](T-004-app-no-audio.md) | P8: standalone APP robustness (no audio device, devices, settings) | **ready — good for a 2nd instance** | — | — | — |
 | [T-005](T-005-ide-research.md) | P11a: IDE research + presets/IDE configs for examples | **ready — good for a 2nd instance** | — | — | T-011 later |
 | [T-006](T-006-clap-state-repro.md) | clap-validator `state-reproducibility` failures (Linux and mac) | **ready — good for a 2nd instance** | — | — | — |
-| [T-007](T-007-hidpi.md) | P5: HiDPI (CLAP set_scale, VST3 content scale, Xft.dpi) | in-progress (reviewing) | coordinator | — | T-008 (IGraphicsLinux*): not in parallel |
+| [T-007](T-007-hidpi.md) | P5: HiDPI (CLAP set_scale, VST3 content scale, Xft.dpi) | **merged** 4d413d040 | coordinator | — | T-008 (IGraphicsLinux*): not in parallel |
 | [T-008](T-008-p3-polish.md) | P3 polish from the VM run (notes/14), listed below the table | ready | — | — | T-007 (IGraphicsLinux*): not in parallel |
 | T-009 | P6: Gneiss visual parity vs macOS | todo (unblocked; needs task file) | — | — | — |
 | T-010 | P9: Gneiss-side changes (deferred `SetLatency`, menus, `openFolder`) | todo (unblocked; needs task file; see CROSS_PLATFORM_FINDINGS for what NOT to mix in) | — | — | Gneiss repo |
@@ -38,5 +38,6 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | Date | Task | Merge commit | Smoke tests |
 |---|---|---|---|
 | 2026-10-14 | T-001 | (committed directly on hvoya-linux, last 75e906365) | — (evidence/notes only) |
+| 2026-10-15 | T-007 | 4d413d040 (conflict in IGraphicsLinux.cpp: T-003 and T-007 both added "tell the host the opened size"; kept T-007's, which also skips a host-resized window; kept T-003's stand-in menu font) | Docker build Gneiss CLAP+VST3, IPlugControls CLAP+VST3, IPlugEffect VST3 PASS; REAPER: Gneiss CLAP PASS, IPlugControls VST3 P3b PASS; Gneiss VST3 fails only the right-click step, which also fails before T-007 (REAPER's VST3 host menu does not open on a same-ms synthetic click, notes/14) |
 | 2026-10-15 | T-003 | e54a43e76 | Docker build Gneiss CLAP+VST3 and IPlugControls CLAP+VST3 PASS; REAPER: IPlugControls P3b script PASS, Gneiss `steps/gneiss.txt` PASS, all Draw/X on tid 1, Gneiss UI renders (`evidence/merge-smoke/t003-*`). Cross-platform bugs found → `../CROSS_PLATFORM_FINDINGS.md` |
 | 2026-10-14 | T-002 | 0846167f8 | Docker build IPlugControls CLAP+VST3 PASS; REAPER full P3b script on CLAP: PASS, all Draw/X events on tid 1 (`evidence/merge-smoke/t002-clap/`) |
