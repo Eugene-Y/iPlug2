@@ -31,7 +31,8 @@ Not pursued: Eclipse CDT (heavy, weaker CMake UX), GNOME Builder (Flatpak-first,
 ## What the checked-in setup does
 
 - `Scripts/cmake/Linux/CMakePresets-linux.json`: `linux-debug`, `linux-release` (Ninja, NanoVG/GL2,
-  `CMAKE_EXPORT_COMPILE_COMMANDS`, `IPLUG_DEPLOY_PLUGINS=ON`, `binaryDir` `build/<preset>`), Linux-only via
+  `CMAKE_EXPORT_COMPILE_COMMANDS`, `IPLUG_DEPLOY_PLUGINS=ON`, `binaryDir` `build-linux/<preset>`: the existing
+  `build-*` patterns in `duplicate.py`'s `DONT_COPY` and in every `.gitignore` already cover it), Linux-only via
   `condition`. Included by the root `CMakePresets.json` and by each example's `CMakePresets.json`. One definition.
 - Root `CMakePresets.json`: upstream `base-linux` forced `IGRAPHICS_RENDERER=GL3`; now GL2 (PLAN, notes/11).
 - `Examples/<Name>/<Name>-linux.code-workspace`: tasks "Build APP", "Build and deploy CLAP/VST3" (CMake Tools tasks
@@ -65,27 +66,33 @@ VM (Ubuntu 24.04.5 arm64, GNOME/X11), as a developer would:
    - "Debug standalone APP": `ProcessBlock` (`23-…`), `OnMouseDown` (`25-…`);
    - "Debug VST3 in REAPER": `ProcessBlock` (`26-…`).
 6. IPlugControls workspace: fresh configure, build, "Debug CLAP in REAPER" opens the full editor (`27-…`).
-7. Qt Creator 13.0.0 (apt): opens `Examples/IPlugEffect/CMakeLists.txt`, offers both presets as kits, configures
-   (`30-…`, `31-…`). Not driven further.
+7. Qt Creator 13.0.0 (apt): opens `Examples/IPlugEffect/CMakeLists.txt` and offers both presets as kits
+   (`30-…`). After "Configure Project" the project tree loads (`31-…`); the CMake output was not captured. Not
+   driven further.
 
 ## Lessons (also in the docs)
 
 - One manual step remains in VS Code: selecting the configure preset once per checkout. CMake Tools has no
   "default preset" setting.
-- REAPER needs a working audio device, or `ProcessBlock` never runs: on PipeWire desktops choose PulseAudio.
+- REAPER needs a working audio device, or `ProcessBlock` never runs. On PipeWire desktops choose PulseAudio
+  (`linux_audio_mode=3`; `0` JACK, `2` Dummy Audio).
 - `cmake.copyCompileCommands` alone is not enough: clangd searches for the database above each source file, so
   framework sources outside the project (`../../IGraphics/...`) got no flags. `--compile-commands-dir` fixes it.
 - Harness trap: `vm-display-env` puts the sudo gdb wrapper on PATH; an IDE started from it debugs REAPER as root
-  (other HOME and profile, no audio). Recorded in `scripts/vm/README.md`.
+  (other HOME and profile: REAPER's default JACK audio, which fails, and none of the user's scans). Recorded in
+  `scripts/vm/README.md`.
+- "Debug in REAPER" passes `-newinst`: otherwise a REAPER that is already running takes the arguments and the
+  debugged process exits at once (found in review, notes/21).
 
 ## For T-011 (`duplicate.py`)
 
-- In-tree duplication (`duplicate.py IPlugEffect MyFx Mfr`) already renames `MyFx-linux.code-workspace` and
-  rewrites target names (`MyFx-clap`) and `IPLUG2_REAPER_FX` ("CLAP: MyFx"). Tested 2026-10-16.
-- Out-of-tree (4th argument): `build/` is copied (172 MB here). `DONT_COPY` has `build-*` but not `build`, and the
-  presets put builds in `build/<preset>`. `../..` in `CMakePresets.json`, the workspace and `CMakeLists.txt` is
-  not rewritten: `newroot` is computed for `config/`, and only the xcconfig's `IPLUG2_ROOT` string is replaced.
-  The `CMakeLists.txt` case predates T-005.
+- In-tree duplication (`duplicate.py IPlugEffect MyFx Mfr`) renames `MyFx-linux.code-workspace` and rewrites
+  target names (`MyFx-clap`) and `IPLUG2_REAPER_FX` ("CLAP: MyFx"). After the review fix it also works after a
+  build: the duplicate of a built IPlugEffect configures and builds in Docker. Earlier, `build/` was copied with a
+  stale `CMakeCache.txt`.
+- Out-of-tree (4th argument): `../..` in `CMakePresets.json`, the workspace and `CMakeLists.txt` is not rewritten:
+  `newroot` is computed for `config/`, and only the xcconfig's `IPLUG2_ROOT` string is replaced. The
+  `CMakeLists.txt` case predates T-005. Task file: `tasks/T-011-duplicate-templates.md`.
 
 ## Sources (read 2026-10-16)
 

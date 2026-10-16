@@ -79,7 +79,7 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
 - **Bugs fixed on the way:**
   - clangd got no flags for framework sources outside the project → `--compile-commands-dir`;
   - clangd `#error` from `WDL/wdlendian.h` → `.clangd`;
-  - `scripts/vm/README.md` wrongly said `linux_audio_mode=2` is dummy audio (it is JACK) → fixed, plus a gotcha: the sudo gdb wrapper on PATH makes IDE debuggees run as root.
+  - ~~`scripts/vm/README.md` wrongly said `linux_audio_mode=2` is dummy audio (it is JACK)~~. **Wrong, corrected in the review round:** 2 *is* Dummy Audio; the JACK I saw was the root-run REAPER's default profile. Kept: the gotcha that the sudo gdb wrapper on PATH makes IDE debuggees run as root.
 - **VM state left behind** (useful for later tasks):
   - installed: VS Code + extensions, clangd, Qt Creator, native build deps;
   - `~/dev/iPlug2`, a hvoya-linux clone with T-005 files;
@@ -87,7 +87,7 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
   - `~/.config/REAPER`: a full profile with PulseAudio (`linux_audio_mode=3`), not the seeded minimal one;
   - `~/.config/Code/User/settings.json`: trust prompt off;
   - apport crash reports from a root REAPER I killed.
-- **For T-011:** `duplicate.py` in-tree works with the new files. Out-of-tree it copies `build/` (`DONT_COPY` lacks `build`) and does not rewrite `../..` in project-root files (notes/20 §"For T-011").
+- **For T-011:** task file `tasks/T-011-duplicate-templates.md` (written 2026-10-16 at the user's request: every rough edge must be tracked and fixed). Out of tree, `duplicate.py` does not rewrite `../..` in project-root files (notes/20 §"For T-011"). The `build/` copy is resolved by the review fix M1 below.
 - **For T-004:** APP under the debugger logs `RtApiAlsa::probeDeviceOpen: unable to synchronize input and output devices` at start (ALSA `default` = PipeWire). It still runs, with underruns while stopped in the debugger.
 
 ### Review round 1 (2026-10-16, fresh-context reviewer)
@@ -110,3 +110,16 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
 ### Cross-platform findings
 - (low, pre-existing upstream) `Examples/duplicate.py` with an output path outside the iPlug2 tree leaves `IPLUG2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.."` in the copied `CMakeLists.txt`: `newroot` is relative to `config/`, and only the xcconfig's `IPLUG2_ROOT` value is replaced. CMake builds of such a duplicate fail on mac/win too. Repro: `python3 duplicate.py IPlugEffect MyFx Mfr /tmp/x`, then `grep IPLUG2_DIR /tmp/x/MyFx/CMakeLists.txt`.
 
+
+### Review round 1 — fixes (2026-10-16)
+- **M1:** presets build into `build-linux/<preset>` (covered by `build-*` in `DONT_COPY` and every `.gitignore`); workspaces point `copyCompileCommands` and clangd there. Verified in Docker: built IPlugEffect, duplicated it in-tree (`T005Dup`), and the duplicate configures and builds (`T005Dup.clap`). Test duplicate removed.
+- **M2:** `scripts/vm/README.md` now gives the mapping 0 JACK / 2 Dummy / 3 PulseAudio (1 presumably ALSA). Fixed the stale comments in `reaper-up.sh` and `vm-provision.sh`, and my Log line above.
+- **m1:** `-newinst` added to both REAPER launches and to the Qt Creator args in the docs. Verified in Docker with a REAPER already running: 2 instances, ProcessBlock breakpoint hits in the debugged one (`evidence/t005/review-fix/gdb-newinst.log`).
+- **m3:** the docs explain the `/opt/REAPER` symlink and that workspace settings win over user settings.
+- **m4:** notes/20 no longer claims a captured configure in Qt Creator.
+- **Nits:**
+  - docs say `reaper/mediafx` instead of "audio thread";
+  - the hidden preset is now `linux-common` (it was `linux-base`, next to root's `base-linux`).
+- **Open, user's call:**
+  - **m2**: the examples' `CMakePresets.json` puts CMake Tools on mac/win into presets mode with an empty list.
+- Also: the T-004 task file got a pointer to the APP's RtAudio warning, and `tasks/T-011-duplicate-templates.md` was written (the user asked for every rough edge to be tracked).

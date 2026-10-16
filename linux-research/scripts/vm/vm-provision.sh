@@ -3,7 +3,7 @@
 #   - apt packages for running and debugging plug-ins on the real desktop
 #   - REAPER $REAPER_VER for the VM's arch in ~/opt/REAPER, with /opt/REAPER -> ~/opt/REAPER so the Docker
 #     harness scripts (which hard-code /opt/REAPER) run unchanged
-#   - ~/.config/REAPER/reaper.ini seeded with the keys the Docker harness uses (no splash, JACK audio)
+#   - ~/.config/REAPER/reaper.ini seeded with the keys the Docker harness uses (no splash, Dummy Audio)
 #   - ~/.clap, ~/.vst3, ~/iplug-apps, and the harness scripts mirrored to ~/$VM_HARNESS/linux-research/scripts
 # Usage: vm-provision.sh            (env: VM_HOST, VM_KEY, REAPER_VER=782)
 set -euo pipefail

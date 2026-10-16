@@ -2,10 +2,10 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "linux-base",
+      "name": "linux-common",
       "hidden": true,
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "binaryDir": "${sourceDir}/build-linux/${presetName}",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -22,7 +22,7 @@
       "name": "linux-debug",
       "displayName": "Linux Debug",
       "description": "Ninja, NanoVG/GL2, -O0 -g; CLAP/VST3 are copied to ~/.clap and ~/.vst3 after each build",
-      "inherits": "linux-base",
+      "inherits": "linux-common",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -31,7 +31,7 @@
       "name": "linux-release",
       "displayName": "Linux Release",
       "description": "Ninja, NanoVG/GL2, optimised; CLAP/VST3 are copied to ~/.clap and ~/.vst3 after each build",
-      "inherits": "linux-base",
+      "inherits": "linux-common",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }

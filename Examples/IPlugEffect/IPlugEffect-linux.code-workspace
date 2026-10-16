@@ -7,8 +7,8 @@
   "settings": {
     "cmake.useCMakePresets": "always",
     "cmake.configureOnOpen": true,
-    "cmake.copyCompileCommands": "${workspaceFolder}/build/compile_commands.json",
-    "clangd.arguments": ["--compile-commands-dir=${workspaceFolder}/build"],
+    "cmake.copyCompileCommands": "${workspaceFolder}/build-linux/compile_commands.json",
+    "clangd.arguments": ["--compile-commands-dir=${workspaceFolder}/build-linux"],
     "C_Cpp.intelliSenseEngine": "disabled",
     "iplug2.reaperPath": "/opt/REAPER/reaper"
   },
@@ -72,7 +72,7 @@
         "request": "launch",
         "preLaunchTask": "Build and deploy CLAP",
         "program": "${config:iplug2.reaperPath}",
-        "args": ["-new", "${workspaceFolder}/../../Scripts/linux/reaper-open-fx.lua"],
+        "args": ["-newinst", "-new", "${workspaceFolder}/../../Scripts/linux/reaper-open-fx.lua"],
         "environment": [
           { "name": "IPLUG2_REAPER_FX", "value": "CLAP: IPlugEffect" }
         ],
@@ -89,7 +89,7 @@
         "request": "launch",
         "preLaunchTask": "Build and deploy VST3",
         "program": "${config:iplug2.reaperPath}",
-        "args": ["-new", "${workspaceFolder}/../../Scripts/linux/reaper-open-fx.lua"],
+        "args": ["-newinst", "-new", "${workspaceFolder}/../../Scripts/linux/reaper-open-fx.lua"],
         "environment": [
           { "name": "IPLUG2_REAPER_FX", "value": "VST3: IPlugEffect" }
         ],

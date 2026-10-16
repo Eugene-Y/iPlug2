@@ -19,7 +19,8 @@ for p in "$@"; do
     *.vst3) cp -a "$p" "$HOME/.vst3/";;
   esac
 done
-# JACK dummy backend so REAPER (and the plugins) run a real audio thread without a sound card.
+# Unused while reaper.ini selects Dummy Audio (linux_audio_mode=2), which already runs an audio thread without a
+# sound card; switching to JACK (mode 0) needs this server.
 pgrep -x jackd >/dev/null || { jackd --no-realtime -d dummy -r 48000 -p 256 >/tmp/jackd.log 2>&1 & sleep 1.5; }
 cat > "$HOME/.config/REAPER/reaper.ini" <<'EOF'
 [REAPER]

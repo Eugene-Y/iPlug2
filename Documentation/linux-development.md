@@ -22,7 +22,9 @@ CMake Tools (`ms-vscode.cmake-tools`), clangd (`llvm-vs-code-extensions.vscode-c
 (`ms-vscode.cpptools`, used only for its gdb debugger; its IntelliSense is switched off in favour of clangd).
 
 **REAPER** (for "Debug in REAPER"): unpack the Linux tarball from https://www.reaper.fm and install it to
-`/opt/REAPER` (its `install-reaper.sh` offers that). Elsewhere: set `iplug2.reaperPath` in the workspace file.
+`/opt/REAPER` (its `install-reaper.sh` offers that). Installed elsewhere, symlink it there
+(`sudo ln -s ~/opt/REAPER /opt/REAPER`), or change `iplug2.reaperPath` in the workspace file. Workspace settings
+override user settings, so the setting only takes effect in that file.
 In REAPER, *Preferences > Audio > Device*: pick **PulseAudio** on a PipeWire desktop (or JACK if you run it).
 Without a working device REAPER never calls `ProcessBlock`.
 
@@ -42,7 +44,7 @@ code Examples/IPlugEffect/IPlugEffect-linux.code-workspace
 
 On first open, pick a configure preset: **Linux Debug** (or Linux Release). VS Code remembers the choice for
 that checkout, and configuring runs on its own from then on. clangd gets its compile database from
-`build/compile_commands.json`, which CMake Tools refreshes after each configure.
+`build-linux/compile_commands.json`, which CMake Tools refreshes after each configure.
 
 `<Name>.code-workspace` and `.vscode/c_cpp_properties.json` in the same folder belong to the macOS/Windows setup;
 use the `-linux` workspace on Linux.
@@ -53,7 +55,7 @@ use the `-linux` workspace on Linux.
 
 | Task | Result |
 |---|---|
-| Build APP | `build/<preset>/out/<Name>` (+ `<Name>.resources/`) |
+| Build APP | `build-linux/<preset>/out/<Name>` (+ `<Name>.resources/`) |
 | Build and deploy CLAP | `out/<Name>.clap`, copied to `~/.clap/` with `<Name>.resources/` |
 | Build and deploy VST3 | `out/<Name>.vst3`, copied to `~/.vst3/` |
 
@@ -75,11 +77,11 @@ copy into `~/.clap` and `~/.vst3`.
 | Configuration | What happens |
 |---|---|
 | Debug standalone APP | builds the APP and runs it under gdb |
-| Debug CLAP in REAPER | builds and deploys the CLAP, starts REAPER under gdb with `Scripts/linux/reaper-open-fx.lua`, which puts the plug-in on a new track and opens its editor |
+| Debug CLAP in REAPER | builds and deploys the CLAP, starts a new REAPER instance (also when one is already open) under gdb with `Scripts/linux/reaper-open-fx.lua`, which puts the plug-in on a new track and opens its editor |
 | Debug VST3 in REAPER | the same for VST3 |
 
 Breakpoints in the plug-in can be set before launch. gdb binds them when REAPER loads the plug-in. For example,
-`ProcessBlock` stops on REAPER's audio thread even with the transport stopped, and a control's `OnMouseDown`
+`ProcessBlock` stops on one of REAPER's FX processing threads (`reaper/mediafx`) even with the transport stopped, and a control's `OnMouseDown`
 stops on the main thread.
 
 If REAPER says it does not know the plug-in, the build was not deployed, or REAPER needs a rescan:
@@ -96,7 +98,8 @@ Both read the same `CMakePresets.json`, so build settings need no extra files.
   pick the project's `CMakeLists.txt`, keep the "Linux Debug/Release (CMake preset)" kits. To debug in REAPER, add a
   *Custom Executable* run configuration once, in *Projects > Run*:
   - executable `/opt/REAPER/reaper`;
-  - arguments `-new <iPlug2>/Scripts/linux/reaper-open-fx.lua`;
+  - arguments `-newinst -new <iPlug2>/Scripts/linux/reaper-open-fx.lua` (`-newinst`: without it a REAPER that
+    is already running takes the arguments and the new process exits);
   - environment `IPLUG2_REAPER_FX=CLAP: <Name>`.
 
   On machines with 8 GB of RAM it turns clangd off at first; accept "Enable Anyway".
@@ -106,6 +109,6 @@ Both read the same `CMakePresets.json`, so build settings need no extra files.
 ## 6. New projects
 
 `Examples/duplicate.py` copies an example under a new name. The Linux files come along renamed: `CMakePresets.json`,
-`<New>-linux.code-workspace` with `<New>-clap`/`-vst3`/`-app` targets, and `.clangd`. Duplicate inside
-`Examples/` for now. Duplicating to a path outside the iPlug2 tree leaves `../..` paths that need fixing, and also
-copies a local `build/` folder.
+`<New>-linux.code-workspace` with `<New>-clap`/`-vst3`/`-app` targets, and `.clangd`. Builds live in
+`build-linux/`, which `duplicate.py` does not copy. Duplicate inside `Examples/` for now. Duplicating to a path
+outside the iPlug2 tree leaves `../..` paths that need fixing (T-011).

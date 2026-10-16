@@ -59,10 +59,9 @@ are reproducible and the seeded profile stays for manual use (`~/opt/REAPER/reap
 - **Screen height.** 863 px minus the top bar: a 1024×768 editor plus REAPER's FX header and the title bar does not
   quite fit. Mutter constrains the FX window, so REAPER's container is 1024×766 and the editor's bottom 2 px are clipped.
 - `import -window root` shows the composited screen (top bar and dock included) but no mouse cursor.
-- `linux_audio_mode=2` is REAPER's **JACK** audio system (Preferences > Audio > Device shows it), so the harness's
-  `jackd -d dummy` is what REAPER runs on; `3` is PulseAudio, the one to use for manual work in `~/.config/REAPER`
-  (without jackd, mode 2 gives "Error opening devices" and no audio thread). The APP opens ALSA `default`, which is
-  PipeWire here.
+- `linux_audio_mode` in `reaper.ini`: `0` JACK, `2` Dummy Audio (the harness's choice: a real audio thread with no
+  device), `3` PulseAudio (use it for manual work in `~/.config/REAPER` on this PipeWire desktop); `1` is presumably
+  ALSA. The harness's `jackd` dummy is started but unused. The APP opens ALSA `default`, which is PipeWire here.
 - **`vm-display-env` puts the sudo `gdb` wrapper first on PATH.** A GUI app started from that environment inherits it:
   VS Code's cppdbg then runs gdb as root, and the debuggee (REAPER) runs as root with root's HOME, profile and no
   PulseAudio session. Start IDEs with a plain PATH (`/usr/local/bin:/usr/bin:/bin`).
