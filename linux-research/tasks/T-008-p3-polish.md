@@ -1,7 +1,7 @@
 # T-008 — P3 polish (findings from the VM run and reviews)
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** in-progress
+- **Owner:** T-008 worker (Claude, 2026-10-16)
 - **Branch/worktree:** `linux/T-008` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-008`.
 - **Depends on:** T-002 (merged).
 - **Conflicts:** `IGraphics/Platforms/IGraphicsLinux*`, also touched by T-007 — don't run them in parallel.
@@ -23,3 +23,5 @@ Details and repro steps are in `notes/14-vm-p3a.md` (Parts 1–2), `notes/15-rev
 - [ ] Self-review; evidence in `evidence/t008/`; Log complete.
 
 ## Log
+
+- 2026-10-16: claimed; worktree `/Volumes/Storage/code/IPlug2-T-008`, branch `linux/T-008` from `30580fe02`. Container `t008`, build dirs `build/t008-*`.
