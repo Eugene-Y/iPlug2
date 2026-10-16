@@ -91,11 +91,10 @@ private:
   void ForwardKeyToHost(const _XEvent& event);
   /** Keyboard focus and stand-in controls follow the editing state after every event and frame */
   void UpdateEditingState();
-  /** First: an edit, a menu or the app's click starts wanting the keys. Click: a click while it does.
-   * Retry: the focus went into the host's window right after a request. */
-  enum class EFocusRequest { First, Click, Retry };
-  void TakeKeyboardFocus(EFocusRequest request);
+  void TakeKeyboardFocus(unsigned long time);
+  void AskForKeyboardFocusAgain();
   void CheckKeyboardFocus();
+  void LoseKeyboardFocusToHost(unsigned long focus);
   void RequestKeyboardFocus(unsigned long time);
   void RememberHostFocusWindow(unsigned long focus);
   void DeclineKeyboardFocus();
@@ -112,7 +111,7 @@ private:
   bool TellHostTheOpenedSize();
   bool IsHostResizeEnabled();
   unsigned long GetDialogParentWindow();
-  unsigned long FindClientTopLevel();
+  unsigned long FindClientTopLevel(bool* pHasWMState);
   void WatchTopLevel();
   void UpdateTopLevelHidden();
   /** @return false when the editor is not open: then no dialog shows and the handler never runs */

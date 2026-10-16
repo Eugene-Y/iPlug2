@@ -74,12 +74,13 @@ constexpr long kXEmbedEmbeddedNotify = 0;
 constexpr long kXEmbedRequestFocus = 3;
 constexpr long kXEmbedFocusOut = 5;
 constexpr int kClipboardTimeoutMs = 200;
-// The window manager's click-to-focus and a host's focus proxy (GDK) answer a click within ≈25 ms under Mutter and
-// openbox; by then whatever they do to the focus has landed.
-constexpr auto kClickFocusSettle = std::chrono::milliseconds(150);
-// A focus change into the host's own window this soon after our request is the click's, not the user's.
-constexpr auto kFocusRetryWindow = std::chrono::milliseconds(500);
-constexpr int kMaxFocusRetries = 2;
+// After a click, the window manager's click-to-focus and the host's focus proxy (GDK) move the focus within its own
+// window: once within ≈25 ms under Mutter, but several times over up to ≈0.8 s in a loaded REAPER under openbox. A
+// focus change into the host's window this soon after a click (or after the edit took the keys) is theirs, not the
+// user's, and the editor asks again; later ones are left to the host.
+constexpr auto kClickFocusEpisode = std::chrono::milliseconds(1500);
+// Asking again while they still move it only loses again: the focus must have stayed put this long first.
+constexpr auto kFocusQuiet = std::chrono::milliseconds(150);
 
 bool HasGLXExtension(const char* extensions, const char* name)
 {
@@ -269,6 +270,8 @@ struct IGraphicsLinux::Impl
   // Compositing window managers (Mutter) leave a minimized window's children mapped, so no UnmapNotify stops the
   // frames: the host's top-level is watched for being minimized, and our window for being covered.
   Window mTopLevel = 0;
+  bool mTopLevelHasWMState = false; // else it is a guess: the host's window may not be managed yet
+  std::chrono::steady_clock::time_point mTopLevelFoundAt;
   bool mTopLevelHidden = false;
   bool mFullyObscured = false;
   Atom mWMState = None;
@@ -308,10 +311,14 @@ struct IGraphicsLinux::Impl
   XIC mInputContext = nullptr;
   bool mHoldsFocus = false;
   bool mFocusDeclined = false; // the focus left for another window during this edit or menu: do not take it back
-  bool mFocusChecked = false; // the check after the click's own focus changes have landed is done
+  bool mFocusLost = false; // the host's window took it during the episode: ask again once the focus stays put
+  bool mFocusChecked = false; // the check one quiet period after our last request is done
   bool mClickedForFocus = false; // a click was released in the editor since the last editing-state update
-  int mFocusRetries = 0;
+  bool mFocusBeforeKnown = false;
+  std::chrono::steady_clock::time_point mFocusEpisodeAt; // the click, or the take, that began this fight for the keys
   std::chrono::steady_clock::time_point mFocusTakenAt;
+  Window mFocusWatched = None; // while lost: where the focus is, and since when
+  std::chrono::steady_clock::time_point mFocusQuietSince;
   unsigned mButtonState = 0; // buttons held, as after the last button event
   std::chrono::steady_clock::time_point mLastReleaseAt;
   bool mFocusOnClick = false;
@@ -664,6 +671,11 @@ void IGraphicsLinux::OnDisplayTimer()
     return;
   if (mImpl->mHostSizeUnconfirmed && !TellHostTheOpenedSize())
     return;
+  // A host that maps its own window after the open (Carla) gets it managed, and WM_STATE set, only later; no event
+  // of ours tells when.
+  constexpr auto kTopLevelRecheck = std::chrono::seconds(1);
+  if (!mImpl->mTopLevelHasWMState && std::chrono::steady_clock::now() - mImpl->mTopLevelFoundAt > kTopLevelRecheck)
+    WatchTopLevel();
   // Animations (a menu collapsing, the text cursor) end in IsDirty, outside any X event.
   DrawDirtyControls();
   if (mImpl->mOpen && *mImpl->mOpen)
@@ -875,7 +887,6 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
     w.mCursorX = x;
     w.mCursorY = y;
     w.mClickedForFocus = true;
-    FitMenusOnScreen();
     OnMouseUp({ info });
   }
 }
@@ -1057,10 +1068,10 @@ void IGraphicsLinux::HandleFocusOut(const XEvent& event)
     return;
 
   ScopedXErrorTrap trap(w.mDisplay);
-  Window now = None;
+  Window current = None;
   int revert = 0;
-  XGetInputFocus(w.mDisplay, &now, &revert);
-  const EFocusPlace place = LocateFocus(w.mDisplay, w.mWindow, now);
+  XGetInputFocus(w.mDisplay, &current, &revert);
+  const EFocusPlace place = LocateFocus(w.mDisplay, w.mWindow, current);
   if (place == EFocusPlace::Ours)
     return;
 
@@ -1072,14 +1083,22 @@ void IGraphicsLinux::HandleFocusOut(const XEvent& event)
   }
 
   // Into the host's own window (its top-level, or GDK's focus proxy inside it) the edit stays open: hosts that
-  // forward keys (REAPER) still deliver most of them. Right after our request it is the click's own focus change
-  // by the window manager and the host, which won the server's timestamp tie or used CurrentTime: ask again.
-  const bool justTaken = std::chrono::steady_clock::now() - w.mFocusTakenAt < kFocusRetryWindow;
-  if (justTaken && w.mFocusRetries < kMaxFocusRetries)
-  {
-    w.mFocusRetries++;
-    w.mHoldsFocus = false;
-  }
+  // forward keys (REAPER) still deliver most of them. During the episode it is the click's own focus change by the
+  // window manager and the host, which won the server's timestamp tie or used CurrentTime: ask again later.
+  LoseKeyboardFocusToHost(current);
+}
+
+void IGraphicsLinux::LoseKeyboardFocusToHost(unsigned long focus)
+{
+  Impl& w = *mImpl;
+  const auto now = std::chrono::steady_clock::now();
+  if (now - w.mFocusEpisodeAt > kClickFocusEpisode)
+    return;
+  TRACE_INPUT("focus lost to the host's 0x%lx, asking again once it stays put\n", focus);
+  w.mHoldsFocus = false;
+  w.mFocusLost = true;
+  w.mFocusWatched = focus;
+  w.mFocusQuietSince = now;
 }
 
 void IGraphicsLinux::DeclineKeyboardFocus()
@@ -1135,20 +1154,28 @@ void IGraphicsLinux::UpdateEditingState()
   // The standalone app's window is the editor's own: a click into it asks for the keys, like a click into a view
   // on mac, and the app keeps them afterwards. In a host, only an edit or an open menu does; an open menu so that
   // Escape closes it rather than (in REAPER) the host's window.
-  const bool appClick = w.mFocusOnClick && now - w.mLastReleaseAt < kFocusRetryWindow;
+  const bool appClick = w.mFocusOnClick && now - w.mLastReleaseAt < kClickFocusEpisode;
   const bool wantsKeys = IsEditing() || IsMenuOpen() || appClick;
   if (!wantsKeys)
     w.mFocusDeclined = false;
-  const bool clicked = std::exchange(w.mClickedForFocus, false);
-  // Window managers focus the top-level again on a click into it (openbox does on every click, from our child too).
-  if (wantsKeys && w.mHoldsFocus && clicked)
-    TakeKeyboardFocus(EFocusRequest::Click);
-  // Not during the press: the window manager's click-to-focus and the host's focus proxy answer it with its time.
-  else if (wantsKeys && !w.mHoldsFocus && !w.mFocusDeclined && !w.mButtonState)
-    TakeKeyboardFocus(w.mFocusRetries > 0 ? EFocusRequest::Retry : EFocusRequest::First);
-  else if (wantsKeys && w.mHoldsFocus && !w.mFocusChecked && now - w.mFocusTakenAt > kClickFocusSettle)
+  const bool clicked = std::exchange(w.mClickedForFocus, false) && wantsKeys;
+  // Every click begins an episode: window managers focus the top-level again on a click into it (openbox does on
+  // every click, from our child too). Not during the press: the window manager and the host answer it with its time.
+  if (clicked)
+  {
+    w.mFocusEpisodeAt = now;
+    w.mFocusDeclined = false;
+  }
+  const Time eventTime = w.mLastEventTime;
+  if (clicked && !w.mButtonState)
+    TakeKeyboardFocus(eventTime);
+  else if (wantsKeys && !w.mHoldsFocus && !w.mFocusLost && !w.mFocusDeclined && !w.mButtonState)
+    TakeKeyboardFocus(eventTime);
+  else if (wantsKeys && w.mFocusLost && !w.mFocusDeclined && !w.mButtonState)
+    AskForKeyboardFocusAgain();
+  else if (wantsKeys && w.mHoldsFocus && !w.mFocusChecked && now - w.mFocusTakenAt > kFocusQuiet)
     CheckKeyboardFocus();
-  else if (!wantsKeys && w.mHoldsFocus)
+  else if (!wantsKeys && (w.mHoldsFocus || w.mFocusLost))
     ReleaseKeyboardFocus();
 
   if (w.mPasteKeyPending && w.mClipboard.AsyncReadDone())
@@ -1167,7 +1194,7 @@ void IGraphicsLinux::UpdateEditingState()
 
 // Text entry asks for the keys while the pointer is elsewhere too (a host may refuse by taking the focus back).
 // Outside an edit the host keeps its focus, so its shortcuts work whenever the pointer is not over the editor.
-void IGraphicsLinux::TakeKeyboardFocus(EFocusRequest request)
+void IGraphicsLinux::TakeKeyboardFocus(unsigned long time)
 {
   Impl& w = *mImpl;
   if (!w.mWindowAlive || !w.mMapped)
@@ -1177,34 +1204,74 @@ void IGraphicsLinux::TakeKeyboardFocus(EFocusRequest request)
   Window focus = None;
   int revert = RevertToParent;
   XGetInputFocus(w.mDisplay, &focus, &revert);
-  TRACE_INPUT("take focus from 0x%lx%s\n", focus, request == EFocusRequest::Retry ? " (retry)" : request == EFocusRequest::Click ? " (click)" : "");
-  if (request == EFocusRequest::First)
+  TRACE_INPUT("take focus from 0x%lx%s\n", focus, time == CurrentTime ? " (again)" : "");
+  if (!w.mFocusBeforeKnown)
   {
     if (focus != w.mWindow)
     {
       w.mFocusBefore = focus;
       w.mRevertBefore = revert;
     }
+    w.mFocusBeforeKnown = true;
+    w.mFocusEpisodeAt = std::chrono::steady_clock::now();
   }
   else
   {
     RememberHostFocusWindow(focus);
   }
-  if (request == EFocusRequest::Click)
-    w.mFocusRetries = 0;
-  // A request for a click carries the time of the event that asked for the keys, its release. The window manager's
-  // click-to-focus and a host's focus proxy carry the press's time, so the server ignores them if they arrive
-  // later; a focus change the user made after the click is newer and wins. A retry answers a focus change seen
-  // after our request, which may have used CurrentTime.
-  RequestKeyboardFocus(request == EFocusRequest::Retry ? CurrentTime : w.mLastEventTime);
+  // A request for an event carries its time, normally the click's release. The window manager's click-to-focus and
+  // a host's focus proxy carry the press's time, so the server ignores them if they arrive later; a focus change the
+  // user made after the click is newer and wins. Asking again follows a focus change seen after our request, which
+  // may have used CurrentTime.
+  RequestKeyboardFocus(time);
   w.mHoldsFocus = true;
+  w.mFocusLost = false;
   w.mFocusChecked = false;
   w.mFocusTakenAt = std::chrono::steady_clock::now();
 }
 
-// Once the click's own focus changes have landed: with a press and release in the same millisecond (a tap, a
-// synthetic click) the host's focus proxy can win the timestamp tie without a FocusOut reaching us first, and a
-// window manager may use CurrentTime. Ask once more then, unless the user has gone to another window meanwhile.
+// While the host's window has the focus it took during the episode: ask again once the focus has stayed put for a
+// quiet period, so as not to race the rest of its moves. The episode bounds the whole fight.
+void IGraphicsLinux::AskForKeyboardFocusAgain()
+{
+  Impl& w = *mImpl;
+  const auto now = std::chrono::steady_clock::now();
+  if (now - w.mFocusEpisodeAt > kClickFocusEpisode)
+  {
+    TRACE_INPUT("focus left with the host\n");
+    w.mFocusLost = false;
+    w.mFocusDeclined = true;
+    return;
+  }
+
+  ScopedXErrorTrap trap(w.mDisplay);
+  Window focus = None;
+  int revert = 0;
+  XGetInputFocus(w.mDisplay, &focus, &revert);
+  if (focus != w.mFocusWatched)
+  {
+    switch (LocateFocus(w.mDisplay, w.mWindow, focus))
+    {
+      case EFocusPlace::Ours:
+        w.mFocusLost = false;
+        w.mHoldsFocus = true;
+        return;
+      case EFocusPlace::Elsewhere:
+        w.mFocusLost = false;
+        DeclineKeyboardFocus();
+        return;
+      default:
+        w.mFocusWatched = focus;
+        w.mFocusQuietSince = now;
+        return;
+    }
+  }
+  if (now - w.mFocusQuietSince > kFocusQuiet)
+    TakeKeyboardFocus(CurrentTime);
+}
+
+// One quiet period after a request: with a press and release in the same millisecond (a tap, a synthetic click) the
+// host's focus proxy can win the timestamp tie without a FocusOut reaching us first.
 void IGraphicsLinux::CheckKeyboardFocus()
 {
   Impl& w = *mImpl;
@@ -1218,10 +1285,8 @@ void IGraphicsLinux::CheckKeyboardFocus()
   XGetInputFocus(w.mDisplay, &focus, &revert);
   const EFocusPlace place = LocateFocus(w.mDisplay, w.mWindow, focus);
   TRACE_INPUT("check focus: at 0x%lx (%s)\n", focus, place == EFocusPlace::Ours ? "ours" : place == EFocusPlace::Elsewhere ? "elsewhere" : "host");
-  if (place == EFocusPlace::Ours || place == EFocusPlace::Elsewhere)
-    return;
-  RememberHostFocusWindow(focus);
-  RequestKeyboardFocus(CurrentTime);
+  if (place == EFocusPlace::OurAncestor || place == EFocusPlace::OurTopLevel)
+    LoseKeyboardFocusToHost(focus);
 }
 
 // The host's own focus window for the click (GDK's focus proxy) is the best place to give the keys back to; its
@@ -1259,7 +1324,8 @@ void IGraphicsLinux::ReleaseKeyboardFocus()
 {
   Impl& w = *mImpl;
   w.mHoldsFocus = false;
-  w.mFocusRetries = 0;
+  w.mFocusLost = false;
+  w.mFocusBeforeKnown = false;
   // The standalone app keeps the focus, and the input context with it.
   if (w.mFocusOnClick)
     return;
@@ -1523,9 +1589,10 @@ void IGraphicsLinux::FinishFadingMenu()
 
 // IPopupMenuControl keeps its menus inside the editor, flipping and scrolling them there. Native menus stay on the
 // screen: with the editor dragged partly off it, a dropdown would open into the part nobody can see. Before a menu
-// can open (a click, a platform menu), the editor's on-screen part becomes the popup control's limit; with the editor
-// wholly on screen the limit goes back to the whole editor, IPopupMenuControl's own default. A plug-in's own
-// SetMaxBounds is replaced meanwhile. Multi-monitor layouts that are not one rectangle are not considered.
+// can open (a press, a platform menu), the editor's on-screen part becomes the popup control's limit; with the editor
+// wholly on screen the limit goes back to the whole editor, IPopupMenuControl's own default. That overwrites a
+// plug-in's own SetMaxBounds for good (the control has no getter), and a menu opened without a press keeps the last
+// press's limit. Multi-monitor layouts that are not one rectangle are not considered.
 void IGraphicsLinux::FitMenusOnScreen()
 {
   Impl& w = *mImpl;
@@ -1631,7 +1698,10 @@ void IGraphicsLinux::WatchTopLevel()
 {
   Impl& w = *mImpl;
   ScopedXErrorTrap trap(w.mDisplay);
-  const Window topLevel = FindClientTopLevel();
+  bool hasWMState = false;
+  const Window topLevel = FindClientTopLevel(&hasWMState);
+  w.mTopLevelHasWMState = hasWMState;
+  w.mTopLevelFoundAt = std::chrono::steady_clock::now();
   if (topLevel != w.mTopLevel)
   {
     auto watchMask = [&w](Window window, long mask) {
@@ -1648,11 +1718,11 @@ void IGraphicsLinux::WatchTopLevel()
 // Dialogs are made transient for it: the window manager only honours that for top-levels.
 unsigned long IGraphicsLinux::GetDialogParentWindow()
 {
-  return mImpl->mWindowAlive ? FindClientTopLevel() : 0;
+  return mImpl->mWindowAlive ? FindClientTopLevel(nullptr) : 0;
 }
 
 /** The client top-level that contains our window (the one with WM_STATE), else the outermost ancestor below the root */
-unsigned long IGraphicsLinux::FindClientTopLevel()
+unsigned long IGraphicsLinux::FindClientTopLevel(bool* pHasWMState)
 {
   Impl& w = *mImpl;
   ScopedXErrorTrap trap(w.mDisplay);
@@ -1670,7 +1740,11 @@ unsigned long IGraphicsLinux::FindClientTopLevel()
       if (pData)
         XFree(pData);
       if (type != None)
+      {
+        if (pHasWMState)
+          *pHasWMState = true;
         return window;
+      }
     }
 
     Window root = 0, parent = 0;

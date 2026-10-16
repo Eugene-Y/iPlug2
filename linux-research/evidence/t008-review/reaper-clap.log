@@ -1,0 +1,165 @@
+c47f74a0af84eb8cd9b1db3fae76757270a49c2600b53b84173fbb9d51f6b27f
+GUI container t008r up (DISPLAY=:99)
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=67 (open)
+render[first-open] ok (stddev 0.196558)
+view origin 113 188
+[xact] origin 113,188
+[xact] ALIVE pid 67
+[xact] shot c00-start
+[xact] move 1016 760
+[xact] cursor nwse-resize (24x24)
+[xact] move 500 400
+[xact] cursor default (24x24)
+[xact] cursor blank (1x1)
+[xact] drag 322,237 -> 322,330
+[xact] cursor default (24x24)
+[xact] shot c01-knob-drag
+[xact] changed c00-start -> c01-knob-drag in view rect 262,170 120x130 (5748 px)
+[xact] pointer at view 322,237
+[xact] param 0/0 = '20.24 %' (matches ^([0-9]|[1-9][0-9])([.,]|$))
+[xact] drag 150,440 -> 220,360
+[xact] click 330 560
+[xact] shot c02-xy-keyboard
+[xact] changed c01-knob-drag -> c02-xy-keyboard in view rect 137,325 115x130 (725 px)
+[xact] click 322 237
+[xact] click 322 237
+[xact] click 322 237
+[xact] shot c03-wheel
+[xact] changed c02-xy-keyboard -> c03-wheel in view rect 262,170 120x130 (5123 px)
+[xact] click 828 284
+[xact] shot c04-popup-igraphics
+[xact] changed c03-wheel -> c04-popup-igraphics in view rect 760,270 200x150 (11914 px)
+[xact] click 828 357
+[xact] param 0/1 = 'three' (matches three)
+[xact] click 321 99
+[xact] shot c05-caption-popup
+[xact] changed c04-popup-igraphics -> c05-caption-popup in view rect 221,50 300x200 (8917 px)
+[xact] click 321 144
+[xact] param 0/1 = 'two' (matches two)
+[xact] dclick 941 437
+[xact] shot c06-textentry-igraphics
+[xact] type 42 
+[xact] key Return    
+[xact] shot c07-textentry-committed
+[xact] param 0/0 = '42.00 %' (matches ^42)
+[xact] dclick 941 437
+[xact] type 13 
+[xact] key Escape    
+[xact] param 0/0 = '42.00 %' (matches ^42)
+[xact] window /IPlugControls.*Track/ exists
+[xact] set-clipboard
+[xact] dclick 941 437
+[xact] key ctrl+v    
+[xact] key Return    
+[xact] param 0/0 = '55.00 %' (matches ^55)
+[xact] dclick 941 437
+[xact] key ctrl+c    
+[xact] key Escape    
+[xact] FAIL expect-clipboard: xclip 'Error: target STRING not available', xsel '', expected '55'
+[xact] set-clipboard
+[xact] dclick 941 437
+[xact] rclick 941 437
+[xact] click 945 494
+[xact] key Return    
+[xact] FAIL expect-param: track 0 param 0 = '55.00 %', expected /^66/
+[xact] move 1010 600
+[xact] key space    
+[xact] FAIL lua-expect: '0', expected /^1$/ from: out(reaper.GetPlayState() & 1) 
+[xact] key space    
+[xact] FAIL lua-expect: '1', expected /^0$/ from: out(reaper.GetPlayState() & 1) 
+[xact] ALIVE pid 67
+[xact] click 224 692
+[xact] click 224 720
+[xact] shot c08-os-toggles
+[xact] changed c07-textentry-committed -> c08-os-toggles in view rect 200,680 50x50 (2500 px)
+[xact] click 828 284
+[xact] shot c09-popup-os
+[xact] changed c08-os-toggles -> c09-popup-os in view rect 760,270 200x150 (446 px)
+[xact] click 833 358
+[xact] FAIL expect-param: track 0 param 1 = 'two', expected /four/
+[xact] dclick 941 437
+[xact] shot c10-textentry-os
+[xact] FAIL expect-change: c09-popup-os -> c10-textentry-os unchanged in view rect 890,410 90x40
+[xact] type 7 
+[xact] key Return    
+[xact] FAIL expect-param: track 0 param 0 = '55.00 %', expected /^7/
+[xact] dclick 941 437
+[xact] type 99 
+[xact] key Escape    
+[xact] FAIL expect-param: track 0 param 0 = '55.00 %', expected /^7/
+[xact] FAIL expect-window: no visible window /IPlugControls.*Track/
+[xact] ALIVE pid 67
+[xact] set-clipboard
+[xact] dclick 941 437
+[xact] rclick 941 437
+[xact] click 945 481
+[xact] key Return    
+[xact] FAIL expect-param: track 0 param 0 = '(no output from lua within 10s)', expected /^33/
+[xact] set-clipboard
+[xact] dclick 941 437
+[xact] rclick 941 437
+[xact] click 945 481
+[xact] key Return    
+[xact] FAIL expect-param: track 0 param 0 = '(no output from lua within 10s)', expected /^44/
+[xact] rclick 322 237
+[xact] shot c11-context-menu
+[xact]   win: [unsaved project] - REAPER v7.82 - EVALUATION LICENSE
+[xact] click 1010 600
+[xact] FAIL expect-window: no visible window /IPlugControls.*Track/
+[xact] ALIVE pid 67
+[xact] click 919 388
+[xact] click 546 744
+[xact] ALIVE pid 67
+[xact] click 993 737
+[xact] shot c12-about
+[xact] click 500 400
+[xact] shot c13-about-dismissed
+[xact] FAIL expect-change: c12-about -> c13-about-dismissed unchanged in view rect 0,0 1024x768
+[xact] FAIL expect-window: no visible window /IPlugControls.*Track/
+[xact] ALIVE pid 67
+[xact] shot c14-end
+REAPER ALIVE pid=67 (steps)
+FAIL: steps: expect-clipboard: xclip 'Error: target STRING not available', xsel '', expected '55'
+FAIL: steps: expect-param: track 0 param 0 = '55.00 %', expected /^66/
+FAIL: steps: lua-expect: '0', expected /^1$/ from: out(reaper.GetPlayState() & 1)
+FAIL: steps: lua-expect: '1', expected /^0$/ from: out(reaper.GetPlayState() & 1)
+FAIL: steps: expect-param: track 0 param 1 = 'two', expected /four/
+FAIL: steps: expect-change: c09-popup-os -> c10-textentry-os unchanged in view rect 890,410 90x40
+FAIL: steps: expect-param: track 0 param 0 = '55.00 %', expected /^7/
+FAIL: steps: expect-param: track 0 param 0 = '55.00 %', expected /^7/
+FAIL: steps: expect-window: no visible window /IPlugControls.*Track/
+FAIL: steps: expect-param: track 0 param 0 = '(no output from lua within 10s)', expected /^33/
+FAIL: steps: expect-param: track 0 param 0 = '(no output from lua within 10s)', expected /^44/
+FAIL: steps: expect-window: no visible window /IPlugControls.*Track/
+FAIL: steps: expect-change: c12-about -> c13-about-dismissed unchanged in view rect 0,0 1024x768
+FAIL: steps: expect-window: no visible window /IPlugControls.*Track/
+REAPER ALIVE pid=67 (reopen 1)
+REAPER ALIVE pid=67 (reopen 2)
+REAPER ALIVE pid=67 (reopen 3)
+REAPER ALIVE pid=67 (reopen 4)
+REAPER ALIVE pid=67 (reopen 5)
+render[after-reopen] ok (stddev 0.195213)
+add2 0
+REAPER ALIVE pid=67 (two instances)
+render[second-instance] ok (stddev 0.196024)
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+    114 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=1
+    194 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
+REAPER ALIVE pid=67 (end)
+RESULT: FAIL (14)
+  - steps: expect-clipboard: xclip 'Error: target STRING not available', xsel '', expected '55'
+  - steps: expect-param: track 0 param 0 = '55.00 %', expected /^66/
+  - steps: lua-expect: '0', expected /^1$/ from: out(reaper.GetPlayState() & 1)
+  - steps: lua-expect: '1', expected /^0$/ from: out(reaper.GetPlayState() & 1)
+  - steps: expect-param: track 0 param 1 = 'two', expected /four/
+  - steps: expect-change: c09-popup-os -> c10-textentry-os unchanged in view rect 890,410 90x40
+  - steps: expect-param: track 0 param 0 = '55.00 %', expected /^7/
+  - steps: expect-param: track 0 param 0 = '55.00 %', expected /^7/
+  - steps: expect-window: no visible window /IPlugControls.*Track/
+  - steps: expect-param: track 0 param 0 = '(no output from lua within 10s)', expected /^33/
+  - steps: expect-param: track 0 param 0 = '(no output from lua within 10s)', expected /^44/
+  - steps: expect-window: no visible window /IPlugControls.*Track/
+  - steps: expect-change: c12-about -> c13-about-dismissed unchanged in view rect 0,0 1024x768
+  - steps: expect-window: no visible window /IPlugControls.*Track/
