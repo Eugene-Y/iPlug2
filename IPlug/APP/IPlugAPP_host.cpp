@@ -298,6 +298,8 @@ int IPlugAPPHost::GetMIDIPortNumber(ERoute direction, const char* nameToTest) co
     if (nameStrView == "virtual input") return 1;
   #endif
     
+    if (!mMidiIn) return -1;
+
     for (int i = 0; i < mMidiIn->getPortCount(); i++)
     {
       if (nameStrView == mMidiIn->getPortName(i).c_str())
@@ -313,6 +315,8 @@ int IPlugAPPHost::GetMIDIPortNumber(ERoute direction, const char* nameToTest) co
     if (nameStrView == "virtual output") return 1;
   #endif
   
+    if (!mMidiOut) return -1;
+
     for (int i = 0; i < mMidiOut->getPortCount(); i++)
     {
       if (nameStrView == mMidiOut->getPortName(i).c_str())
@@ -327,6 +331,8 @@ void IPlugAPPHost::ProbeAudioIO()
 {
   mAudioInputDevIDs.clear();
   mAudioOutputDevIDs.clear();
+  mDefaultInputDev.reset();
+  mDefaultOutputDev.reset();
 
   if (!mDAC)
     return;
