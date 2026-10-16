@@ -42,10 +42,10 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
 5. **Document.** Write `Documentation/linux-development.md` (or similar): install, open, build, debug, deploy.
 
 ## Acceptance
-- [ ] `notes/NN-ide-research.md` with the comparison table, sources and a recommendation (primary + alternative).
-- [ ] Presets and IDE configs checked in; mac/win presets unaffected. Validate on mac: `cmake --list-presets` still works.
-- [ ] On the VM: build plus both breakpoints hit in the recommended IDE. Screenshots in `evidence/t005/`.
-- [ ] Docs written; self-review; Log complete.
+- [x] `notes/NN-ide-research.md` with the comparison table, sources and a recommendation (primary + alternative). → `notes/20-ide-research.md`
+- [x] Presets and IDE configs checked in; mac/win presets unaffected. Validate on mac: `cmake --list-presets` still works.
+- [x] On the VM: build plus both breakpoints hit in the recommended IDE. Screenshots in `evidence/t005/`.
+- [x] Docs written; self-review; Log complete. → `Documentation/linux-development.md`
 
 ## Log
 
@@ -55,4 +55,41 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
   - Root `CMakePresets.json` already has upstream `linux-ninja`/`linux-make`, but `base-linux` forces `IGRAPHICS_RENDERER=GL3`, against PLAN's GL2 decision (CMake's own Linux default is GL2).
   - `Examples/*/.gitignore` ignores `.vscode/*`; only `c_cpp_properties.json` (mac/win cpptools config) is tracked. So the Linux VS Code setup goes into a separate `<Name>-linux.code-workspace` (settings + tasks + launch in one file), which mac/win VS Code users never open.
   - VM reachable; it has gdb/g++ but no cmake/ninja: a clean target for the native-build check.
+
+### 2026-10-16 — work done (commits cdb79d56c, 1c5f3f480, + docs commit)
+- **Decision:** VS Code primary, Qt Creator alternative, CLion only with a paid licence (its free licence v3.0 §2.3 forbids developing sold products). The user provisionally agreed to VS Code and asked for IPlugEffect + IPlugControls as templates to develop in and duplicate from. Details and sources: `notes/20-ide-research.md`.
+- **Files:**
+  - `Scripts/cmake/Linux/CMakePresets-linux.json` (linux-debug / linux-release), included by the root and both examples' `CMakePresets.json`;
+  - root `base-linux` GL3 → GL2;
+  - `Examples/<Name>/<Name>-linux.code-workspace` (tasks + launch: APP, CLAP/VST3 in REAPER);
+  - `Scripts/linux/reaper-open-fx.lua`;
+  - `.clangd` (root + examples);
+  - `Documentation/linux-development.md`.
+- **mac:** `cmake --list-presets` (root, and `Examples/IPlugEffect` → no presets, rc 0) and `cmake --preset macos-ninja` configure PASS (renderer METAL). No Xcode/VS project, xcconfig, props or C++ source touched.
+- **Docker:** example `linux-debug` configure + full build; root `linux-debug` and `linux-ninja` configure (GL2). REAPER under gdb with the Lua script: ProcessBlock + `IVKnobControl::OnMouseDown` breakpoints hit (`evidence/t005/docker/gdb-reaper.log`).
+- **VM** (lock taken and released twice; `xdpyinfo` OK before and after):
+  - fresh clone from GitHub, apt list from the docs, SDK download scripts;
+  - native build of both examples PASS;
+  - VS Code 1.142: preset pick, clangd clean;
+  - breakpoints hit from the IDE: CLAP in REAPER ×2, APP ×2, VST3 ProcessBlock;
+  - IPlugControls: CLAP debug run opens the full editor;
+  - Qt Creator 13: presets as kits, configure.
+
+  Screenshots `evidence/t005/vm/*.png` (git-ignored, local).
+- **Bugs fixed on the way:**
+  - clangd got no flags for framework sources outside the project → `--compile-commands-dir`;
+  - clangd `#error` from `WDL/wdlendian.h` → `.clangd`;
+  - `scripts/vm/README.md` wrongly said `linux_audio_mode=2` is dummy audio (it is JACK) → fixed, plus a gotcha: the sudo gdb wrapper on PATH makes IDE debuggees run as root.
+- **VM state left behind** (useful for later tasks):
+  - installed: VS Code + extensions, clangd, Qt Creator, native build deps;
+  - `~/dev/iPlug2`, a hvoya-linux clone with T-005 files;
+  - `~/.clap`, `~/.vst3`: **Debug** builds of IPlugEffect/IPlugControls (deploy before VM tests, as usual);
+  - `~/.config/REAPER`: a full profile with PulseAudio (`linux_audio_mode=3`), not the seeded minimal one;
+  - `~/.config/Code/User/settings.json`: trust prompt off;
+  - apport crash reports from a root REAPER I killed.
+- **For T-011:** `duplicate.py` in-tree works with the new files. Out-of-tree it copies `build/` (`DONT_COPY` lacks `build`) and does not rewrite `../..` in project-root files (notes/20 §"For T-011").
+- **For T-004:** APP under the debugger logs `RtApiAlsa::probeDeviceOpen: unable to synchronize input and output devices` at start (ALSA `default` = PipeWire). It still runs, with underruns while stopped in the debugger.
+
+### Cross-platform findings
+- (low, pre-existing upstream) `Examples/duplicate.py` with an output path outside the iPlug2 tree leaves `IPLUG2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.."` in the copied `CMakeLists.txt`: `newroot` is relative to `config/`, and only the xcconfig's `IPLUG2_ROOT` value is replaced. CMake builds of such a duplicate fail on mac/win too. Repro: `python3 duplicate.py IPlugEffect MyFx Mfr /tmp/x`, then `grep IPLUG2_DIR /tmp/x/MyFx/CMakeLists.txt`.
 
