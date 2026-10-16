@@ -1,6 +1,6 @@
 # T-008 — P3 polish (findings from the VM run and reviews)
 
-- **Status:** in-progress (review fixes)
+- **Status:** review-done
 - **Owner:** T-008 worker (Claude, 2026-10-16)
 - **Branch/worktree:** `linux/T-008` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-008`.
 - **Depends on:** T-002 (merged).
@@ -76,5 +76,22 @@ on-screen clamp already makes usable. Left for a later decision.
 | L3 | `kFocusRetryWindow` is gone; the APP's click and the retries share one meaning now: the click's focus episode | — |
 | I1 | Menus are fitted on the press only (and for stand-ins), not on the release | menu-edges / L2 PASS |
 
-Open, VM-only (the VM's GPU hung twice today; for the coordinator, light and short): `vm/probe/focus-edit.sh` CLAP
-+ VST3 ×10 and the APP P3b script ×3 with the fix build (the earlier VM results are for the first focus version).
+### Review round 2 (notes/19): accepted
+Reviewer under its own load: probe first version 24/30, fix 30/30 (Release and trace; ≤2 requests per edit), full
+P3b CLAP + VST3 PASS, APP PASS. Its two non-blocking findings fixed in caaf4c268: R2-L1 (`mFocusBeforeKnown` cleared
+after a declined/abandoned fight), R2-I1 (return when asking for the focus again closed the editor). Re-check of
+caaf4c268 (`build/t008-fix2`) in Docker under one extra loaded REAPER: probe 30/30, full P3b CLAP + VST3 PASS, APP
+no failed check (`review-fix2/`).
+
+### Hand-over
+- Commits: `git log hvoya-linux..linux/T-008` (d0b8cdcba … caaf4c268; 9627a73a8 and 48073cd22 are the
+  coordinator's WIP commits over rate limits, the latter holding the round-1 focus code).
+- Code: `IGraphics/Platforms/IGraphicsLinux.{h,cpp}` and a comment in `IGraphicsLinuxFontconfig.h`; no shared file.
+- Harness: `xact.sh` `click-click`; steps `iplugcontrols-l2.txt`; probes `probe/hidden-draws.sh`,
+  `probe/focus-copy.sh` (reviewer's), `vm/probe/fc-variable.sh`; thread checks list the new functions.
+- **Open, VM-only** (the VM's GPU hung twice today; for the coordinator, light and short), with the final build:
+  `vm/probe/focus-edit.sh` CLAP + VST3 ×10 and the APP P3b script ×3. The earlier VM results (focus 10/10 ×3, APP
+  13/13, full P3b CLAP + VST3, menus, minimized drawing, L2) are for the first focus version; items 3, 4, 8 are
+  unchanged since.
+- Cross-platform findings: see the table above (L2 with attached popup controls; nested menu from a completion;
+  sticky `mMaxBounds`).
