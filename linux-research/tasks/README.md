@@ -23,6 +23,7 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | T-012 | P11c: Sand Linux build (as T-003, for Sand); reuse the T-005/T-011 Linux template (presets, `-linux.code-workspace`, `.clangd`) | todo (unblocked; needs task file) | — | — | Sand repo |
 | T-013 | P10: host matrix (Carla, Ardour, Renoise on the VM; Bitwig/x86_64 on a PC) | todo (unblocked; needs task file) | — | T-002, T-007 (merged) | uses the VM |
 | T-014 | P12: LV2 | blocked | — | everything else | — |
+| T-015 | P13: repo `README.md` — what works on Linux and how (last of all) | blocked | — | everything else, incl. T-014 | `README.md` |
 
 **T-008 items:**
 - APP focus-on-click race (P3b-V1);

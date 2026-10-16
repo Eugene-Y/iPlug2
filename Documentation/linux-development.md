@@ -4,6 +4,9 @@ Linux builds produce CLAP, VST3 and a standalone APP, with an IGraphics UI on X1
 covers a native setup on Ubuntu 24.04 (x86_64 or arm64) with VS Code as the IDE. `Examples/IPlugEffect` and
 `Examples/IPlugControls` are ready to open, and new projects duplicated from them inherit the setup.
 
+The renderer is NanoVG GL2 (`IGRAPHICS_RENDERER=GL2`, as on Windows), the only one tested on Linux. The editor
+creates a legacy GLX context, which old or virtual drivers may cap below 3.2, so `GL3` is not guaranteed to open.
+
 ## 1. Install
 
 ```sh

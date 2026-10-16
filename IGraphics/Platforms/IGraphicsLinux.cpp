@@ -475,6 +475,8 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     XStoreName(pDisplay, w.mWindow, pPlug->GetPluginName());
   }
 
+  // A legacy context gets whatever version the driver defaults to, down to 2.1 on old or virtual drivers. Only
+  // NanoVG GL2 is guaranteed and tested; IGRAPHICS_GL3 would need a core 3.2 context via glXCreateContextAttribsARB.
   w.mGLContext = w.mGLX->CreateContext(pDisplay, pVisual, nullptr, True);
   XFree(pVisual);
   if (!w.mGLContext)

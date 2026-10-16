@@ -381,6 +381,10 @@ Work:
 
 Estimate: 5–10 d.
 
+### P13. README (the very end; asked by the user 2026-10-16)
+
+Update the repo `README.md`: Linux in the platform list, what works on Linux (formats, renderer GL2 only, X11, hosts tested), what does not (Wayland-native, Skia, WebView, …), and a pointer to `Documentation/linux-development.md`. Written last, from the final state, so it does not go stale mid-port.
+
 ## 4. Risks to probe first
 
 1. VST3 hosts without `IRunLoop` while the editor is closed → decides how much Gneiss fallback is needed. REAPER: has it (factory context, notes/09). Bitwig, Ardour, Carla: probe with `-DIPLUG_TRACE_HOST_LOOP`.
