@@ -1,7 +1,7 @@
 # T-004 — Standalone APP robustness on Linux
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** in-progress
+- **Owner:** 2nd instance (claimed 2026-10-16)
 - **Branch/worktree:** `linux/T-004` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-004`.
 - **Depends on:** nothing.
 - **Plan phase:** P8.
