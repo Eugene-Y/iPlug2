@@ -48,7 +48,9 @@ Update it at every merge or user decision.
 - **The VM's virgl GPU can hang.**
   - Seen during T-007 mode changes and on 2026-10-16 during T-008.
   - Symptoms: X stops answering (`xdpyinfo` times out), a kworker sits in D state, and `dmesg` shows `drm_atomic_helper_wait_for_fences … blocked`.
-  - A guest reboot then hangs at shutdown, so the user must **Force Stop + Start in UTM**.
+  - A guest reboot then hangs at shutdown, so the user must **Force Stop + Start in UTM**. If UTM itself is stuck: Force Quit UTM (and any leftover `QEMULauncher`/`qemu-system-aarch64`).
+  - **Don't switch the VM to `virtio-gpu-pci` (no GL).** Tried 2026-10-16: GNOME then shows only a cursor on black (DRI3 error), so keep `virtio-gpu-gl-pci`.
+  - **Avoid needless display-mode or scale changes on the VM.** They triggered the hang in T-007.
   - Agents must kill everything they start on the VM (APP, REAPER, xclip, jackd) when they finish.
 - The VM (UTM, 192.168.64.2) is unreachable when the Mac slept or UTM is stopped; there is no `bridge100`. Ask the user. Key: `~/.ssh/claude_linux_vm`. Never use the password.
 - Docker: colima. If it's down: `colima start` with the mounts in AGENTS §3.
