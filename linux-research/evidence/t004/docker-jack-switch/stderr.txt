@@ -17,9 +17,6 @@ MidiInAlsa::initialize: error creating ALSA sequencer client object.
 
 MidiInAlsa::initialize: error creating ALSA sequencer client object.
 
-IPlugInstrument: Audio is off (ALSA): no device found.
-
-Choose an audio driver and device in File > Preferences.
 trying to start audio stream @ 48000 sr, buffer size 256
 indev = system
 outdev = system
@@ -28,6 +25,19 @@ outputs = 2
 IGraphics NanoVG @ 60 FPS
 
 RtAudio Version 6.0.1
+errorCallback: RtApiPulse::probeDevices: pa_context_connect() failed: Connection refused
+
+
+errorCallback: RtApiPulse::probeDevices: pa_context_connect() failed: Connection refused
+
+
+errorCallback: RtApiPulse::probeDevices: pa_context_connect() failed: Connection refused
+
+IPlugInstrument: Audio is off (Pulse): no device found.
+pa_context_connect() failed: Connection refused
+
+Choose an audio driver and device in File > Preferences.
+
 RtAudio Version 6.0.1trying to start audio stream @ 48000 sr, buffer size 256
 indev = system
 outdev = system

@@ -545,10 +545,11 @@ static void _silentAlsaErrorHandler(const char*, int, const char*, int, const ch
 
 // Like a WM close, which SWELL ignores while a modal dialog has the main window disabled: menus and
 // dialogs close first, since their procs still use the host that closing the main window destroys.
+// Menus are not waited for: Preferences runs inside the File menu's TrackPopupMenu, which stays open
+// until the dialog ends.
 static gboolean CloseInnermostWindow(gpointer)
 {
-  if (DestroyPopupMenus())
-    return G_SOURCE_CONTINUE;
+  DestroyPopupMenus();
 
   if (HWND modal = DialogBoxIsActive())
   {

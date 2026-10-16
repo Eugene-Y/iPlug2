@@ -148,7 +148,7 @@ bool IPlugAPPHost::InitState()
     {
       DBGMSG("Reading ini file from %s\n", mINIPath.Get());
       
-      mState.mAudioDriverType = GetPrivateProfileInt("audio", "driver", 0, mINIPath.Get());
+      mState.mAudioDriverType = GetPrivateProfileInt("audio", "driver", mState.mAudioDriverType, mINIPath.Get());
 
       GetPrivateProfileString("audio", "indev", "Built-in Input", buf, STRBUFSZ, mINIPath.Get()); mState.mAudioInDev.Set(buf);
       GetPrivateProfileString("audio", "outdev", "Built-in Output", buf, STRBUFSZ, mINIPath.Get()); mState.mAudioOutDev.Set(buf);
@@ -716,6 +716,8 @@ bool IPlugAPPHost::InitAudio(uint32_t inID, uint32_t outID, uint32_t sr, uint32_
   options.flags = RTAUDIO_NONINTERLEAVED;
 #ifdef OS_LINUX
   options.streamName = BUNDLE_NAME; // the client name in JACK, the stream name in PulseAudio
+  // PulseAudio's output otherwise buffers up to the server default (about 100 ms on PipeWire); 4 is ALSA's default
+  options.numberOfBuffers = 4;
 #endif
 
   mBufIndex = 0;

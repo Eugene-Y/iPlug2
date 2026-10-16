@@ -110,7 +110,11 @@ public:
     , mAudioOutDev(DEFAULT_OUTPUT_DEV)
     , mMidiInDev(OFF_TEXT)
     , mMidiOutDev(OFF_TEXT)
+#ifdef OS_LINUX
+    , mAudioDriverType(kDevicePulse) // ALSA's duplex through PipeWire, today's desktop default, underruns all the time
+#else
     , mAudioDriverType(0) // DirectSound / CoreAudio by default
+#endif
     , mBufferSize(512)
     , mAudioSR(44100)
     , mMidiInChan(0)

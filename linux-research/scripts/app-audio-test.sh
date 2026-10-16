@@ -15,7 +15,13 @@ pkill -x "$NAME"; sleep 0.5
 export HOME="$OUT/home"; rm -rf "$HOME"; mkdir -p "$HOME"
 INI="$HOME/.config/$NAME/settings.ini"
 
-win() { xdotool search --onlyvisible --name "^$1\$" 2>/dev/null | head -1; }
+# By WM_CLASS too: Mutter's frame windows carry their client's title
+win() {
+  local w
+  for w in $(xdotool search --onlyvisible --name "^$1\$" 2>/dev/null); do
+    xprop -id "$w" WM_CLASS 2>/dev/null | grep -q "\"$NAME\"" && { echo "$w"; return 0; }
+  done
+}
 wait_win() { for _ in $(seq 50); do w=$(win "$1"); [ -n "$w" ] && { sleep 0.5; echo "$w"; return 0; }; sleep 0.2; done; return 1; }
 # SWELL's menu bar ignores a click whose press and release share a timestamp
 slow_click() { xdotool mousemove "$1" "$2" mousedown 1; sleep 0.2; xdotool mouseup 1; sleep 0.8; }
@@ -46,11 +52,11 @@ else
 fi
 
 menu_item 0
-if P=$(xdotool search --onlyvisible --name '^Preferences' | head -1) && [ -n "$P" ]; then
+if P=$(win 'Preferences.*') && [ -n "$P" ]; then
   pass "Preferences open, title '$(xdotool getwindowname "$P")'"
   import -window root "$OUT/02-prefs.png"
   xdotool windowactivate --sync "$P"; xdotool key Escape; sleep 1
-  [ -z "$(xdotool search --onlyvisible --name '^Preferences' | head -1)" ] && pass "Preferences closed by Escape" || fail "Preferences still open"
+  [ -z "$(win 'Preferences.*')" ] && pass "Preferences closed by Escape" || fail "Preferences still open"
 else
   fail "Preferences did not open"
 fi
@@ -68,7 +74,7 @@ signal_quit() { # <signal> <what is open: none|prefs>
   [ -n "$(win Audio)" ] && { xdotool windowactivate --sync "$(win Audio)"; xdotool key Return; sleep 0.5; }
   if [ "$2" = prefs ]; then
     menu_item 0
-    P=$(xdotool search --onlyvisible --name '^Preferences' | head -1)
+    P=$(win 'Preferences.*')
     read -r X Y < <(client_origin "$P"); slow_click $((X + 150)) $((Y + 553)) # Apply: a message box over Preferences, if audio fails
     import -window root "$OUT/03-before-sig$1.png"
   fi
