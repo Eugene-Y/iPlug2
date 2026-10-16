@@ -148,3 +148,6 @@ so it is not a missing stencil buffer. Belongs to T-009 (visual parity) / IGraph
 
 **Hand-over:** commits `git log hvoya-linux..linux/T-004`; shared-code fixes isolated in 013328ba4 for the user's
 decision (A2/A3); evidence `evidence/t004/` (Docker `docker-*`, VM `vm-*`, macOS `macos/`, review `review-*`).
+
+**User decision (2026-10-16):** the shared-code fixes in 013328ba4 (A2, A3) stay as they are, for all platforms. The
+VM Pulse cookies in history (m4) are to be dealt with later.
