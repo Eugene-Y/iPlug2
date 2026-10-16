@@ -191,7 +191,7 @@ The harness fails on a blank editor, no repaint, a REAPER PID change, `LUA ERROR
   - CLAP + VST3 + standalone APP;
   - IGraphics + NanoVG on GL (GL2 like Windows, or GL3 like RR — pick in P3);
   - X11 only (XWayland covers Wayland desktops).
-- Out of scope for v1: Skia, native Wayland, LV2 (Ardour loads VST3), WebView.
+- **Feature parity with mac/win is required (user, 2026-10-16):** Linux must not be poorer than mac or win. WebView, Skia, GL3, drag-and-drop, tooltips etc. are in scope; gap list and WebView options in notes/22. Not gaps: native Wayland embedding (no mac/win equivalent; hosts embed X11 via XWayland), AU/AAX. LV2 stays the last phase.
 - **Threading contract — the decisive requirement.** All X event processing, IGraphics drawing, `IPlugTimer` callbacks (→ `OnIdle`, `ISender` draining) and editor-delegate callbacks run on the **host main thread**:
   - CLAP: `timer-support`, plus `posix-fd-support` for the X fd.
   - VST3: `Linux::IRunLoop`, `registerTimer` + `registerEventHandler`.
@@ -383,7 +383,7 @@ Estimate: 5–10 d.
 
 ### P13. README (the very end; asked by the user 2026-10-16)
 
-Update the repo `README.md`: Linux in the platform list, what works on Linux (formats, renderer GL2 only, X11, hosts tested), what does not (Wayland-native, Skia, WebView, …), and a pointer to `Documentation/linux-development.md`. Written last, from the final state, so it does not go stale mid-port.
+Update the repo `README.md`: Linux in the platform list, what works on Linux (formats, renderer GL2 only, X11, hosts tested), any remaining differences from mac/win (the goal is none, notes/22), and a pointer to `Documentation/linux-development.md`. Written last, from the final state, so it does not go stale mid-port.
 
 ## 4. Risks to probe first
 

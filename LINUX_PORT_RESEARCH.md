@@ -144,6 +144,7 @@ upstream не превратится в ад.
 - Фикс `IPlugLogger.h` (баг №4) внесён в `hvoya` (`46f834a92`); заодно `IText::SetFont`/`WithFont` (`3a05dd2f4`).
 - Порт ведётся в ветке **`hvoya-linux`** (от `hvoya` после мерджа), рабочий план — `linux-research/PLAN.md`.
 - Объём v1: CLAP + VST3 + standalone, NanoVG/GL, X11. Без Skia, Wayland-native, LV2.
+- **Обновлено 2026-10-16:** требование автора — паритет возможностей с mac/win (WebView, Skia, GL3, drag-and-drop, тултипы и т. д.); список пробелов и варианты WebView — `linux-research/notes/22-feature-parity.md`.
 
 Открыто:
 1. Проверить `state-reproducibility` clap-validator на маковском CLAP Gneiss (баг №6).
