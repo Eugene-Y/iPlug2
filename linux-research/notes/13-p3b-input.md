@@ -40,12 +40,14 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
    run kept the focus for the whole edit (`focuswatch`, trace build). Once we hold it, REAPER/GDK leave it alone
    (`xdotool windowfocus` test: stays).
    **Since T-008** the request goes out at once after the release, with the release's server time: the window
-   manager's click-to-focus and GDK's proxy move carry the press's time and lose when they arrive later. A press and
-   release in the same millisecond tie; then a FocusOut into the host's own top-level within 500 ms asks again
-   (CurrentTime, at most twice), and 150 ms after each request one check asks again if the focus is in the host's
-   window anyway: the old delay survives as that check. Every click while the editor wants the keys asks again
-   (openbox focuses the top-level on every click). Mutter, human-like clicks: 10/10 edits CLAP and VST3, no retry
-   needed; openbox with xdotool clicks: retries on most edits, all scripts pass (`evidence/t008/`).
+   manager's click-to-focus and GDK's proxy move carry the press's time and lose when they arrive later. Each click
+   (and each take) begins an episode of 1.5 s. A FocusOut into the host's own top-level during it, or a check one
+   quiet period (150 ms) after a request that finds the focus there, makes the editor wait until the focus has
+   stayed put for 150 ms and then ask again (CurrentTime): under load REAPER/openbox move the focus back several
+   times over up to ≈0.8 s after a click, and asking during that only loses again (review notes/19 H1). After the
+   episode the host keeps it. Every click while the editor wants the keys asks again (openbox focuses the top-level
+   on every click). Mutter, human-like clicks: 10/10 edits CLAP and VST3 with nothing lost; openbox under ≈5 cores
+   of load: the P3b Ctrl+C step 30/30 (old delay 30/30, the first T-008 version 18/30) (`evidence/t008/focus-load/`).
 3. **Synthetic keys: REAPER takes them, GDK3 apps do not.** `xdotool key --window <container> space` starts
    REAPER's transport; the same to the APP's SWELL window (system GDK3) is ignored, while a real Escape closes the
    APP's dialog. So forwarding unused keys reaches the host in some hosts only. In the APP it costs SWELL's Escape
@@ -113,8 +115,8 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
   face of the same family with the requested style ahead of the variable file when one is installed (measured with a
   fixture, `evidence/t008/vm/fc-variable*/`), and taking another family's static bold instead would change the look
   more than the missing weight does. Synthetic bold would need NanoVG changes.
-- Focus retries: after the retries and the check `mHoldsFocus` means "requested", not "held"; keys then come only as
-  the host forwards them, until the next click into the editor asks again.
+- Focus: after the episode `mHoldsFocus` means "requested", not "held"; keys then come only as the host forwards
+  them, until the next click into the editor asks again.
 - A menu requested while the previous one is still fading out (≈300 ms after a choice) is ignored by
   `IPopupMenuControl::CreatePopupMenu`. Since T-008 a click ends the fade first, so a click-opened menu works; a
   request without a click (key, timer) during the fade is still ignored, as with a plug-in's own popup control on

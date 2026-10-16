@@ -1,6 +1,6 @@
 # T-008 — P3 polish (findings from the VM run and reviews)
 
-- **Status:** in-progress
+- **Status:** in-progress (review fixes)
 - **Owner:** T-008 worker (Claude, 2026-10-16)
 - **Branch/worktree:** `linux/T-008` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-008`.
 - **Depends on:** T-002 (merged).
@@ -65,3 +65,16 @@ on-screen clamp already makes usable. Left for a later decision.
 | Low | L2 on mac/win with a plug-in-attached `IPopupMenuControl`: a menu requested during the previous one's ≈300 ms fade is ignored; the owner keeps `mInPopupMenu` and its host gesture until the next menu. Repro: `steps/iplugcontrols-l2.txt` logic (choose, reopen within 50 ms) | `IPopupMenuControl.cpp:456` (`CreatePopupMenu` expands only from kCollapsed) |
 | Low | A menu opened from inside `OnPopupMenuSelection` with an async popup control loses its owner: `SetControlValueAfterPopupMenu` sets `mInPopupMenu = nullptr` after the callback, so the nested menu's completion and gesture end go nowhere | `IGraphics.cpp:279–301` |
 | Info | `IPopupMenuControl::mMaxBounds` is set once (first menu) and never follows a later UI resize | `IPopupMenuControl.cpp:453` |
+
+### Review round 1 (notes/19): fixes
+| # | Fix | Evidence |
+|---|---|---|
+| H1 | Focus rework (code in WIP 48073cd22, kept by the coordinator over a limit): every click/take begins a 1.5 s episode (`kClickFocusEpisode`); a FocusOut into the host's window, or the check 150 ms after any request, marks the focus lost; it is asked for again (CurrentTime) only once the focus has stayed put 150 ms (`kFocusQuiet`, polled with `XGetInputFocus` while lost, `LocateFocus` only on a change); a move to another top-level meanwhile ends the edit; past the episode the host keeps it. All requests go through `TakeKeyboardFocus`, so every one re-arms the check. No retry count any more | Docker, load = 1–2 extra REAPERs with open editors (≈3.4–4.7 cores): reviewer's probe `scripts/probe/focus-copy.sh` ×30 — heavier load: first T-008 version **18/30**, fix **30/30**, base 30/30, fix trace 30/30 (57 requests, 27 losses, 0 given up, `focus-load/*-load2/`); lighter load: fix 30/30, base 30/30, first version 29/30. Under the heavier load: full P3b CLAP ×2, VST3 ×2, APP, L2 CLAP + VST3 PASS; churn `EDIT=1` ×100 CLAP + VST3 PASS; hidden-draws 0 Draws minimized/covered (`review-fix/`) |
+| M1 | `Dependencies/IPlug/VST3_SDK/README.md` restored (67b2aff9b); `install-sdks.sh` overwrites it, so check `git status` after it | `git diff hvoya-linux -- Dependencies` empty |
+| L1 | The watched top-level remembers whether it has WM_STATE; without, it is looked up again once a second from the frame timer until one does (a host that maps its window after the open) | code; not exercised by REAPER (WM_STATE present at open) |
+| L2 | `FitMenusOnScreen`'s comment says it overwrites a plug-in's own `SetMaxBounds` and that a menu opened without a press keeps the last press's limit | — |
+| L3 | `kFocusRetryWindow` is gone; the APP's click and the retries share one meaning now: the click's focus episode | — |
+| I1 | Menus are fitted on the press only (and for stand-ins), not on the release | menu-edges / L2 PASS |
+
+Open, VM-only (the VM's GPU hung twice today; for the coordinator, light and short): `vm/probe/focus-edit.sh` CLAP
++ VST3 ×10 and the APP P3b script ×3 with the fix build (the earlier VM results are for the first focus version).
