@@ -37,7 +37,7 @@ The coordinator keeps this table current. A worker updates only its own task fil
 
 | Date | Task | Merge commit | Smoke tests |
 |---|---|---|---|
-| 2026-10-16 | T-005 | "Merge T-005" (first parent of the next commit) | Docker: `cmake --list-presets` + `cmake --preset linux-debug` + `cmake --build --preset linux-debug` in `Examples/IPlugEffect` PASS (CLAP, VST3, APP built); root `cmake --list-presets` on Linux lists upstream + new presets. mac (cmake 3.29): root `--list-presets` unchanged (macOS/iOS/visionOS/web), examples list nothing (m2) |
+| 2026-10-16 | T-005 | 17675831f | Docker: `cmake --list-presets` + `cmake --preset linux-debug` + `cmake --build --preset linux-debug` in `Examples/IPlugEffect` PASS (CLAP, VST3, APP built); root `cmake --list-presets` on Linux lists upstream + new presets. mac (cmake 3.29): root `--list-presets` unchanged (macOS/iOS/visionOS/web), examples list nothing (m2) |
 | 2026-10-14 | T-001 | (committed directly on hvoya-linux, last 75e906365) | — (evidence/notes only) |
 | 2026-10-16 | T-008 | fac9cc84d | Docker build IPlugControls CLAP+VST3, Gneiss CLAP PASS; REAPER: IPlugControls full P3b CLAP PASS, VST3 PASS, Gneiss `steps/gneiss.txt` CLAP PASS (`evidence/merge-smoke/t008-*`) |
 | 2026-10-16 | sync hvoya → hvoya-linux; Gneiss master → linux-experiment | e393b6398; Gneiss 4219350 | User's morph/preset fix (hvoya 0b2d8dbef, Gneiss 3cf2e2e). Docker build Gneiss CLAP+VST3 PASS; REAPER `steps/gneiss.txt` CLAP PASS, VST3 PASS except the known right-click step (`evidence/merge-smoke/sync-1016-*`) |
