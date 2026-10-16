@@ -545,8 +545,6 @@ static void _silentAlsaErrorHandler(const char*, int, const char*, int, const ch
 
 // Like a WM close, which SWELL ignores while a modal dialog has the main window disabled: menus and
 // dialogs close first, since their procs still use the host that closing the main window destroys.
-// Menus are not waited for: Preferences runs inside the File menu's TrackPopupMenu, which stays open
-// until the dialog ends.
 static gboolean CloseInnermostWindow(gpointer)
 {
   DestroyPopupMenus();
@@ -601,11 +599,11 @@ int main(int argc, char** argv)
   if (gHWND && menu)
     SetMenu(gHWND, menu);
 
-  // After the window exists, so that a message about missing audio has a parent and the UI behind it
-  pAppHost->TryToChangeAudio();
-
   g_unix_signal_add(SIGINT, CloseOnSignal, nullptr);
   g_unix_signal_add(SIGTERM, CloseOnSignal, nullptr);
+
+  // After the window exists, so that a message about missing audio has a parent and the UI behind it
+  pAppHost->TryToChangeAudio();
 
   // Block in GLib instead of sleeping, so X input and the plug-in's HostLoop sources run as soon as they
   // are ready, also without a display. SWELL polls its own timers and posted messages in

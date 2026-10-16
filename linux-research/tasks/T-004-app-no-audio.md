@@ -1,6 +1,6 @@
 # T-004 — Standalone APP robustness on Linux
 
-- **Status:** in-progress (self-review done; independent review next)
+- **Status:** review-done
 - **Owner:** 2nd instance (claimed 2026-10-16)
 - **Branch/worktree:** `linux/T-004` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-004`.
 - **Depends on:** nothing.
@@ -72,9 +72,11 @@ the audio settings" *before* any window. A second segfault: with no ALSA sequenc
 - Release builds drop the Debug menu, as on Windows (Linux has no screenshot implementation for its last item).
 - SIGINT/SIGTERM close like a WM close: popup menus and modal dialogs first (`DialogBoxIsActive`/`EndDialog`), then
   `WM_CLOSE`. The first version posted `WM_CLOSE` directly and destroyed the host under a running Preferences proc
-  (UAF, seen as a garbage title); the second waited for `DestroyPopupMenus()` and hung on the VM because Preferences
-  runs inside the File menu's `TrackPopupMenu` (gdb: main thread in `SWELL_DialogBox` under `TrackPopupMenu`; the
-  probe's later passing run replaced its `hung-bt.txt`, the finding is in commit fa7fc2e09). The handler removes its
+  (UAF, seen as a garbage title); the second looped while `DestroyPopupMenus()` returned true and hung on the VM with
+  Preferences open (gdb: main thread in `SWELL_DialogBox` under `TrackPopupMenu`). Not waiting on menus fixed it
+  (VM probe exits 0, repeatedly). **Mechanism unconfirmed:** the reviewer points out that SWELL's `TrackPopupMenu`
+  empties its menu list before sending `WM_COMMAND`, so `DestroyPopupMenus()` should have returned false there; the
+  first claim in commit fa7fc2e09 is therefore not proven. The probe's later run replaced `hung-bt.txt`. The handler removes its
   source, so GLib restores SIG_DFL: a second signal ends a hung quit (checked with a probe program).
 - *Shared (separate commit 013328ba4, for the user's decision):* `ProbeAudioIO` resets the default device IDs (after
   JACK→ALSA the stale JACK default gave "output device ID is invalid"; RtAudio numbers every API's devices from the
@@ -129,3 +131,20 @@ so it is not a missing stencil buffer. Belongs to T-009 (visual parity) / IGraph
   too) — fixed in shared code, commit 013328ba4 (same decision).
 - **A4 (minor):** `TryToChangeAudio` requires an input device even for an instrument with no inputs; an output-only
   system reports "no device". Not changed.
+
+### Review round 1 (notes/23-review-T-004.md): approve with minor fixes — fixed
+- m1: SIGINT/SIGTERM handlers now installed before `TryToChangeAudio()`; a signal over the startup "Audio is off"
+  box exits 0 (was 143). `app-audio-test.sh` gained that case (Docker PASS); VM `vm-sigterm-probe` exits 0,
+  `vm-default-effect` PASS after the change.
+- m2: the comment that blamed `TrackPopupMenu` is gone; the Log above says the mechanism is unconfirmed.
+- m3: the dead Linux `mkdir` branch in `InitState` is replaced by "run on unsaved defaults" for the folder vanishing
+  between creation and `stat`.
+- Nit: one `kAudioDriverNames` table (`ALSA`, `JACK`, `PulseAudio`) feeds the Preferences list and the message
+  ("Audio is off (PulseAudio)", was RtAudio's "Pulse").
+- m4 (Pulse cookies of the VM in fa7fc2e09/0e986f5d4): left for the user/coordinator — dropping them needs a history
+  rewrite of this unpushed branch. They are VM-local PulseAudio auth tokens.
+- Not changed: `getErrorText()` may be an older RtAudio error (shown as detail only); the Linux tail of
+  `TryToChangeAudio` stays a separate branch so the mac/win lines are untouched.
+
+**Hand-over:** commits `git log hvoya-linux..linux/T-004`; shared-code fixes isolated in 013328ba4 for the user's
+decision (A2/A3); evidence `evidence/t004/` (Docker `docker-*`, VM `vm-*`, macOS `macos/`, review `review-*`).

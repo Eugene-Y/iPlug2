@@ -321,9 +321,8 @@ static void ShowMidiUnavailable(HWND hwndDlg)
 
 void IPlugAPPHost::PopulatePreferencesDialog(HWND hwndDlg)
 {
-  SendDlgItemMessage(hwndDlg,IDC_COMBO_AUDIO_DRIVER,CB_ADDSTRING,0,(LPARAM)"ALSA");
-  SendDlgItemMessage(hwndDlg,IDC_COMBO_AUDIO_DRIVER,CB_ADDSTRING,0,(LPARAM)"JACK");
-  SendDlgItemMessage(hwndDlg,IDC_COMBO_AUDIO_DRIVER,CB_ADDSTRING,0,(LPARAM)"PulseAudio");
+  for (const char* driverName : kAudioDriverNames)
+    SendDlgItemMessage(hwndDlg, IDC_COMBO_AUDIO_DRIVER, CB_ADDSTRING, 0, (LPARAM) driverName);
   SendDlgItemMessage(hwndDlg,IDC_COMBO_AUDIO_DRIVER,CB_SETCURSEL, mState.mAudioDriverType, 0);
   // Linux has no system-wide audio device panel to open
   EnableWindow(GetDlgItem(hwndDlg, IDC_BUTTON_OS_DEV_SETTINGS), FALSE);

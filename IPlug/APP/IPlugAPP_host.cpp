@@ -196,11 +196,7 @@ bool IPlugAPPHost::InitState()
       return false;
     }
 #elif defined OS_LINUX
-    if (mkdir(mINIPath.Get(), S_IRWXU) != 0)
-      return false;
-
-    mINIPath.Append("settings.ini");
-    UpdateINI(); // will write file if doesn't exist
+    mINIPath.Set(""); // the folder created above has gone again: run on unsaved defaults
 #else
   #error NOT IMPLEMENTED
 #endif
@@ -569,7 +565,7 @@ void IPlugAPPHost::ReportAudioOff(const char* reason)
   mAudioOffReason.Set(reason);
 
   WDL_String message;
-  message.SetFormatted(1024, "Audio is off (%s): %s.", RtAudio::getApiDisplayName(mDAC->getCurrentApi()).c_str(), reason);
+  message.SetFormatted(1024, "Audio is off (%s): %s.", kAudioDriverNames[mState.mAudioDriverType], reason);
   if (!mDAC->getErrorText().empty())
     message.AppendFormatted(1024, "\n%s", WithoutRtAudioPrefix(mDAC->getErrorText()).c_str());
   message.Append("\n\nChoose an audio driver and device in File > Preferences.");

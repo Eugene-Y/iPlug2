@@ -70,11 +70,11 @@ if kill -0 "$APID" 2>/dev/null; then fail "APP still running 5 s after File > Qu
 else wait "$APID"; RC=$?; [ "$RC" = 0 ] && pass "File > Quit, exit 0" || fail "File > Quit, exit $RC"; fi
 
 # SIGINT (Ctrl+C in a terminal) and SIGTERM close the window like a quit, also over open dialogs
-signal_quit() { # <signal> <what is open: none|prefs>
+signal_quit() { # <signal> <what is open: none|prefs|box (the startup message)>
   "$APP" ${APP_ARGS:-} > "$OUT/stderr-sig$1-$2.txt" 2>&1 &
   APID=$!
   sleep 4
-  [ -n "$(win Audio)" ] && { xdotool windowactivate --sync "$(win Audio)"; xdotool key Return; sleep 0.5; }
+  [ "$2" != box ] && [ -n "$(win Audio)" ] && { xdotool windowactivate --sync "$(win Audio)"; xdotool key Return; sleep 0.5; }
   if [ "$2" = prefs ]; then
     menu_item 0
     P=$(win 'Preferences.*')
@@ -88,5 +88,6 @@ signal_quit() { # <signal> <what is open: none|prefs>
 }
 signal_quit INT none
 signal_quit TERM prefs
+[ "${EXPECT_BOX:-1}" = 1 ] && signal_quit TERM box
 
 if [ "$FAILS" = 0 ]; then echo "RESULT: PASS" | tee "$OUT/RESULT.txt"; else echo "RESULT: FAIL ($FAILS)" | tee "$OUT/RESULT.txt"; fi

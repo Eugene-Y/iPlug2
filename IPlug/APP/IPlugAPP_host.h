@@ -78,6 +78,9 @@ const std::string kBufferSizeOptions[kNumBufferSizeOptions] = {"32", "64", "96",
 const int kDeviceDS = 0; const int kDeviceCoreAudio = 0; const int kDeviceAlsa = 0;
 const int kDeviceASIO = 1; const int kDeviceJack = 1;
 const int kDevicePulse = 2;
+#ifdef OS_LINUX
+const char* const kAudioDriverNames[] = {"ALSA", "JACK", "PulseAudio"}; // indexed by AppState::mAudioDriverType
+#endif
 extern UINT gSCROLLMSG;
 
 class IPlugAPP;
