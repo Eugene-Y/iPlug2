@@ -60,14 +60,24 @@ for _ in $(seq 50); do kill -0 "$APID" 2>/dev/null || break; sleep 0.1; done
 if kill -0 "$APID" 2>/dev/null; then fail "APP still running 5 s after File > Quit"; kill -9 "$APID"
 else wait "$APID"; RC=$?; [ "$RC" = 0 ] && pass "File > Quit, exit 0" || fail "File > Quit, exit $RC"; fi
 
-# SIGINT (Ctrl+C in a terminal) closes the window like a quit
-"$APP" ${APP_ARGS:-} > "$OUT/stderr-sigint.txt" 2>&1 &
-APID=$!
-sleep 4
-[ -n "$(win Audio)" ] && { xdotool windowactivate --sync "$(win Audio)"; xdotool key Return; sleep 0.5; }
-kill -INT "$APID"
-for _ in $(seq 50); do kill -0 "$APID" 2>/dev/null || break; sleep 0.1; done
-if kill -0 "$APID" 2>/dev/null; then fail "APP still running 5 s after SIGINT"; kill -9 "$APID"
-else wait "$APID"; RC=$?; [ "$RC" = 0 ] && pass "SIGINT, exit 0" || fail "SIGINT, exit $RC"; fi
+# SIGINT (Ctrl+C in a terminal) and SIGTERM close the window like a quit, also over open dialogs
+signal_quit() { # <signal> <what is open: none|prefs>
+  "$APP" ${APP_ARGS:-} > "$OUT/stderr-sig$1-$2.txt" 2>&1 &
+  APID=$!
+  sleep 4
+  [ -n "$(win Audio)" ] && { xdotool windowactivate --sync "$(win Audio)"; xdotool key Return; sleep 0.5; }
+  if [ "$2" = prefs ]; then
+    menu_item 0
+    P=$(xdotool search --onlyvisible --name '^Preferences' | head -1)
+    read -r X Y < <(client_origin "$P"); slow_click $((X + 150)) $((Y + 553)) # Apply: a message box over Preferences, if audio fails
+    import -window root "$OUT/03-before-sig$1.png"
+  fi
+  kill -"$1" "$APID"
+  for _ in $(seq 50); do kill -0 "$APID" 2>/dev/null || break; sleep 0.1; done
+  if kill -0 "$APID" 2>/dev/null; then fail "APP still running 5 s after SIG$1 ($2 open)"; kill -9 "$APID"
+  else wait "$APID"; RC=$?; [ "$RC" = 0 ] && pass "SIG$1 with $2 open, exit 0" || fail "SIG$1 with $2 open, exit $RC"; fi
+}
+signal_quit INT none
+signal_quit TERM prefs
 
 if [ "$FAILS" = 0 ]; then echo "RESULT: PASS" | tee "$OUT/RESULT.txt"; else echo "RESULT: FAIL ($FAILS)" | tee "$OUT/RESULT.txt"; fi

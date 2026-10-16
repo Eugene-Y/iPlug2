@@ -543,11 +543,29 @@ static bool gNoIO = false;
 // during library initialisation even when PulseAudio isn't running.
 static void _silentAlsaErrorHandler(const char*, int, const char*, int, const char*, ...) {}
 
-// A second signal finds the default handler again, so a hung quit can still be interrupted.
-static gboolean CloseOnSignal(gpointer)
+// Like a WM close, which SWELL ignores while a modal dialog has the main window disabled: menus and
+// dialogs close first, since their procs still use the host that closing the main window destroys.
+static gboolean CloseInnermostWindow(gpointer)
 {
+  if (DestroyPopupMenus())
+    return G_SOURCE_CONTINUE;
+
+  if (HWND modal = DialogBoxIsActive())
+  {
+    EndDialog(modal, IDCANCEL);
+    return G_SOURCE_CONTINUE;
+  }
+
   if (gHWND)
     PostMessage(gHWND, WM_CLOSE, 0, 0);
+
+  return G_SOURCE_REMOVE;
+}
+
+// Removing the source restores the default handler, so a second signal still ends a hung quit.
+static gboolean CloseOnSignal(gpointer)
+{
+  g_timeout_add(20, CloseInnermostWindow, nullptr);
   return G_SOURCE_REMOVE;
 }
 

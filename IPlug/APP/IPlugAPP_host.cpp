@@ -714,7 +714,9 @@ bool IPlugAPPHost::InitAudio(uint32_t inID, uint32_t outID, uint32_t sr, uint32_
 
   RtAudio::StreamOptions options;
   options.flags = RTAUDIO_NONINTERLEAVED;
-  // options.streamName = BUNDLE_NAME; // JACK stream name, not used on other streams
+#ifdef OS_LINUX
+  options.streamName = BUNDLE_NAME; // the client name in JACK, the stream name in PulseAudio
+#endif
 
   mBufIndex = 0;
   mSamplesElapsed = 0;
