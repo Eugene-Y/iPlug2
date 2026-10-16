@@ -132,3 +132,4 @@ rm -rf $L/vm                                                                  # 
 | Best practices from JUCE/DPF/VSTGUI/pugl | notes/02 |
 | Harness | `docker/README.md`, `scripts/vm/README.md` |
 | What other ports got wrong | notes/04, notes/05 |
+| Developer setup on Linux (presets, VS Code, debugging in REAPER), IDE choice | `Documentation/linux-development.md`, notes/20 |

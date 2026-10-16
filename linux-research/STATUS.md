@@ -17,9 +17,11 @@ Update it at every merge or user decision.
 | Sand | `/Volumes/Storage/code/hvoya/Sand` | Untouched. T-012 must use a local experiment branch + worktree, like Gneiss |
 
 ## In flight
-- Nothing. **T-008 merged** (fac9cc84d). **Open VM-only re-check of its final focus build** (light, short): `scripts/vm/vm-run.sh vm/probe/focus-edit.sh` CLAP + VST3 ×10 and the APP P3b script ×3. Earlier VM passes used the first focus version. Check `timeout 8 xdpyinfo` before and after.
+- **T-005 merged** (2026-10-16). T-011 is now ready.
+- **T-008 merged** (fac9cc84d). **Open VM-only re-check of its final focus build** (light, short): `scripts/vm/vm-run.sh vm/probe/focus-edit.sh` CLAP + VST3 ×10 and the APP P3b script ×3. Earlier VM passes used the first focus version. Check `timeout 8 xdpyinfo` before and after.
 
 ## Waiting on the user
+0. **T-005 m2:** the examples' new `CMakePresets.json` puts VS Code's CMake Tools on mac/win into presets mode with an empty list (tooling only; Xcode/VS projects and builds untouched). Options: (a) keep and document; (b) include the root presets instead (mac presets appear; Linux list gains upstream `linux-ninja`/`linux-make`). Worker recommends (a).
 1. ~~Gneiss morph bugs on mac~~ — **fixed by the user 2026-10-16** (hvoya 0b2d8dbef, Gneiss 3cf2e2e) and synced into hvoya-linux (e393b6398) / linux-experiment (4219350); Linux smoke PASS. Old note: Then the coordinator merges Gneiss `master` → `linux-experiment` and `hvoya` → `hvoya-linux`, with builds plus REAPER runs (`steps/gneiss.txt`).
    - **Hints given to the user:**
      - C2 analysis in `CROSS_PLATFORM_FINDINGS.md` and `evidence/t003/reviews/2-findings-review.md`: the `_prevParamVals` dedup cache is not updated by direct `IParam::Set` in `applyMorphModeParams`/`snapshotPatchMorphOff`/`morph_file_router`.
@@ -29,6 +31,8 @@ Update it at every merge or user decision.
    - The `gene` remote is https without stored credentials. Push via `git@github.com:Eugene-Y/iPlug2.git`, or the user runs `git remote set-url gene git@github.com:Eugene-Y/iPlug2.git`.
 
 ## Decisions already made by the user (don't re-ask)
+- **IDE (2026-10-16, provisional):** VS Code is the primary Linux IDE; IPlugEffect and IPlugControls are the templates to develop in and duplicate from. Qt Creator is the documented alternative; CLion only with a paid licence (its free licence forbids sold products). notes/20, `Documentation/linux-development.md`.
+- **Rough edges must be fixed, not just noted (2026-10-16):** every known gap gets a task file. For T-011 this includes changing the shared `Examples/duplicate.py` (out-of-tree path rewrite), which also changes mac/win output (for the better).
 - The port branches from `hvoya`, never upstream. Upstream master **was merged into hvoya** (2026-10-11).
 - RR 360d84011 (StringToValue numeric fallback for enum/bool) is **rejected**.
 - v1 = CLAP + VST3 + APP, NanoVG GL2, X11. **LV2 is the last phase (P12)**, after P11 (developer experience: IDE research — CLion is non-commercial-only; presets, `duplicate.py`, one-command flows, for IPlugEffect/IPlugControls/Gneiss/Sand).
@@ -59,12 +63,19 @@ Update it at every merge or user decision.
   - Agents must kill everything they start on the VM (APP, REAPER, xclip, jackd) when they finish.
 - The VM (UTM, 192.168.64.2) is unreachable when the Mac slept or UTM is stopped; there is no `bridge100`. Ask the user. Key: `~/.ssh/claude_linux_vm`. Never use the password.
 - Docker: colima. If it's down: `colima start` with the mounts in AGENTS §3.
+- REAPER `linux_audio_mode`: 0 JACK, 2 Dummy Audio (the harness's), 3 PulseAudio; 1 presumably ALSA. Without a working device REAPER never calls `ProcessBlock`.
+- **VM state after T-005:**
+  - `~/.config/REAPER` is a full profile on PulseAudio (mode 3), no longer the minimal seeded one; the harness uses `/tmp/rhome` and is unaffected;
+  - VS Code (+ CMake Tools, clangd, cpptools), clangd 18, Qt Creator 13 and the native build deps are installed;
+  - `~/dev/iPlug2` holds a hvoya-linux clone with T-005's files;
+  - `~/.clap` and `~/.vst3` hold Debug builds of IPlugEffect and IPlugControls.
+- **Starting an IDE on the VM from `vm-display-env`** puts the sudo gdb wrapper on PATH. The debuggee (REAPER) then runs as root. Start IDEs with a plain PATH (`scripts/vm/README.md`).
 
 ## Next tasks (after T-008), in suggested order
 - T-013: host matrix on the VM — Carla, Ardour VST3, Renoise. Bitwig and x86_64 need a PC.
 - T-004: standalone robustness.
 - T-006: `state-reproducibility`.
-- T-005: IDE research.
+- ~~T-005: IDE research~~ → merged; next **T-011** (duplication out of tree + Gneiss IDE setup).
 - After the Gneiss master sync: T-009 (visual parity) and T-010 (Gneiss-side Linux needs: deferred `SetLatency`, menus, `openFolder`; keep cross-platform fixes out unless the user decides).
 - T-012: Sand.
 - T-011: templates.

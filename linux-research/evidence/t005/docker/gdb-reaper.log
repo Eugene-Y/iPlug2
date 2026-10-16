@@ -1,0 +1,94 @@
+No symbol table is loaded.  Use the "file" command.
+Breakpoint 1 (IPlugEffect.cpp:53) pending.
+No symbol table is loaded.  Use the "file" command.
+Breakpoint 2 (IControls.cpp:687) pending.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0xfffff49ef160 (LWP 139)]
+[New Thread 0xfffff416f160 (LWP 140)]
+[New Thread 0xfffff395f160 (LWP 141)]
+[New Thread 0xfffff314f160 (LWP 142)]
+[New Thread 0xfffff293f160 (LWP 143)]
+[New Thread 0xfffff212f160 (LWP 144)]
+[New Thread 0xfffff191f160 (LWP 145)]
+[New Thread 0xfffff110f160 (LWP 146)]
+[New Thread 0xfffff08ff160 (LWP 147)]
+[New Thread 0xfffff00ef160 (LWP 148)]
+[New Thread 0xffffef8df160 (LWP 149)]
+[New Thread 0xffffef0cf160 (LWP 150)]
+[New Thread 0xffffee8bf160 (LWP 151)]
+
+BEGIN IPLUG CHANNEL IO PARSER --------------------------------------------------
+Channel I/O #1 - 1-1
+               - input bus count: 1, output bus count 1
+               - channel count on input bus 1: 1
+               - channel count on output bus 1: 1
+               - input channel count across all buses: 1, output channel count across all buses 1
+
+Channel I/O #2 - 2-2
+               - input bus count: 1, output bus count 1
+               - channel count on input bus 1: 2
+               - channel count on output bus 1: 2
+               - input channel count across all buses: 2, output channel count across all buses 2
+
+2 I/O configs detected
+Total # in chans: 2, Total # out chans: 2 
+
+END IPLUG CHANNEL IO PARSER --------------------------------------------------
+18:45:04.000  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  HostInfo UI update trigger not set!
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_GIT_BRANCH_NAME linux/T-005
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_GIT_COMMIT_SHA  1411474
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_BUILD_DATE      2026.10.16
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_PRODUCT         IPlugEffect
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_ARCHS           aarch64
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 0 v 0
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  unknown param idx: 0
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 1 v 0
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  unknown param idx: 1
+18:45:04.001  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 2 v 0
+18:45:04.002  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 3 v 0
+18:45:04.002  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 4 v 1
+18:45:04.002  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  HostInfo sr: 44100
+18:45:04.002  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  Serializing state
+18:45:04.002  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  version 0.1.0
+18:45:04.002  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  CCMapperSerializer: serializing. map size: 0
+18:45:04.002  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  Serializing state
+18:45:04.002  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  version 0.1.0
+18:45:04.002  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  CCMapperSerializer: serializing. map size: 0
+[Switching to Thread 0xfffff416f160 (LWP 140)]
+BP-HIT ProcessBlock thread=3
+#0  IPlugEffect::ProcessBlock (this=0x262b230, ins=0x31c7060, outs=0x31cce80, numFrames=512) at /Volumes/Storage/code/IPlug2-T-005/Examples/IPlugEffect/IPlugEffect.cpp:53
+#1  0x0000ffffed3ae028 in iplug::IPlugProcessor::ProcessBuffers (this=0x262b758, type=0, nFrames=512) at /Volumes/Storage/code/IPlug2-T-005/IPlug/IPlugProcessor.cpp:525
+#2  0x0000ffffed3774d8 in iplug::IPlugCLAP::process (this=0x262b230, pProcess=0xfffff4164998) at /Volumes/Storage/code/IPlug2-T-005/IPlug/CLAP/IPlugCLAP.cpp:376
+#3  0x0000ffffed37ebd4 in clap::helpers::Plugin<(clap::helpers::MisbehaviourHandler)1, (clap::helpers::CheckingLevel)2>::clapProcess (plugin=0x262b940, process=0xfffff4164998) at /Volumes/Storage/code/IPlug2-T-005/Dependencies/IPlug/CLAP_HELPERS/include/clap/helpers/plugin.hxx:518
+IGraphics NanoVG @ 60 FPS
+18:45:04.098  |      1 | IPlugEffect_IPlugEffect_0 DEBUG  HostInfo buf size: 512
+18:45:04.098  |      1 | IPlugEffect_IPlugEffect_0 DEBUG  HostInfo chans: 2-2
+[New Thread 0xffffec9cf160 (LWP 152)]
+[New Thread 0xffffd8e7f160 (LWP 153)]
+[New Thread 0xffffc3fff160 (LWP 154)]
+[New Thread 0xffffc37ef160 (LWP 155)]
+[New Thread 0xffffc2fdf160 (LWP 156)]
+[New Thread 0xffffc27cf160 (LWP 157)]
+[New Thread 0xffffc1fbf160 (LWP 158)]
+[New Thread 0xffffc17af160 (LWP 159)]
+[New Thread 0xffffc0f9f160 (LWP 160)]
+[New Thread 0xffff9ffff160 (LWP 161)]
+[New Thread 0xffff975ff160 (LWP 162)]
+[New Thread 0xffff9f7ef160 (LWP 163)]
+[New Thread 0xffff9efdf160 (LWP 164)]
+[Switching to Thread 0xfffff7feb460 (LWP 133)]
+BP-HIT IVKnobControl::OnMouseDown thread=1
+#0  iplug::igraphics::IVKnobControl::OnMouseDown (this=0x6581a80, x=112, y=237, mod=...) at /Volumes/Storage/code/IPlug2-T-005/IGraphics/Controls/IControls.cpp:687
+#1  0x0000ffffed364f90 in hvoya::midi_cc::ControlDecorator<iplug::igraphics::IVKnobControl>::OnMouseDown (this=0x6581a80, x=112, y=237, mod=...) at /Volumes/Storage/code/IPlug2-T-005/hvoya/hvoya/utils/midi_cc/control_decorator.hpp:355
+#2  0x0000ffffed418a88 in iplug::igraphics::IGraphics::OnMouseDown (this=0x2dc13b0, points=std::vector of length 1, capacity 1 = {...}) at /Volumes/Storage/code/IPlug2-T-005/IGraphics/IGraphics.cpp:1093
+#3  0x0000ffffed48efa0 in iplug::igraphics::IGraphicsLinux::HandleButton (this=0x2dc13b0, event=...) at /Volumes/Storage/code/IPlug2-T-005/IGraphics/Platforms/IGraphicsLinux.cpp:883
+#4  0x0000ffffed48eb1c in iplug::igraphics::IGraphicsLinux::HandleXEvent (this=0x2dc13b0, event=...) at /Volumes/Storage/code/IPlug2-T-005/IGraphics/Platforms/IGraphicsLinux.cpp:808
+#5  0x0000ffffed48e320 in iplug::igraphics::IGraphicsLinux::ProcessXEvents (this=0x2dc13b0) at /Volumes/Storage/code/IPlug2-T-005/IGraphics/Platforms/IGraphicsLinux.cpp:699
+18:45:08.986  |    443 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 2 v 0
+18:45:09.390  |    481 | IPlugEffect_IPlugEffect_0 DEBUG  Serializing state
+18:45:09.390  |    481 | IPlugEffect_IPlugEffect_0 DEBUG  version 0.1.0
+18:45:09.390  |    481 | IPlugEffect_IPlugEffect_0 DEBUG  CCMapperSerializer: serializing. map size: 0
+
+Thread 1 "reaper" received signal SIGTERM, Terminated.
+0x0000fffff79abd90 in clock_nanosleep () from /lib/aarch64-linux-gnu/libc.so.6

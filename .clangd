@@ -1,0 +1,4 @@
+# GCC defines __FLOAT_WORD_ORDER__ and clang does not, so with GCC compile commands clangd stops at
+# WDL/wdlendian.h's "#error Unsupported float endian" in every translation unit.
+CompileFlags:
+  Add: [-D__FLOAT_WORD_ORDER__=__BYTE_ORDER__]

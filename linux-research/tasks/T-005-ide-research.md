@@ -1,7 +1,7 @@
 # T-005 — IDE research and IDE/presets setup for the examples
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** review-done (reviewer verdict: accept, round 2; notes/21)
+- **Owner:** Claude instance (T-005 session, 2026-10-16)
 - **Branch/worktree:** `linux/T-005` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-005`.
 - **Depends on:** nothing.
 - **Plan phase:** P11 (part a); part b, `duplicate.py`/templates, is T-011.
@@ -42,9 +42,111 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
 5. **Document.** Write `Documentation/linux-development.md` (or similar): install, open, build, debug, deploy.
 
 ## Acceptance
-- [ ] `notes/NN-ide-research.md` with the comparison table, sources and a recommendation (primary + alternative).
-- [ ] Presets and IDE configs checked in; mac/win presets unaffected. Validate on mac: `cmake --list-presets` still works.
-- [ ] On the VM: build plus both breakpoints hit in the recommended IDE. Screenshots in `evidence/t005/`.
-- [ ] Docs written; self-review; Log complete.
+- [x] `notes/NN-ide-research.md` with the comparison table, sources and a recommendation (primary + alternative). → `notes/20-ide-research.md`
+- [x] Presets and IDE configs checked in; mac/win presets unaffected. Validate on mac: `cmake --list-presets` still works.
+- [x] On the VM: build plus both breakpoints hit in the recommended IDE. Screenshots in `evidence/t005/`.
+- [x] Docs written; self-review; Log complete. → `Documentation/linux-development.md`
 
 ## Log
+
+### 2026-10-16 — claimed
+- Lock `/Volumes/Storage/code/.linux-port-locks/T-005`, worktree `/Volumes/Storage/code/IPlug2-T-005`, branch `linux/T-005`.
+- Findings so far:
+  - Root `CMakePresets.json` already has upstream `linux-ninja`/`linux-make`, but `base-linux` forces `IGRAPHICS_RENDERER=GL3`, against PLAN's GL2 decision (CMake's own Linux default is GL2).
+  - `Examples/*/.gitignore` ignores `.vscode/*`; only `c_cpp_properties.json` (mac/win cpptools config) is tracked. So the Linux VS Code setup goes into a separate `<Name>-linux.code-workspace` (settings + tasks + launch in one file), which mac/win VS Code users never open.
+  - VM reachable; it has gdb/g++ but no cmake/ninja: a clean target for the native-build check.
+
+### 2026-10-16 — work done (commits cdb79d56c, 1c5f3f480, + docs commit)
+- **Decision:** VS Code primary, Qt Creator alternative, CLion only with a paid licence (its free licence v3.0 §2.3 forbids developing sold products). The user provisionally agreed to VS Code and asked for IPlugEffect + IPlugControls as templates to develop in and duplicate from. Details and sources: `notes/20-ide-research.md`.
+- **Files:**
+  - `Scripts/cmake/Linux/CMakePresets-linux.json` (linux-debug / linux-release), included by the root and both examples' `CMakePresets.json`;
+  - root `base-linux` GL3 → GL2;
+  - `Examples/<Name>/<Name>-linux.code-workspace` (tasks + launch: APP, CLAP/VST3 in REAPER);
+  - `Scripts/linux/reaper-open-fx.lua`;
+  - `.clangd` (root + examples);
+  - `Documentation/linux-development.md`.
+- **mac:** `cmake --list-presets` (root, and `Examples/IPlugEffect` → no presets, rc 0) and `cmake --preset macos-ninja` configure PASS (renderer METAL). No Xcode/VS project, xcconfig, props or C++ source touched.
+- **Docker:** example `linux-debug` configure + full build; root `linux-debug` and `linux-ninja` configure (GL2). REAPER under gdb with the Lua script: ProcessBlock + `IVKnobControl::OnMouseDown` breakpoints hit (`evidence/t005/docker/gdb-reaper.log`).
+- **VM** (lock taken and released twice; `xdpyinfo` OK before and after):
+  - fresh clone from GitHub, apt list from the docs, SDK download scripts;
+  - native build of both examples PASS;
+  - VS Code 1.142: preset pick, clangd clean;
+  - breakpoints hit from the IDE: CLAP in REAPER ×2, APP ×2, VST3 ProcessBlock;
+  - IPlugControls: CLAP debug run opens the full editor;
+  - Qt Creator 13: presets as kits, configure.
+
+  Screenshots `evidence/t005/vm/*.png` (git-ignored, local).
+- **Bugs fixed on the way:**
+  - clangd got no flags for framework sources outside the project → `--compile-commands-dir`;
+  - clangd `#error` from `WDL/wdlendian.h` → `.clangd`;
+  - ~~`scripts/vm/README.md` wrongly said `linux_audio_mode=2` is dummy audio (it is JACK)~~. **Wrong, corrected in the review round:** 2 *is* Dummy Audio; the JACK I saw was the root-run REAPER's default profile. Kept: the gotcha that the sudo gdb wrapper on PATH makes IDE debuggees run as root.
+- **VM state left behind** (useful for later tasks):
+  - installed: VS Code + extensions, clangd, Qt Creator, native build deps;
+  - `~/dev/iPlug2`, a hvoya-linux clone with T-005 files;
+  - `~/.clap`, `~/.vst3`: **Debug** builds of IPlugEffect/IPlugControls (deploy before VM tests, as usual);
+  - `~/.config/REAPER`: a full profile with PulseAudio (`linux_audio_mode=3`), not the seeded minimal one;
+  - `~/.config/Code/User/settings.json`: trust prompt off;
+  - apport crash reports from a root REAPER I killed.
+- **For T-011:** task file `tasks/T-011-duplicate-templates.md` (written 2026-10-16 at the user's request: every rough edge must be tracked and fixed). Out of tree, `duplicate.py` does not rewrite `../..` in project-root files (notes/20 §"For T-011"). The `build/` copy is resolved by the review fix M1 below.
+- **For T-004:** APP under the debugger logs `RtApiAlsa::probeDeviceOpen: unable to synchronize input and output devices` at start (ALSA `default` = PipeWire). It still runs, with underruns while stopped in the debugger.
+
+### Review round 1 (2026-10-16, fresh-context reviewer)
+- Full text: `notes/21-review-T-005.md`. **Verdict: changes requested.**
+- Re-ran and PASS:
+  - mac preset list (identical to hvoya-linux) and `macos-ninja` configure;
+  - Docker IPlugControls `linux-debug` build;
+  - REAPER under gdb: `IPlugControls::ProcessBlock` hit, editor open;
+  - pristine ubuntu:24.04 build with only the docs' apt list.
+- Major:
+  - M1 — `build/<preset>` + `duplicate.py` (in-tree too) copies a stale CMakeCache, so the duplicate's `cmake --preset` fails. Suggested fix: binaryDir `build-linux/<preset>`.
+  - M2 — `scripts/vm/README.md` edit is wrong: `linux_audio_mode=2` is Dummy Audio, 0 is JACK (verified in Docker). Log line 82 above is wrong too.
+- Minor:
+  - m1 — add `-newinst` (a running REAPER swallows the debug launch);
+  - m2 — the examples' `CMakePresets.json` puts CMake Tools on mac/win into an empty presets mode;
+  - m3 — `iplug2.reaperPath` override needs a tracked-file edit;
+  - m4 — 31-qtcreator-configured.png doesn't show a configure.
+- Plus nits.
+
+### Cross-platform findings
+- (low, pre-existing upstream) `Examples/duplicate.py` with an output path outside the iPlug2 tree leaves `IPLUG2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.."` in the copied `CMakeLists.txt`: `newroot` is relative to `config/`, and only the xcconfig's `IPLUG2_ROOT` value is replaced. CMake builds of such a duplicate fail on mac/win too. Repro: `python3 duplicate.py IPlugEffect MyFx Mfr /tmp/x`, then `grep IPLUG2_DIR /tmp/x/MyFx/CMakeLists.txt`.
+
+
+### Review round 1 — fixes (2026-10-16)
+- **M1:** presets build into `build-linux/<preset>` (covered by `build-*` in `DONT_COPY` and every `.gitignore`); workspaces point `copyCompileCommands` and clangd there. Verified in Docker: built IPlugEffect, duplicated it in-tree (`T005Dup`), and the duplicate configures and builds (`T005Dup.clap`). Test duplicate removed.
+- **M2:** `scripts/vm/README.md` now gives the mapping 0 JACK / 2 Dummy / 3 PulseAudio (1 presumably ALSA). Fixed the stale comments in `reaper-up.sh` and `vm-provision.sh`, and my Log line above.
+- **m1:** `-newinst` added to both REAPER launches and to the Qt Creator args in the docs. Verified in Docker with a REAPER already running: 2 instances, ProcessBlock breakpoint hits in the debugged one (`evidence/t005/review-fix/gdb-newinst.log`).
+- **m3:** the docs explain the `/opt/REAPER` symlink and that workspace settings win over user settings.
+- **m4:** notes/20 no longer claims a captured configure in Qt Creator.
+- **Nits:**
+  - docs say `reaper/mediafx` instead of "audio thread";
+  - the hidden preset is now `linux-common` (it was `linux-base`, next to root's `base-linux`).
+- **Open, user's call:**
+  - **m2**: the examples' `CMakePresets.json` puts CMake Tools on mac/win into presets mode with an empty list.
+- Also: the T-004 task file got a pointer to the APP's RtAudio warning, and `tasks/T-011-duplicate-templates.md` was written (the user asked for every rough edge to be tracked).
+
+### Review round 2 (2026-10-16, fresh-context reviewer)
+- **Verdict: accept.** Details: `notes/21-review-T-005.md` §"Round 2".
+- Re-checked in Docker:
+  - M1: build the template, duplicate it in tree; the duplicate configures and builds, and copies no build folder.
+  - m1: `-newinst` with a REAPER already running gives 2 instances, and the ProcessBlock breakpoint hits in the debugged one.
+- M2, m3, m4 and the nits: fixed in the files.
+- m2 stays open as the user's call.
+- No new findings beyond two cosmetic nits.
+
+### Hand-over (2026-10-16)
+- **Commits** (`git log hvoya-linux..linux/T-005`):
+  - 1411474a2 claim;
+  - cdb79d56c presets / workspaces / Lua;
+  - 1c5f3f480 clangd + VM README;
+  - c1d8d7ce6 notes/docs/log;
+  - 7db73ebe7 review 1;
+  - d3d1ac762 round-1 fixes + T-011 task file;
+  - 6c1c1386b review 2;
+  - this hand-over commit.
+- **Evidence:** `evidence/t005/{docker,vm,review,review2,review-fix}` (PNGs git-ignored, local in this worktree).
+- **Open:**
+  - **m2 (user's call):** the examples' `CMakePresets.json` puts CMake Tools on mac/win into presets mode with an empty list. Options: (a) keep and document; (b) include the root presets instead. Worker's recommendation: (a).
+  - **Follow-ups:** T-011 (`tasks/T-011-duplicate-templates.md`: out-of-tree duplication, Gneiss IDE setup); T-004 pointer (RtAudio warning).
+- **Recorded in the shared files (2026-10-16, at the user's request):** the board (T-005 row, T-011 linked, T-012 reuse note), STATUS (in flight, m2 under "Waiting on the user", IDE decision, VM state and gotchas), PLAN P11 status, AGENTS "Where to look", CROSS_PLATFORM_FINDINGS T5-1. The coordinator still merges `linux/T-005` and adds the merge-log row.
+- No containers left. VM lock released; task lock released with this commit.
+

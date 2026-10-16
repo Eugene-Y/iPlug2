@@ -1,0 +1,76 @@
+Function "IPlugEffect::ProcessBlock" not defined.
+Breakpoint 1 (IPlugEffect::ProcessBlock) pending.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0xfffff49ef160 (LWP 80)]
+[New Thread 0xfffff416f160 (LWP 81)]
+[New Thread 0xfffff395f160 (LWP 82)]
+[New Thread 0xfffff314f160 (LWP 83)]
+[New Thread 0xfffff293f160 (LWP 84)]
+[New Thread 0xfffff212f160 (LWP 85)]
+[New Thread 0xfffff191f160 (LWP 86)]
+[New Thread 0xfffff110f160 (LWP 87)]
+[New Thread 0xfffff08ff160 (LWP 88)]
+[New Thread 0xfffff00ef160 (LWP 89)]
+[New Thread 0xffffef8df160 (LWP 90)]
+[New Thread 0xffffef0cf160 (LWP 91)]
+[New Thread 0xffffee8bf160 (LWP 92)]
+
+BEGIN IPLUG CHANNEL IO PARSER --------------------------------------------------
+Channel I/O #1 - 1-1
+               - input bus count: 1, output bus count 1
+               - channel count on input bus 1: 1
+               - channel count on output bus 1: 1
+               - input channel count across all buses: 1, output channel count across all buses 1
+
+Channel I/O #2 - 2-2
+               - input bus count: 1, output bus count 1
+               - channel count on input bus 1: 2
+               - channel count on output bus 1: 2
+               - input channel count across all buses: 2, output channel count across all buses 2
+
+2 I/O configs detected
+Total # in chans: 2, Total # out chans: 2 
+
+END IPLUG CHANNEL IO PARSER --------------------------------------------------
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  HostInfo UI update trigger not set!
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_GIT_BRANCH_NAME linux/T-005
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_GIT_COMMIT_SHA  d3d1ac7
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_BUILD_DATE      2026.10.16
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_PRODUCT         IPlugEffect
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  PLUG_ARCHS           aarch64
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 0 v 0
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  unknown param idx: 0
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 1 v 0
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  unknown param idx: 1
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 2 v 0
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 3 v 0
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  OnParamChange: p 4 v 1
+19:49:02.649  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  HostInfo sr: 44100
+19:49:02.650  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  Serializing state
+19:49:02.650  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  version 0.1.0
+19:49:02.650  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  CCMapperSerializer: serializing. map size: 0
+19:49:02.650  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  Serializing state
+19:49:02.650  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  version 0.1.0
+19:49:02.650  |      0 | IPlugEffect_IPlugEffect_0 DEBUG  CCMapperSerializer: serializing. map size: 0
+[Switching to Thread 0xfffff416f160 (LWP 81)]
+BP-HIT IPlugEffect::ProcessBlock thread=3
+#0  IPlugEffect::ProcessBlock (this=0x262ebf0, ins=0x31ca220, outs=0x31d02b0, numFrames=512) at /Volumes/Storage/code/IPlug2-T-005/Examples/IPlugEffect/IPlugEffect.cpp:52
+#1  0x0000ffffed3ae028 in iplug::IPlugProcessor::ProcessBuffers (this=0x262f118, type=0, nFrames=512) at /Volumes/Storage/code/IPlug2-T-005/IPlug/IPlugProcessor.cpp:525
+#2  0x0000ffffed3774d8 in iplug::IPlugCLAP::process (this=0x262ebf0, pProcess=0xfffff4164998) at /Volumes/Storage/code/IPlug2-T-005/IPlug/CLAP/IPlugCLAP.cpp:376
+IGraphics NanoVG @ 60 FPS
+19:49:02.733  |      1 | IPlugEffect_IPlugEffect_0 DEBUG  HostInfo buf size: 512
+19:49:02.736  |      1 | IPlugEffect_IPlugEffect_0 DEBUG  HostInfo chans: 2-2
+[New Thread 0xffffec9cf160 (LWP 93)]
+[New Thread 0xffffd8e7f160 (LWP 94)]
+[New Thread 0xffffbbfff160 (LWP 95)]
+[New Thread 0xffffbb7ef160 (LWP 96)]
+[New Thread 0xffffbafdf160 (LWP 97)]
+[New Thread 0xffffba7cf160 (LWP 98)]
+[New Thread 0xffffb9fbf160 (LWP 99)]
+[New Thread 0xffffb97af160 (LWP 100)]
+[New Thread 0xffffb8f9f160 (LWP 101)]
+[New Thread 0xffff9bfff160 (LWP 102)]
+[New Thread 0xffff9b7ef160 (LWP 103)]
+[New Thread 0xffff9afdf160 (LWP 104)]
+[New Thread 0xffff9a7cf160 (LWP 105)]

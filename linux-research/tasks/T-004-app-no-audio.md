@@ -40,3 +40,5 @@ The standalone app is usable on a normal Linux desktop:
 - [ ] mac APP unaffected (Linux-only changes or mac build proof). Evidence in `evidence/t004/`; self-review; Log complete.
 
 ## Log
+
+- 2026-10-16 (from T-005, not a claim of this task): on the VM, the APP under gdb in VS Code logs `RtApiAlsa::probeDeviceOpen: unable to synchronize input and output devices` at start (ALSA `default` = PipeWire); audio still runs. Worth checking here (evidence `evidence/t005/vm/23-vscode-app-bp-processblock.png`).
