@@ -17,6 +17,9 @@
 
 #ifdef OS_LINUX
 #include <gdk/gdkx.h>
+#include <algorithm>
+#include <filesystem>
+#include "IPlugPaths.h"
 #endif
 
 #include "IPlugLogger.h"
@@ -116,14 +119,22 @@ bool IPlugAPPHost::InitState()
 #elif defined OS_MAC
   mINIPath.SetFormatted(MAX_PATH_LEN, "%s/Library/Application Support/%s/", getenv("HOME"), BUNDLE_NAME);
 #elif defined OS_LINUX
-  const char* xdgConfig = getenv("XDG_CONFIG_HOME");
-  const char* home = getenv("HOME");
-  if (xdgConfig && xdgConfig[0])
-    mINIPath.SetFormatted(MAX_PATH_LEN, "%s/%s/", xdgConfig, BUNDLE_NAME);
-  else if (home && home[0])
-    mINIPath.SetFormatted(MAX_PATH_LEN, "%s/.config/%s/", home, BUNDLE_NAME);
+  // Without a settings folder the APP still runs, on defaults that are not saved.
+  INIPath(mINIPath, BUNDLE_NAME);
+  std::error_code error;
+  if (mINIPath.GetLength())
+    std::filesystem::create_directories(mINIPath.Get(), error);
   else
-    return false;
+    error = std::make_error_code(std::errc::no_such_file_or_directory);
+
+  if (error)
+  {
+    fprintf(stderr, "%s: settings will not be saved, no settings folder '%s': %s\n", BUNDLE_NAME, mINIPath.Get(), error.message().c_str());
+    mINIPath.Set("");
+    return true;
+  }
+
+  mINIPath.Append("/");
 #endif
 
   struct stat st;
@@ -138,7 +149,7 @@ bool IPlugAPPHost::InitState()
     {
       DBGMSG("Reading ini file from %s\n", mINIPath.Get());
       
-      mState.mAudioDriverType = GetPrivateProfileInt("audio", "driver", 0, mINIPath.Get());
+      mState.mAudioDriverType = GetPrivateProfileInt("audio", "driver", mState.mAudioDriverType, mINIPath.Get());
 
       GetPrivateProfileString("audio", "indev", "Built-in Input", buf, STRBUFSZ, mINIPath.Get()); mState.mAudioInDev.Set(buf);
       GetPrivateProfileString("audio", "outdev", "Built-in Output", buf, STRBUFSZ, mINIPath.Get()); mState.mAudioOutDev.Set(buf);
@@ -186,11 +197,7 @@ bool IPlugAPPHost::InitState()
       return false;
     }
 #elif defined OS_LINUX
-    if (mkdir(mINIPath.Get(), S_IRWXU) != 0)
-      return false;
-
-    mINIPath.Append("settings.ini");
-    UpdateINI(); // will write file if doesn't exist
+    mINIPath.Set(""); // the folder created above has gone again: run on unsaved defaults
 #else
   #error NOT IMPLEMENTED
 #endif
@@ -201,6 +208,9 @@ bool IPlugAPPHost::InitState()
 
 void IPlugAPPHost::UpdateINI()
 {
+  if (!mINIPath.GetLength())
+    return;
+
   char buf[STRBUFSZ]; // temp buffer for writing integers to profile strings
   const char* ini = mINIPath.Get();
 
@@ -285,6 +295,8 @@ int IPlugAPPHost::GetMIDIPortNumber(ERoute direction, const char* nameToTest) co
     if (nameStrView == "virtual input") return 1;
   #endif
     
+    if (!mMidiIn) return -1;
+
     for (int i = 0; i < mMidiIn->getPortCount(); i++)
     {
       if (nameStrView == mMidiIn->getPortName(i).c_str())
@@ -300,6 +312,8 @@ int IPlugAPPHost::GetMIDIPortNumber(ERoute direction, const char* nameToTest) co
     if (nameStrView == "virtual output") return 1;
   #endif
   
+    if (!mMidiOut) return -1;
+
     for (int i = 0; i < mMidiOut->getPortCount(); i++)
     {
       if (nameStrView == mMidiOut->getPortName(i).c_str())
@@ -314,6 +328,8 @@ void IPlugAPPHost::ProbeAudioIO()
 {
   mAudioInputDevIDs.clear();
   mAudioOutputDevIDs.clear();
+  mDefaultInputDev.reset();
+  mDefaultOutputDev.reset();
 
   if (!mDAC)
     return;
@@ -435,10 +451,15 @@ bool IPlugAPPHost::TryToChangeAudioDriverType()
   //else
   //mDAC = std::make_unique<RtAudio>(RtAudio::UNIX_JACK);
 #elif defined OS_LINUX
-  if (mState.mAudioDriverType == kDeviceAlsa)
-    mDAC = std::make_unique<RtAudio>(RtAudio::LINUX_ALSA);
-  else if (mState.mAudioDriverType == kDeviceJack)
+  if (mState.mAudioDriverType == kDeviceJack)
     mDAC = std::make_unique<RtAudio>(RtAudio::UNIX_JACK);
+  else if (mState.mAudioDriverType == kDevicePulse)
+    mDAC = std::make_unique<RtAudio>(RtAudio::LINUX_PULSE);
+  else
+  {
+    mState.mAudioDriverType = kDeviceAlsa;
+    mDAC = std::make_unique<RtAudio>(RtAudio::LINUX_ALSA);
+  }
 #endif
 
   if (mDAC)
@@ -455,6 +476,11 @@ bool IPlugAPPHost::TryToChangeAudio()
   // Skip audio initialization in no-I/O mode or screenshot mode
   if (mNoIO || IsScreenshotMode())
     return true;
+
+  if (!mDAC) // Init() stopped before creating it, e.g. without a settings folder
+    return false;
+
+  const bool needsInputDevice = GetPlug()->MaxNChannels(ERoute::kInput) > 0;
 
 #if defined OS_WIN
   // ASIO has one device, use the output for the input ID
@@ -479,7 +505,7 @@ bool IPlugAPPHost::TryToChangeAudio()
       if (mAudioInputDevIDs.size())
         mState.mAudioInDev.Set(GetAudioDeviceName(inputID.value()).c_str());
     }
-    else
+    else if (needsInputDevice)
       failedToFindDevice = true;
   }
 
@@ -497,12 +523,35 @@ bool IPlugAPPHost::TryToChangeAudio()
       failedToFindDevice = true;
   }
 
+  // Without input channels InitAudio opens no input stream, but it still takes an input device ID
+  if (!inputID && !needsInputDevice)
+    inputID = outputID;
+
   if (resetToDefault)
   {
     DBGMSG("Couldn't find previous audio device, reseting to default\n");
     UpdateINI();
   }
 
+#ifdef OS_LINUX
+  if (failedToFindDevice)
+  {
+    ReportAudioOff("no device found");
+  }
+  else if (inputID && outputID)
+  {
+    UseSampleRateTheDeviceSupports(outputID.value());
+
+    if (!InitAudio(inputID.value(), outputID.value(), mState.mAudioSR, mState.mBufferSize))
+    {
+      ReportAudioOff("the device did not open");
+      return false;
+    }
+
+    mAudioOffReason.Set("");
+    return true;
+  }
+#else
   if (failedToFindDevice)
     MessageBox(gHWND, "Please check the audio settings", "Error", MB_OK);
 
@@ -510,9 +559,43 @@ bool IPlugAPPHost::TryToChangeAudio()
   {
     return InitAudio(inputID.value(), outputID.value(), mState.mAudioSR, mState.mBufferSize);
   }
+#endif
 
   return false;
 }
+
+#ifdef OS_LINUX
+static std::string WithoutRtAudioPrefix(const std::string& errorText)
+{
+  const auto classEnd = errorText.find("::");
+  const auto messageStart = classEnd == std::string::npos ? std::string::npos : errorText.find(": ", classEnd);
+  return messageStart == std::string::npos ? errorText : errorText.substr(messageStart + 2);
+}
+
+// A JACK server runs at one rate, and the settings start at 44100
+void IPlugAPPHost::UseSampleRateTheDeviceSupports(uint32_t outputID)
+{
+  const RtAudio::DeviceInfo info = mDAC->getDeviceInfo(outputID);
+  const std::vector<unsigned int>& rates = info.sampleRates;
+  if (rates.empty() || std::find(rates.begin(), rates.end(), mState.mAudioSR) != rates.end())
+    return;
+
+  mState.mAudioSR = info.preferredSampleRate ? info.preferredSampleRate : rates.front();
+}
+
+void IPlugAPPHost::ReportAudioOff(const char* reason)
+{
+  mAudioOffReason.Set(reason);
+
+  WDL_String message;
+  message.SetFormatted(1024, "Audio is off (%s): %s.", kAudioDriverNames[mState.mAudioDriverType], reason);
+  if (!mDAC->getErrorText().empty())
+    message.AppendFormatted(1024, "\n%s", WithoutRtAudioPrefix(mDAC->getErrorText()).c_str());
+  message.Append("\n\nChoose an audio driver and device in File > Preferences.");
+  fprintf(stderr, "%s: %s\n", BUNDLE_NAME, message.Get());
+  MessageBox(gHWND, message.Get(), "Audio", MB_OK);
+}
+#endif
 
 bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
 {
@@ -650,7 +733,11 @@ bool IPlugAPPHost::InitAudio(uint32_t inID, uint32_t outID, uint32_t sr, uint32_
 
   RtAudio::StreamOptions options;
   options.flags = RTAUDIO_NONINTERLEAVED;
-  // options.streamName = BUNDLE_NAME; // JACK stream name, not used on other streams
+#ifdef OS_LINUX
+  options.streamName = BUNDLE_NAME; // the client name in JACK, the stream name in PulseAudio
+  // PulseAudio's output otherwise buffers up to the server default (about 100 ms on PipeWire); 4 is ALSA's default
+  options.numberOfBuffers = 4;
+#endif
 
   mBufIndex = 0;
   mSamplesElapsed = 0;
@@ -700,7 +787,11 @@ bool IPlugAPPHost::InitMidi()
 
   try
   {
+#ifdef OS_LINUX
+    mMidiIn = std::make_unique<RtMidiIn>(RtMidi::UNSPECIFIED, BUNDLE_NAME); // the client name in aconnect and PipeWire
+#else
     mMidiIn = std::make_unique<RtMidiIn>();
+#endif
   }
   catch (RtMidiError &error)
   {
@@ -711,7 +802,11 @@ bool IPlugAPPHost::InitMidi()
 
   try
   {
+#ifdef OS_LINUX
+    mMidiOut = std::make_unique<RtMidiOut>(RtMidi::UNSPECIFIED, BUNDLE_NAME);
+#else
     mMidiOut = std::make_unique<RtMidiOut>();
+#endif
   }
   catch (RtMidiError &error)
   {

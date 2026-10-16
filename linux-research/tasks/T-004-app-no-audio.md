@@ -1,7 +1,7 @@
 # T-004 — Standalone APP robustness on Linux
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** review-done
+- **Owner:** 2nd instance (claimed 2026-10-16)
 - **Branch/worktree:** `linux/T-004` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-004`.
 - **Depends on:** nothing.
 - **Plan phase:** P8.
@@ -32,13 +32,179 @@ The standalone app is usable on a normal Linux desktop:
 5. Quit and close: no hang, no crash, audio thread stopped.
 
 ## Acceptance
-- [ ] Starts with no audio device: UI shown, no crash, clear status.
-- [ ] Plays audio through PipeWire (Pulse or JACK API) on the VM: the APP's own meter shows signal, `pw-top` shows the stream.
-- [ ] Device switch works without restart; settings persist.
-- [ ] MIDI input reaches the plugin (IPlugInstrument plays a note).
-- [ ] Clean quit; no leaked threads in gdb at exit.
-- [ ] mac APP unaffected (Linux-only changes or mac build proof). Evidence in `evidence/t004/`; self-review; Log complete.
+- [x] Starts with no audio device: UI shown, no crash, clear status.
+- [x] Plays audio through PipeWire (Pulse or JACK API) on the VM: the APP's own meter shows signal, `pw-top` shows the stream.
+- [x] Device switch works without restart; settings persist.
+- [x] MIDI input reaches the plugin (IPlugInstrument plays a note).
+- [x] Clean quit; no leaked threads in gdb at exit.
+- [x] mac APP unaffected (Linux-only changes or mac build proof). Evidence in `evidence/t004/`; self-review; Log complete.
 
 ## Log
 
 - 2026-10-16 (from T-005, not a claim of this task): on the VM, the APP under gdb in VS Code logs `RtApiAlsa::probeDeviceOpen: unable to synchronize input and output devices` at start (ALSA `default` = PipeWire); audio still runs. Worth checking here (evidence `evidence/t005/vm/23-vscode-app-bp-processblock.png`).
+
+### 2026-10-16 — work log (2nd instance)
+
+**The "no-device segfault" was not about audio.** Without `~/.config`, `InitState` failed its non-recursive
+`mkdir`, `Init()` returned before creating the RtAudio object, and `main()` ignored that and crashed in
+`GetAudioDeviceID` (null `mDAC`). With `~/.config` present the APP started and showed the shared modal "Please check
+the audio settings" *before* any window. A second segfault: with no ALSA sequencer (containers, snd-seq not loaded)
+`mMidiIn` is null and an ini without `[midi]` (default name "no input") crashed `GetMIDIPortNumber`.
+
+**Changes** (all in `IPlug/APP/*`; `#ifdef OS_LINUX` unless marked *shared*):
+- Settings folder from `INIPath` (XDG), created with parents; failure → run on unsaved defaults (warning on stderr).
+  *Shared:* `UpdateINI` returns on an empty path (never empty on mac/win).
+- Drivers ALSA / JACK / **PulseAudio** (`kDevicePulse = 2`, new constant in the shared header). Unknown type → ALSA, so
+  `mDAC` always exists. **PulseAudio is the default for new Linux settings** (`AppState` ctor; the ini read now
+  defaults to `AppState`'s value, 0 on mac/win as before). Why: ALSA `default` = PipeWire on current desktops, and
+  RtAudio's ALSA duplex needs `snd_pcm_link`, which the PipeWire plug-in refuses ("unable to synchronize input and
+  output devices"): an effect underruns ~36×/s (`vm-xruns-IPlugEffect-alsa-512`: 359 in 10 s). Pulse and JACK(PipeWire)
+  ran 10 s with none. Output-only ALSA (instrument) has none either. Existing ini files keep their driver.
+- `options.numberOfBuffers = 4`: Pulse output otherwise buffers to the server default (pw-top quantum 5040 ≈ 105 ms,
+  `vm-xruns-effect-2`); now 1024 (`vm-xruns-*-pulse-*`). 4 is RtAudio's ALSA default anyway; JACK ignores it.
+- `options.streamName` and the RtMidi client name = `BUNDLE_NAME` (JACK/pw-top/aconnect show "IPlugInstrument"
+  instead of "RtApiJack"/"RtAudio"/"RtMidi Input Client").
+- The window opens before audio starts; a failure shows "Audio is off (<API>): <reason>. <RtAudio text>. Choose an
+  audio driver and device in File > Preferences." over the UI, and Preferences shows `Preferences - audio off:
+  <reason>` (or `(--no-io)`) in its title, refreshed on Apply.
+- Preferences: SWELL generic scale 1.9 (swell_resgen's own non-Apple default; the macOS 1.5 clipped every label);
+  MIDI combos show a disabled "off" when RtMidi is unavailable; "Config..." disabled (it opened alsa-project.org).
+- Release builds drop the Debug menu, as on Windows (Linux has no screenshot implementation for its last item).
+- SIGINT/SIGTERM close like a WM close: popup menus and modal dialogs first (`DialogBoxIsActive`/`EndDialog`), then
+  `WM_CLOSE`. The first version posted `WM_CLOSE` directly and destroyed the host under a running Preferences proc
+  (UAF, seen as a garbage title); the second looped while `DestroyPopupMenus()` returned true and hung on the VM with
+  Preferences open (gdb: main thread in `SWELL_DialogBox` under `TrackPopupMenu`). Not waiting on menus fixed it
+  (VM probe exits 0, repeatedly). **Mechanism unconfirmed:** the reviewer points out that SWELL's `TrackPopupMenu`
+  empties its menu list before sending `WM_COMMAND`, so `DestroyPopupMenus()` should have returned false there; the
+  first claim in commit fa7fc2e09 is therefore not proven. The probe's later run replaced `hung-bt.txt`. The handler removes its
+  source, so GLib restores SIG_DFL: a second signal ends a hung quit (checked with a probe program).
+- *Shared (separate commit 013328ba4, for the user's decision):* `ProbeAudioIO` resets the default device IDs (after
+  JACK→ALSA the stale JACK default gave "output device ID is invalid"; RtAudio numbers every API's devices from the
+  same start value, so it can also pick a wrong device); `GetMIDIPortNumber` treats a null RtMidi object as "port not
+  found" (→ "off") instead of dereferencing it, placed after mac's virtual-port answer so that path is unchanged.
+
+**Results**
+- Docker (Xvfb, no audio): `evidence/t004/docker-nodev` PASS (fresh HOME without `~/.config`, Pulse "no device found
+  / Connection refused" box over the UI, Preferences title, Escape, File > Quit, SIGINT, SIGTERM over Preferences +
+  message box). `docker-jack-switch` PASS (jackd dummy: JACK ports named after the APP, note moves the meter,
+  JACK→PulseAudio(no server)→JACK in Preferences without restart, `driver=1` persisted, exit threads).
+- VM (GNOME/X11, PipeWire): `vm-default-instrument`, `vm-default-effect` PASS (fresh settings → Pulse, no box,
+  `driver=2` saved); `vm-jack-pulse`, `vm-jack-alsa` PASS (JACK via `pipewire-jack`'s libjack ↔ Pulse/ALSA live; the
+  meter moves on every driver; pw-top rows `+ IPlugInstrument`, `+ alsa_playback.IPlugInstrument`); `vm-midi` PASS
+  (snd-virmidi → ALSA seq → IPlugInstrument plays from `amidi`, sequencer client "IPlugInstrument", gone after quit);
+  `vm-sigterm-probe` exits 0. Dialog under GNOME: `vm-pipewire-alsa/02-prefs.png`. X answered after the batch.
+- Threads at `exit()` (gdb, Docker and VM): main + GLib's own `gmain` worker (started by `g_unix_signal_add`);
+  no audio, JACK or MIDI thread left.
+- macOS: `xcodebuild -scheme macOS-APP` (IPlugInstrument): `IPlugAPP_host/dialog/main.cpp` compile without errors or
+  warnings; the build fails only in the untouched `IPlugAPP.cpp` (pre-existing: compiled as C++ but includes Cocoa, see
+  T-003). The CMake/Ninja build of `IPlugInstrument-app` (which marks APP sources Objective-C++) links
+  `IPlugInstrument.app` (`evidence/t004/macos/`). The Xcode build regenerated `main.rc_mac_dlg/menu`; I restored them
+  with `git checkout` without the snapshot AGENTS asks for (they held only generated output).
+- Env hacks: none left (`IPLUG2_MENU_OFFSET`/`IPLUG2_SCREEN_SCALE` absent; only `IPLUG_LINUX_DIALOGS` from T-002).
+- Harness: `scripts/app-audio-test.sh`, `scripts/app-switch-test.sh`, `scripts/vm/probe/app-{midi,xruns,
+  sigterm-hang,first-frame}.sh`; `vm-run.sh` gains `VM_ENV`; `vm-provision.sh` installs `pipewire-jack`,
+  `pulseaudio-utils`, `alsa-utils` (installed on the VM). Test HOMEs drop Mesa caches and the Pulse cookie on exit;
+  the VM's Pulse cookies did land in commits d9823b47d..0e986f5d4 (VM-local auth token, removed in the last commit).
+
+**Not done / open**
+- JACK MIDI: MIDI stays on the ALSA sequencer for every driver. On PipeWire that reaches the same graph; a pure
+  jackd setup needs a2jmidid. Split out as **T-022** (`T-022-app-jack-midi.md`, low priority; the coordinator adds it
+  to the board).
+- `Ctrl+,` (Preferences) and the Debug-menu shortcuts are shown but do nothing: SWELL generic has no accelerator
+  tables and the Linux loop does not translate them.
+- "Save Screenshot" (Debug builds) has no Linux implementation (gap for T-016).
+- SWELL writes `~/.libSwell.ini` into `$HOME` (pre-existing; `SWELL_ExtendedAPI("INIFILE", …)` could move it to XDG).
+- ALSA stays selectable; an effect on ALSA through PipeWire still underruns (RtAudio limitation, `Dependencies/`).
+
+**Seen in passing, not T-004 (for the coordinator):** on the VM (virgl) the hvoya header logo of IPlugEffect
+(`ISVGControl`, white strokes on transparency) draws as a **white rectangle on the first frames** and correctly after
+the pointer hovers it (`evidence/t004/vm-logo/02-5s.png` vs `04-away.png`; noticed by the user). Docker/llvmpipe draws
+it correctly from the start (`logo-01-start.png`). The GLX visual has stencil 8 and NanoVG stencil strokes are off,
+so it is not a missing stencil buffer. Belongs to T-009 (visual parity) / IGraphicsLinux.
+
+### Cross-platform findings
+- **A1 (crash, low):** `IPlugAPP_main.cpp` (all platforms) ignores `Init()`'s result; if `InitState` fails (mac:
+  `mkdir` of `~/Library/Application Support/<BUNDLE>` fails), `TryToChangeAudio` dereferences a null `mDAC`
+  (`IPlugAPP_host.cpp` `GetAudioDeviceID`). Linux no longer reaches it; mac/win unchanged (report only).
+- **A2 (crash, low):** `GetMIDIPortNumber` null deref when RtMidi failed to initialise — fixed in shared code,
+  commit 013328ba4 (needs the user's OK, or wrap in `#ifdef OS_LINUX`).
+- **A3 (wrong device, low):** `ProbeAudioIO` kept stale default device IDs across driver changes (Windows DS↔ASIO
+  too) — fixed in shared code, commit 013328ba4 (same decision).
+- **A4 (minor):** `TryToChangeAudio` requires an input device even for an instrument with no inputs; an output-only
+  system reports "no device". Not changed.
+
+### Review round 1 (notes/23-review-T-004.md): approve with minor fixes — fixed
+- m1: SIGINT/SIGTERM handlers now installed before `TryToChangeAudio()`; a signal over the startup "Audio is off"
+  box exits 0 (was 143). `app-audio-test.sh` gained that case (Docker PASS); VM `vm-sigterm-probe` exits 0,
+  `vm-default-effect` PASS after the change.
+- m2: the comment that blamed `TrackPopupMenu` is gone; the Log above says the mechanism is unconfirmed.
+- m3: the dead Linux `mkdir` branch in `InitState` is replaced by "run on unsaved defaults" for the folder vanishing
+  between creation and `stat`.
+- Nit: one `kAudioDriverNames` table (`ALSA`, `JACK`, `PulseAudio`) feeds the Preferences list and the message
+  ("Audio is off (PulseAudio)", was RtAudio's "Pulse").
+- m4 (Pulse cookies of the VM in fa7fc2e09/0e986f5d4): left for the user/coordinator — dropping them needs a history
+  rewrite of this unpushed branch. They are VM-local PulseAudio auth tokens.
+- Not changed: `getErrorText()` may be an older RtAudio error (shown as detail only); the Linux tail of
+  `TryToChangeAudio` stays a separate branch so the mac/win lines are untouched.
+
+**Hand-over:** commits `git log hvoya-linux..linux/T-004`; shared-code fixes isolated in 013328ba4 for the user's
+decision (A2/A3); evidence `evidence/t004/` (Docker `docker-*`, VM `vm-*`, macOS `macos/`, review `review-*`).
+
+**User decision (2026-10-16):** the shared-code fixes in 013328ba4 (A2, A3) stay as they are, for all platforms. The
+VM Pulse cookies in history (m4) are to be dealt with later.
+
+### 2026-10-17 — the "small things" (user: fix them)
+- **Menu shortcuts** (`Ctrl+,` Preferences, `Ctrl+Shift+S` screenshot, Debug `Ctrl+E/B/D/F`) now work, also with the
+  focus in the plug-in UI. Why they did not: the editor passes unused keys on with `XSendEvent`, and GDK3 ignores
+  synthetic keys (notes/13 finding 3); SWELL generic has no accelerator tables either. Now the shortcuts are read from
+  the menu's item texts (after the tab), grabbed on the main window with `XGrabKey` (also with Caps/Num Lock) and
+  caught by a GDK event filter, which posts the item's `WM_COMMAND` unless a modal dialog has the window disabled.
+  Like mac/win, a menu shortcut wins over the plug-in UI. No IGraphicsLinux change.
+- **Save Screenshot** on Linux: the plug-in UI's own X window (largest child of SWELL's window) via `XGetImage`, PNG via
+  stb_image_write (same as Windows). `--screenshot <path>` works on Linux too (exits after saving). Release builds keep
+  the Debug menu with only "Save Screenshot", as on macOS; leading and trailing separators are trimmed (macOS trims
+  only trailing ones, so its menu starts with a separator: not changed there).
+- **SWELL's settings** go to `~/.config/<BUNDLE>/libSwell.ini` (`SWELL_ExtendedAPI("INIFILE")`, which also reads an
+  optional `libSwell.colortheme` beside it), no longer `~/.libSwell.ini`.
+- Linux code of the APP moved to new files `IPlug/Linux/IPlugAPPLinux.{h,cpp}` (signals, shortcuts, screenshot, SWELL
+  settings); `IPlugAPP_main.cpp` keeps thin calls. `Scripts/cmake/APP.cmake` adds the file in its Linux branch only.
+- **A1, A4** fixed in shared code, commit 7cce657a1 (separate, like 013328ba4): no null deref when `Init()` fails; a
+  plug-in without inputs no longer needs an input device (an output-only JACK server: Docker `jackd -C 0 -P 2`).
+- Found while testing A4, Linux-only fix: the settings start at 44100 and a JACK server runs at one rate, so a first
+  switch to JACK failed ("requested sample rate (44100) is different than the JACK server rate (48000)"). If the
+  output device does not list the saved rate, the APP takes the device's preferred rate; Preferences shows it after
+  Apply (for an output-only device only since the m7 fix below), and OK saves it.
+- **ALSA duplex through PipeWire**: not fixable in our code. The xruns are a per-start lottery, not a buffer-size
+  matter: buffer 512 gave 438, 0, 359 xruns in 10 s on three starts, 256 gave 0 and 188, 1024 gave 17, 2048 gave 0
+  (`evidence/t004/vm-xruns-IPlugEffect-alsa-*`). Without `snd_pcm_link` RtAudio starts capture and playback with a
+  random phase. PulseAudio stays the default; ALSA stays selectable.
+- Tests: Docker `app-audio-test.sh` (now also `Ctrl+,` from the plug-in UI and `Ctrl+Shift+S`, SIGTERM over the
+  startup box) PASS, `app-switch-test.sh` PASS; Release build: Debug menu = "Save Screenshot" only
+  (`evidence/t004/minor/release-debug-menu-crop.png`), `--screenshot` (`minor/cli-screenshot.png`). VM: shortcuts and
+  `Ctrl+Shift+S` under GNOME PASS (`vm-default-instrument`), `vm-jack-pulse` PASS, `vm-midi` PASS. One `vm-jack-pulse`
+  run failed (no JACK client 5 s after start, then the script hung); not reproduced in the next run nor in
+  `vm-jack-start`. macOS: CMake `IPlugInstrument-app` rebuilds and links, no warnings in the APP files.
+
+### Review round 2 (notes/23 "Round 2"): approve with minor fixes — fixed
+- m5: the sample-rate fallback no longer writes settings.ini itself, so JACK + Apply + Cancel keeps the previous
+  driver and rate (checked: `driver=2 sr=44100` after Cancel). At start the rate is worked out again each time.
+- m6: Debug > Save Screenshot chosen from the menu showed the menu's area black on X without a compositor; the
+  capture now lets the plug-in UI handle the Expose first (about 100 ms of GLib iterations). Clean in Docker/Xvfb.
+- m7 (shared, commit "APP: sample rates of an output-only device"): with no input device the Sampling Rate list
+  was empty; it now lists the output's rates (JACK `-C 0` shows 48000).
+- n6–n8: X queries inside the GDK error trap; header comments corrected; a comment that restated the mask removed.
+- n9: setting SWELL's `INIFILE` also makes SWELL raise the open-files limit to 16384 and write `max_open_files` into
+  `libSwell.ini` (SWELL's own behaviour, as in REAPER).
+- n10 (known limit, not changed): a shortcut on a shifted character, or other lock modifiers than Caps/Num Lock,
+  would not match; no APP menu uses one.
+- Checks: `scripts/probe/app-review2-checks.sh` (`evidence/t004/review2-fixes`), Docker `app-audio-test.sh` and
+  `app-switch-test.sh` PASS, mac CMake `IPlugInstrument-app` links.
+
+**Hand-over (2026-10-17):** status review-done. Shared-code commits, each separate: 013328ba4 (user-approved),
+7cce657a1 (A1, A4) and bb004604a (m7); the rest is `#ifdef OS_LINUX`, `IPlug/Linux/IPlugAPPLinux.*` or the Linux
+branch of `Scripts/cmake/APP.cmake`. JACK MIDI is T-022. The VM Pulse cookies in history (m4) wait for the user.
+
+**Coordinator, at the merge (2026-10-17):** m4 resolved — the three VM Pulse cookies were removed from this branch's
+history before merging (`git filter-branch --index-filter` over `hvoya-linux..linux/T-004`; the final tree was
+unchanged; the old history is kept locally as `backup/T-004-before-cookie-filter`). Rewritten SHAs: b77df0c67 →
+7cce657a1, 5a6c315a2 → bb004604a (013328ba4 unchanged); this file and notes/23 updated.

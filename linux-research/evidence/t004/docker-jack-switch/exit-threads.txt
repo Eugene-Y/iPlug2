@@ -1,0 +1,91 @@
+Breakpoint 1 at 0xa6a20
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0xfffff527ede0 (LWP 2348)]
+[New Thread 0xfffff5076de0 (LWP 2349)]
+[Thread 0xfffff5076de0 (LWP 2349) exited]
+applied rlimit 16384/524288
+
+BEGIN IPLUG CHANNEL IO PARSER --------------------------------------------------
+Channel I/O #1 - 0-2
+               - input bus count: 0, output bus count 1
+               - channel count on output bus 1: 2
+               - input channel count across all buses: 0, output channel count across all buses 2
+
+1 I/O configs detected
+Total # in chans: 0, Total # out chans: 2 
+
+END IPLUG CHANNEL IO PARSER --------------------------------------------------
+Reading ini file from /Volumes/Storage/code/IPlug2-T-004/linux-research/evidence/t004/docker-jack-switch/home/.config/IPlugInstrument/settings.ini
+
+RtAudio Version 6.0.1
+[Thread 0xfffff527ede0 (LWP 2348) exited]
+MidiInAlsa::initialize: error creating ALSA sequencer client object.
+
+
+MidiInAlsa::initialize: error creating ALSA sequencer client object.
+
+[New Thread 0xfffff4fd4de0 (LWP 2350)]
+[New Thread 0xfffff527ede0 (LWP 2351)]
+[New Thread 0xfffff5076de0 (LWP 2352)]
+[Thread 0xfffff5076de0 (LWP 2352) exited]
+[Thread 0xfffff527ede0 (LWP 2351) exited]
+[New Thread 0xfffff527ede0 (LWP 2353)]
+[New Thread 0xfffff5076de0 (LWP 2354)]
+[Thread 0xfffff5076de0 (LWP 2354) exited]
+[Thread 0xfffff527ede0 (LWP 2353) exited]
+[New Thread 0xfffff527ede0 (LWP 2355)]
+[New Thread 0xfffff5076de0 (LWP 2356)]
+[New Thread 0xfffff47c4de0 (LWP 2357)]
+[New Thread 0xffffeceeede0 (LWP 2358)]
+[New Thread 0xffffd36eede0 (LWP 2359)]
+[New Thread 0xffffd76eede0 (LWP 2360)]
+[New Thread 0xffffd6edede0 (LWP 2361)]
+[New Thread 0xffffd66cede0 (LWP 2362)]
+[New Thread 0xffffd5ebede0 (LWP 2363)]
+[New Thread 0xffffd56aede0 (LWP 2364)]
+[New Thread 0xffffd4e9ede0 (LWP 2365)]
+[New Thread 0xffffd468ede0 (LWP 2366)]
+[New Thread 0xffffd2edede0 (LWP 2367)]
+[New Thread 0xffffd26cede0 (LWP 2368)]
+[New Thread 0xffffd1ebede0 (LWP 2369)]
+[New Thread 0xffffd16aede0 (LWP 2370)]
+[Thread 0xffffd1ebede0 (LWP 2369) exited]
+[Thread 0xffffd16aede0 (LWP 2370) exited]
+[Thread 0xffffd26cede0 (LWP 2368) exited]
+[Thread 0xffffd2edede0 (LWP 2367) exited]
+[Thread 0xffffd468ede0 (LWP 2366) exited]
+[Thread 0xffffd4e9ede0 (LWP 2365) exited]
+[Thread 0xffffd56aede0 (LWP 2364) exited]
+[Thread 0xffffd5ebede0 (LWP 2363) exited]
+[Thread 0xffffd66cede0 (LWP 2362) exited]
+[Thread 0xffffd6edede0 (LWP 2361) exited]
+[Thread 0xffffd76eede0 (LWP 2360) exited]
+[Thread 0xffffd36eede0 (LWP 2359) exited]
+[Thread 0xffffeceeede0 (LWP 2358) exited]
+[Thread 0xfffff47c4de0 (LWP 2357) exited]
+[Thread 0xfffff5076de0 (LWP 2356) exited]
+[Thread 0xfffff527ede0 (LWP 2355) exited]
+
+Thread 1 "IPlugInstrument" hit Breakpoint 1, 0x0000fffff706f2f4 in exit () from /lib/aarch64-linux-gnu/libc.so.6
+  Id   Target Id                                          Frame 
+* 1    Thread 0xfffff7e4eac0 (LWP 2346) "IPlugInstrument" 0x0000fffff706f2f4 in exit () from /lib/aarch64-linux-gnu/libc.so.6
+  4    Thread 0xfffff4fd4de0 (LWP 2350) "gmain"           0x0000fffff7110bdc in poll () from /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 4 (Thread 0xfffff4fd4de0 (LWP 2350) "gmain"):
+#0  0x0000fffff7110bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff7ba1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000fffff7b3ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+
+Thread 1 (Thread 0xfffff7e4eac0 (LWP 2346) "IPlugInstrument"):
+#0  0x0000fffff706f2f4 in exit () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70584c8 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fffff7058598 in __libc_start_main () at /lib/aarch64-linux-gnu/libc.so.6
+trying to start audio stream @ 48000 sr, buffer size 256
+indev = system
+outdev = system
+inputs = 0
+outputs = 2
+IGraphics NanoVG @ 60 FPS
+[Thread 0xfffff4fd4de0 (LWP 2350) exited]
+[Inferior 1 (process 2346) exited normally]

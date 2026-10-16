@@ -12,7 +12,8 @@ REAPER_VER="${REAPER_VER:-782}"
 REAPER_URL_BASE="${REAPER_URL_BASE:-https://www.reaper.fm/files/7.x}"
 
 PKGS="gdb strace x11-utils xdotool xclip xsel wmctrl mesa-utils imagemagick scrot rsync sysstat
-      jackd2 build-essential libx11-dev libxfixes-dev"
+      jackd2 build-essential libx11-dev libxfixes-dev
+      pipewire-jack pulseaudio-utils alsa-utils"
 
 vm "REAPER_VER=$REAPER_VER REAPER_URL_BASE=$REAPER_URL_BASE PKGS='$(echo $PKGS)' bash -s" <<'REMOTE'
 set -euo pipefail

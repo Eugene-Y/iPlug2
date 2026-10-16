@@ -530,45 +530,77 @@ INT_PTR SWELLAppMain(int msg, INT_PTR parm1, INT_PTR parm2)
 #elif defined(OS_LINUX)
 #include "IPlugSWELL.h"
 #include "swell-internal.h"
+#include "Linux/IPlugAPPLinux.h"
 #include <alsa/asoundlib.h>
 #include <glib.h>
 
 HWND gHWND;
 HINSTANCE gHINSTANCE;
 
-static bool gNoIO = false;
-
 // Suppress "Invalid CTL pulse" spam: ALSA probes the PulseAudio ALSA plugin
 // during library initialisation even when PulseAudio isn't running.
 static void _silentAlsaErrorHandler(const char*, int, const char*, int, const char*, ...) {}
 
+// As on macOS, release builds keep only "Save Screenshot" in the Debug menu
+static void RemoveDebugMenuItemsForRelease(HMENU menu)
+{
+#if !defined _DEBUG || defined NO_IGRAPHICS
+  HMENU debugMenu = menu ? GetSubMenu(menu, 1) : nullptr;
+  if (!debugMenu)
+    return;
+
+  for (int command : {ID_LIVE_EDIT, ID_SHOW_BOUNDS, ID_SHOW_DRAWN, ID_SHOW_FPS})
+    DeleteMenu(debugMenu, command, MF_BYCOMMAND);
+
+  const auto isSeparator = [debugMenu](int position) { return GetMenuItemID(debugMenu, position) == 0; };
+  int count = GetMenuItemCount(debugMenu);
+  while (count > 0 && isSeparator(count - 1))
+    DeleteMenu(debugMenu, --count, MF_BYPOSITION);
+  while (count > 0 && isSeparator(0))
+  {
+    DeleteMenu(debugMenu, 0, MF_BYPOSITION);
+    count--;
+  }
+
+  if (!count)
+    DeleteMenu(menu, 1, MF_BYPOSITION);
+#endif
+}
+
 int main(int argc, char** argv)
 {
+  linux_app::KeepSwellSettingsInConfigFolder(BUNDLE_NAME);
   snd_lib_error_set_handler(_silentAlsaErrorHandler);
   SWELL_initargs(&argc, &argv);
   SWELL_Internal_PostMessage_Init();
   SWELL_ExtendedAPI("APPNAME", (void*) BUNDLE_NAME);
 
-  // Parse command line arguments
+  IPlugAPPHost* pAppHost = IPlugAPPHost::Create();
+
   for (int i = 1; i < argc; i++)
   {
     if (strcmp(argv[i], "--no-io") == 0)
-      gNoIO = true;
+      pAppHost->SetNoIO(true);
+    else if (strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc)
+      pAppHost->SetScreenshotPath(argv[++i]);
   }
 
-  IPlugAPPHost* pAppHost = IPlugAPPHost::Create();
-
-  if (gNoIO)
-    pAppHost->SetNoIO(true);
-
   pAppHost->Init();
-  pAppHost->TryToChangeAudio();
 
   HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MENU1));
+  RemoveDebugMenuItemsForRelease(menu);
   CreateDialog(gHINSTANCE, MAKEINTRESOURCE(IDD_DIALOG_MAIN), NULL, IPlugAPPHost::MainDlgProc);
 
   if (gHWND && menu)
+  {
     SetMenu(gHWND, menu);
+    linux_app::SetMenuShortcuts(gHWND, menu);
+  }
+
+  linux_app::CloseMainWindowOnSignals();
+
+  // After the window exists, so that a message about missing audio has a parent and the UI behind it
+  pAppHost->TryToChangeAudio();
 
   // Block in GLib instead of sleeping, so X input and the plug-in's HostLoop sources run as soon as they
   // are ready, also without a display. SWELL polls its own timers and posted messages in
@@ -595,7 +627,8 @@ INT_PTR SWELLAppMain(int msg, INT_PTR parm1, INT_PTR parm2)
 
 #define CBS_HASSTRINGS 0
 #define SWELL_DLG_SCALE_AUTOGEN 1
-#define SET_IDD_DIALOG_PREF_SCALE 1.5
+// swell_resgen's own scale for SWELL's generic font; macOS's 1.5 clips the labels here
+#define SET_IDD_DIALOG_PREF_SCALE 1.9
 #if PLUG_HOST_RESIZE
 #define SWELL_DLG_FLAGS_AUTOGEN SWELL_DLG_WS_FLIPPED|SWELL_DLG_WS_RESIZABLE
 #endif
