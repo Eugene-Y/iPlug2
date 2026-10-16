@@ -98,7 +98,12 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
   (no FocusOut leaves the host); Return/Escape/a click in the editor end it.
 - Blocking clipboard reads of host-owned text return nothing (finding 4); serving large texts (INCR) is not done.
 - No tooltips. Host context menus: see finding 5 (REAPER's blocks the editor's drawing while open).
-- Fonts by name: TrueType outlines only until NanoVG's stb_truetype is updated.
+- Fonts by name: TrueType outlines only until NanoVG's stb_truetype is updated. A variable font draws at its default
+  instance only (stb_truetype applies no variation axes), so Bold/Italic of a variable-only family come out regular
+  (Ubuntu Sans and Ubuntu on Ubuntu 24.04, notes/14 P3b-V4). Won't fix (T-008): fontconfig already ranks a static
+  face of the same family with the requested style ahead of the variable file when one is installed (measured with a
+  fixture, `evidence/t008/vm/fc-variable*/`), and taking another family's static bold instead would change the look
+  more than the missing weight does. Synthetic bold would need NanoVG changes.
 - Focus retries: after two retries `mHoldsFocus` means "requested", not "held"; keys then come only as the host
   forwards them. Alternatives in notes/15.
 - A menu requested while a stand-in menu is still fading out (≈400 ms after a choice) is ignored by
