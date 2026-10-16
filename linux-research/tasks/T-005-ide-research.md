@@ -1,6 +1,6 @@
 # T-005 — IDE research and IDE/presets setup for the examples
 
-- **Status:** in-progress
+- **Status:** review-done (reviewer verdict: accept, round 2; notes/21)
 - **Owner:** Claude instance (T-005 session, 2026-10-16)
 - **Branch/worktree:** `linux/T-005` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-005`.
 - **Depends on:** nothing.
@@ -132,3 +132,24 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
 - M2, m3, m4 and the nits: fixed in the files.
 - m2 stays open as the user's call.
 - No new findings beyond two cosmetic nits.
+
+### Hand-over (2026-10-16)
+- **Commits** (`git log hvoya-linux..linux/T-005`):
+  - 1411474a2 claim;
+  - cdb79d56c presets / workspaces / Lua;
+  - 1c5f3f480 clangd + VM README;
+  - c1d8d7ce6 notes/docs/log;
+  - 7db73ebe7 review 1;
+  - d3d1ac762 round-1 fixes + T-011 task file;
+  - 6c1c1386b review 2;
+  - this hand-over commit.
+- **Evidence:** `evidence/t005/{docker,vm,review,review2,review-fix}` (PNGs git-ignored, local in this worktree).
+- **Open:**
+  - **m2 (user's call):** the examples' `CMakePresets.json` puts CMake Tools on mac/win into presets mode with an empty list. Options: (a) keep and document; (b) include the root presets instead. Worker's recommendation: (a).
+  - **Follow-ups:** T-011 (`tasks/T-011-duplicate-templates.md`: out-of-tree duplication, Gneiss IDE setup); T-004 pointer (RtAudio warning).
+- **For the coordinator:**
+  - link the T-011 task file in the board;
+  - mark T-011 ready after this merge;
+  - add the duplicate.py cross-platform finding above to `CROSS_PLATFORM_FINDINGS.md`.
+- No containers left. VM lock released; task lock released with this commit.
+

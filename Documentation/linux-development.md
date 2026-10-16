@@ -81,7 +81,8 @@ copy into `~/.clap` and `~/.vst3`.
 | Debug VST3 in REAPER | the same for VST3 |
 
 Breakpoints in the plug-in can be set before launch. gdb binds them when REAPER loads the plug-in. For example,
-`ProcessBlock` stops on one of REAPER's FX processing threads (`reaper/mediafx`) even with the transport stopped, and a control's `OnMouseDown`
+`ProcessBlock` stops on one of REAPER's FX processing threads (`reaper/mediafx`) even with the transport
+stopped, and a control's `OnMouseDown`
 stops on the main thread.
 
 If REAPER says it does not know the plug-in, the build was not deployed, or REAPER needs a rescan:
