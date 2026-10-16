@@ -38,6 +38,7 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | Date | Task | Merge commit | Smoke tests |
 |---|---|---|---|
 | 2026-10-14 | T-001 | (committed directly on hvoya-linux, last 75e906365) | — (evidence/notes only) |
+| 2026-10-16 | sync hvoya → hvoya-linux; Gneiss master → linux-experiment | e393b6398; Gneiss 4219350 | User's morph/preset fix (hvoya 0b2d8dbef, Gneiss 3cf2e2e). Docker build Gneiss CLAP+VST3 PASS; REAPER `steps/gneiss.txt` CLAP PASS, VST3 PASS except the known right-click step (`evidence/merge-smoke/sync-1016-*`) |
 | 2026-10-15 | T-007 | 4d413d040 (conflict in IGraphicsLinux.cpp: T-003 and T-007 both added "tell the host the opened size"; kept T-007's, which also skips a host-resized window; kept T-003's stand-in menu font) | Docker build Gneiss CLAP+VST3, IPlugControls CLAP+VST3, IPlugEffect VST3 PASS; REAPER: Gneiss CLAP PASS, IPlugControls VST3 P3b PASS; Gneiss VST3 fails only the right-click step, which also fails before T-007 (REAPER's VST3 host menu does not open on a same-ms synthetic click, notes/14) |
 | 2026-10-15 | T-003 | e54a43e76 | Docker build Gneiss CLAP+VST3 and IPlugControls CLAP+VST3 PASS; REAPER: IPlugControls P3b script PASS, Gneiss `steps/gneiss.txt` PASS, all Draw/X on tid 1, Gneiss UI renders (`evidence/merge-smoke/t003-*`). Cross-platform bugs found → `../CROSS_PLATFORM_FINDINGS.md` |
 | 2026-10-14 | T-002 | 0846167f8 | Docker build IPlugControls CLAP+VST3 PASS; REAPER full P3b script on CLAP: PASS, all Draw/X events on tid 1 (`evidence/merge-smoke/t002-clap/`) |

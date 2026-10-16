@@ -12,15 +12,15 @@ Update it at every merge or user decision.
 |---|---|---|
 | iPlug2 `hvoya` (product) | `/Volumes/Storage/code/IPlug2` (main checkout, Gneiss builds against it) | Pushed to `gene` up to 3474f3d55. My commits there, all with the user's OK: logger snprintf fix 46f834a92, `IText::SetFont` 3a05dd2f4, **upstream master merged** 5d854712d, `ITextEntryControl` right-click menu UAF (H1) e0c2680e7, **C1 `AudioBuffer::reserve` fix 3474f3d55**, CLAUDE.md pointers. **The user has not yet tested Gneiss on mac/win after the upstream merge.** |
 | iPlug2 `hvoya-linux` (Linux integration) | `/Volumes/Storage/code/IPlug2-linux` | Unpushed, about 127 commits ahead of `gene/hvoya-linux`; the user pushes. Contains hvoya at 5d854712d + Linux P0–P5 + T-001/2/3/7 merges + the C1 cherry-pick e7c882995. HEAD ≈ 30580fe02 |
-| Gneiss `master` | `/Volumes/Storage/code/hvoya/Gneiss` (user's working tree, uncommitted .RPP/xcscheme edits) | d8e95fd "v 1.3.1 rc1" (includes 6b2a083 FL crash fix, 84035d1). The user is fixing morph bugs on it **in a separate chat** |
-| Gneiss `linux-experiment` | `/Volumes/Storage/code/hvoya/Gneiss-linux` (local only, never push) | d8e95fd + 52cb5d6 (CMakeLists.txt) + 7e3a1c9 (initializer_list UB fix, behaviour-neutral) |
+| Gneiss `master` | `/Volumes/Storage/code/hvoya/Gneiss` (user's working tree, uncommitted .RPP/xcscheme edits) | 3cf2e2e (user's morph/preset-swap fix, 2026-10-16), pushed |
+| Gneiss `linux-experiment` | `/Volumes/Storage/code/hvoya/Gneiss-linux` (local only, never push) | master 3cf2e2e merged (4219350) + 52cb5d6 (CMakeLists.txt) + 7e3a1c9 (initializer_list UB fix, behaviour-neutral) |
 | Sand | `/Volumes/Storage/code/hvoya/Sand` | Untouched. T-012 must use a local experiment branch + worktree, like Gneiss |
 
 ## In flight
 - **T-008** (P3 polish) — implementer agent, branch `linux/T-008`, worktree `/Volumes/Storage/code/IPlug2-T-008`, lock held by the coordinator. Next: review, then merge.
 
 ## Waiting on the user
-1. **Gneiss morph bugs on mac** (separate chat). Then the coordinator merges Gneiss `master` → `linux-experiment` and `hvoya` → `hvoya-linux`, with builds plus REAPER runs (`steps/gneiss.txt`).
+1. ~~Gneiss morph bugs on mac~~ — **fixed by the user 2026-10-16** (hvoya 0b2d8dbef, Gneiss 3cf2e2e) and synced into hvoya-linux (e393b6398) / linux-experiment (4219350); Linux smoke PASS. Old note: Then the coordinator merges Gneiss `master` → `linux-experiment` and `hvoya` → `hvoya-linux`, with builds plus REAPER runs (`steps/gneiss.txt`).
    - **Hints given to the user:**
      - C2 analysis in `CROSS_PLATFORM_FINDINGS.md` and `evidence/t003/reviews/2-findings-review.md`: the `_prevParamVals` dedup cache is not updated by direct `IParam::Set` in `applyMorphModeParams`/`snapshotPatchMorphOff`/`morph_file_router`.
      - To check whether the upstream merge is to blame: build Gneiss against hvoya `3a05dd2f4` (pre-merge) vs `5d854712d` (post-merge).
