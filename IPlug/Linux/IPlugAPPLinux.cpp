@@ -80,7 +80,7 @@ void CloseMainWindowOnSignals()
 struct MenuShortcut
 {
   KeyCode keyCode;
-  unsigned int modifiers; // ControlMask | ShiftMask | Mod1Mask
+  unsigned int modifiers;
   int command;
 };
 
@@ -230,15 +230,20 @@ bool SaveWindowScreenshot(HWND hwnd, const char* path)
   if (!pGdkWindow)
     return false;
 
-  Display* pDisplay = GDK_WINDOW_XDISPLAY(pGdkWindow);
-  Window window = LargestChildWindow(pDisplay, GDK_WINDOW_XID(pGdkWindow));
-  if (window == None)
-    return false;
+  // Without a compositor, what a menu (Debug > Save Screenshot) covered stays unpainted until the plug-in UI handles
+  // the Expose on its next frames
+  for (int frame = 0; frame < 10; frame++)
+  {
+    while (g_main_context_iteration(nullptr, FALSE)) {}
+    g_usleep(10000);
+  }
 
-  XWindowAttributes attributes;
+  Display* pDisplay = GDK_WINDOW_XDISPLAY(pGdkWindow);
   GdkDisplay* pGdkDisplay = gdk_window_get_display(pGdkWindow);
   gdk_x11_display_error_trap_push(pGdkDisplay);
-  XImage* pImage = XGetWindowAttributes(pDisplay, window, &attributes)
+  const Window window = LargestChildWindow(pDisplay, GDK_WINDOW_XID(pGdkWindow));
+  XWindowAttributes attributes;
+  XImage* pImage = window != None && XGetWindowAttributes(pDisplay, window, &attributes)
                  ? XGetImage(pDisplay, window, 0, 0, attributes.width, attributes.height, AllPlanes, ZPixmap)
                  : nullptr;
   gdk_x11_display_error_trap_pop_ignored(pGdkDisplay);

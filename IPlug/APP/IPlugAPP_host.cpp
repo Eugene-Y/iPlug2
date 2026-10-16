@@ -581,7 +581,6 @@ void IPlugAPPHost::UseSampleRateTheDeviceSupports(uint32_t outputID)
     return;
 
   mState.mAudioSR = info.preferredSampleRate ? info.preferredSampleRate : rates.front();
-  UpdateINI();
 }
 
 void IPlugAPPHost::ReportAudioOff(const char* reason)

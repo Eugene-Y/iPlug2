@@ -172,8 +172,8 @@ VM Pulse cookies in history (m4) are to be dealt with later.
   plug-in without inputs no longer needs an input device (an output-only JACK server: Docker `jackd -C 0 -P 2`).
 - Found while testing A4, Linux-only fix: the settings start at 44100 and a JACK server runs at one rate, so a first
   switch to JACK failed ("requested sample rate (44100) is different than the JACK server rate (48000)"). If the
-  output device does not list the saved rate, the APP takes the device's preferred rate and saves it; Preferences
-  shows it after Apply.
+  output device does not list the saved rate, the APP takes the device's preferred rate; Preferences shows it after
+  Apply (for an output-only device only since the m7 fix below), and OK saves it.
 - **ALSA duplex through PipeWire**: not fixable in our code. The xruns are a per-start lottery, not a buffer-size
   matter: buffer 512 gave 438, 0, 359 xruns in 10 s on three starts, 256 gave 0 and 188, 1024 gave 17, 2048 gave 0
   (`evidence/t004/vm-xruns-IPlugEffect-alsa-*`). Without `snd_pcm_link` RtAudio starts capture and playback with a
@@ -184,3 +184,18 @@ VM Pulse cookies in history (m4) are to be dealt with later.
   `Ctrl+Shift+S` under GNOME PASS (`vm-default-instrument`), `vm-jack-pulse` PASS, `vm-midi` PASS. One `vm-jack-pulse`
   run failed (no JACK client 5 s after start, then the script hung); not reproduced in the next run nor in
   `vm-jack-start`. macOS: CMake `IPlugInstrument-app` rebuilds and links, no warnings in the APP files.
+
+### Review round 2 (notes/23 "Round 2"): approve with minor fixes — fixed
+- m5: the sample-rate fallback no longer writes settings.ini itself, so JACK + Apply + Cancel keeps the previous
+  driver and rate (checked: `driver=2 sr=44100` after Cancel). At start the rate is worked out again each time.
+- m6: Debug > Save Screenshot chosen from the menu showed the menu's area black on X without a compositor; the
+  capture now lets the plug-in UI handle the Expose first (about 100 ms of GLib iterations). Clean in Docker/Xvfb.
+- m7 (shared, commit "APP: sample rates of an output-only device"): with no input device the Sampling Rate list
+  was empty; it now lists the output's rates (JACK `-C 0` shows 48000).
+- n6–n8: X queries inside the GDK error trap; header comments corrected; a comment that restated the mask removed.
+- n9: setting SWELL's `INIFILE` also makes SWELL raise the open-files limit to 16384 and write `max_open_files` into
+  `libSwell.ini` (SWELL's own behaviour, as in REAPER).
+- n10 (known limit, not changed): a shortcut on a shifted character, or other lock modifiers than Caps/Num Lock,
+  would not match; no APP menu uses one.
+- Checks: `scripts/probe/app-review2-checks.sh` (`evidence/t004/review2-fixes`), Docker `app-audio-test.sh` and
+  `app-switch-test.sh` PASS, mac CMake `IPlugInstrument-app` links.
