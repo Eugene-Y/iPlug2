@@ -63,7 +63,7 @@ namespace
 // window contains ours, the keys typed while the pointer is over the editor. Unused ones go on to the host's window.
 constexpr long kWindowEventMask = ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask
                                 | PointerMotionMask | LeaveWindowMask | KeyPressMask | KeyReleaseMask
-                                | FocusChangeMask | PropertyChangeMask;
+                                | FocusChangeMask | PropertyChangeMask | VisibilityChangeMask;
 constexpr Time kDoubleClickMs = 400;
 constexpr float kDoubleClickSlop = 4.f;
 constexpr unsigned kWheelUp = Button4;
@@ -266,6 +266,14 @@ struct IGraphicsLinux::Impl
   // would draw and swap into a dead drawable, which crashes llvmpipe.
   bool mWindowAlive = false;
   Atom mWMDeleteWindow = 0;
+  // Compositing window managers (Mutter) leave a minimized window's children mapped, so no UnmapNotify stops the
+  // frames: the host's top-level is watched for being minimized, and our window for being covered.
+  Window mTopLevel = 0;
+  bool mTopLevelHidden = false;
+  bool mFullyObscured = false;
+  Atom mWMState = None;
+  Atom mNetWMState = None;
+  Atom mNetWMStateHidden = None;
 
   int mWindowW = 0; // physical size of our X window: last requested, or last seen when someone else resized it
   int mWindowH = 0;
@@ -445,6 +453,9 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   XChangeProperty(pDisplay, w.mWindow, xembedInfoAtom, xembedInfoAtom, 32, PropModeReplace,
                   reinterpret_cast<const unsigned char*>(xembedInfo), 2);
 
+  w.mWMState = XInternAtom(pDisplay, "WM_STATE", False);
+  w.mNetWMState = XInternAtom(pDisplay, "_NET_WM_STATE", False);
+  w.mNetWMStateHidden = XInternAtom(pDisplay, "_NET_WM_STATE_HIDDEN", False);
   if (w.mParent)
   {
     // Our selection on the parent belongs to this connection only; the host's own event mask is untouched.
@@ -463,6 +474,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     return fail("glXCreateContext failed");
 
   XMapWindow(pDisplay, w.mWindow);
+  WatchTopLevel();
   XSync(pDisplay, False);
   if (trap.GetErrorCount() > 0)
     return fail("X errors while creating the window");
@@ -704,6 +716,9 @@ void IGraphicsLinux::DrawDirtyControls()
   if (!IsDirty(rects) || !*open)
     return;
   SetAllControlsClean();
+  // Controls and animations go on as on mac and Windows; only drawing stops. Showing again redraws everything.
+  if (w.mTopLevelHidden || w.mFullyObscured)
+    return;
 
   ScopedXErrorTrap trap(w.mDisplay);
   ActivateGLContext();
@@ -754,6 +769,23 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
     case UnmapNotify:
       if (event.xunmap.window == w.mWindow)
         w.mMapped = false;
+      break;
+    case ReparentNotify:
+      if (event.xreparent.window == w.mWindow || event.xreparent.window == w.mParent)
+        WatchTopLevel();
+      break;
+    case PropertyNotify:
+      if (event.xproperty.window == w.mTopLevel && (event.xproperty.atom == w.mWMState || event.xproperty.atom == w.mNetWMState))
+        UpdateTopLevelHidden();
+      break;
+    case VisibilityNotify:
+      if (event.xvisibility.window == w.mWindow)
+      {
+        const bool obscured = event.xvisibility.state == VisibilityFullyObscured;
+        if (w.mFullyObscured && !obscured)
+          SetAllControlsDirty();
+        w.mFullyObscured = obscured;
+      }
       break;
     case ConfigureNotify:
       HandleConfigure(event);
@@ -1539,16 +1571,71 @@ PlatformFontPtr IGraphicsLinux::LoadPlatformFont(const char* fontID, void* pData
 
 #pragma mark - Dialogs
 
-/** The client top-level that contains our window (the one with WM_STATE), else the outermost ancestor below the
- * root: dialogs are made transient for it, which the window manager only honours for top-levels. */
-unsigned long IGraphicsLinux::GetDialogParentWindow()
+// The window manager's WM_STATE (Iconic) or the EWMH _NET_WM_STATE_HIDDEN on the host's top-level: minimized, or its
+// owner window minimized (Mutter iconifies REAPER's FX windows with the main window).
+void IGraphicsLinux::UpdateTopLevelHidden()
 {
   Impl& w = *mImpl;
-  if (!w.mWindowAlive)
-    return 0;
+  bool hidden = false;
+  if (w.mTopLevel)
+  {
+    ScopedXErrorTrap trap(w.mDisplay);
+    Atom type = None;
+    int format = 0;
+    unsigned long count = 0, remaining = 0;
+    unsigned char* pData = nullptr;
+    if (XGetWindowProperty(w.mDisplay, w.mTopLevel, w.mWMState, 0, 1, False, w.mWMState, &type, &format, &count, &remaining, &pData) == Success && pData)
+    {
+      hidden = format == 32 && count == 1 && reinterpret_cast<long*>(pData)[0] == IconicState;
+      XFree(pData);
+    }
+    pData = nullptr;
+    constexpr long kMaxStates = 32;
+    if (!hidden && XGetWindowProperty(w.mDisplay, w.mTopLevel, w.mNetWMState, 0, kMaxStates, False, XA_ATOM, &type, &format, &count, &remaining, &pData) == Success && pData)
+    {
+      const long* pStates = reinterpret_cast<long*>(pData);
+      for (unsigned long i = 0; format == 32 && i < count && !hidden; i++)
+        hidden = static_cast<Atom>(pStates[i]) == w.mNetWMStateHidden;
+      XFree(pData);
+    }
+  }
+  if (w.mTopLevelHidden && !hidden)
+    SetAllControlsDirty();
+  w.mTopLevelHidden = hidden;
+}
 
+// A host can move our window into another top-level (REAPER docking its FX window); only a reparenting of our window
+// or of the host's parent window is seen.
+void IGraphicsLinux::WatchTopLevel()
+{
+  Impl& w = *mImpl;
   ScopedXErrorTrap trap(w.mDisplay);
-  const Atom wmState = XInternAtom(w.mDisplay, "WM_STATE", False);
+  const Window topLevel = FindClientTopLevel();
+  if (topLevel != w.mTopLevel)
+  {
+    auto watchMask = [&w](Window window, long mask) {
+      if (window && window != w.mWindow)
+        XSelectInput(w.mDisplay, window, mask | (window == w.mParent ? StructureNotifyMask : NoEventMask));
+    };
+    watchMask(w.mTopLevel, NoEventMask);
+    watchMask(topLevel, PropertyChangeMask);
+    w.mTopLevel = topLevel;
+  }
+  UpdateTopLevelHidden();
+}
+
+// Dialogs are made transient for it: the window manager only honours that for top-levels.
+unsigned long IGraphicsLinux::GetDialogParentWindow()
+{
+  return mImpl->mWindowAlive ? FindClientTopLevel() : 0;
+}
+
+/** The client top-level that contains our window (the one with WM_STATE), else the outermost ancestor below the root */
+unsigned long IGraphicsLinux::FindClientTopLevel()
+{
+  Impl& w = *mImpl;
+  ScopedXErrorTrap trap(w.mDisplay);
+  const Atom wmState = w.mWMState;
   Window window = w.mWindow;
   Window outermost = w.mWindow;
   for (int depth = 0; depth < 64; depth++)

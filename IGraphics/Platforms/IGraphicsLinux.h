@@ -111,6 +111,9 @@ private:
   bool TellHostTheOpenedSize();
   bool IsHostResizeEnabled();
   unsigned long GetDialogParentWindow();
+  unsigned long FindClientTopLevel();
+  void WatchTopLevel();
+  void UpdateTopLevelHidden();
   /** @return false when the editor is not open: then no dialog shows and the handler never runs */
   bool ShowDialog(LinuxDialogRequest& request, std::function<void(const LinuxDialogResult&)> handler);
   void DestroyWindowResources();
