@@ -852,6 +852,7 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
     if (!buttonMask)
       return;
 
+    FinishFadingMenu();
     FitMenusOnScreen();
     const bool isDoubleClick = button.button == w.mLastClickButton
                             && button.time - w.mLastClickTime < kDoubleClickMs
@@ -1498,6 +1499,26 @@ IPopupMenu* IGraphicsLinux::CreatePlatformPopupMenu(IPopupMenu& menu, const IREC
   mImpl->mStandInPopup->CreatePopupMenu(menu, bounds);
   isAsync = true;
   return nullptr;
+}
+
+// A menu that has sent its completion fades out for ≈300 ms, and IPopupMenuControl::CreatePopupMenu ignores requests
+// until it has collapsed: a click on a menu's owner meanwhile opened nothing, and left that owner waiting for a
+// completion (with its host gesture begun) until the next menu. Such a click ends the fade first.
+void IGraphicsLinux::FinishFadingMenu()
+{
+  IPopupMenuControl* pPopup = GetPopupMenuControl();
+  auto isFading = [pPopup]() {
+    const IPopupMenuControl::EPopupState state = pPopup->GetState();
+    return state == IPopupMenuControl::kFlickering || state == IPopupMenuControl::kCollapsing || state == IPopupMenuControl::kIdling;
+  };
+  if (!pPopup || !isFading())
+    return;
+  // Each call is the end of one fade stage: flickering, collapsing, idling, then collapsed.
+  constexpr int kFadeStages = 3;
+  for (int stage = 0; stage < kFadeStages && isFading(); stage++)
+    pPopup->OnEndAnimation();
+  // The panels' area is no control's: only a full redraw clears it.
+  SetAllControlsDirty();
 }
 
 // IPopupMenuControl keeps its menus inside the editor, flipping and scrolling them there. Native menus stay on the

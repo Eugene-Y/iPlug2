@@ -106,6 +106,7 @@ private:
   bool IsMenuOpen();
   void DismissOpenMenu();
   void FitMenusOnScreen();
+  void FinishFadingMenu();
   void DrawDirtyControls();
   /** @return false when the host closed the editor meanwhile */
   bool TellHostTheOpenedSize();
