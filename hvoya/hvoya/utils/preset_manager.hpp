@@ -237,7 +237,8 @@ public:
     }
 
     void undo() {
-        InternalRestoreScope guard(_restoringInternally);
+        ScopedFlag internal(_restoringInternally);
+        ScopedFlag keepsWorkspace(_preservingWorkspace);
         auto cc = snapshotCCMap();
         auto ws = snapshotWorkspace();
 
@@ -269,7 +270,8 @@ public:
     // back onto the undo stack (so undo returns here) WITHOUT clearing redo.
     void redo() {
         if (_redoStack.empty()) return;
-        InternalRestoreScope guard(_restoringInternally);
+        ScopedFlag internal(_restoringInternally);
+        ScopedFlag keepsWorkspace(_preservingWorkspace);
         auto cc = snapshotCCMap();
         auto ws = snapshotWorkspace();
         const bool ccStep = _redoStack.front().ccInChunk;
@@ -390,6 +392,12 @@ public:
     // while still clearing a stray selection on a genuine host load. See onHostStateRestored().
     bool isRestoringInternally() const { return _restoringInternally; }
 
+    // True while a manager restore will put the live workspace back right after loading the state
+    // (undo/redo/strip navigation — not an explicit file load). The loaded chunk's workspace values
+    // are transient then: a plugin applying them as they arrive flips its live state for the length
+    // of the load.
+    bool isPreservingWorkspace() const { return _preservingWorkspace && _wsUnserialize; }
+
     // ── File I/O ──────────────────────────────────────────────────────────────
 
     void saveToFile(const std::string& path) {
@@ -411,7 +419,7 @@ public:
         const PresetApply v = _redirect ? _redirect(PresetSource::file(path)) : PresetApply::PassThrough;
         if (v == PresetApply::Handled) return true;
         if (v == PresetApply::Block)   return false;
-        InternalRestoreScope guard(_restoringInternally);
+        ScopedFlag internal(_restoringInternally);
         pushUndo();
         auto cc = snapshotCCMap();
         // NB: workspace is NOT snapshotted here — an explicit file load opens the
@@ -735,14 +743,15 @@ private:
         bool              ccInChunk = false; // CC-map step: restore the map FROM chunk, don't overlay live
     };
 
-    // RAII flag set while the manager itself drives a state restore, so the plugin's
+    struct ScopedFlag {
+        bool& flag; bool prev;
+        explicit ScopedFlag(bool& f) : flag(f), prev(f) { flag = true; }
+        ~ScopedFlag() { flag = prev; }
+    };
+    // Set while the manager itself drives a state restore, so the plugin's
     // OnRestoreState → onHostStateRestored() can tell our restores from a host load.
     bool _restoringInternally = false;
-    struct InternalRestoreScope {
-        bool& flag; bool prev;
-        explicit InternalRestoreScope(bool& f) : flag(f), prev(f) { flag = true; }
-        ~InternalRestoreScope() { flag = prev; }
-    };
+    bool _preservingWorkspace = false;   // see isPreservingWorkspace()
 
     // ── Members ───────────────────────────────────────────────────────────────
 
@@ -873,7 +882,8 @@ private:
     // Navigate to idx. If the target user preset file is missing, removes it
     // from the list and clamps _currentIdx without changing DSP state.
     void applyIdx(int idx) {
-        InternalRestoreScope guard(_restoringInternally);
+        ScopedFlag internal(_restoringInternally);
+        ScopedFlag keepsWorkspace(_preservingWorkspace);
         _currentIdx = idx;
         _divergedFromIndex = false;   // the live patch now IS this preset → strip shows its name
         auto cc = snapshotCCMap();
