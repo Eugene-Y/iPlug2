@@ -11,7 +11,7 @@ Update it at every merge or user decision.
 | Repo / branch | Where | State |
 |---|---|---|
 | iPlug2 `hvoya` (product) | `/Volumes/Storage/code/IPlug2` (main checkout, Gneiss builds against it) | Pushed to `gene` up to 3474f3d55. My commits there, all with the user's OK: logger snprintf fix 46f834a92, `IText::SetFont` 3a05dd2f4, **upstream master merged** 5d854712d, `ITextEntryControl` right-click menu UAF (H1) e0c2680e7, **C1 `AudioBuffer::reserve` fix 3474f3d55**, CLAUDE.md pointers. **The user has not yet tested Gneiss on mac/win after the upstream merge.** |
-| iPlug2 `hvoya-linux` (Linux integration) | `/Volumes/Storage/code/IPlug2-linux` | Unpushed, about 127 commits ahead of `gene/hvoya-linux`; the user pushes. Contains hvoya at 5d854712d + Linux P0–P5 + T-001/2/3/7 merges + the C1 cherry-pick e7c882995. HEAD ≈ 30580fe02 |
+| iPlug2 `hvoya-linux` (Linux integration) | `/Volumes/Storage/code/IPlug2-linux` | Pushed to `gene` up to b33e405b2 by the user on 2026-10-16; later commits are unpushed until the user pushes. Contains hvoya at 5d854712d + Linux P0–P5 + T-001/2/3/7 merges + the C1 cherry-pick e7c882995. HEAD ≈ 30580fe02 |
 | Gneiss `master` | `/Volumes/Storage/code/hvoya/Gneiss` (user's working tree, uncommitted .RPP/xcscheme edits) | 3cf2e2e (user's morph/preset-swap fix, 2026-10-16), pushed |
 | Gneiss `linux-experiment` | `/Volumes/Storage/code/hvoya/Gneiss-linux` (local only, never push) | master 3cf2e2e merged (4219350) + 52cb5d6 (CMakeLists.txt) + 7e3a1c9 (initializer_list UB fix, behaviour-neutral) |
 | Sand | `/Volumes/Storage/code/hvoya/Sand` | Untouched. T-012 must use a local experiment branch + worktree, like Gneiss |
