@@ -91,18 +91,29 @@ private:
   void ForwardKeyToHost(const _XEvent& event);
   /** Keyboard focus and stand-in controls follow the editing state after every event and frame */
   void UpdateEditingState();
-  void TakeKeyboardFocus();
+  void TakeKeyboardFocus(unsigned long time);
+  void AskForKeyboardFocusAgain();
+  void CheckKeyboardFocus();
+  void LoseKeyboardFocusToHost(unsigned long focus);
+  void RequestKeyboardFocus(unsigned long time);
+  void RememberHostFocusWindow(unsigned long focus);
+  void DeclineKeyboardFocus();
   void ReleaseKeyboardFocus();
   void EndTextEntryOnFocusLoss();
   void RemoveFinishedStandIns();
   bool IsEditing();
   bool IsMenuOpen();
   void DismissOpenMenu();
+  void FitMenusOnScreen();
+  void FinishFadingMenu();
   void DrawDirtyControls();
   /** @return false when the host closed the editor meanwhile */
   bool TellHostTheOpenedSize();
   bool IsHostResizeEnabled();
   unsigned long GetDialogParentWindow();
+  unsigned long FindClientTopLevel(bool* pHasWMState);
+  void WatchTopLevel();
+  void UpdateTopLevelHidden();
   /** @return false when the editor is not open: then no dialog shows and the handler never runs */
   bool ShowDialog(LinuxDialogRequest& request, std::function<void(const LinuxDialogResult&)> handler);
   void DestroyWindowResources();

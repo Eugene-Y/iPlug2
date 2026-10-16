@@ -5,6 +5,7 @@
 #   scale S                            view coordinates and rect sizes in the steps that follow are logical: times S
 #   click X Y [button] | dclick X Y | rclick X Y
 #   drag X1 Y1 X2 Y2                   press, move in 10 steps, release
+#   click-click X1 Y1 X2 Y2 SECS       two clicks SECS apart in one xdotool call (faster than two click steps)
 #   key KEYS... | type TEXT...
 #   wait SECS
 #   shot NAME                          screenshot -> $OUT/NAME.png
@@ -33,8 +34,8 @@ log() { echo "[xact] $*"; }
 xfail() { log "FAIL $*"; echo "$*" >> "$OUT/xact-fails.txt"; }
 while read -r cmd a b c d rest; do
   case "$cmd" in
-    click|dclick|rclick|drag|drag-check|move|expect-pointer) a=$(sc "$a"); b=$(sc "$b")
-      case "$cmd" in drag|drag-check) c=$(sc "$c"); d=$(sc "$d");; esac;;
+    click|dclick|rclick|drag|drag-check|click-click|move|expect-pointer) a=$(sc "$a"); b=$(sc "$b")
+      case "$cmd" in drag|drag-check|click-click) c=$(sc "$c"); d=$(sc "$d");; esac;;
     expect-change|expect-same) c=$(sc "$c"); d=$(sc "$d"); read -r w h <<<"$rest"; rest="$(sc "$w") $(sc "$h")";;
   esac
   case "$cmd" in
@@ -47,6 +48,7 @@ while read -r cmd a b c d rest; do
     click) xdotool mousemove $((OX+a)) $((OY+b)) click "${c:-1}"; log "click $a $b";;
     rclick) xdotool mousemove $((OX+a)) $((OY+b)) click 3; log "rclick $a $b";;
     dclick) xdotool mousemove $((OX+a)) $((OY+b)) click --repeat 2 --delay 80 1; log "dclick $a $b";;
+    click-click) xdotool mousemove $((OX+a)) $((OY+b)) click 1 sleep "$rest" mousemove $((OX+c)) $((OY+d)) click 1; log "click $a $b, $rest s later click $c $d";;
     drag|drag-check)
       xdotool mousemove $((OX+a)) $((OY+b)) mousedown 1
       for i in $(seq 1 10); do xdotool mousemove $((OX+a+(c-a)*i/10)) $((OY+b+(d-b)*i/10)); sleep 0.03; done

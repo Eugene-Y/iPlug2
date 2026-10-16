@@ -14,7 +14,8 @@ W=$(xdotool search --name "${FX#*: }.*Track 1" | tail -1)
 read -r OX OY < <(xwininfo -id "$W" -tree | awk '/^ +0x[0-9a-f]+ /{ split($(NF-1),g,"[x+]"); split($NF,a,"+"); if (g[1]*g[2] > best) { best=g[1]*g[2]; r=a[2]" "a[3] } } END { print r }')
 P=$(cat /tmp/reaper.pid)
 L=iplug::igraphics::IGraphicsLinux
-"$HERE/gdb-count.sh" "$P" 150 "$L::HandleKey" "$L::TakeKeyboardFocus" "$L::ReleaseKeyboardFocus" \
+"$HERE/gdb-count.sh" "$P" 150 "$L::HandleKey" "$L::TakeKeyboardFocus" "$L::CheckKeyboardFocus" "$L::ReleaseKeyboardFocus" \
+  "$L::FitMenusOnScreen" "$L::FinishFadingMenu" "$L::UpdateTopLevelHidden" \
   "$L::SetTextInClipboard" "$L::GetTextFromClipboard" "$L::CreatePlatformTextEntry" "$L::CreatePlatformPopupMenu" \
   "$L::SetMouseCursor" "$L::HideMouseCursor" "$L::MoveMouseCursor" "$L::ProcessXEvents()" > "$OUT/input-threads.txt" 2>&1 &
 G=$!

@@ -13,7 +13,7 @@ IPlugEffect CLAP Debug builds, `evidence/p3b/review-fixes/macos/`, diff against 
 |---|---|
 | Keys | `IGraphicsLinuxKeys.h`. Keysym → `kVK_*` with Windows semantics (what `ITextEntryControl` and the keyboard controls test): keypad by NumLock state, F1–F24, modifiers. Letters and digits get the VK of the **physical** key, searched across XKB groups: Ctrl+C is `'C'` in a Russian layout too, Shift+1 is `'1'`. Text: `Xutf8LookupString` through Xlib's built-in input method (compose/dead keys, any keysym → UTF-8), else Latin-1/Unicode keysyms; with Ctrl/Alt the unmodified character (as mac's `charactersIgnoringModifiers`), control characters as the VK only; one `IKeyPress` per character an IM commits. `XkbSetDetectableAutoRepeat` (per connection). Locale and `XMODIFIERS` are not touched: process-wide, the host's |
 | Routing | `KeyPress`/`KeyRelease` → `IGraphics::OnKeyDown/OnKeyUp` at the pointer position. Keys pressed during an edit or an open menu are always kept (Escape/Return must not reach the host). Unused real keys are sent on to the parent window (`XSendEvent`); their releases follow their presses (a 256-bit kept-keys set). Synthetic keys (sent by a host) are never sent back: loops |
-| Focus | Plug-ins: the host keeps the X focus outside text entry. During an edit the editor takes it (`XSetInputFocus`, after the opening click has settled, see finding 2), restores the previous focus on commit/Escape, and ends the edit (commit) when the focus leaves for another top-level window. APP: focus on click (the editor is the app's content) |
+| Focus | Plug-ins: the host keeps the X focus outside text entry. During an edit or an open menu the editor takes it (`XSetInputFocus` at the opening click's release, with its timestamp; see finding 2), restores the previous focus on commit/Escape, and ends the edit (commit) when the focus leaves for another top-level window. APP: focus on click, by the same request (the editor is the app's content) |
 | XEmbed | `_XEMBED`: `EMBEDDED_NOTIFY` remembers the embedder, which then also gets `REQUEST_FOCUS` when an edit takes the focus; `FOCUS_OUT` ends an edit. `WINDOW_ACTIVATE` etc. ignored. Nothing depends on XEmbed (REAPER sends none) |
 | Text entry | `CreatePlatformTextEntry` attaches IGraphics' `ITextEntryControl` for this one edit ("stand-in") and returns at once; the control commits later (Return, a click outside, focus loss) and is removed after the edit and after any menu has collapsed, with mouse-over/capture cleared first. A stand-in the plug-in removed itself (`RemoveAllControls` in a layout, `Remove*Control`) is only forgotten; an edit whose control vanished is cleared (`ClearInTextEntryControl`), or every key would count as an edit's. No GTK. `ForceEndUserEdit` dismisses. Ctrl+V in an edit reads the clipboard **asynchronously** and replays the key (finding 4); further Ctrl+V while one is pending are dropped |
 | Menus | `CreatePlatformPopupMenu` attaches `IPopupMenuControl` likewise (`isAsync = true`), removed once collapsed. An open menu (stand-in or the plug-in's own) takes the keyboard focus like an edit, so Escape reaches it: dismissed without a choice. Closing the editor with a menu open completes it first (no choice), so the gesture its owner began on the host is ended. A focus loss to another window dismisses an expanded menu, then commits an edit |
@@ -39,6 +39,15 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
    button release, with up to two retries when it is moved to an ancestor within 500 ms. 4/4 and every later full
    run kept the focus for the whole edit (`focuswatch`, trace build). Once we hold it, REAPER/GDK leave it alone
    (`xdotool windowfocus` test: stays).
+   **Since T-008** the request goes out at once after the release, with the release's server time: the window
+   manager's click-to-focus and GDK's proxy move carry the press's time and lose when they arrive later. Each click
+   (and each take) begins an episode of 1.5 s. A FocusOut into the host's own top-level during it, or a check one
+   quiet period (150 ms) after a request that finds the focus there, makes the editor wait until the focus has
+   stayed put for 150 ms and then ask again (CurrentTime): under load REAPER/openbox move the focus back several
+   times over up to ≈0.8 s after a click, and asking during that only loses again (review notes/19 H1). After the
+   episode the host keeps it. Every click while the editor wants the keys asks again (openbox focuses the top-level
+   on every click). Mutter, human-like clicks: 10/10 edits CLAP and VST3 with nothing lost; openbox under ≈5 cores
+   of load: the P3b Ctrl+C step 30/30 (old delay 30/30, the first T-008 version 18/30) (`evidence/t008/focus-load/`).
 3. **Synthetic keys: REAPER takes them, GDK3 apps do not.** `xdotool key --window <container> space` starts
    REAPER's transport; the same to the APP's SWELL window (system GDK3) is ignored, while a real Escape closes the
    APP's dialog. So forwarding unused keys reaches the host in some hosts only. In the APP it costs SWELL's Escape
@@ -48,11 +57,15 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
    starts an async read and replays the key when the text is in; `host-clipboard-probe.sh` pastes REAPER's "77"
    in CLAP and VST3 [R]. Other callers of `GetTextFromClipboard` (Gneiss's rig paste, the text entry's
    right-click Paste) still block: fine for other processes and other editors of ours, empty for host-owned text.
-5. **REAPER's VST3 context menu does not show on Linux.** Right click on a parameter control reaches
-   `IComponentHandler3::createContextMenu`, and REAPER's `IContextMenu::popup` returns after ≈0.1 s without a
-   menu (gdb at the call), with or without our implicit pointer grab (tried an ungrab on right press: no change,
-   so not kept). No nested loop, so Stillwell's close deferral during host popups has nothing to guard in REAPER.
-   Re-check grabs/nesting in hosts whose menu does show (P10).
+5. **REAPER's VST3 context menu shows with a held right click** (corrected by T-008; this first read "does not
+   show"). Right click on a parameter control reaches `IComponentHandler3::createContextMenu`, and REAPER's
+   `IContextMenu::popup` opens a GTK menu in a **nested modal loop**: it returns when an item is chosen, and the
+   editor gets no `Draw` meanwhile. REAPER runs its own actions (close/delete FX) only after the menu has closed
+   and our `OnMouseDown` has returned, so no close-during-popup guard is needed for REAPER. The first test used
+   `xdotool click 3`, whose release lands in the same millisecond as the press; GTK takes that release as a
+   choice outside the menu and closes it at once (`popup` returned after ≈0.1 s). With the button held 150 ms
+   the menu shows and "Show track envelope" creates the envelope, in Docker (`evidence/t008/ctx-menu-docker-vst3/`)
+   and on the VM (notes/14 part 2, row 8). Re-check grabs/nesting in other hosts (P10).
 6. **NanoVG cannot draw CFF fonts.** Its stb_truetype is v1.09; fontconfig maps "Times New Roman" to Nimbus Roman
    (`.otf`, CFF) here, and `LoadAPIFont` refused it, so IGraphicsTest fell back to its bundled font. Fonts by name
    now take the best TrueType candidate (DejaVu Serif here), `fonts-by-name-igraphicstest.txt` [R].
@@ -62,7 +75,9 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
    `XCheckIfEvent`). 3 MB from xclip arrives both ways [U].
 8. **Menus stay inside the editor.** `IPopupMenuControl::Expand` clamps panels to the IGraphics bounds (above or
    below the anchor, scrolling when too long), unlike native menus. A menu near the bottom of a small editor opens
-   upwards or scrolls; nothing is clipped by the window edge. Gneiss's platform menus become these.
+   upwards or scrolls; nothing is clipped by the window edge. Gneiss's platform menus become these. Since T-008 the
+   bounds are the editor's on-screen part (work area) when it is partly off screen, before every click and stand-in
+   menu (`SetMaxBounds`).
 
 ## Acceptance
 
@@ -93,13 +108,19 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
 - While an edit is open in REAPER and the user clicks into REAPER's own window, the focus may stay with the edit
   (no FocusOut leaves the host); Return/Escape/a click in the editor end it.
 - Blocking clipboard reads of host-owned text return nothing (finding 4); serving large texts (INCR) is not done.
-- No tooltips. Host context menus: see finding 5.
-- Fonts by name: TrueType outlines only until NanoVG's stb_truetype is updated.
-- Focus retries: after two retries `mHoldsFocus` means "requested", not "held"; keys then come only as the host
-  forwards them. Alternatives in notes/15.
-- A menu requested while a stand-in menu is still fading out (≈400 ms after a choice) is ignored by
-  `IPopupMenuControl::CreatePopupMenu` (it expands only when collapsed); its owner keeps `mInPopupMenu` and the
-  host gesture begun on its mouse down until the next menu. Same as a plug-in's own popup control on mac/win.
+- No tooltips. Host context menus: see finding 5 (REAPER's blocks the editor's drawing while open).
+- Fonts by name: TrueType outlines only until NanoVG's stb_truetype is updated. A variable font draws at its default
+  instance only (stb_truetype applies no variation axes), so Bold/Italic of a variable-only family come out regular
+  (Ubuntu Sans and Ubuntu on Ubuntu 24.04, notes/14 P3b-V4). Won't fix (T-008): fontconfig already ranks a static
+  face of the same family with the requested style ahead of the variable file when one is installed (measured with a
+  fixture, `evidence/t008/vm/fc-variable*/`), and taking another family's static bold instead would change the look
+  more than the missing weight does. Synthetic bold would need NanoVG changes.
+- Focus: after the episode `mHoldsFocus` means "requested", not "held"; keys then come only as the host forwards
+  them, until the next click into the editor asks again.
+- A menu requested while the previous one is still fading out (≈300 ms after a choice) is ignored by
+  `IPopupMenuControl::CreatePopupMenu`. Since T-008 a click ends the fade first, so a click-opened menu works; a
+  request without a click (key, timer) during the fade is still ignored, as with a plug-in's own popup control on
+  mac/win.
 - No SAVE_TARGETS hand-over to a clipboard manager: an orphaned text is readable in this process only.
 
 ## Review round 1 (notes/15)

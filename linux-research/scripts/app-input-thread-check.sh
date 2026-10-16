@@ -11,7 +11,8 @@ sleep 5
 P=$(pgrep -n -x "$NAME")
 ORIGIN=$(xwininfo -root -tree | awk "/\"$NAME\": \(\"$NAME\" \"$NAME\"\)/{f=1;next} f&&/^ +0x/{split(\$NF,a,\"+\"); print a[2],a[3]; exit}")
 L=iplug::igraphics::IGraphicsLinux
-"$HERE/gdb-count.sh" "$P" 120 "$L::HandleKey" "$L::TakeKeyboardFocus" "$L::ReleaseKeyboardFocus" \
+"$HERE/gdb-count.sh" "$P" 120 "$L::HandleKey" "$L::TakeKeyboardFocus" "$L::CheckKeyboardFocus" "$L::ReleaseKeyboardFocus" \
+  "$L::FitMenusOnScreen" "$L::FinishFadingMenu" "$L::UpdateTopLevelHidden" \
   "$L::SetTextInClipboard" "$L::GetTextFromClipboard" "$L::CreatePlatformTextEntry" "$L::CreatePlatformPopupMenu" \
   "$L::SetMouseCursor" "$L::HideMouseCursor" "$L::MoveMouseCursor" "$L::ProcessXEvents()" > "$OUT/input-threads.txt" 2>&1 &
 G=$!

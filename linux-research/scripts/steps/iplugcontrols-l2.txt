@@ -1,0 +1,25 @@
+# IPlugControls in REAPER, notes/15 L2: a menu requested while the previous one is still fading out (≈300 ms after
+# a choice). Each choice is followed 50 ms later by a click that opens the menu again; the second choice must take.
+# Track 0, FX 0: param 1 = Mode (one/two/three/four), ICaptionControl at view 321,99 drops down below it.
+alive __PROC__
+# the plug-in's own IPopupMenuControl: items 22 px apart from y 122
+click 321 99
+wait 1
+click-click 321 166 321 99 0.05
+wait 1
+shot l01-own-reopened
+click 321 188
+wait 1
+expect-param 0 1 four
+# stand-in (platform) menus, "OS Menu" toggle: items 16 px apart from y 120
+click 224 720
+wait 0.5
+click 321 99
+wait 1
+click-click 321 136 321 99 0.05
+wait 1
+shot l02-standin-reopened
+click 321 168
+wait 1
+expect-param 0 1 four
+alive __PROC__

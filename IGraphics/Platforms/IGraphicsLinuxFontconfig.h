@@ -104,7 +104,9 @@ private:
 /** Offers the font files for a family name and style, best first, until accept takes one. Like Windows' font
  * mapper, a missing family gives the system's substitutes (e.g. Liberation Sans for Arial). Only TrueType-outline
  * faces are offered: NanoVG's stb_truetype (v1.09) cannot draw CFF outlines, which most .otf files have, nor
- * named instances of variable fonts (fontconfig's index with an instance number above bit 16).
+ * named instances of variable fonts (fontconfig's index with an instance number above bit 16). It draws a variable
+ * font at its default instance only, so Bold or Italic of a family that is variable-only (Ubuntu Sans) comes out
+ * regular; fontconfig ranks a static face of the family with that style first where one is installed.
  * @param accept bool(const char* path, int faceIdx): true when the caller could use that face
  * @return true when a face was accepted */
 template <typename AcceptFunc>

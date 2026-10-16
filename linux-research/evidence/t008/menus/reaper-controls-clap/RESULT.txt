@@ -1,0 +1,15 @@
+RESULT: FAIL (14)
+  - steps: expect-clipboard: xclip 'Error: target STRING not available', xsel '', expected '55'
+  - steps: expect-param: track 0 param 0 = '55.00 %', expected /^66/
+  - steps: lua-expect: '0', expected /^1$/ from: out(reaper.GetPlayState() & 1)
+  - steps: lua-expect: '1', expected /^0$/ from: out(reaper.GetPlayState() & 1)
+  - steps: expect-param: track 0 param 1 = 'two', expected /four/
+  - steps: expect-change: c09-popup-os -> c10-textentry-os unchanged in view rect 890,410 90x40
+  - steps: expect-param: track 0 param 0 = '55.00 %', expected /^7/
+  - steps: expect-param: track 0 param 0 = '55.00 %', expected /^7/
+  - steps: expect-window: no visible window /IPlugControls.*Track/
+  - steps: expect-param: track 0 param 0 = '(no output from lua within 10s)', expected /^33/
+  - steps: expect-param: track 0 param 0 = '(no output from lua within 10s)', expected /^44/
+  - steps: expect-window: no visible window /IPlugControls.*Track/
+  - steps: expect-change: c12-about -> c13-about-dismissed unchanged in view rect 0,0 1024x768
+  - steps: expect-window: no visible window /IPlugControls.*Track/
