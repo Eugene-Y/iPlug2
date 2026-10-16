@@ -78,3 +78,57 @@ minimized under Mutter, L2, won't-fix fonts with evidence, harness and docs). It
 openbox with load the new focus scheme loses about 37 % of edits in the probe, against 4 % for the old delay (H1), so
 the acceptance lines "must not regress the REAPER focus results" and "full P3b scripts still PASS in Docker" do not
 hold. The settle-based retry suggested in H1 should also cure the old delay's residual losses. M1 must be dropped from the branch before the merge.
+
+## Round 2 (fixes `67b2aff9b`, `48073cd22`, `c9778b586`)
+
+Reviewed: `65e901691..c9778b586`, code in `IGraphicsLinux.{h,cpp}` (from WIP `48073cd22`). Reviewer evidence:
+`evidence/t008-review/r2/`. Builds `build/t008r2` (Release) and `build/t008r2-trace`, no warning from the Linux files.
+Load: two reviewer containers (`t008r-load1/2`, `probe/load-reaper.sh`), each a REAPER with an open IPlugControls
+editor, ≈2.4 cores each for the whole batch: about the round-1 load or a little more. The first T-008 version, re-run
+as the control, still fails under it.
+
+| Check (Docker, under that load) | Result |
+|---|---|
+| Focus probe ×30, first T-008 version (`build/t008r`, control) | **24/30**: the load reproduces round 1's failure (`r2/focus-copy-r1-clap/`) |
+| Focus probe ×30, fix Release | **30/30** (`r2/focus-copy-fix-clap/`) |
+| Focus probe ×30, fix trace | **30/30**; 54 requests, 24 losses into the host's window, 0 episodes given up, 30 releases; at most **2 requests per edit** (6 edits 1, 24 edits 2), so no fight (`r2/focus-copy-fix-trace-clap/editor-focus-trace.txt`) |
+| Full P3b CLAP / VST3 | **PASS / PASS** (`r2/reaper-{clap,vst3}/`; `c10-textentry-os` opened by the reviewer) |
+| APP script | no failed check, alive 4/4 (`r2/app/`) |
+| M1 | `git diff hvoya-linux...linux/T-008 -- Dependencies` is empty |
+
+### The new state machine [C]
+
+States: `mHoldsFocus` (requested), `mFocusLost` (the host's window took it within the episode), `mFocusDeclined`,
+`mFocusChecked`, an episode start (`mFocusEpisodeAt`, 1.5 s) and, while lost, the watched focus window with its
+quiet-since time.
+- **Bounded:** while lost, a new request goes out only after the focus has stayed on one window for 150 ms, inside a
+  1.5 s episode. That allows at most about 10 requests per click, and the trace shows 1–2. Only a user click starts a
+  new episode, and past it the host keeps the focus (`mFocusDeclined`), so nothing can fight forever.
+- **No stuck state:** a move to another top-level while lost is caught by the polling and ends the edit. Escape,
+  Return or a commit releases the focus from both "held" and "lost" (`!wantsKeys && (holds || lost)`). A click clears
+  `mFocusDeclined`.
+- **Cost:** the polling is one `XGetInputFocus` per event/frame, only while lost (≤1.5 s); `LocateFocus` runs only on
+  a change. The 1 s WM_STATE re-check (L1) runs only until a top-level with WM_STATE is found. Fitting the menus on the
+  press only removes the release's round trips (I1).
+- All requests go through `TakeKeyboardFocus`, so every one re-arms the 150 ms check. That was H1's second point.
+- Comments follow the code. The `kClickFocusEpisode` comment now gives the measured ≈0.8 s under openbox, and the
+  `FitMenusOnScreen` comment says "overwrites … for good" (L2). L3 is resolved: the APP's click and the retries now
+  share one meaning, the episode.
+
+### New findings (round 2)
+
+| # | Sev. | Finding | Suggested fix |
+|---|---|---|---|
+| R2-L1 | Low | **`mFocusBeforeKnown` and the episode start stay set after a decline.** `ReleaseKeyboardFocus` is the only place that clears them, and it runs only when the focus is held or lost. `DeclineKeyboardFocus` (another top-level took the focus: alt-tab, a click into REAPER's main window, XEmbed FOCUS_OUT) and the expiry branch of `AskForKeyboardFocusAgain` clear both flags, so the next take keeps the earlier edit's restore target (`mFocusBefore`, which may be a destroyed window, and then the BadWindow fallback gives the focus to PointerRoot). If that next take is not a click (an edit opened by a key, a timer or the plug-in), it also keeps the old `mFocusEpisodeAt`: every loss is then outside the episode and is not answered, which is round 1's failure mode for that edit. A click-started edit restarts the episode in `UpdateEditingState`, so the probe and scripts do not show it | In `UpdateEditingState`, when `!wantsKeys && !mHoldsFocus && !mFocusLost`, clear `mFocusBeforeKnown` together with `mFocusDeclined`; or clear it in `DeclineKeyboardFocus` and the expiry branch |
+| R2-I1 | Info | `UpdateEditingState` now reaches plug-in code itself: `AskForKeyboardFocusAgain` → `DeclineKeyboardFocus` → `EndTextEntryOnFocusLoss` (commit, menu completion). Afterwards the function still reads `w` (the paste block). `IGEditorDelegate::CloseWindow` deletes the IGraphics, so a plug-in or host that closed the editor from that commit would leave the rest of `UpdateEditingState` running on freed memory. Before round 2 this path ran only from `ProcessXEvents`, behind its `*open` check | Hold `const std::shared_ptr<bool> open = w.mOpen;` and return after `AskForKeyboardFocusAgain` when `!*open`, as the paste block already does |
+
+Open (VM only; the VM was not used in this round either): `vm/probe/focus-edit.sh` CLAP + VST3 and the APP script
+with the fix build, as the task file lists. Mutter answers the release request directly (round 1), so the new
+lost/quiet path should rarely run there.
+
+### Verdict (round 2)
+
+**Accepted.** H1 is fixed: under the round-1 load the probe went from 24/30 (control) to 30/30 with no focus fight,
+and the full P3b scripts (CLAP and VST3) and the APP script pass. M1, L1, L2, L3 and I1 are fixed as described.
+R2-L1 and R2-I1 are small and can follow in the next Linux task; neither blocks the merge. The coordinator still has
+to do the VM re-checks listed above.

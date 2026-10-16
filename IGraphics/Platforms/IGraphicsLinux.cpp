@@ -1157,7 +1157,12 @@ void IGraphicsLinux::UpdateEditingState()
   const bool appClick = w.mFocusOnClick && now - w.mLastReleaseAt < kClickFocusEpisode;
   const bool wantsKeys = IsEditing() || IsMenuOpen() || appClick;
   if (!wantsKeys)
+  {
     w.mFocusDeclined = false;
+    // A declined or abandoned fight ends without ReleaseKeyboardFocus: the next take records its own restore target.
+    if (!w.mHoldsFocus && !w.mFocusLost)
+      w.mFocusBeforeKnown = false;
+  }
   const bool clicked = std::exchange(w.mClickedForFocus, false) && wantsKeys;
   // Every click begins an episode: window managers focus the top-level again on a click into it (openbox does on
   // every click, from our child too). Not during the press: the window manager and the host answer it with its time.
@@ -1172,7 +1177,13 @@ void IGraphicsLinux::UpdateEditingState()
   else if (wantsKeys && !w.mHoldsFocus && !w.mFocusLost && !w.mFocusDeclined && !w.mButtonState)
     TakeKeyboardFocus(eventTime);
   else if (wantsKeys && w.mFocusLost && !w.mFocusDeclined && !w.mButtonState)
+  {
+    // Moving to another window commits the edit, which may close the editor
+    const std::shared_ptr<bool> open = w.mOpen;
     AskForKeyboardFocusAgain();
+    if (!*open)
+      return;
+  }
   else if (wantsKeys && w.mHoldsFocus && !w.mFocusChecked && now - w.mFocusTakenAt > kFocusQuiet)
     CheckKeyboardFocus();
   else if (!wantsKeys && (w.mHoldsFocus || w.mFocusLost))
