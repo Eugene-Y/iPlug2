@@ -24,8 +24,10 @@ extern bool SaveWindowScreenshot(HWND hwnd, const char* path);
 #define GET_MENU() SWELL_GetCurrentMenu()
 extern "C" bool SaveWindowScreenshot(void* hwnd, const char* path);
 #elif defined OS_LINUX
+#include "Linux/IPlugAPPLinux.h"
+#include "Linux/IPlugLinuxOpen.h"
 #define GET_MENU() GetMenu(gHWND)
-static bool SaveWindowScreenshot(HWND, const char*) { return false; }
+using iplug::linux_app::SaveWindowScreenshot;
 #endif
 
 using namespace iplug;
@@ -378,6 +380,7 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
         case IDAPPLY:
           _this->TryToChangeAudio();
 #ifdef OS_LINUX
+          _this->PopulateDriverSpecificControls(hwndDlg); // the sample rate may have followed the device
           ShowAudioStateInTitle(hwndDlg, *_this);
 #endif
           break;
@@ -738,6 +741,9 @@ WDL_DLGRET IPlugAPPHost::MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPA
                             tmpDir ? tmpDir : "/tmp/",
                             PLUG_NAME,
                             timestamp);
+          #elif defined OS_LINUX
+          const char* tmpDir = getenv("TMPDIR");
+          path.SetFormatted(512, "%s/%s_screenshot_%s.png", tmpDir && tmpDir[0] ? tmpDir : "/tmp", PLUG_NAME, timestamp);
           #endif
 
           if (SaveWindowScreenshot(gHWND, path.Get()))
@@ -754,6 +760,8 @@ WDL_DLGRET IPlugAPPHost::MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPA
               WDL_String cmd;
               cmd.SetFormatted(1024, "open \"%s\"", path.Get());
               system(cmd.Get());
+              #elif defined OS_LINUX
+              LinuxOpenWithDefaultApp(path.Get());
               #endif
             }
           }

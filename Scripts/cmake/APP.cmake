@@ -97,6 +97,7 @@ if(NOT TARGET iPlug2::APP)
     )
   elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
     target_include_directories(iPlug2::APP INTERFACE ${SWELL_DIR})
+    target_sources(iPlug2::APP INTERFACE ${IPLUG2_DIR}/IPlug/Linux/IPlugAPPLinux.cpp)
 
     set(_LICE_DIR "${SWELL_DIR}/../lice")
     set(IPLUG2_SWELL_SRC

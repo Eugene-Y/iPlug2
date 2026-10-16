@@ -251,6 +251,7 @@ public:
 
 private:
 #ifdef OS_LINUX
+  void UseSampleRateTheDeviceSupports(uint32_t outputID);
   void ReportAudioOff(const char* reason);
 
   WDL_String mAudioOffReason;

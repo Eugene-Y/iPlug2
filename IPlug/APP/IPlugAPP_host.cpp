@@ -17,6 +17,7 @@
 
 #ifdef OS_LINUX
 #include <gdk/gdkx.h>
+#include <algorithm>
 #include <filesystem>
 #include "IPlugPaths.h"
 #endif
@@ -539,6 +540,8 @@ bool IPlugAPPHost::TryToChangeAudio()
   }
   else if (inputID && outputID)
   {
+    UseSampleRateTheDeviceSupports(outputID.value());
+
     if (!InitAudio(inputID.value(), outputID.value(), mState.mAudioSR, mState.mBufferSize))
     {
       ReportAudioOff("the device did not open");
@@ -567,6 +570,18 @@ static std::string WithoutRtAudioPrefix(const std::string& errorText)
   const auto classEnd = errorText.find("::");
   const auto messageStart = classEnd == std::string::npos ? std::string::npos : errorText.find(": ", classEnd);
   return messageStart == std::string::npos ? errorText : errorText.substr(messageStart + 2);
+}
+
+// A JACK server runs at one rate, and the settings start at 44100
+void IPlugAPPHost::UseSampleRateTheDeviceSupports(uint32_t outputID)
+{
+  const RtAudio::DeviceInfo info = mDAC->getDeviceInfo(outputID);
+  const std::vector<unsigned int>& rates = info.sampleRates;
+  if (rates.empty() || std::find(rates.begin(), rates.end(), mState.mAudioSR) != rates.end())
+    return;
+
+  mState.mAudioSR = info.preferredSampleRate ? info.preferredSampleRate : rates.front();
+  UpdateINI();
 }
 
 void IPlugAPPHost::ReportAudioOff(const char* reason)

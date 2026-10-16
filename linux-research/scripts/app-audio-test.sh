@@ -13,6 +13,7 @@ pkill -x "$NAME"; sleep 0.5
 
 # A fresh HOME without ~/.config: the APP must create its settings folder itself.
 export HOME="$OUT/home"; rm -rf "$HOME"; mkdir -p "$HOME"
+export TMPDIR="$OUT" # where Debug > Save Screenshot writes
 # Only the settings files are evidence; Mesa's shader cache and PulseAudio's auth cookie are not
 tidy_home() { rm -rf "$HOME/.cache" "$HOME/.config/pulse"; }
 trap tidy_home EXIT
@@ -63,6 +64,23 @@ if P=$(win 'Preferences.*') && [ -n "$P" ]; then
 else
   fail "Preferences did not open"
 fi
+
+# Menu shortcuts reach the APP also when the plug-in UI has the keyboard focus (it passes on unused keys)
+read -r X Y < <(client_origin "$(win "$NAME")")
+slow_click $((X + 500)) $((Y + 300))
+xdotool key ctrl+comma; sleep 1.5
+if P=$(win 'Preferences.*') && [ -n "$P" ]; then
+  pass "Ctrl+, from the plug-in UI opens Preferences"
+  xdotool windowactivate --sync "$P"; xdotool key Escape; sleep 1
+else
+  fail "Ctrl+, did not open Preferences"
+fi
+rm -f "$OUT"/*_screenshot_*.png
+slow_click $((X + 500)) $((Y + 300))
+xdotool key ctrl+shift+s; sleep 2
+S=$(ls "$OUT"/*_screenshot_*.png 2>/dev/null | head -1)
+[ -n "$S" ] && pass "Ctrl+Shift+S saved $(basename "$S") ($(identify -format '%wx%h' "$S"))" || fail "Ctrl+Shift+S saved no screenshot"
+B=$(win 'Screenshot Saved'); [ -n "$B" ] && { xdotool windowactivate --sync "$B"; xdotool key Escape; sleep 0.8; }
 
 menu_item 1
 for _ in $(seq 50); do kill -0 "$APID" 2>/dev/null || break; sleep 0.1; done

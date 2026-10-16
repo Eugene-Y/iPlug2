@@ -1,10 +1,10 @@
 ok: JACK: IPlugInstrument:outport 0 IPlugInstrument:outport 1 
 ok: note on JACK moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
-ok: pw-top on JACK: R 75 0 0 28.1us 59.0us 0.00 0.00 0 + IPlugInstrument
+ok: pw-top on JACK: R 59 0 0 89.2us 159.0us 0.00 0.01 0 + IPlugInstrument
 ok: Preferences 'Preferences'
 ok: PulseAudio plays, title 'Preferences'
 ok: note on PulseAudio moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
-ok: pw-top on PulseAudio: R 75 1024 48000 24.2us 12.5us 0.00 0.00 0 F32LE 2 48000 + IPlugInstrument
+ok: pw-top on PulseAudio: R 59 1024 48000 24.5us 14.0us 0.00 0.00 0 F32LE 2 48000 + IPlugInstrument
 ok: JACK client gone after switching to PulseAudio
 ok: back on JACK, title 'Preferences'
 ok: JACK ports back
@@ -12,6 +12,6 @@ ok: OK closes Preferences
 ok: settings.ini: driver=1 (JACK)
 ok: note after the switch moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
 ok: File > Quit with JACK running, exit 0
-  * 1    Thread 0xfffff7e35020 (LWP 34713) "IPlugInstrument" __GI_exit (status=0) at ./stdlib/exit.c:138
-    19   Thread 0xffffeefd6e20 (LWP 34734) "gmain"           0x0000fffff7110bdc in __GI___poll (fds=0xaaaaab0adde0, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+  * 1    Thread 0xfffff7e35020 (LWP 44415) "IPlugInstrument" __GI_exit (status=0) at ./stdlib/exit.c:138
+    6    Thread 0xfffff5536e20 (LWP 44423) "gmain"           0x0000fffff7110bdc in __GI___poll (fds=0xaaaaab014dd0, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
 ok: 2 thread(s) at exit()

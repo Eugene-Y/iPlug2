@@ -152,3 +152,35 @@ decision (A2/A3); evidence `evidence/t004/` (Docker `docker-*`, VM `vm-*`, macOS
 
 **User decision (2026-10-16):** the shared-code fixes in 013328ba4 (A2, A3) stay as they are, for all platforms. The
 VM Pulse cookies in history (m4) are to be dealt with later.
+
+### 2026-10-17 — the "small things" (user: fix them)
+- **Menu shortcuts** (`Ctrl+,` Preferences, `Ctrl+Shift+S` screenshot, Debug `Ctrl+E/B/D/F`) now work, also with the
+  focus in the plug-in UI. Why they did not: the editor passes unused keys on with `XSendEvent`, and GDK3 ignores
+  synthetic keys (notes/13 finding 3); SWELL generic has no accelerator tables either. Now the shortcuts are read from
+  the menu's item texts (after the tab), grabbed on the main window with `XGrabKey` (also with Caps/Num Lock) and
+  caught by a GDK event filter, which posts the item's `WM_COMMAND` unless a modal dialog has the window disabled.
+  Like mac/win, a menu shortcut wins over the plug-in UI. No IGraphicsLinux change.
+- **Save Screenshot** on Linux: the plug-in UI's own X window (largest child of SWELL's window) via `XGetImage`, PNG via
+  stb_image_write (same as Windows). `--screenshot <path>` works on Linux too (exits after saving). Release builds keep
+  the Debug menu with only "Save Screenshot", as on macOS; leading and trailing separators are trimmed (macOS trims
+  only trailing ones, so its menu starts with a separator: not changed there).
+- **SWELL's settings** go to `~/.config/<BUNDLE>/libSwell.ini` (`SWELL_ExtendedAPI("INIFILE")`, which also reads an
+  optional `libSwell.colortheme` beside it), no longer `~/.libSwell.ini`.
+- Linux code of the APP moved to new files `IPlug/Linux/IPlugAPPLinux.{h,cpp}` (signals, shortcuts, screenshot, SWELL
+  settings); `IPlugAPP_main.cpp` keeps thin calls. `Scripts/cmake/APP.cmake` adds the file in its Linux branch only.
+- **A1, A4** fixed in shared code, commit b77df0c67 (separate, like 013328ba4): no null deref when `Init()` fails; a
+  plug-in without inputs no longer needs an input device (an output-only JACK server: Docker `jackd -C 0 -P 2`).
+- Found while testing A4, Linux-only fix: the settings start at 44100 and a JACK server runs at one rate, so a first
+  switch to JACK failed ("requested sample rate (44100) is different than the JACK server rate (48000)"). If the
+  output device does not list the saved rate, the APP takes the device's preferred rate and saves it; Preferences
+  shows it after Apply.
+- **ALSA duplex through PipeWire**: not fixable in our code. The xruns are a per-start lottery, not a buffer-size
+  matter: buffer 512 gave 438, 0, 359 xruns in 10 s on three starts, 256 gave 0 and 188, 1024 gave 17, 2048 gave 0
+  (`evidence/t004/vm-xruns-IPlugEffect-alsa-*`). Without `snd_pcm_link` RtAudio starts capture and playback with a
+  random phase. PulseAudio stays the default; ALSA stays selectable.
+- Tests: Docker `app-audio-test.sh` (now also `Ctrl+,` from the plug-in UI and `Ctrl+Shift+S`, SIGTERM over the
+  startup box) PASS, `app-switch-test.sh` PASS; Release build: Debug menu = "Save Screenshot" only
+  (`evidence/t004/minor/release-debug-menu-crop.png`), `--screenshot` (`minor/cli-screenshot.png`). VM: shortcuts and
+  `Ctrl+Shift+S` under GNOME PASS (`vm-default-instrument`), `vm-jack-pulse` PASS, `vm-midi` PASS. One `vm-jack-pulse`
+  run failed (no JACK client 5 s after start, then the script hung); not reproduced in the next run nor in
+  `vm-jack-start`. macOS: CMake `IPlugInstrument-app` rebuilds and links, no warnings in the APP files.
