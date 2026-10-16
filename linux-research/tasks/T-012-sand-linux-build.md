@@ -1,7 +1,7 @@
 # T-012 — Sand: Linux CMake build (CLAP, VST3, APP)
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** in-progress
+- **Owner:** T-012 instance (2026-10-17)
 - **Branches/worktrees:**
   - Sand repo (`/Volumes/Storage/code/hvoya/Sand`, own git repo, `master`): create a local-only branch `linux-experiment` in a new worktree `/Volumes/Storage/code/hvoya/Sand-linux` (`git -C /Volumes/Storage/code/hvoya/Sand worktree add ../Sand-linux -b linux-experiment master`). Never push it. Never touch the main checkout (its untracked `Media/` and any WIP stay as they are).
   - iPlug2: `linux/T-012` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-012`, only if iPlug2 changes are needed.
