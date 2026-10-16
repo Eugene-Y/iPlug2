@@ -122,3 +122,26 @@ say "loads the presets as kits" instead of "configures" (`notes/20-ide-research.
 - Docs written: yes, and the install list is verified complete on a pristine image. §6 is wrong (M1).
 
 Verdict: changes requested
+
+## Round 2 (2026-10-16, re-check of d3d1ac762)
+
+| Round-1 item | Re-check | Status |
+|---|---|---|
+| M1 stale CMakeCache in duplicates | Docker: built `Examples/IPlugEffect` with `linux-debug` (now `build-linux/linux-debug`), `duplicate.py IPlugEffect T005R2Fx Mfr` in tree. The duplicate has no build folder, `cmake --preset linux-debug` gives rc 0, and the build produces APP/CLAP/VST3 (154 steps). `git status` shows the duplicate's `build-linux/` as ignored. Duplicate deleted afterwards. | fixed |
+| M2 `linux_audio_mode` | `scripts/vm/README.md` gives 0 JACK / 2 Dummy / 3 PulseAudio, which matches my round-1 measurements. The `reaper-up.sh:22` comment now gives the WHY (jackd unused under mode 2, needed for mode 0), `vm-provision.sh:6` says Dummy Audio, and the Log line is struck through and corrected. | fixed |
+| m1 `-newinst` | Both workspaces (`:75`, `:92`) and the Qt Creator args in the docs. Docker: a REAPER already running, then `gdb … reaper -newinst -new reaper-open-fx.lua` exactly as in the workspace. 2 instances; `IPlugEffect::ProcessBlock` hit in the debugged one; editor open, built from d3d1ac7 (`evidence/t005/review2/`, screenshot looked at). | fixed |
+| m2 CMake Tools presets mode on mac/win | unchanged, recorded as the user's call in the Log | open (user decision) |
+| m3 REAPER path | docs: `/opt/REAPER` symlink, and that workspace settings beat user settings | fixed |
+| m4 Qt Creator evidence | notes/20 now says the CMake output was not captured | fixed |
+| nits | docs say `reaper/mediafx`; hidden preset renamed `linux-common` | fixed |
+
+Also checked:
+- **mac presets:** `cmake --list-presets` at root is still identical to `hvoya-linux`.
+- **JSON:** the changed preset and workspace files parse.
+- **`.gitignore` coverage of `build-linux`:** covered by root `build-*`, `Examples/*/build*`, and `gitignore_template`'s `build-*`.
+- **T-011 task file:** it is self-contained. It correctly drops the `build/` item and keeps the out-of-tree `../..` rewrite, Gneiss and the mac before/after diff as acceptance.
+
+New nits, no action needed: `Documentation/linux-development.md:84` is now one long line (the `reaper/mediafx` edit).
+The committed `evidence/t005/review/run.sh` still names the old `build/linux-debug` path. It is a record of round 1, so leave it.
+
+Verdict: accept

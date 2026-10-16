@@ -123,3 +123,12 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
 - **Open, user's call:**
   - **m2**: the examples' `CMakePresets.json` puts CMake Tools on mac/win into presets mode with an empty list.
 - Also: the T-004 task file got a pointer to the APP's RtAudio warning, and `tasks/T-011-duplicate-templates.md` was written (the user asked for every rough edge to be tracked).
+
+### Review round 2 (2026-10-16, fresh-context reviewer)
+- **Verdict: accept.** Details: `notes/21-review-T-005.md` §"Round 2".
+- Re-checked in Docker:
+  - M1: build the template, duplicate it in tree; the duplicate configures and builds, and copies no build folder.
+  - m1: `-newinst` with a REAPER already running gives 2 instances, and the ProcessBlock breakpoint hits in the debugged one.
+- M2, m3, m4 and the nits: fixed in the files.
+- m2 stays open as the user's call.
+- No new findings beyond two cosmetic nits.
