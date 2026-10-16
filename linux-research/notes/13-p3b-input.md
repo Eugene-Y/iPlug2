@@ -13,7 +13,7 @@ IPlugEffect CLAP Debug builds, `evidence/p3b/review-fixes/macos/`, diff against 
 |---|---|
 | Keys | `IGraphicsLinuxKeys.h`. Keysym → `kVK_*` with Windows semantics (what `ITextEntryControl` and the keyboard controls test): keypad by NumLock state, F1–F24, modifiers. Letters and digits get the VK of the **physical** key, searched across XKB groups: Ctrl+C is `'C'` in a Russian layout too, Shift+1 is `'1'`. Text: `Xutf8LookupString` through Xlib's built-in input method (compose/dead keys, any keysym → UTF-8), else Latin-1/Unicode keysyms; with Ctrl/Alt the unmodified character (as mac's `charactersIgnoringModifiers`), control characters as the VK only; one `IKeyPress` per character an IM commits. `XkbSetDetectableAutoRepeat` (per connection). Locale and `XMODIFIERS` are not touched: process-wide, the host's |
 | Routing | `KeyPress`/`KeyRelease` → `IGraphics::OnKeyDown/OnKeyUp` at the pointer position. Keys pressed during an edit or an open menu are always kept (Escape/Return must not reach the host). Unused real keys are sent on to the parent window (`XSendEvent`); their releases follow their presses (a 256-bit kept-keys set). Synthetic keys (sent by a host) are never sent back: loops |
-| Focus | Plug-ins: the host keeps the X focus outside text entry. During an edit the editor takes it (`XSetInputFocus`, after the opening click has settled, see finding 2), restores the previous focus on commit/Escape, and ends the edit (commit) when the focus leaves for another top-level window. APP: focus on click (the editor is the app's content) |
+| Focus | Plug-ins: the host keeps the X focus outside text entry. During an edit or an open menu the editor takes it (`XSetInputFocus` at the opening click's release, with its timestamp; see finding 2), restores the previous focus on commit/Escape, and ends the edit (commit) when the focus leaves for another top-level window. APP: focus on click, by the same request (the editor is the app's content) |
 | XEmbed | `_XEMBED`: `EMBEDDED_NOTIFY` remembers the embedder, which then also gets `REQUEST_FOCUS` when an edit takes the focus; `FOCUS_OUT` ends an edit. `WINDOW_ACTIVATE` etc. ignored. Nothing depends on XEmbed (REAPER sends none) |
 | Text entry | `CreatePlatformTextEntry` attaches IGraphics' `ITextEntryControl` for this one edit ("stand-in") and returns at once; the control commits later (Return, a click outside, focus loss) and is removed after the edit and after any menu has collapsed, with mouse-over/capture cleared first. A stand-in the plug-in removed itself (`RemoveAllControls` in a layout, `Remove*Control`) is only forgotten; an edit whose control vanished is cleared (`ClearInTextEntryControl`), or every key would count as an edit's. No GTK. `ForceEndUserEdit` dismisses. Ctrl+V in an edit reads the clipboard **asynchronously** and replays the key (finding 4); further Ctrl+V while one is pending are dropped |
 | Menus | `CreatePlatformPopupMenu` attaches `IPopupMenuControl` likewise (`isAsync = true`), removed once collapsed. An open menu (stand-in or the plug-in's own) takes the keyboard focus like an edit, so Escape reaches it: dismissed without a choice. Closing the editor with a menu open completes it first (no choice), so the gesture its owner began on the host is ended. A focus loss to another window dismisses an expanded menu, then commits an edit |
@@ -39,6 +39,13 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
    button release, with up to two retries when it is moved to an ancestor within 500 ms. 4/4 and every later full
    run kept the focus for the whole edit (`focuswatch`, trace build). Once we hold it, REAPER/GDK leave it alone
    (`xdotool windowfocus` test: stays).
+   **Since T-008** the request goes out at once after the release, with the release's server time: the window
+   manager's click-to-focus and GDK's proxy move carry the press's time and lose when they arrive later. A press and
+   release in the same millisecond tie; then a FocusOut into the host's own top-level within 500 ms asks again
+   (CurrentTime, at most twice), and 150 ms after each request one check asks again if the focus is in the host's
+   window anyway: the old delay survives as that check. Every click while the editor wants the keys asks again
+   (openbox focuses the top-level on every click). Mutter, human-like clicks: 10/10 edits CLAP and VST3, no retry
+   needed; openbox with xdotool clicks: retries on most edits, all scripts pass (`evidence/t008/`).
 3. **Synthetic keys: REAPER takes them, GDK3 apps do not.** `xdotool key --window <container> space` starts
    REAPER's transport; the same to the APP's SWELL window (system GDK3) is ignored, while a real Escape closes the
    APP's dialog. So forwarding unused keys reaches the host in some hosts only. In the APP it costs SWELL's Escape
@@ -66,7 +73,9 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
    `XCheckIfEvent`). 3 MB from xclip arrives both ways [U].
 8. **Menus stay inside the editor.** `IPopupMenuControl::Expand` clamps panels to the IGraphics bounds (above or
    below the anchor, scrolling when too long), unlike native menus. A menu near the bottom of a small editor opens
-   upwards or scrolls; nothing is clipped by the window edge. Gneiss's platform menus become these.
+   upwards or scrolls; nothing is clipped by the window edge. Gneiss's platform menus become these. Since T-008 the
+   bounds are the editor's on-screen part (work area) when it is partly off screen, before every click and stand-in
+   menu (`SetMaxBounds`).
 
 ## Acceptance
 
@@ -104,11 +113,12 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
   face of the same family with the requested style ahead of the variable file when one is installed (measured with a
   fixture, `evidence/t008/vm/fc-variable*/`), and taking another family's static bold instead would change the look
   more than the missing weight does. Synthetic bold would need NanoVG changes.
-- Focus retries: after two retries `mHoldsFocus` means "requested", not "held"; keys then come only as the host
-  forwards them. Alternatives in notes/15.
-- A menu requested while a stand-in menu is still fading out (≈400 ms after a choice) is ignored by
-  `IPopupMenuControl::CreatePopupMenu` (it expands only when collapsed); its owner keeps `mInPopupMenu` and the
-  host gesture begun on its mouse down until the next menu. Same as a plug-in's own popup control on mac/win.
+- Focus retries: after the retries and the check `mHoldsFocus` means "requested", not "held"; keys then come only as
+  the host forwards them, until the next click into the editor asks again.
+- A menu requested while the previous one is still fading out (≈300 ms after a choice) is ignored by
+  `IPopupMenuControl::CreatePopupMenu`. Since T-008 a click ends the fade first, so a click-opened menu works; a
+  request without a click (key, timer) during the fade is still ignored, as with a plug-in's own popup control on
+  mac/win.
 - No SAVE_TARGETS hand-over to a clipboard manager: an orphaned text is readable in this process only.
 
 ## Review round 1 (notes/15)
