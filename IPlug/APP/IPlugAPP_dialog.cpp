@@ -44,12 +44,15 @@ void IPlugAPPHost::PopulateSampleRateList(HWND hwndDlg, RtAudio::DeviceInfo* inp
 
   std::vector<int> matchedSRs;
 
-  for (int i=0; i<inputDevInfo->sampleRates.size(); i++)
+  // A plug-in without inputs can run on an output-only device (see TryToChangeAudio)
+  const std::vector<unsigned int>& inputRates = inputDevInfo->sampleRates.empty() ? outputDevInfo->sampleRates : inputDevInfo->sampleRates;
+
+  for (int i=0; i<inputRates.size(); i++)
   {
     for (int j=0; j<outputDevInfo->sampleRates.size(); j++)
     {
-      if (inputDevInfo->sampleRates[i] == outputDevInfo->sampleRates[j])
-        matchedSRs.push_back(inputDevInfo->sampleRates[i]);
+      if (inputRates[i] == outputDevInfo->sampleRates[j])
+        matchedSRs.push_back(inputRates[i]);
     }
   }
 
