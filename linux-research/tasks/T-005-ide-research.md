@@ -90,6 +90,23 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
 - **For T-011:** `duplicate.py` in-tree works with the new files. Out-of-tree it copies `build/` (`DONT_COPY` lacks `build`) and does not rewrite `../..` in project-root files (notes/20 §"For T-011").
 - **For T-004:** APP under the debugger logs `RtApiAlsa::probeDeviceOpen: unable to synchronize input and output devices` at start (ALSA `default` = PipeWire). It still runs, with underruns while stopped in the debugger.
 
+### Review round 1 (2026-10-16, fresh-context reviewer)
+- Full text: `notes/21-review-T-005.md`. **Verdict: changes requested.**
+- Re-ran and PASS:
+  - mac preset list (identical to hvoya-linux) and `macos-ninja` configure;
+  - Docker IPlugControls `linux-debug` build;
+  - REAPER under gdb: `IPlugControls::ProcessBlock` hit, editor open;
+  - pristine ubuntu:24.04 build with only the docs' apt list.
+- Major:
+  - M1 — `build/<preset>` + `duplicate.py` (in-tree too) copies a stale CMakeCache, so the duplicate's `cmake --preset` fails. Suggested fix: binaryDir `build-linux/<preset>`.
+  - M2 — `scripts/vm/README.md` edit is wrong: `linux_audio_mode=2` is Dummy Audio, 0 is JACK (verified in Docker). Log line 82 above is wrong too.
+- Minor:
+  - m1 — add `-newinst` (a running REAPER swallows the debug launch);
+  - m2 — the examples' `CMakePresets.json` puts CMake Tools on mac/win into an empty presets mode;
+  - m3 — `iplug2.reaperPath` override needs a tracked-file edit;
+  - m4 — 31-qtcreator-configured.png doesn't show a configure.
+- Plus nits.
+
 ### Cross-platform findings
 - (low, pre-existing upstream) `Examples/duplicate.py` with an output path outside the iPlug2 tree leaves `IPLUG2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.."` in the copied `CMakeLists.txt`: `newroot` is relative to `config/`, and only the xcconfig's `IPLUG2_ROOT` value is replaced. CMake builds of such a duplicate fail on mac/win too. Repro: `python3 duplicate.py IPlugEffect MyFx Mfr /tmp/x`, then `grep IPLUG2_DIR /tmp/x/MyFx/CMakeLists.txt`.
 
