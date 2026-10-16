@@ -51,6 +51,11 @@ Update it at every merge or user decision.
   - A guest reboot then hangs at shutdown, so the user must **Force Stop + Start in UTM**. If UTM itself is stuck: Force Quit UTM (and any leftover `QEMULauncher`/`qemu-system-aarch64`).
   - **Don't switch the VM to `virtio-gpu-pci` (no GL).** Tried 2026-10-16: GNOME then shows only a cursor on black (DRI3 error), so keep `virtio-gpu-gl-pci`.
   - **Avoid needless display-mode or scale changes on the VM.** They triggered the hang in T-007.
+  - **It hangs under our GL test load.** It happened 3 times by 2026-10-16; the third time, 6 minutes after a fresh boot, during T-008's VM batch.
+    - Keep VM runs short and light: a few opens and interactions.
+    - Do churn and other GL-heavy loops only in Docker (llvmpipe).
+    - Check `timeout 8 xdpyinfo` before and after each VM batch.
+    - Open question, worth a task later: does our GL usage (context per editor, swap interval 0, open/close churn) trigger a virgl/ANGLE fence hang? Real drivers may not care, but it is worth a probe with a GL-only loop.
   - Agents must kill everything they start on the VM (APP, REAPER, xclip, jackd) when they finish.
 - The VM (UTM, 192.168.64.2) is unreachable when the Mac slept or UTM is stopped; there is no `bridge100`. Ask the user. Key: `~/.ssh/claude_linux_vm`. Never use the password.
 - Docker: colima. If it's down: `colima start` with the mounts in AGENTS §3.
