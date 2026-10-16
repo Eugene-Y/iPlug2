@@ -108,7 +108,8 @@ the audio settings" *before* any window. A second segfault: with no ALSA sequenc
 
 **Not done / open**
 - JACK MIDI: MIDI stays on the ALSA sequencer for every driver. On PipeWire that reaches the same graph; a pure
-  jackd setup needs a2jmidid. Worth a small follow-up if wanted.
+  jackd setup needs a2jmidid. Split out as **T-022** (`T-022-app-jack-midi.md`, low priority; the coordinator adds it
+  to the board).
 - `Ctrl+,` (Preferences) and the Debug-menu shortcuts are shown but do nothing: SWELL generic has no accelerator
   tables and the Linux loop does not translate them.
 - "Save Screenshot" (Debug builds) has no Linux implementation (gap for T-016).
