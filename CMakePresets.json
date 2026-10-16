@@ -5,6 +5,9 @@
     "minor": 21,
     "patch": 0
   },
+  "include": [
+    "Scripts/cmake/Linux/CMakePresets-linux.json"
+  ],
   "configurePresets": [
     {
       "name": "base",
@@ -172,20 +175,20 @@
         "rhs": "Linux"
       },
       "cacheVariables": {
-        "IGRAPHICS_RENDERER": "GL3"
+        "IGRAPHICS_RENDERER": "GL2"
       }
     },
     {
       "name": "linux-ninja",
       "displayName": "Linux Ninja",
-      "description": "Linux build with Ninja generator (NanoVG/GL3)",
+      "description": "Linux build with Ninja generator (NanoVG/GL2)",
       "inherits": "base-linux",
       "generator": "Ninja"
     },
     {
       "name": "linux-make",
       "displayName": "Linux Unix Makefiles",
-      "description": "Linux build with Unix Makefiles generator (NanoVG/GL3)",
+      "description": "Linux build with Unix Makefiles generator (NanoVG/GL2)",
       "inherits": "base-linux",
       "generator": "Unix Makefiles"
     },
