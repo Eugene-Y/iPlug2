@@ -48,11 +48,15 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
    starts an async read and replays the key when the text is in; `host-clipboard-probe.sh` pastes REAPER's "77"
    in CLAP and VST3 [R]. Other callers of `GetTextFromClipboard` (Gneiss's rig paste, the text entry's
    right-click Paste) still block: fine for other processes and other editors of ours, empty for host-owned text.
-5. **REAPER's VST3 context menu does not show on Linux.** Right click on a parameter control reaches
-   `IComponentHandler3::createContextMenu`, and REAPER's `IContextMenu::popup` returns after ≈0.1 s without a
-   menu (gdb at the call), with or without our implicit pointer grab (tried an ungrab on right press: no change,
-   so not kept). No nested loop, so Stillwell's close deferral during host popups has nothing to guard in REAPER.
-   Re-check grabs/nesting in hosts whose menu does show (P10).
+5. **REAPER's VST3 context menu shows with a held right click** (corrected by T-008; this first read "does not
+   show"). Right click on a parameter control reaches `IComponentHandler3::createContextMenu`, and REAPER's
+   `IContextMenu::popup` opens a GTK menu in a **nested modal loop**: it returns when an item is chosen, and the
+   editor gets no `Draw` meanwhile. REAPER runs its own actions (close/delete FX) only after the menu has closed
+   and our `OnMouseDown` has returned, so no close-during-popup guard is needed for REAPER. The first test used
+   `xdotool click 3`, whose release lands in the same millisecond as the press; GTK takes that release as a
+   choice outside the menu and closes it at once (`popup` returned after ≈0.1 s). With the button held 150 ms
+   the menu shows and "Show track envelope" creates the envelope, in Docker (`evidence/t008/ctx-menu-docker-vst3/`)
+   and on the VM (notes/14 part 2, row 8). Re-check grabs/nesting in other hosts (P10).
 6. **NanoVG cannot draw CFF fonts.** Its stb_truetype is v1.09; fontconfig maps "Times New Roman" to Nimbus Roman
    (`.otf`, CFF) here, and `LoadAPIFont` refused it, so IGraphicsTest fell back to its bundled font. Fonts by name
    now take the best TrueType candidate (DejaVu Serif here), `fonts-by-name-igraphicstest.txt` [R].
@@ -93,7 +97,7 @@ NEEDED is unchanged: `libX11.so.6` + libc/libm (`inspect.txt`); GLIBC floor 2.34
 - While an edit is open in REAPER and the user clicks into REAPER's own window, the focus may stay with the edit
   (no FocusOut leaves the host); Return/Escape/a click in the editor end it.
 - Blocking clipboard reads of host-owned text return nothing (finding 4); serving large texts (INCR) is not done.
-- No tooltips. Host context menus: see finding 5.
+- No tooltips. Host context menus: see finding 5 (REAPER's blocks the editor's drawing while open).
 - Fonts by name: TrueType outlines only until NanoVG's stb_truetype is updated.
 - Focus retries: after two retries `mHoldsFocus` means "requested", not "held"; keys then come only as the host
   forwards them. Alternatives in notes/15.
