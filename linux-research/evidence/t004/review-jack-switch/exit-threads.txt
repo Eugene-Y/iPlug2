@@ -1,0 +1,90 @@
+Breakpoint 1 at 0xa65e0
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0xfffff527ede0 (LWP 559)]
+[New Thread 0xfffff5076de0 (LWP 560)]
+[Thread 0xfffff5076de0 (LWP 560) exited]
+[Thread 0xfffff527ede0 (LWP 559) exited]
+
+BEGIN IPLUG CHANNEL IO PARSER --------------------------------------------------
+Channel I/O #1 - 0-2
+               - input bus count: 0, output bus count 1
+               - channel count on output bus 1: 2
+               - input channel count across all buses: 0, output channel count across all buses 2
+
+1 I/O configs detected
+Total # in chans: 0, Total # out chans: 2 
+
+END IPLUG CHANNEL IO PARSER --------------------------------------------------
+Reading ini file from /Volumes/Storage/code/IPlug2-T-004/linux-research/evidence/t004/review-jack-switch/home/.config/IPlugInstrument/settings.ini
+
+RtAudio Version 6.0.1
+MidiInAlsa::initialize: error creating ALSA sequencer client object.
+
+
+MidiInAlsa::initialize: error creating ALSA sequencer client object.
+
+[New Thread 0xfffff527ede0 (LWP 561)]
+[New Thread 0xfffff5076de0 (LWP 562)]
+[Thread 0xfffff5076de0 (LWP 562) exited]
+[Thread 0xfffff527ede0 (LWP 561) exited]
+[New Thread 0xfffff527ede0 (LWP 563)]
+[New Thread 0xfffff5076de0 (LWP 564)]
+[Thread 0xfffff5076de0 (LWP 564) exited]
+[Thread 0xfffff527ede0 (LWP 563) exited]
+[New Thread 0xfffff527ede0 (LWP 565)]
+[New Thread 0xfffff5076de0 (LWP 566)]
+[New Thread 0xfffff4fd4de0 (LWP 567)]
+[New Thread 0xfffff4f44de0 (LWP 568)]
+[New Thread 0xffffe975ede0 (LWP 569)]
+[New Thread 0xffffe8f4ede0 (LWP 570)]
+[New Thread 0xffffd6e7ede0 (LWP 571)]
+[New Thread 0xffffd666ede0 (LWP 572)]
+[New Thread 0xffffd5e5ede0 (LWP 573)]
+[New Thread 0xffffd564ede0 (LWP 574)]
+[New Thread 0xffffd4e3ede0 (LWP 575)]
+[New Thread 0xffffbfffede0 (LWP 576)]
+[New Thread 0xffffbf7eede0 (LWP 577)]
+[New Thread 0xffffbefdede0 (LWP 578)]
+[New Thread 0xffffbe7cede0 (LWP 579)]
+[New Thread 0xffffbdfbede0 (LWP 580)]
+[New Thread 0xffffbd7aede0 (LWP 581)]
+[Thread 0xffffbdfbede0 (LWP 580) exited]
+[Thread 0xffffbd7aede0 (LWP 581) exited]
+[Thread 0xffffbe7cede0 (LWP 579) exited]
+[Thread 0xffffbefdede0 (LWP 578) exited]
+[Thread 0xffffbf7eede0 (LWP 577) exited]
+[Thread 0xffffbfffede0 (LWP 576) exited]
+[Thread 0xffffd4e3ede0 (LWP 575) exited]
+[Thread 0xffffd564ede0 (LWP 574) exited]
+[Thread 0xffffd5e5ede0 (LWP 573) exited]
+[Thread 0xffffd666ede0 (LWP 572) exited]
+[Thread 0xffffd6e7ede0 (LWP 571) exited]
+[Thread 0xffffe8f4ede0 (LWP 570) exited]
+[Thread 0xffffe975ede0 (LWP 569) exited]
+[Thread 0xfffff4fd4de0 (LWP 567) exited]
+[Thread 0xfffff5076de0 (LWP 566) exited]
+[Thread 0xfffff527ede0 (LWP 565) exited]
+
+Thread 1 "IPlugInstrument" hit Breakpoint 1, 0x0000fffff706f2f4 in exit () from /lib/aarch64-linux-gnu/libc.so.6
+  Id   Target Id                                         Frame 
+* 1    Thread 0xfffff7e4eac0 (LWP 557) "IPlugInstrument" 0x0000fffff706f2f4 in exit () from /lib/aarch64-linux-gnu/libc.so.6
+  11   Thread 0xfffff4f44de0 (LWP 568) "gmain"           0x0000fffff7110bdc in poll () from /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 11 (Thread 0xfffff4f44de0 (LWP 568) "gmain"):
+#0  0x0000fffff7110bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff7ba1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000fffff7b3ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+
+Thread 1 (Thread 0xfffff7e4eac0 (LWP 557) "IPlugInstrument"):
+#0  0x0000fffff706f2f4 in exit () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70584c8 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fffff7058598 in __libc_start_main () at /lib/aarch64-linux-gnu/libc.so.6
+trying to start audio stream @ 48000 sr, buffer size 256
+indev = system
+outdev = system
+inputs = 0
+outputs = 2
+IGraphics NanoVG @ 60 FPS
+[Thread 0xfffff4f44de0 (LWP 568) exited]
+[Inferior 1 (process 557) exited normally]
