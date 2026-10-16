@@ -1,0 +1,28 @@
+# worktree rangerrick at 03d3c1af1 (HEAD); uncommitted diff saved before removal 2026-10-16
+diff --git a/Scripts/cmake/APP.cmake b/Scripts/cmake/APP.cmake
+index d0c95a364..ac7574c2b 100644
+--- a/Scripts/cmake/APP.cmake
++++ b/Scripts/cmake/APP.cmake
+@@ -129,7 +129,7 @@ if(NOT TARGET iPlug2::APP)
+     target_sources(iPlug2::APP INTERFACE ${IPLUG2_SWELL_SRC})
+ 
+     find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(GDK3 REQUIRED gdk-3.0)
++    pkg_check_modules(GDK3 REQUIRED gdk-3.0 gio-2.0)
+     pkg_check_modules(FREETYPE REQUIRED freetype2)
+     pkg_check_modules(ALSA REQUIRED alsa)
+     pkg_check_modules(JACK REQUIRED jack)
+diff --git a/WDL/swell/swell-dlggen.h b/WDL/swell/swell-dlggen.h
+index ecfc8f85e..418c71761 100644
+--- a/WDL/swell/swell-dlggen.h
++++ b/WDL/swell/swell-dlggen.h
+@@ -112,9 +112,7 @@ struct SWELL_DlgResourceEntry
+ #define SWELL_DLG_WS_NOAUTOSIZE 8
+ #define SWELL_DLG_WS_OPAQUE 16
+ #define SWELL_DLG_WS_DROPTARGET 32
+-#ifdef SWELL_TARGET_OSX
+ #define SWELL_DLG_WS_DEFAULT_SCALING 128
+-#endif
+      
+ typedef struct SWELL_DialogResourceIndex
+ {
