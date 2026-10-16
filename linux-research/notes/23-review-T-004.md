@@ -107,3 +107,95 @@ separate shared-code commit awaiting the user's decision).
 
 ## Verdict
 **approve with minor fixes** (m1–m3 in code/comments; m4 for the coordinator).
+
+## Round 2
+
+Reviewer: fresh-context subagent. Commits: b77df0c67 (shared: A1, A4) and 05cf72aa4 (Linux: shortcuts, screenshot,
+SWELL INIFILE, JACK rate). Docker only (container `t004r2`, build `build/t004r2-debug`), no VM.
+
+### What I re-ran
+
+| Run | Result | Evidence |
+|---|---|---|
+| Debug build `IPlugInstrument-app` | PASS, no warnings | `build/t004r2-debug` |
+| `app-audio-test.sh` (no device, fresh HOME) incl. `Ctrl+,` from the plug-in UI, `Ctrl+Shift+S`, signals | PASS 11/11 | `evidence/t004/review2-nodev` |
+| `jackd -d dummy -r 48000 -C 0 -P 2`, settings `[audio] driver=1` only | no "Audio" box, `IPlugInstrument:outport 0/1` connected, INI rewritten with `sr=48000` | `review2-extra/01-jack-start.png`, `stderr-jack.txt` |
+| `Ctrl+,` with Preferences open (focus in the dialog; then focus forced on the disabled main window, plus `Ctrl+Shift+S`) | one Preferences, no screenshot, APP alive | (console output; `02-jack-prefs.png`) |
+| Pulse (no server) at 44100 → Preferences → JACK → Apply → Cancel | see m5 | `03-driver-combo.png`, `04-after-apply.png`, `stderr-cancel.txt` |
+| Debug > Save Screenshot clicked in the menu (Xvfb + openbox, no compositor) | see m6 | `05-debug-menu.png`, `06-menu-screenshot.png` |
+| `--screenshot <path>` | exit 0, full 1024x669 UI | `07-cli-screenshot.png` |
+
+Screenshots I opened: all of mine, and the worker's `minor/release-debug-menu-crop.png` (Debug menu = "Save
+Screenshot" only, no stray separator).
+
+### b77df0c67 (shared code)
+
+- `!mDAC` guard: reached on mac/win only where the old code dereferenced null (Init() returned before
+  `TryToChangeAudioDriverType`). Behaviour change is crash → silent "no audio"; flagged in the commit. OK.
+- A4: `InitAudio` passes `iParams` only when `nChannels > 0` (`IPlugAPP_host.cpp:754`), and `nChannels` is
+  `MaxNChannels(kInput)`, the same value as `needsInputDevice`. So `inputID = outputID` is only a placeholder that
+  RtAudio never sees (CoreAudio, DS, ASIO alike; it only appears in a `DBGMSG`). ASIO already took the output's ID.
+  Effects (inputs > 0) follow the old path exactly. The only mac/win change is the claimed one: an instrument with
+  no input device now starts audio instead of "Please check the audio settings". OK.
+
+### 05cf72aa4 — shortcuts
+
+- The grab activates only while the focus is the SWELL main window or a descendant (the plug-in's X window), so
+  keys typed in Preferences or a message box are untouched; with the main window disabled the filter swallows
+  the key and posts nothing (verified above).
+- With XInput2 GDK selects no core key events, so the filter sees only grabbed keys and synthetic (`XSendEvent`)
+  ones; it cannot eat normal keys of other windows. KeyRelease is swallowed with the same match, consistent.
+- A text entry in the plug-in UI loses exactly these combos (the grab wins), as on mac/win. Acceptable.
+- GdkWindow recreation: SWELL destroys a top-level's GdkWindow only when it is hidden
+  (`swell_oswindow_manage`, `swell-generic-gdk.cpp:596-603`); the APP never hides the main window, and doing so
+  would also destroy the plug-in's child X window. Not a practical risk.
+- `ParseShortcut`: `,` → `XK_comma` (0x2c), `Ctrl+Shift+S` → `s` + Shift, correct.
+
+### Findings
+
+#### Blocker / Major
+None.
+
+#### Minor
+- **m5** `IPlug/APP/IPlugAPP_host.cpp:584` — `UseSampleRateTheDeviceSupports` calls `UpdateINI()` from inside
+  the Preferences dialog, so Apply writes the *uncommitted* dialog state (driver, devices, rate) to the INI and a
+  later Cancel does not undo it. Reproduced: INI `driver=2 sr=44100` → choose JACK → Apply → INI `driver=1
+  sr=48000` → Cancel: the running state goes back to PulseAudio (no JACK ports), the INI stays JACK/48000, so the
+  next start uses the cancelled driver. (The upstream `resetToDefault` branch has the same pattern but needs a
+  vanished device; this one fires on every first switch to JACK.) Fix: drop the `UpdateINI()` here — the rate is
+  re-derived on each start and OK already saves the INI.
+- **m6** `IPlug/Linux/IPlugAPPLinux.cpp:231-246` + `IPlugAPP_dialog.cpp:749` — Debug > Save Screenshot chosen
+  from the menu on an X server without a compositor captures a black rectangle where the menu was: `XGetImage`
+  runs before the plug-in has repainted the exposed area (`06-menu-screenshot.png`). The keyboard path and
+  `--screenshot` are fine; composited desktops (GNOME/KDE) are fine. Fix: on Linux defer the capture (e.g. a
+  ~200 ms timer, as `--screenshot` already does), or say in the Log that it needs a compositor.
+- **m7** (cross-platform finding, report — shared code) `IPlug/APP/IPlugAPP_dialog.cpp:56-63` —
+  `PopulateSampleRateList` lists only rates common to input *and* output device; with no input devices
+  (`mAudioInputDevIDs` empty) the input info is empty and the Sampling Rate combo stays empty
+  (`02-jack-prefs.png`, `04-after-apply.png`). A4 makes this case reachable on mac/win too (Mac mini without a
+  microphone). The task Log's "Preferences shows it after Apply" is therefore not true for an output-only device;
+  correct the Log and add it to the cross-platform findings.
+
+#### Nit
+- **n6** `IPlug/Linux/IPlugAPPLinux.cpp:204-221` — `XQueryTree`/`XGetWindowAttributes` in `LargestChildWindow` run
+  outside the GDK error trap; an untrapped X error is fatal in GDK3. Practically unreachable (the only child is
+  owned by the same thread), but moving `gdk_x11_display_error_trap_push` above the call costs nothing.
+- **n7** `IPlug/Linux/IPlugAPPLinux.h:28-33` — "Items removed from the menu … take their shortcuts with them" holds
+  only for removals before `SetMenuShortcuts` (grabs are taken once, never refreshed); "Save the window's client
+  area" — it saves the largest child X window and fails when there is none (no IGraphics editor). Reword both.
+- **n8** `IPlug/Linux/IPlugAPPLinux.cpp:83` — `// ControlMask | ShiftMask | Mod1Mask` restates
+  `kShortcutModifiers`; drop it.
+- **n9** `IPlug/Linux/IPlugAPPLinux.cpp:33-47` — `SWELL_ExtendedAPI("INIFILE")` also raises `RLIMIT_NOFILE`'s soft
+  limit to min(hard, 16384), writes `max_open_files` and reads `ui_scale` (`WDL/swell/swell.cpp:1090-1140`); none of
+  that ran before. Harmless (REAPER does the same) and calling it before `SWELL_initargs` is right, but worth one
+  line in the Log. The folder creation duplicates `InitState`'s; on failure SWELL silently falls back to
+  `~/.libSwell.ini` while `InitState` prints the error — acceptable.
+- **n10** `IPlug/Linux/IPlugAPPLinux.cpp:115` — a shortcut on a shifted character (`Ctrl+?`) would grab the base
+  key without Shift; and only Caps/Num Lock variants are grabbed. Neither occurs in the APP menus today.
+
+Comments otherwise follow the rules (WHY only). Shared files: every 05cf72aa4 change outside `IPlug/Linux/` is
+inside `#ifdef OS_LINUX` or the CMake Linux branch.
+
+### Verdict (round 2)
+**approve with minor fixes**: m5 should be fixed (one line); m6 fix or document; m7 goes to the cross-platform
+findings and the Log claim is corrected. Nits optional.
