@@ -20,14 +20,36 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | T-009 | P6: Gneiss visual parity vs macOS | todo (unblocked; needs task file) | — | — | — |
 | T-010 | P9: Gneiss-side changes (deferred `SetLatency`, menus, `openFolder`) | todo (unblocked; needs task file; see CROSS_PLATFORM_FINDINGS for what NOT to mix in) | — | — | Gneiss repo |
 | [T-011](T-011-duplicate-templates.md) | P11b: painless duplication (out-of-tree paths in `duplicate.py`) + Gneiss IDE setup | **ready** (user OK'd fixing the shared `duplicate.py`) | — | T-005 | `Examples/duplicate.py`, `gitignore_template`; Gneiss repo |
-| T-012 | P11c: Sand Linux build (as T-003, for Sand); reuse the T-005/T-011 Linux template (presets, `-linux.code-workspace`, `.clangd`) | todo (unblocked; needs task file) | — | — | Sand repo |
+| T-012 | P11c: Sand Linux build (as T-003, for Sand); reuse the T-005/T-011 Linux template (presets, `-linux.code-workspace`, `.clangd`). Known: `SandUI.cpp` `getOsString()` has no Linux branch (falls off the end: UB) | todo (unblocked; needs task file) | — | — | Sand repo |
 | T-013 | P10: host matrix (Carla, Ardour, Renoise on the VM; Bitwig/x86_64 on a PC) | todo (unblocked; needs task file) | — | T-002, T-007 (merged) | uses the VM |
 | T-014 | P12: LV2 | blocked | — | everything else | — |
 | T-016 | Feature-parity audit: complete notes/22 (every IGraphics/IPlug platform API, Extras, formats incl. REAPER extension) and file tasks for each gap | todo (needs task file) | — | — | — |
-| T-017 | WebView on Linux: `IWebViewEditorDelegate`, `IWebViewControl`, platform child views | blocked | — | user's architecture decision (notes/22) | `IPlug/Extras/WebView`, IGraphicsLinux* |
+| T-017 | WebView on Linux: `IWebViewEditorDelegate`, `IWebViewControl`, platform child views. **Design decided: out-of-process WebKitGTK helper embedded via XEmbed** (notes/22) | todo (unblocked; needs task file) | — | — | `IPlug/Extras/WebView`, IGraphicsLinux* (platform views) |
 | T-018 | Skia backend on Linux (build/fetch Skia for x86_64 + arm64, GL context) | todo (needs task file) | — | — | IGraphicsLinux*, `Scripts/` Skia fetch |
-| T-019 | Platform gaps: GL3 context, XDND drop in/out, file-path clipboard, tooltips, dark/light appearance, XInput2 multi-touch | todo (needs task file; split if large) | — | — | IGraphicsLinux* (not in parallel with T-009/T-017/T-018) |
-| T-015 | P13: repo `README.md` — what works on Linux and how (last of all) | blocked | — | everything else, incl. T-014, T-016..T-019 | `README.md` |
+| T-019 | Platform features Gneiss/Sand use: tooltips (`SetTooltip`/`EnableTooltips`, now a no-op), files dropped onto the editor (XDND in; Gneiss USER tab `OnDrop`) | todo (needs task file) | — | — | IGraphicsLinux* (not in parallel with T-009/T-017/T-018/T-020) |
+| T-020 | Remaining platform gaps: GL3 context (`glXCreateContextAttribsARB`, GL2 fallback), drag files out, file-path clipboard, dark/light appearance (portal), XInput2 multi-touch | todo (needs task file; split if large) | — | T-019 | IGraphicsLinux* |
+| T-021 | Release packaging of Gneiss and Sand: Release builds in the 22.04 container (glibc floor), CLAP + VST3 (+ APP) with resources, tarball + install notes, symbols split | todo (needs task file) | — | T-012 (for Sand) | `scripts/`, plug-in repos' local branches |
+| T-015 | P13: repo `README.md` — what works on Linux and how (last of all) | blocked | — | everything else, incl. T-014, T-016..T-021 | `README.md` |
+
+## Priority (user, 2026-10-16): Gneiss and Sand as fully working Linux plug-ins first
+
+Gneiss and Sand use, beyond what already works (dialogs, clipboard, menus, text entry, `openFolder`): tooltips,
+files dropped onto the editor (Gneiss USER tab), deferred `SetLatency`. Order:
+
+| # | Task | Who | Why this slot |
+|---|---|---|---|
+| 1 | VM re-check of T-008's final focus build | coordinator | short; closes T-008 |
+| 2 | T-012 Sand build | 2nd instance | separate repo, no conflicts |
+| 3 | T-019 tooltips + XDND drop | coordinator | IGraphicsLinux; used by both plug-ins |
+| 4 | T-010 Gneiss-side Linux needs | coordinator | Gneiss `linux-experiment` |
+| 5 | T-006 CLAP `state-reproducibility` | 2nd instance | CLAP wrapper; shared-code fix goes to the user before merging |
+| 6 | T-009 visual parity, Gneiss and Sand | coordinator | IGraphicsLinux, after T-019 |
+| 7 | T-021 release packaging, Gneiss and Sand | 2nd instance | after T-012 |
+| 8 | T-013 host matrix with Gneiss and Sand | coordinator | the VM |
+
+Then: developer experience T-011 (2nd), standalone T-004 (2nd); full parity T-016 audit (2nd, read-only, can run
+any time), T-018 Skia (2nd), T-017 WebView (2nd: helper and IPC are new files; the IGraphicsLinux platform-view
+hook is coordinated), T-020 (coordinator); last T-014 LV2, T-015 README.
 
 **T-008 items:**
 - APP focus-on-click race (P3b-V1);

@@ -21,7 +21,6 @@ Update it at every merge or user decision.
 - **T-008 merged** (fac9cc84d). **Open VM-only re-check of its final focus build** (light, short): `scripts/vm/vm-run.sh vm/probe/focus-edit.sh` CLAP + VST3 ×10 and the APP P3b script ×3. Earlier VM passes used the first focus version. Check `timeout 8 xdpyinfo` before and after.
 
 ## Waiting on the user
-0. **WebView architecture (notes/22):** out-of-process WebKitGTK helper embedded via XEmbed (recommended) vs in-process WebKitGTK vs CEF. Blocks T-017.
 1. ~~Gneiss morph bugs on mac~~ — **fixed by the user 2026-10-16** (hvoya 0b2d8dbef, Gneiss 3cf2e2e) and synced into hvoya-linux (e393b6398) / linux-experiment (4219350); Linux smoke PASS. Old note: Then the coordinator merges Gneiss `master` → `linux-experiment` and `hvoya` → `hvoya-linux`, with builds plus REAPER runs (`steps/gneiss.txt`).
    - **Hints given to the user:**
      - C2 analysis in `CROSS_PLATFORM_FINDINGS.md` and `evidence/t003/reviews/2-findings-review.md`: the `_prevParamVals` dedup cache is not updated by direct `IParam::Set` in `applyMorphModeParams`/`snapshotPatchMorphOff`/`morph_file_router`.
@@ -36,7 +35,9 @@ Update it at every merge or user decision.
 - **Rough edges must be fixed, not just noted (2026-10-16):** every known gap gets a task file. For T-011 this includes changing the shared `Examples/duplicate.py` (out-of-tree path rewrite), which also changes mac/win output (for the better).
 - The port branches from `hvoya`, never upstream. Upstream master **was merged into hvoya** (2026-10-11).
 - RR 360d84011 (StringToValue numeric fallback for enum/bool) is **rejected**.
-- **Feature parity with mac/win is required (2026-10-16):** Linux must not be poorer than mac or win, WebView included. Gaps and tasks: notes/22, T-016..T-019.
+- **WebView (2026-10-16): out-of-process WebKitGTK helper embedded via XEmbed** (notes/22 option 1).
+- **Priority (2026-10-16): Gneiss and Sand as fully working Linux plug-ins first**; order in `tasks/README.md` "Priority".
+- **Feature parity with mac/win is required (2026-10-16):** Linux must not be poorer than mac or win, WebView included. Gaps and tasks: notes/22, T-016..T-021.
 - First milestone = CLAP + VST3 + APP, NanoVG GL2, X11. **LV2 is the last phase (P12)**, after P11 (developer experience: IDE research — CLion is non-commercial-only; presets, `duplicate.py`, one-command flows, for IPlugEffect/IPlugControls/Gneiss/Sand).
 - Gneiss/Sand experiments only on local branches in separate worktrees. Never touch the main checkouts.
 - **Minimal footprint** (AGENTS §2): the port must not change mac/win behaviour, projects or flags. Report cross-platform bugs; don't fix them in port branches.
@@ -73,12 +74,5 @@ Update it at every merge or user decision.
   - `~/.clap` and `~/.vst3` hold Debug builds of IPlugEffect and IPlugControls.
 - **Starting an IDE on the VM from `vm-display-env`** puts the sudo gdb wrapper on PATH. The debuggee (REAPER) then runs as root. Start IDEs with a plain PATH (`scripts/vm/README.md`).
 
-## Next tasks (after T-008), in suggested order
-- T-013: host matrix on the VM — Carla, Ardour VST3, Renoise. Bitwig and x86_64 need a PC.
-- T-004: standalone robustness.
-- T-006: `state-reproducibility`.
-- ~~T-005: IDE research~~ → merged; next **T-011** (duplication out of tree + Gneiss IDE setup).
-- After the Gneiss master sync: T-009 (visual parity) and T-010 (Gneiss-side Linux needs: deferred `SetLatency`, menus, `openFolder`; keep cross-platform fixes out unless the user decides).
-- T-012: Sand.
-- T-011: templates.
-- T-014: LV2.
+## Next tasks
+See `tasks/README.md`, section "Priority" (who does what, in which order).

@@ -11,13 +11,13 @@ without the user's say.
 | **WebView**: `IWebViewEditorDelegate` (whole UI in a web view) and `IWebViewControl` (web view inside IGraphics) | WKWebView / WebView2 | stub `IPlugWebView_linux.cpp` | T-017 |
 | Platform child views (`AttachPlatformView` / `RemovePlatformView` / `HidePlatformView`), which `IWebViewControl` needs | mac | missing | T-017 |
 | **Skia** backend | mac, win | NanoVG only | T-018 |
-| NanoVG **GL3** | win (GL2/GL3) | legacy GLX context, GL2 only | T-019 |
+| NanoVG **GL3** | win (GL2/GL3) | legacy GLX context, GL2 only | T-020 |
 | Files dropped **onto** the editor (`OnDrop`, `OnDropMultiple`) | mac, win | no XDND | T-019 |
-| Drag files **out** (`InitiateExternalFileDragDrop`) | mac, win | missing | T-019 |
-| `SetFilePathInClipboard` | mac, win | missing | T-019 |
+| Drag files **out** (`InitiateExternalFileDragDrop`) | mac, win | missing | T-020 |
+| `SetFilePathInClipboard` | mac, win | missing | T-020 |
 | Tooltips (`UpdateTooltips`) | native on mac, win | no-op | T-019 |
-| UI appearance (dark/light, `GetUIAppearance`) | mac | missing; Linux source: xdg-desktop-portal `org.freedesktop.appearance color-scheme` | T-019 |
-| Multi-touch (`PlatformSupportsMultiTouch`) | win | missing; X11 source: XInput2 touch | T-019 |
+| UI appearance (dark/light, `GetUIAppearance`) | mac | missing; Linux source: xdg-desktop-portal `org.freedesktop.appearance color-scheme` | T-020 |
+| Multi-touch (`PlatformSupportsMultiTouch`) | win | missing; X11 source: XInput2 touch | T-020 |
 | Standalone APP: devices, settings, MIDI, no-device start | mac, win | partial | T-004 |
 | REAPER extension / REAPER-API plugins on Linux | mac, win | not checked | T-016 |
 
@@ -25,7 +25,7 @@ Not gaps: AU/AUv3/AAX (no Linux hosts), native OS menus and text entry (IGraphic
 no GTK in the plug-in process), native Wayland embedding (mac/win have no equivalent; Linux hosts embed X11 and
 run under XWayland). LV2 is Linux-only extra (P12).
 
-## WebView: the hard one — options (needs the user's decision)
+## WebView: the hard one — options (user chose 1, 2026-10-16)
 
 The only system web engine on Linux is WebKitGTK, which needs GTK in its process. That collides with PLAN §1
 "no GTK in the plug-in process": hosts built on GTK2 (Ardour's ytk) or another GTK major crash or misbehave when a
