@@ -20,6 +20,8 @@ Several Claude instances work on this port in parallel; none of them shares memo
   - P3a: X11 window + GL2;
   - P3b: keyboard, focus, text entry, clipboard, menus, fonts.
 - **Tasks:** `linux-research/tasks/` — one file per task, board in `tasks/README.md`.
+- **Current state of branches, waiting items and user decisions:** `linux-research/STATUS.md` (coordinator snapshot).
+- **Cross-platform (mac/win) bugs found during the port:** `linux-research/CROSS_PLATFORM_FINDINGS.md`.
 
 ## 2. Non-negotiable rules (from PLAN §1–2 and the user's CLAUDE.md)
 
