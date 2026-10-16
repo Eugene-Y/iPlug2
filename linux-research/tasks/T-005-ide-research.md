@@ -1,7 +1,7 @@
 # T-005 — IDE research and IDE/presets setup for the examples
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** in-progress
+- **Owner:** Claude instance (T-005 session, 2026-10-16)
 - **Branch/worktree:** `linux/T-005` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-005`.
 - **Depends on:** nothing.
 - **Plan phase:** P11 (part a); part b, `duplicate.py`/templates, is T-011.
@@ -48,3 +48,11 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
 - [ ] Docs written; self-review; Log complete.
 
 ## Log
+
+### 2026-10-16 — claimed
+- Lock `/Volumes/Storage/code/.linux-port-locks/T-005`, worktree `/Volumes/Storage/code/IPlug2-T-005`, branch `linux/T-005`.
+- Findings so far:
+  - Root `CMakePresets.json` already has upstream `linux-ninja`/`linux-make`, but `base-linux` forces `IGRAPHICS_RENDERER=GL3`, against PLAN's GL2 decision (CMake's own Linux default is GL2).
+  - `Examples/*/.gitignore` ignores `.vscode/*`; only `c_cpp_properties.json` (mac/win cpptools config) is tracked. So the Linux VS Code setup goes into a separate `<Name>-linux.code-workspace` (settings + tasks + launch in one file), which mac/win VS Code users never open.
+  - VM reachable; it has gdb/g++ but no cmake/ninja: a clean target for the native-build check.
+
