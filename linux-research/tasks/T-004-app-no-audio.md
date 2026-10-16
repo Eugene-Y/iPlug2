@@ -199,3 +199,7 @@ VM Pulse cookies in history (m4) are to be dealt with later.
   would not match; no APP menu uses one.
 - Checks: `scripts/probe/app-review2-checks.sh` (`evidence/t004/review2-fixes`), Docker `app-audio-test.sh` and
   `app-switch-test.sh` PASS, mac CMake `IPlugInstrument-app` links.
+
+**Hand-over (2026-10-17):** status review-done. Shared-code commits, each separate: 013328ba4 (user-approved),
+b77df0c67 (A1, A4) and 5a6c315a2 (m7); the rest is `#ifdef OS_LINUX`, `IPlug/Linux/IPlugAPPLinux.*` or the Linux
+branch of `Scripts/cmake/APP.cmake`. JACK MIDI is T-022. The VM Pulse cookies in history (m4) wait for the user.
