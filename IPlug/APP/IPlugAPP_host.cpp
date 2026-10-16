@@ -476,6 +476,11 @@ bool IPlugAPPHost::TryToChangeAudio()
   if (mNoIO || IsScreenshotMode())
     return true;
 
+  if (!mDAC) // Init() stopped before creating it, e.g. without a settings folder
+    return false;
+
+  const bool needsInputDevice = GetPlug()->MaxNChannels(ERoute::kInput) > 0;
+
 #if defined OS_WIN
   // ASIO has one device, use the output for the input ID
   auto inputID = GetAudioDeviceID(mState.mAudioDriverType == kDeviceASIO ? mState.mAudioOutDev.Get() : mState.mAudioInDev.Get());
@@ -499,7 +504,7 @@ bool IPlugAPPHost::TryToChangeAudio()
       if (mAudioInputDevIDs.size())
         mState.mAudioInDev.Set(GetAudioDeviceName(inputID.value()).c_str());
     }
-    else
+    else if (needsInputDevice)
       failedToFindDevice = true;
   }
 
@@ -516,6 +521,10 @@ bool IPlugAPPHost::TryToChangeAudio()
     else
       failedToFindDevice = true;
   }
+
+  // Without input channels InitAudio opens no input stream, but it still takes an input device ID
+  if (!inputID && !needsInputDevice)
+    inputID = outputID;
 
   if (resetToDefault)
   {
