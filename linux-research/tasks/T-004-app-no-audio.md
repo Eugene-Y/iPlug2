@@ -73,7 +73,8 @@ the audio settings" *before* any window. A second segfault: with no ALSA sequenc
 - SIGINT/SIGTERM close like a WM close: popup menus and modal dialogs first (`DialogBoxIsActive`/`EndDialog`), then
   `WM_CLOSE`. The first version posted `WM_CLOSE` directly and destroyed the host under a running Preferences proc
   (UAF, seen as a garbage title); the second waited for `DestroyPopupMenus()` and hung on the VM because Preferences
-  runs inside the File menu's `TrackPopupMenu` (gdb stack in `vm-sigterm-probe` history). The handler removes its
+  runs inside the File menu's `TrackPopupMenu` (gdb: main thread in `SWELL_DialogBox` under `TrackPopupMenu`; the
+  probe's later passing run replaced its `hung-bt.txt`, the finding is in commit fa7fc2e09). The handler removes its
   source, so GLib restores SIG_DFL: a second signal ends a hung quit (checked with a probe program).
 - *Shared (separate commit 013328ba4, for the user's decision):* `ProbeAudioIO` resets the default device IDs (after
   JACK→ALSA the stale JACK default gave "output device ID is invalid"; RtAudio numbers every API's devices from the
