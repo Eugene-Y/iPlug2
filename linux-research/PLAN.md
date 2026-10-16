@@ -361,6 +361,7 @@ Goal: a developer on Linux opens a project in an IDE and builds/debugs any forma
   - `CMakePresets.json` with Linux presets for Debug/Release × formats; CLion and Qt Creator read it natively.
   - VS Code `.vscode/` (`settings.json`, `launch.json` with "debug in REAPER" / "debug standalone"), or equivalents for the chosen IDE.
 - **Projects to configure:** IPlugEffect, IPlugControls, **Gneiss**, **Sand** (`/Volumes/Storage/code/hvoya/Sand`). Gneiss/Sand changes go to local experiment branches only (Gneiss: `linux-experiment` worktree), unless the user approves otherwise.
+- **Status 2026-10-16:** P11a (IDE research, presets, VS Code workspaces for IPlugEffect/IPlugControls, docs) done in T-005, review-done; decision and sources in notes/20, user docs in `Documentation/linux-development.md`. P11b continues as T-011.
 - **Duplication.** Extend `Examples/duplicate.py` (and/or a CMake template) so a duplicated project gets a working Linux `CMakeLists.txt` + presets + IDE config with no manual CMake editing. Ideally the per-project CMakeLists is a thin call into `iplug_add_plugin(...)` with sources/resources listed once, shared with the mac/win project generators where feasible.
 - **One-command flows** (scripts): configure+build all formats; deploy to `~/.clap`, `~/.vst3`; launch REAPER with the plugin; package (VST3 bundle, CLAP, tarball/AppImage-style APP) in the old-glibc container.
 - **Docs:** a short "Linux development" guide in the repo.

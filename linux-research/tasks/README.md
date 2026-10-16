@@ -13,14 +13,14 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | [T-002](T-002-p4-dialogs.md) | P4: file/message/colour dialogs without GTK | **merged** 0846167f8 | coordinator | — | — |
 | [T-003](T-003-gneiss-linux-build.md) | P7: Gneiss Linux CMake build (CLAP/VST3/APP) | **merged** e54a43e76 (Gneiss side: local `linux-experiment`, 52cb5d6 + 7e3a1c9) | 2nd instance | — | — |
 | [T-004](T-004-app-no-audio.md) | P8: standalone APP robustness (no audio device, devices, settings) | **ready — good for a 2nd instance** | — | — | — |
-| [T-005](T-005-ide-research.md) | P11a: IDE research + presets/IDE configs for examples | **ready — good for a 2nd instance** | — | — | T-011 later |
+| [T-005](T-005-ide-research.md) | P11a: IDE research + presets/IDE configs for examples | **review-done** (accept, round 2; notes/21) — awaiting merge; open user decision m2 (see STATUS) | T-005 session | — | T-011 later |
 | [T-006](T-006-clap-state-repro.md) | clap-validator `state-reproducibility` failures (Linux and mac) | **ready — good for a 2nd instance** | — | — | — |
 | [T-007](T-007-hidpi.md) | P5: HiDPI (CLAP set_scale, VST3 content scale, Xft.dpi) | **merged** 4d413d040 | coordinator | — | T-008 (IGraphicsLinux*): not in parallel |
 | [T-008](T-008-p3-polish.md) | P3 polish from the VM run (notes/14), listed below the table | **merged** fac9cc84d (VM re-check of the final focus build still open, see STATUS) | coordinator | — | — |
 | T-009 | P6: Gneiss visual parity vs macOS | todo (unblocked; needs task file) | — | — | — |
 | T-010 | P9: Gneiss-side changes (deferred `SetLatency`, menus, `openFolder`) | todo (unblocked; needs task file; see CROSS_PLATFORM_FINDINGS for what NOT to mix in) | — | — | Gneiss repo |
-| T-011 | P11b: `duplicate.py` + templates produce Linux CMake/presets/IDE config | blocked | — | T-005 | — |
-| T-012 | P11c: Sand Linux build (as T-003, for Sand) | todo (unblocked; needs task file) | — | — | Sand repo |
+| [T-011](T-011-duplicate-templates.md) | P11b: painless duplication (out-of-tree paths in `duplicate.py`) + Gneiss IDE setup | ready after the T-005 merge (user OK'd fixing the shared `duplicate.py`) | — | T-005 | `Examples/duplicate.py`, `gitignore_template`; Gneiss repo |
+| T-012 | P11c: Sand Linux build (as T-003, for Sand); reuse the T-005/T-011 Linux template (presets, `-linux.code-workspace`, `.clangd`) | todo (unblocked; needs task file) | — | — | Sand repo |
 | T-013 | P10: host matrix (Carla, Ardour, Renoise on the VM; Bitwig/x86_64 on a PC) | blocked | — | T-002, T-007 | uses the VM |
 | T-014 | P12: LV2 | blocked | — | everything else | — |
 

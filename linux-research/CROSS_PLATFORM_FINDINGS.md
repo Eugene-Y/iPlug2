@@ -23,6 +23,11 @@
 - **C3, C2, C4** — правки в Gneiss/hvoya PresetManager; лучше отдельной задачей на mac с тестом в DAW.
 - **L1** — проверить в Cubase/Live на маке.
 
+## Из T-005 (`Examples/duplicate.py`, upstream; касается mac/win)
+| ID | Серьёзность | Суть |
+|---|---|---|
+| T5-1 | Низкая–средняя | `duplicate.py <ex> <new> <mfr> <путь вне дерева iPlug2>` оставляет в `CMakeLists.txt` `IPLUG2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.."`. `newroot` считается относительно `config/`, а заменяется только значение `IPLUG2_ROOT` в xcconfig. CMake-сборка такого дубликата не работает ни на одной платформе. Пользователь разрешил исправить в T-011 (2026-10-16). Повтор: `python3 duplicate.py IPlugEffect MyFx Mfr /tmp/x; grep IPLUG2_DIR /tmp/x/MyFx/CMakeLists.txt` |
+
 ## Из T-008 (IPopupMenuControl, upstream iPlug; касается mac/win только у плагинов со своим `AttachPopupMenuControl`)
 | ID | Серьёзность | Суть |
 |---|---|---|

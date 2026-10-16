@@ -147,9 +147,6 @@ Follow AGENTS §2 "Minimal footprint". Presets and IDE configs are **additive**:
 - **Open:**
   - **m2 (user's call):** the examples' `CMakePresets.json` puts CMake Tools on mac/win into presets mode with an empty list. Options: (a) keep and document; (b) include the root presets instead. Worker's recommendation: (a).
   - **Follow-ups:** T-011 (`tasks/T-011-duplicate-templates.md`: out-of-tree duplication, Gneiss IDE setup); T-004 pointer (RtAudio warning).
-- **For the coordinator:**
-  - link the T-011 task file in the board;
-  - mark T-011 ready after this merge;
-  - add the duplicate.py cross-platform finding above to `CROSS_PLATFORM_FINDINGS.md`.
+- **Recorded in the shared files (2026-10-16, at the user's request):** the board (T-005 row, T-011 linked, T-012 reuse note), STATUS (in flight, m2 under "Waiting on the user", IDE decision, VM state and gotchas), PLAN P11 status, AGENTS "Where to look", CROSS_PLATFORM_FINDINGS T5-1. The coordinator still merges `linux/T-005` and adds the merge-log row.
 - No containers left. VM lock released; task lock released with this commit.
 
