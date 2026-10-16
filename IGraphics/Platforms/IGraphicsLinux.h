@@ -91,7 +91,14 @@ private:
   void ForwardKeyToHost(const _XEvent& event);
   /** Keyboard focus and stand-in controls follow the editing state after every event and frame */
   void UpdateEditingState();
-  void TakeKeyboardFocus();
+  /** First: an edit, a menu or the app's click starts wanting the keys. Click: a click while it does.
+   * Retry: the focus went into the host's window right after a request. */
+  enum class EFocusRequest { First, Click, Retry };
+  void TakeKeyboardFocus(EFocusRequest request);
+  void CheckKeyboardFocus();
+  void RequestKeyboardFocus(unsigned long time);
+  void RememberHostFocusWindow(unsigned long focus);
+  void DeclineKeyboardFocus();
   void ReleaseKeyboardFocus();
   void EndTextEntryOnFocusLoss();
   void RemoveFinishedStandIns();
