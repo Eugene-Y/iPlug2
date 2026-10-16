@@ -211,6 +211,10 @@ void AudioBuffer::reserve (n_chan_t c, n_frames_t s) {
     if (isWrapper())
         return;
     _data.reserve (static_cast<size_t> (validateAndClamp (c, "reserve")) * s);
+    // reserve may reallocate _data; the channel pointers into it must follow.
+    for (n_chan_t ch = 0; ch != _numChans; ++ch)
+        _channels [ch] = _data.data() + _numFrames * ch;
+    updateDebugDataView();
 }
 
 
