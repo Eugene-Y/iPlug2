@@ -14,6 +14,9 @@ pass() { echo "ok: $*" | tee -a "$OUT/checks.txt"; }
 pkill -x "$NAME"; sleep 0.5
 
 export HOME="$OUT/home"; rm -rf "$HOME"; mkdir -p "$HOME/.config/$NAME"
+# Only the settings files are evidence; Mesa's shader cache and PulseAudio's auth cookie are not
+tidy_home() { rm -rf "$HOME/.cache" "$HOME/.config/pulse"; }
+trap tidy_home EXIT
 INI="$HOME/.config/$NAME/settings.ini"
 printf '[audio]\ndriver=1\nindev=system\noutdev=system\nsr=48000\nbuffer=256\n' > "$INI"
 

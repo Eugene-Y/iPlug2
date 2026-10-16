@@ -13,6 +13,9 @@ pkill -x "$NAME"; sleep 0.5
 
 # A fresh HOME without ~/.config: the APP must create its settings folder itself.
 export HOME="$OUT/home"; rm -rf "$HOME"; mkdir -p "$HOME"
+# Only the settings files are evidence; Mesa's shader cache and PulseAudio's auth cookie are not
+tidy_home() { rm -rf "$HOME/.cache" "$HOME/.config/pulse"; }
+trap tidy_home EXIT
 INI="$HOME/.config/$NAME/settings.ini"
 
 # By WM_CLASS too: Mutter's frame windows carry their client's title

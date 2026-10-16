@@ -28,6 +28,9 @@ PNAME=$(aconnect -i | grep -A1 -F "$CLINE" | tail -1 | sed -E "s/^ +0 '(.*[^ ]) 
 PORT="$CNAME:$PNAME $CLIENT:0"
 
 export HOME="$OUT/home"; rm -rf "$HOME"; mkdir -p "$HOME/.config/$NAME"
+# Only the settings files are evidence; Mesa's shader cache and PulseAudio's auth cookie are not
+tidy_home() { rm -rf "$HOME/.cache" "$HOME/.config/pulse"; }
+trap tidy_home EXIT
 printf '[audio]\ndriver=2\n[midi]\nindev=%s\noutdev=off\ninchan=0\n' "$PORT" > "$HOME/.config/$NAME/settings.ini"
 
 "$APP" > "$OUT/stderr.txt" 2>&1 &

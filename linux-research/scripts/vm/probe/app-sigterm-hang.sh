@@ -5,6 +5,9 @@ set -uo pipefail
 OUT="$1"; APP="$2"; NAME=$(basename "$APP")
 mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"
 export HOME="$OUT/home"; rm -rf "$HOME"; mkdir -p "$HOME"
+# Only the settings files are evidence; Mesa's shader cache and PulseAudio's auth cookie are not
+tidy_home() { rm -rf "$HOME/.cache" "$HOME/.config/pulse"; }
+trap tidy_home EXIT
 slow_click() { xdotool mousemove "$1" "$2" mousedown 1; sleep 0.2; xdotool mouseup 1; sleep 0.8; }
 win() { local w; for w in $(xdotool search --onlyvisible --name "^$1\$" 2>/dev/null); do
   xprop -id "$w" WM_CLASS 2>/dev/null | grep -q "\"$NAME\"" && { echo "$w"; return 0; }; done; }

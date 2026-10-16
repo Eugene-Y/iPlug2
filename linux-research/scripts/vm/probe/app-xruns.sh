@@ -5,6 +5,9 @@ set -uo pipefail
 OUT="$1"; APP="$2"; DRIVER="$3"; SECS="${4:-10}"; BUF="${5:-512}"; NAME=$(basename "$APP")
 mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"
 export HOME="$OUT/home"; rm -rf "$HOME"; mkdir -p "$HOME/.config/$NAME"
+# Only the settings files are evidence; Mesa's shader cache and PulseAudio's auth cookie are not
+tidy_home() { rm -rf "$HOME/.cache" "$HOME/.config/pulse"; }
+trap tidy_home EXIT
 printf '[audio]\ndriver=%s\nsr=48000\nbuffer=%s\n' "$DRIVER" "$BUF" > "$HOME/.config/$NAME/settings.ini"
 env ${APP_ENV:-} "$APP" > "$OUT/stderr.txt" 2>&1 &
 APID=$!
