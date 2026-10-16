@@ -768,7 +768,11 @@ bool IPlugAPPHost::InitMidi()
 
   try
   {
+#ifdef OS_LINUX
+    mMidiIn = std::make_unique<RtMidiIn>(RtMidi::UNSPECIFIED, BUNDLE_NAME); // the client name in aconnect and PipeWire
+#else
     mMidiIn = std::make_unique<RtMidiIn>();
+#endif
   }
   catch (RtMidiError &error)
   {
@@ -779,7 +783,11 @@ bool IPlugAPPHost::InitMidi()
 
   try
   {
+#ifdef OS_LINUX
+    mMidiOut = std::make_unique<RtMidiOut>(RtMidi::UNSPECIFIED, BUNDLE_NAME);
+#else
     mMidiOut = std::make_unique<RtMidiOut>();
+#endif
   }
   catch (RtMidiError &error)
   {
