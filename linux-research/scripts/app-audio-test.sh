@@ -30,6 +30,7 @@ wait_win() { for _ in $(seq 50); do w=$(win "$1"); [ -n "$w" ] && { sleep 0.5; e
 # SWELL's menu bar ignores a click whose press and release share a timestamp
 slow_click() { xdotool mousemove "$1" "$2" mousedown 1; sleep 0.2; xdotool mouseup 1; sleep 0.8; }
 client_origin() { xwininfo -id "$1" | awk '/Absolute upper-left X/{x=$NF} /Absolute upper-left Y/{y=$NF} END{print x, y}'; }
+client_center() { xwininfo -id "$1" | awk '/Absolute upper-left X/{x=$NF} /Absolute upper-left Y/{y=$NF} /^ *Width:/{w=$NF} /^ *Height:/{h=$NF} END{print x + int(w / 2), y + int(h / 2)}'; }
 menu_item() { # <row>: File menu item, 0 = Preferences, 1 = Quit
   read -r X Y < <(client_origin "$(win "$NAME")")
   slow_click $((X + 16)) $((Y + 6))
@@ -66,8 +67,9 @@ else
 fi
 
 # Menu shortcuts reach the APP also when the plug-in UI has the keyboard focus (it passes on unused keys)
-read -r X Y < <(client_origin "$(win "$NAME")")
-slow_click $((X + 500)) $((Y + 300))
+# The middle of the window: a fixed offset fell outside small editors (IPlugEffect), taking the focus away
+read -r CX CY < <(client_center "$(win "$NAME")")
+slow_click "$CX" "$CY"
 xdotool key ctrl+comma; sleep 1.5
 if P=$(win 'Preferences.*') && [ -n "$P" ]; then
   pass "Ctrl+, from the plug-in UI opens Preferences"
@@ -76,7 +78,7 @@ else
   fail "Ctrl+, did not open Preferences"
 fi
 rm -f "$OUT"/*_screenshot_*.png
-slow_click $((X + 500)) $((Y + 300))
+slow_click "$CX" "$CY"
 xdotool key ctrl+shift+s; sleep 2
 S=$(ls "$OUT"/*_screenshot_*.png 2>/dev/null | head -1)
 [ -n "$S" ] && pass "Ctrl+Shift+S saved $(basename "$S") ($(identify -format '%wx%h' "$S"))" || fail "Ctrl+Shift+S saved no screenshot"
