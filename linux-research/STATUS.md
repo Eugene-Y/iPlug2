@@ -21,7 +21,6 @@ Update it at every merge or user decision.
 - **T-008 merged** (fac9cc84d). **Open VM-only re-check of its final focus build** (light, short): `scripts/vm/vm-run.sh vm/probe/focus-edit.sh` CLAP + VST3 ×10 and the APP P3b script ×3. Earlier VM passes used the first focus version. Check `timeout 8 xdpyinfo` before and after.
 
 ## Waiting on the user
-0. **T-005 m2:** the examples' new `CMakePresets.json` puts VS Code's CMake Tools on mac/win into presets mode with an empty list (tooling only; Xcode/VS projects and builds untouched). Options: (a) keep and document; (b) include the root presets instead (mac presets appear; Linux list gains upstream `linux-ninja`/`linux-make`). Worker recommends (a).
 1. ~~Gneiss morph bugs on mac~~ — **fixed by the user 2026-10-16** (hvoya 0b2d8dbef, Gneiss 3cf2e2e) and synced into hvoya-linux (e393b6398) / linux-experiment (4219350); Linux smoke PASS. Old note: Then the coordinator merges Gneiss `master` → `linux-experiment` and `hvoya` → `hvoya-linux`, with builds plus REAPER runs (`steps/gneiss.txt`).
    - **Hints given to the user:**
      - C2 analysis in `CROSS_PLATFORM_FINDINGS.md` and `evidence/t003/reviews/2-findings-review.md`: the `_prevParamVals` dedup cache is not updated by direct `IParam::Set` in `applyMorphModeParams`/`snapshotPatchMorphOff`/`morph_file_router`.
@@ -31,6 +30,7 @@ Update it at every merge or user decision.
    - The `gene` remote is https without stored credentials. Push via `git@github.com:Eugene-Y/iPlug2.git`, or the user runs `git remote set-url gene git@github.com:Eugene-Y/iPlug2.git`.
 
 ## Decisions already made by the user (don't re-ask)
+- **T-005 m2 (2026-10-16): keep as is.** The examples' Linux-only `CMakePresets.json` stays; the empty presets list in VS Code CMake Tools on mac/win is documented in `Documentation/linux-development.md` (workaround `cmake.useCMakePresets: never`).
 - **IDE (2026-10-16, provisional):** VS Code is the primary Linux IDE; IPlugEffect and IPlugControls are the templates to develop in and duplicate from. Qt Creator is the documented alternative; CLion only with a paid licence (its free licence forbids sold products). notes/20, `Documentation/linux-development.md`.
 - **Rough edges must be fixed, not just noted (2026-10-16):** every known gap gets a task file. For T-011 this includes changing the shared `Examples/duplicate.py` (out-of-tree path rewrite), which also changes mac/win output (for the better).
 - The port branches from `hvoya`, never upstream. Upstream master **was merged into hvoya** (2026-10-11).

@@ -49,6 +49,10 @@ that checkout, and configuring runs on its own from then on. clangd gets its com
 `<Name>.code-workspace` and `.vscode/c_cpp_properties.json` in the same folder belong to the macOS/Windows setup;
 use the `-linux` workspace on Linux.
 
+The example folders' `CMakePresets.json` holds only the Linux presets. On macOS/Windows, VS Code's CMake Tools
+sees that file and switches to presets mode with an empty list; set `"cmake.useCMakePresets": "never"` there if
+you build those examples with CMake Tools. Xcode and Visual Studio projects are unaffected.
+
 ## 3. Build and deploy
 
 *Terminal > Run Build Task* (Ctrl+Shift+B) offers:
