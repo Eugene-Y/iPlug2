@@ -532,6 +532,7 @@ INT_PTR SWELLAppMain(int msg, INT_PTR parm1, INT_PTR parm2)
 #include "swell-internal.h"
 #include <alsa/asoundlib.h>
 #include <glib.h>
+#include <glib-unix.h>
 
 HWND gHWND;
 HINSTANCE gHINSTANCE;
@@ -541,6 +542,14 @@ static bool gNoIO = false;
 // Suppress "Invalid CTL pulse" spam: ALSA probes the PulseAudio ALSA plugin
 // during library initialisation even when PulseAudio isn't running.
 static void _silentAlsaErrorHandler(const char*, int, const char*, int, const char*, ...) {}
+
+// A second signal finds the default handler again, so a hung quit can still be interrupted.
+static gboolean CloseOnSignal(gpointer)
+{
+  if (gHWND)
+    PostMessage(gHWND, WM_CLOSE, 0, 0);
+  return G_SOURCE_REMOVE;
+}
 
 int main(int argc, char** argv)
 {
@@ -562,13 +571,22 @@ int main(int argc, char** argv)
     pAppHost->SetNoIO(true);
 
   pAppHost->Init();
-  pAppHost->TryToChangeAudio();
 
   HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MENU1));
+#if !defined _DEBUG || defined NO_IGRAPHICS
+  if (menu)
+    DeleteMenu(menu, 1, MF_BYPOSITION); // Debug
+#endif
   CreateDialog(gHINSTANCE, MAKEINTRESOURCE(IDD_DIALOG_MAIN), NULL, IPlugAPPHost::MainDlgProc);
 
   if (gHWND && menu)
     SetMenu(gHWND, menu);
+
+  // After the window exists, so that a message about missing audio has a parent and the UI behind it
+  pAppHost->TryToChangeAudio();
+
+  g_unix_signal_add(SIGINT, CloseOnSignal, nullptr);
+  g_unix_signal_add(SIGTERM, CloseOnSignal, nullptr);
 
   // Block in GLib instead of sleeping, so X input and the plug-in's HostLoop sources run as soon as they
   // are ready, also without a display. SWELL polls its own timers and posted messages in
@@ -595,7 +613,8 @@ INT_PTR SWELLAppMain(int msg, INT_PTR parm1, INT_PTR parm2)
 
 #define CBS_HASSTRINGS 0
 #define SWELL_DLG_SCALE_AUTOGEN 1
-#define SET_IDD_DIALOG_PREF_SCALE 1.5
+// swell_resgen's own scale for SWELL's generic font; macOS's 1.5 clips the labels here
+#define SET_IDD_DIALOG_PREF_SCALE 1.9
 #if PLUG_HOST_RESIZE
 #define SWELL_DLG_FLAGS_AUTOGEN SWELL_DLG_WS_FLIPPED|SWELL_DLG_WS_RESIZABLE
 #endif

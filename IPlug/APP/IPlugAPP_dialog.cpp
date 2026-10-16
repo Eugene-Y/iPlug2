@@ -24,7 +24,6 @@ extern bool SaveWindowScreenshot(HWND hwnd, const char* path);
 #define GET_MENU() SWELL_GetCurrentMenu()
 extern "C" bool SaveWindowScreenshot(void* hwnd, const char* path);
 #elif defined OS_LINUX
-#include "Linux/IPlugLinuxOpen.h"
 #define GET_MENU() GetMenu(gHWND)
 static bool SaveWindowScreenshot(HWND, const char*) { return false; }
 #endif
@@ -298,14 +297,43 @@ void IPlugAPPHost::PopulatePreferencesDialog(HWND hwndDlg)
   PopulateMidiDialogs(hwndDlg);
 }
 #elif defined OS_LINUX
+static void ShowAudioStateInTitle(HWND hwndDlg, const IPlugAPPHost& host)
+{
+  WDL_String title("Preferences");
+
+  if (host.IsNoIO())
+    title.Append(" - audio off (--no-io)");
+  else if (host.GetAudioOffReason()[0])
+    title.AppendFormatted(256, " - audio off: %s", host.GetAudioOffReason());
+
+  SetWindowText(hwndDlg, title.Get());
+}
+
+static void ShowMidiUnavailable(HWND hwndDlg)
+{
+  for (int combo : {IDC_COMBO_MIDI_IN_DEV, IDC_COMBO_MIDI_OUT_DEV, IDC_COMBO_MIDI_IN_CHAN, IDC_COMBO_MIDI_OUT_CHAN})
+  {
+    SendDlgItemMessage(hwndDlg, combo, CB_ADDSTRING, 0, (LPARAM) OFF_TEXT);
+    SendDlgItemMessage(hwndDlg, combo, CB_SETCURSEL, 0, 0);
+    EnableWindow(GetDlgItem(hwndDlg, combo), FALSE);
+  }
+}
+
 void IPlugAPPHost::PopulatePreferencesDialog(HWND hwndDlg)
 {
   SendDlgItemMessage(hwndDlg,IDC_COMBO_AUDIO_DRIVER,CB_ADDSTRING,0,(LPARAM)"ALSA");
   SendDlgItemMessage(hwndDlg,IDC_COMBO_AUDIO_DRIVER,CB_ADDSTRING,0,(LPARAM)"JACK");
+  SendDlgItemMessage(hwndDlg,IDC_COMBO_AUDIO_DRIVER,CB_ADDSTRING,0,(LPARAM)"PulseAudio");
   SendDlgItemMessage(hwndDlg,IDC_COMBO_AUDIO_DRIVER,CB_SETCURSEL, mState.mAudioDriverType, 0);
+  // Linux has no system-wide audio device panel to open
+  EnableWindow(GetDlgItem(hwndDlg, IDC_BUTTON_OS_DEV_SETTINGS), FALSE);
 
   PopulateAudioDialogs(hwndDlg);
-  PopulateMidiDialogs(hwndDlg);
+
+  if (!PopulateMidiDialogs(hwndDlg))
+    ShowMidiUnavailable(hwndDlg);
+
+  ShowAudioStateInTitle(hwndDlg, *this);
 }
 #endif
 
@@ -350,6 +378,9 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
           break;
         case IDAPPLY:
           _this->TryToChangeAudio();
+#ifdef OS_LINUX
+          ShowAudioStateInTitle(hwndDlg, *_this);
+#endif
           break;
         case IDCANCEL:
           EndDialog(hwndDlg, IDCANCEL);
@@ -495,8 +526,6 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
             {
               system("open \"/Applications/Utilities/Audio MIDI Setup.app\"");
             }
-            #elif defined OS_LINUX
-              LinuxOpenWithDefaultApp("https://alsa-project.org");
             #endif
           }
           break;

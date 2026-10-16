@@ -77,6 +77,7 @@ const int kNumBufferSizeOptions = 11;
 const std::string kBufferSizeOptions[kNumBufferSizeOptions] = {"32", "64", "96", "128", "192", "256", "512", "1024", "2048", "4096", "8192" };
 const int kDeviceDS = 0; const int kDeviceCoreAudio = 0; const int kDeviceAlsa = 0;
 const int kDeviceASIO = 1; const int kDeviceJack = 1;
+const int kDevicePulse = 2;
 extern UINT gSCROLLMSG;
 
 class IPlugAPP;
@@ -235,7 +236,19 @@ public:
   static WDL_DLGRET MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
   IPlugAPP* GetPlug() { return mIPlug.get(); }
+
+#ifdef OS_LINUX
+  /** @return Why the last attempt to start audio failed, empty when it started */
+  const char* GetAudioOffReason() const { return mAudioOffReason.Get(); }
+#endif
+
 private:
+#ifdef OS_LINUX
+  void ReportAudioOff(const char* reason);
+
+  WDL_String mAudioOffReason;
+#endif
+
   std::unique_ptr<IPlugAPP> mIPlug = nullptr;
   std::unique_ptr<RtAudio> mDAC = nullptr;
   std::unique_ptr<RtMidiIn> mMidiIn = nullptr;
