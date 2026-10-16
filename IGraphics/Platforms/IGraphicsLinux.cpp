@@ -137,6 +137,55 @@ EFocusPlace LocateFocus(Display* pDisplay, Window ours, Window focus)
   return focusTopLevel == ourTopLevel ? EFocusPlace::OurTopLevel : EFocusPlace::Elsewhere;
 }
 
+/** The root-window area applications may cover, in physical pixels: the current desktop's _NET_WORKAREA (the
+ * screen minus panels and docks), else the whole root window. */
+void GetWorkArea(Display* pDisplay, int& x, int& y, int& w, int& h)
+{
+  const int screen = DefaultScreen(pDisplay);
+  const Window root = RootWindow(pDisplay, screen);
+  x = y = 0;
+  w = DisplayWidth(pDisplay, screen);
+  h = DisplayHeight(pDisplay, screen);
+
+  auto readCardinals = [&](const char* name, long offset, long count, unsigned long& received) -> unsigned char* {
+    Atom type = None;
+    int format = 0;
+    unsigned long remaining = 0;
+    unsigned char* pData = nullptr;
+    received = 0;
+    const Atom property = XInternAtom(pDisplay, name, True);
+    if (property == None || XGetWindowProperty(pDisplay, root, property, offset, count, False, XA_CARDINAL, &type, &format, &received, &remaining, &pData) != Success)
+      return nullptr;
+    if (format != 32 && pData)
+    {
+      XFree(pData);
+      return nullptr;
+    }
+    return pData;
+  };
+
+  unsigned long received = 0;
+  long desktop = 0;
+  if (unsigned char* pDesktop = readCardinals("_NET_CURRENT_DESKTOP", 0, 1, received))
+  {
+    if (received == 1)
+      desktop = reinterpret_cast<long*>(pDesktop)[0];
+    XFree(pDesktop);
+  }
+  if (unsigned char* pArea = readCardinals("_NET_WORKAREA", desktop * 4, 4, received))
+  {
+    const long* pValues = reinterpret_cast<long*>(pArea);
+    if (received == 4 && pValues[2] > 0 && pValues[3] > 0)
+    {
+      x = static_cast<int>(pValues[0]);
+      y = static_cast<int>(pValues[1]);
+      w = static_cast<int>(pValues[2]);
+      h = static_cast<int>(pValues[3]);
+    }
+    XFree(pArea);
+  }
+}
+
 IMouseMod MouseModFromState(unsigned int state)
 {
   return IMouseMod((state & Button1Mask) != 0, (state & Button3Mask) != 0,
@@ -272,6 +321,8 @@ struct IGraphicsLinux::Impl
   // IGraphics-drawn controls standing in for platform text entry and menus, removed once they are done
   ITextEntryControl* mStandInTextEntry = nullptr;
   IPopupMenuControl* mStandInPopup = nullptr;
+  // The popup control whose menus are kept to the on-screen part of the editor (IPopupMenuControl::SetMaxBounds)
+  IPopupMenuControl* mScreenFittedPopup = nullptr;
 
   std::unique_ptr<LinuxDialogs> mDialogs;
 
@@ -769,6 +820,7 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
     if (!buttonMask)
       return;
 
+    FitMenusOnScreen();
     const bool isDoubleClick = button.button == w.mLastClickButton
                             && button.time - w.mLastClickTime < kDoubleClickMs
                             && std::fabs(x - w.mLastClickX) < kDoubleClickSlop
@@ -790,6 +842,7 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
     w.mCursorX = x;
     w.mCursorY = y;
     w.mClickedForFocus = true;
+    FitMenusOnScreen();
     OnMouseUp({ info });
   }
 }
@@ -1409,9 +1462,49 @@ IPopupMenu* IGraphicsLinux::CreatePlatformPopupMenu(IPopupMenu& menu, const IREC
 {
   AttachPopupMenuControl(StandInMenuText());
   mImpl->mStandInPopup = GetPopupMenuControl();
+  FitMenusOnScreen();
   mImpl->mStandInPopup->CreatePopupMenu(menu, bounds);
   isAsync = true;
   return nullptr;
+}
+
+// IPopupMenuControl keeps its menus inside the editor, flipping and scrolling them there. Native menus stay on the
+// screen: with the editor dragged partly off it, a dropdown would open into the part nobody can see. Before a menu
+// can open (a click, a platform menu), the editor's on-screen part becomes the popup control's limit; with the editor
+// wholly on screen the limit goes back to the whole editor, IPopupMenuControl's own default. A plug-in's own
+// SetMaxBounds is replaced meanwhile. Multi-monitor layouts that are not one rectangle are not considered.
+void IGraphicsLinux::FitMenusOnScreen()
+{
+  Impl& w = *mImpl;
+  IPopupMenuControl* pPopup = GetPopupMenuControl();
+  if (!pPopup || pPopup->GetState() != IPopupMenuControl::kCollapsed || !w.mWindowAlive)
+    return;
+
+  ScopedXErrorTrap trap(w.mDisplay);
+  const Window root = RootWindow(w.mDisplay, DefaultScreen(w.mDisplay));
+  int windowX = 0, windowY = 0;
+  Window child = None;
+  if (!XTranslateCoordinates(w.mDisplay, w.mWindow, root, 0, 0, &windowX, &windowY, &child))
+    return;
+  int areaX, areaY, areaW, areaH;
+  GetWorkArea(w.mDisplay, areaX, areaY, areaW, areaH);
+
+  const float scale = GetTotalScale();
+  const IRECT editor = GetBounds();
+  const IRECT area((areaX - windowX) / scale, (areaY - windowY) / scale,
+                   (areaX + areaW - windowX) / scale, (areaY + areaH - windowY) / scale);
+  const IRECT onScreen = editor.Intersect(area);
+  const bool partlyOffScreen = !onScreen.Empty() && !area.Contains(editor);
+  if (partlyOffScreen)
+  {
+    pPopup->SetMaxBounds(onScreen);
+    w.mScreenFittedPopup = pPopup;
+  }
+  else if (w.mScreenFittedPopup == pPopup)
+  {
+    pPopup->SetMaxBounds(editor);
+    w.mScreenFittedPopup = nullptr;
+  }
 }
 
 void IGraphicsLinux::ForceEndUserEdit()
