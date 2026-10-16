@@ -45,6 +45,11 @@ Update it at every merge or user decision.
 - A fresh iPlug2 worktree needs `scripts/install-sdks.sh <worktree>` before any build. It modifies `Dependencies/IPlug/VST3_SDK/README.md`; never commit that.
 - REAPER's VST3 host parameter context menu does not open on a same-millisecond synthetic click (`xdotool click`), only on a held right click. Gneiss VST3's right-click harness step therefore fails; this is not a regression.
 - After limits or sleep, orphaned agent scripts can keep running for a day: the `verify.sh` loop, test binaries. Check `ps` and kill them.
+- **The VM's virgl GPU can hang.**
+  - Seen during T-007 mode changes and on 2026-10-16 during T-008.
+  - Symptoms: X stops answering (`xdpyinfo` times out), a kworker sits in D state, and `dmesg` shows `drm_atomic_helper_wait_for_fences … blocked`.
+  - A guest reboot then hangs at shutdown, so the user must **Force Stop + Start in UTM**.
+  - Agents must kill everything they start on the VM (APP, REAPER, xclip, jackd) when they finish.
 - The VM (UTM, 192.168.64.2) is unreachable when the Mac slept or UTM is stopped; there is no `bridge100`. Ask the user. Key: `~/.ssh/claude_linux_vm`. Never use the password.
 - Docker: colima. If it's down: `colima start` with the mounts in AGENTS §3.
 
