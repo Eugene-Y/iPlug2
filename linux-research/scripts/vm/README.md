@@ -59,8 +59,13 @@ are reproducible and the seeded profile stays for manual use (`~/opt/REAPER/reap
 - **Screen height.** 863 px minus the top bar: a 1024×768 editor plus REAPER's FX header and the title bar does not
   quite fit. Mutter constrains the FX window, so REAPER's container is 1024×766 and the editor's bottom 2 px are clipped.
 - `import -window root` shows the composited screen (top bar and dock included) but no mouse cursor.
-- `linux_audio_mode=2` is REAPER's dummy audio; the harness's `jackd` dummy is started but unused. The APP opens ALSA
-  `default`, which is PipeWire here.
+- `linux_audio_mode=2` is REAPER's **JACK** audio system (Preferences > Audio > Device shows it), so the harness's
+  `jackd -d dummy` is what REAPER runs on; `3` is PulseAudio, the one to use for manual work in `~/.config/REAPER`
+  (without jackd, mode 2 gives "Error opening devices" and no audio thread). The APP opens ALSA `default`, which is
+  PipeWire here.
+- **`vm-display-env` puts the sudo `gdb` wrapper first on PATH.** A GUI app started from that environment inherits it:
+  VS Code's cppdbg then runs gdb as root, and the debuggee (REAPER) runs as root with root's HOME, profile and no
+  PulseAudio session. Start IDEs with a plain PATH (`/usr/local/bin:/usr/bin:/bin`).
 - `vm-env.sh` must be sourced from bash (it refuses otherwise): under zsh `BASH_SOURCE` is empty and the paths go wrong.
 - **`xdotool click` presses and releases in the same millisecond.** That ties X focus-request timestamps (a WM's
   WM_TAKE_FOCUS then wins or loses by arrival order) and makes GTK menus close on the release. Probes that model a
