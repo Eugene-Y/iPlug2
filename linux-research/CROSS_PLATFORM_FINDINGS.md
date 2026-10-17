@@ -40,7 +40,7 @@ Gneiss на mac/win использует нативные меню — его н
 | ID | Серьёзность | Суть | Затрагивает mac/win? |
 |---|---|---|---|
 | T6-1 | Средняя | `stateLoad` восстанавливает параметры, но не зовёт `host->params->rescan(CLAP_PARAM_RESCAN_VALUES)`. Хосты с кэшем значений (общий UI параметров, полосы автоматизации) после открытия проекта / загрузки пресета хостом показывают старые значения. clap-validator `state-reproducibility-basic/-binary/-buffered` падают у всех iPlug2 CLAP, в том числе у установленного mac Gneiss. Фикс 46d10516c: rescan после `OnRestoreState()`; после него все три теста проходят на Linux и mac (IPlugEffect, IPlugControls, IPlugInstrument, Gneiss). Изменение на mac/win: после загрузки состояния хост перечитывает значения параметров; автоматизация из этого не пишется (так по спеке). Доказательства: `tasks/T-006-clap-state-repro.md`, `evidence/t006/` | **Да** (все CLAP) |
-Рядом, не исправлено: CLAP не переопределяет `InformHostOfPresetChange`, поэтому пресет, загруженный внутри плагина, тоже оставляет CLAP-хосту старые значения. Это CLAP-половина C4.
+Рядом, не исправлено: CLAP не переопределяет `InformHostOfPresetChange`, поэтому пресеты iPlug (`RestorePreset`, FXP/FXB) тоже оставляют CLAP-хосту старые значения. Gneiss это не покрыло бы: его PresetManager не зовёт `InformHostOfPresetChange`, а morph undo вызывает `UnserializeState` напрямую. Для Gneiss остаётся фикс C4.
 
 ## Из T-004 (standalone APP, общий код `IPlug/APP/IPlugAPP_host.cpp`) — исправлено с согласия автора
 Меняют поведение mac/win только в сбойных случаях, нормальная работа не меняется. В `hvoya-linux`; в `hvoya` попадут при будущем слиянии.

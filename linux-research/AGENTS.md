@@ -58,6 +58,7 @@ colima status || colima start --cpu 6 --memory 8 --disk 50 --vm-type vz --vz-ros
 ```
 - Image `iplug2-linux:24.04` (Ubuntu 24.04, arm64; REAPER 7.82, clap-validator, VST3 validator, Xvfb, openbox, llvmpipe, xdotool, gdb). See `linux-research/docker/README.md`.
 - Build: `linux-research/scripts/dock.sh -- scripts/build-cmake.sh <tree> <builddir> <targets…>`.
+  Only `DOCK_ENV` reaches the container: `DOCK_ENV="BUILD_TYPE=Debug" scripts/dock.sh …`. A plain `BUILD_TYPE=Debug scripts/dock.sh …` silently builds Release.
 - GUI test in REAPER under Xvfb: `GUI=<your-container> scripts/run-gui-test.sh <plugin> <outdir> [steps]`.
 - **Use your own container name and build dirs**, prefixed with your task id, e.g. `GUI=t003`, `build/t003-…`.
 - Other scripts in `scripts/`:

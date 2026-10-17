@@ -1,6 +1,6 @@
 # T-006 — clap-validator `state-reproducibility` failures
 
-- **Status:** in-progress
+- **Status:** review-done — awaiting user decision (shared-code fix, T6-1)
 - **Owner:** 2nd instance (T-006 session, 2026-10-17)
 - **Branch/worktree:** `linux/T-006` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-006`.
 - **Depends on:** nothing.
@@ -26,10 +26,10 @@ Find out why clap-validator's `state-reproducibility-*` tests fail (3 tests, all
 5. Re-run the validators on Linux and mac.
 
 ## Acceptance
-- [ ] Root cause documented with evidence (state dumps, validator output).
-- [ ] Linux vs mac answer: does the Gneiss mac CLAP fail too?
-- [ ] Fix committed with validator passes (shared-code fix: awaiting the user's decision, see step 4), or a documented reason why it's a validator/test artefact.
-- [ ] mac build proof if shared code changed; self-review; Log complete.
+- [x] Root cause documented with evidence (state dumps, validator output).
+- [x] Linux vs mac answer: does the Gneiss mac CLAP fail too?
+- [x] Fix committed with validator passes (shared-code fix: awaiting the user's decision, see step 4), or a documented reason why it's a validator/test artefact.
+- [x] mac build proof if shared code changed; self-review; Log complete.
 
 ## Log
 
@@ -38,13 +38,13 @@ Find out why clap-validator's `state-reproducibility-*` tests fail (3 tests, all
 - **What the test does** (clap-validator 0.4.1, `src/tests/plugin_instance/state.rs`): randomise params via `params.flush`, save; new instance; read values, `state.load`, poll host callbacks, read values again. If the values changed and the plug-in did **not** call `clap_host_params.rescan(CLAP_PARAM_RESCAN_VALUES)` it fails with "values changed without a rescan request". Only after that come the value comparison with the saved instance and (`-binary`) byte equality of a re-save.
 - **Root cause:** `IPlugCLAP::stateLoad` restores every param and never calls `params->rescan`. The diffs in every earlier run are "default vs loaded" (e.g. IPlugControls Gain 100 % vs 5.56 %). No iPlug2 fork has the call (upstream, RR, stillwell, tomtrnk: `grep rescan` empty). Not about rounding, chunk format, non-determinism or `OnParamChange` side effects: once the rescan is there, value equality and byte equality pass on all four plug-ins, Gneiss included.
 - **Not Linux-specific:** the user's installed **Gneiss mac CLAP** (Oct 16, read-only) fails the same three tests with the same message (71 params). A mac IPlugEffect CLAP from `hvoya-linux` fails them too; with the fix it passes 44/44.
-- **Fix** 46d10516c, `IPlug/CLAP/IPlugCLAP.cpp` `stateLoad`: after `OnRestoreState()`, `if (canUseParams()) paramsRescan(CLAP_PARAM_RESCAN_VALUES)`. Same thing clap-juce-extensions does when a JUCE processor's program/state changes. `stateLoad` is the only load entry point (no `state-context`, no `preset-load`). Thread: `stateLoad` is `[main-thread]`; Debug builds already terminate in clap-helpers' `clapStateLoad` thread check before reaching the call, Release does no checks.
+- **Fix** 46d10516c, `IPlug/CLAP/IPlugCLAP.cpp` `stateLoad`: after `OnRestoreState()`, `if (canUseParams()) paramsRescan(CLAP_PARAM_RESCAN_VALUES)`. clap-juce-extensions makes the same call when a JUCE processor reports a program change. `stateLoad` is the only load entry point (no `state-context`, no `preset-load`). Thread: `stateLoad` is `[main-thread]`; when the host provides `thread-check`, Debug builds already terminate in clap-helpers' `clapStateLoad` check before reaching the call; Release does no checks.
 - **Results** (`evidence/t006/README.md`):
   - Linux, before: IPlugEffect/IPlugControls/IPlugInstrument 3 state failures each. After: 0 / 0 / 1 failure (`param-fuzz-bounds` subnormal output, known since notes/03, not state). Gneiss (`linux-experiment` 4219350 against this branch): all 5 state tests pass; its other 4 failures are known (C3, C5, T-003 Log).
   - mac, IPlugEffect CLAP Debug via xcodebuild (DerivedData and `CLAP_PATH` in the scratchpad): before 3 failed, after 0 failed. No `.rc_mac` regenerated (`git status` clean).
   - REAPER 7.82 (Docker) with the new `scripts/steps/state-roundtrip.txt` (set param 0 → `GetTrackStateChunk` → move param 0 → `SetTrackStateChunk` → read back): Gneiss CLAP and IPlugControls CLAP PASS, REAPER alive, all draws on tid 1. IPlugControls' editor shows the restored 25 % after the load. REAPER passes param changes to a CLAP via process/flush, i.e. later, so the step file waits between changes.
 - **mac/win behaviour change (needs the user's decision, AGENTS §2):** after every host-driven state load (project open, host preset/undo, `SetTrackStateChunk`) a CLAP host now re-reads all param values through `params.value`. Spec says the host does not record automation from it and the values take effect immediately. Before, hosts that cache values (generic param UI, automation lanes, Bitwig/Studio One modulators) could show the pre-load values until the next change of each param. No change to VST3/AU/AAX, the state format, or the audio path. Row **T6-1** in `CROSS_PLATFORM_FINDINGS.md`.
-- **Related, not fixed:** CLAP has no `InformHostOfPresetChange` override, so a preset loaded inside the plug-in (preset strip, Gneiss PresetManager) also leaves CLAP hosts with stale values — that is C4's CLAP half. `rescan(VALUES)` from `InformHostOfPresetChange` (main thread) would be the analogous fix; out of scope here.
+- **Related, not fixed:** CLAP has no `InformHostOfPresetChange` override, so iPlug's own preset paths (`RestorePreset`, FXP/FXB) leave CLAP hosts with stale values; `rescan(VALUES)` there would be the analogous fix. It would **not** cover Gneiss: its PresetManager never calls `InformHostOfPresetChange`, and morph undo calls `UnserializeState` directly (`morph_controller.hpp:864`), so C4 still needs its Gneiss-side fix. Out of scope here.
 - **Side data point for C5 / T-003** (`process-sleep-process-status`, T-003 left the mac comparison to T-006): the installed mac Gneiss passes it 3/3; Linux Gneiss fails it 3/3 in **both Debug and Release** ("The plugin is sleeping but output port 0, channel 0 contains non-constant data (-22.45 dBFS)"). So it is not a build-config artefact, and C5's explanation ("Gneiss declares no tail") does not account for the mac pass. iPlug never sets `constant_mask`, so under `CONTINUE_IF_NOT_QUIET` the validator never counts the plug-in as sleeping; it only sleeps on `CLAP_PROCESS_SLEEP`, i.e. the finite-tail branch of `IPlugCLAP::process`. Possibly Linux-specific: for the coordinator to file (T-010 or a new task), not investigated further here.
 
 ### Review round 1 (independent reviewer)
@@ -69,3 +69,25 @@ Fresh-context review of 46d10516c, 5512f7be5, 0020953f9 (`git diff hvoya-linux..
 **Checked, no finding:** diff is the minimal one in the only state-load entry point (no `state-context`/`preset-load` implemented; `UnserializeState` is called only in `stateLoad`); guarded by `canUseParams()` (which also satisfies clap-helpers' `assert(canUseParams())`); comment is a single WHY line, no restatement; removed trailing-whitespace line only; no VST3/AU/AAX/state-format/audio-path change; `Dependencies/IPlug/VST3_SDK/README.md` is in no commit (still an unstaged local change); commit messages carry the trailer; T6-1 row describes the mac/win change correctly and flags it as needing the user's decision; the step file is generic (FX 0, param 0) and its waits are explained. The REAPER step is a no-regression/integration check rather than a before/after discriminator (REAPER reads values via `params.value` on demand); the Log does not claim otherwise.
 
 **Verdict: pass with minors.** The root cause and fix are correct and proven on Linux and mac; findings 1–3 are documentation accuracy, 4–5 are input for the user's decision, none blocks. Merge still waits for the user's decision on T6-1 (shared code).
+
+### Round 1 fixes (worker)
+- 1: `evidence/t006/README.md` names each build's config; the `DOCK_ENV` trap is now in AGENTS §3.
+- 2: the "Related, not fixed" note (here and under T6-1) now says that a CLAP `InformHostOfPresetChange` would cover only iPlug's own preset paths, not Gneiss's PresetManager or morph undo.
+- 3: the clap-juce-extensions wording is corrected (the call it makes on a program change).
+- 4: **kept the synchronous call**, for the user to overrule:
+  - `stateLoad` is `[main-thread]` by the spec.
+  - `runOnMainThread` (used at `IPlugCLAP.cpp:71/135` because those callers run on any thread) only runs inline when the host provides `thread-check`. Otherwise it defers through a `std::function`, a mutex and `request_callback` even on a host that follows the spec.
+  - A host that calls `state.load` off the main thread already breaks the rest of the load: the params and the editor are touched on that thread.
+  - Open check for the user's decision: does a mac/win DAW (Bitwig, REAPER mac) mark a freshly opened project as modified after the rescan?
+- 5: the thread-check caveat is added to the Log line.
+- 6: Status is `review-done — awaiting user decision`, and the acceptance list is ticked.
+
+### Hand-over
+- **Commits:** 46d10516c (the fix), 5512f7be5 (evidence, steps, Log, T6-1), 0020953f9 (process-sleep data point), 87d5d19f0 (review round 1), then the round-1 fixes commit.
+- **Evidence:** `evidence/t006/` (README indexes it).
+- **For the coordinator:**
+  - Merge only after the user decides on T6-1.
+  - The `process-sleep-process-status` Linux-vs-mac difference above needs a task.
+  - Containers are removed.
+  - Build dirs `build/t006-*` and `build/t006r*` are left in the worktree (gitignored).
+- **Mac tooling added:** Homebrew `rust` (cargo 1.99.1). The clap-validator 0.4.1 binary is in this session's scratchpad (`cv/target/release/clap-validator`); it disappears with the scratchpad.
