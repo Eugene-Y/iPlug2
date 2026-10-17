@@ -38,11 +38,14 @@ ARG REAPER_VER=782
 ARG DEBIAN_FRONTEND=noninteractive
 # Plug-in runtime (README-Linux.txt): libX11, libGL + Mesa, fontconfig, Xcursor. The standalone's: GTK 3,
 # ALSA, PulseAudio, JACK. REAPER: GTK 3. Then the test tools.
+# Ubuntu 24.04 renamed libasound2 and libgtk-3-0 (64-bit time_t: ...t64).
 RUN if command -v apt-get >/dev/null; then \
-      apt-get update && apt-get install -y --no-install-recommends \
+      apt-get update \
+      && t64=$(apt-cache show libasound2t64 >/dev/null 2>&1 && echo t64 || true) \
+      && apt-get install -y --no-install-recommends \
         ca-certificates curl xz-utils procps file binutils \
         libx11-6 libgl1 libgl1-mesa-dri libfontconfig1 libxcursor1 \
-        libgtk-3-0 libasound2 libpulse0 libjack-jackd2-0 \
+        libgtk-3-0$t64 libasound2$t64 libpulse0 libjack-jackd2-0 \
         xvfb openbox dbus-x11 x11-utils x11-xserver-utils xdotool imagemagick gdb lua5.4 xclip xsel \
       && rm -rf /var/lib/apt/lists/*; \
     else \

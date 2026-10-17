@@ -24,7 +24,7 @@ cat "$OUT/install-user.txt"
 CLAP=/home/customer/.clap/$NAME.clap
 VST3=/home/customer/.vst3/$NAME.vst3
 APP=/home/customer/.local/share/$NAME/$NAME
-for f in "$CLAP" "$CLAP/../$NAME.resources" "$VST3" "$APP" /home/customer/.local/bin/$NAME \
+for f in "$CLAP" "$(dirname "$CLAP")/$NAME.resources" "$VST3" "$APP" /home/customer/.local/bin/$NAME \
          "/home/customer/.local/share/applications/$(echo "$NAME" | tr 'A-Z ' 'a-z-').desktop"; do
   [ -e "$f" ] || fail "per-user install: missing $f"
 done
@@ -35,8 +35,8 @@ for f in "$CLAP" "$VST3"/Contents/*-linux/"$NAME".so "$APP"; do
 done 2>&1 | tee "$OUT/ldd.txt"
 
 echo "--- validators (installed per-user copies, run as customer)"
-as_customer "timeout 900 clap-validator validate '$CLAP'" > "$OUT/clap-validator.txt" 2>&1
-echo "clap-validator exit=$? :: $(grep -E 'tests run' "$OUT/clap-validator.txt" | tail -1)"
+as_customer "timeout 900 clap-validator validate '$CLAP'" 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > "$OUT/clap-validator.txt"
+echo "clap-validator exit=${PIPESTATUS[0]} :: $(grep -E 'tests run' "$OUT/clap-validator.txt" | tail -1)"
 as_customer "timeout 900 validator -e '$VST3'" > "$OUT/vst3-validator.txt" 2>&1; rc=$?
 echo "vst3 validator exit=$rc :: $(grep -E 'Result: [0-9]+ tests passed' "$OUT/vst3-validator.txt" | tail -1)"
 grep -qE 'Result: [0-9]+ tests passed, 0 tests failed' "$OUT/vst3-validator.txt" || fail "VST3 validator (exit $rc)"
@@ -72,7 +72,10 @@ echo "--- CLAP without its .resources folder"
 mkdir -p /tmp/nores && cp "$CLAP" /tmp/nores/
 timeout 600 "$HERE/reaper-plugin-test.sh" "$OUT/nores" "CLAP: $NAME" /tmp/nores/"$NAME".clap "" > "$OUT/nores.log" 2>&1
 grep -E 'REAPER ALIVE|render\[|RESULT' "$OUT/nores.log" | head -8
-grep -iE 'resource|font|svg|png|load' /tmp/reaper.log | sort | uniq -c | head -10 > "$OUT/nores-messages.txt"
+grep -i 'iPlug2:' /tmp/reaper.log > "$OUT/nores-messages.txt"
+cat "$OUT/nores-messages.txt"
+grep -q "resource folder .*/$NAME.resources/ not found" "$OUT/nores-messages.txt" \
+  || fail "CLAP without resources: no message naming the missing folder"
 grep -q 'REAPER pid .* dead' "$OUT/nores.log" && fail "CLAP without resources crashed REAPER"
 pkill -x reaper 2>/dev/null; sleep 1
 

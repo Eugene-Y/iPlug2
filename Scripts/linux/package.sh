@@ -171,11 +171,16 @@ check_binary() {  # file kind report
   return $ok
 }
 
+# The .build-id/ links let gdb find the symbols with `set debug-file-directory <unpacked dir>`.
 split_symbols() {  # binary debug-dir
-  local f="$1" dbg="$2/$(basename "$1").debug"
+  local f="$1" dbg="$2/$(basename "$1").debug" id
   objcopy --only-keep-debug --compress-debug-sections=zlib "$f" "$dbg"
   strip --strip-unneeded "$f"
   objcopy --add-gnu-debuglink="$dbg" "$f"
+  id="$(readelf -n "$f" | sed -n 's/.*Build ID: //p')"
+  [ -n "$id" ] || die "$f has no build id"
+  mkdir -p "$2/.build-id/${id:0:2}"
+  ln -sf "../../$(basename "$dbg")" "$2/.build-id/${id:0:2}/${id:2}.debug"
 }
 
 # Modes from the build tree depend on the builder's umask; --system installs need world-readable files.
@@ -316,16 +321,15 @@ fi
 # Replace, never merge: a resource file dropped by a newer version must not linger from an older one.
 replace() {  # src dest
   rm -rf "$2"
+  mkdir -p "$(dirname "$2")"
   cp -R "$1" "$2"
 }
 if [ $CLAP = 1 ]; then
-  mkdir -p "$CLAP_DIR"
   replace "$HERE/CLAP/$NAME.clap" "$CLAP_DIR/$NAME.clap"
   replace "$HERE/CLAP/$NAME.resources" "$CLAP_DIR/$NAME.resources"
   echo "CLAP -> $CLAP_DIR/$NAME.clap (+ $NAME.resources)"
 fi
 if [ $VST3 = 1 ]; then
-  mkdir -p "$VST3_DIR"
   replace "$HERE/VST3/$NAME.vst3" "$VST3_DIR/$NAME.vst3"
   echo "VST3 -> $VST3_DIR/$NAME.vst3"
 fi
