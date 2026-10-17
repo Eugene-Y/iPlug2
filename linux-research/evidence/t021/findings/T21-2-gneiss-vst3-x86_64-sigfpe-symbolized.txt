@@ -1,0 +1,50 @@
+exit=136
+[ProcessContext Requirements]
+[Succeeded]
+[Process Test]
+SEGV signal 8 fault-addr 0x7fffff06eff8
+SEGV rip 0x7fffff06eff8 /tmp/p/Gneiss_v1.3.1_linux_x86_64_paid/VST3/Gneiss.vst3/Contents/x86_64-linux/Gneiss.so+0x7eff8
+SEGV frame 0x7fffff7bd2d5 /Volumes/Storage/code/IPlug2-T-021/build/t021-segv/segv.so+0x12d5
+SEGV frame 0x7fffff4e9520 /lib/x86_64-linux-gnu/libc.so.6+0x42520
+SEGV frame 0x7fffff06eff8 /tmp/p/Gneiss_v1.3.1_linux_x86_64_paid/VST3/Gneiss.vst3/Contents/x86_64-linux/Gneiss.so+0x7eff8
+SEGV frame 0x7fffff081f20 /tmp/p/Gneiss_v1.3.1_linux_x86_64_paid/VST3/Gneiss.vst3/Contents/x86_64-linux/Gneiss.so+0x91f20
+SEGV frame 0x7fffff1d2d8d /tmp/p/Gneiss_v1.3.1_linux_x86_64_paid/VST3/Gneiss.vst3/Contents/x86_64-linux/Gneiss.so+0x1e2d8d
+SEGV frame 0x7fffff191511 /tmp/p/Gneiss_v1.3.1_linux_x86_64_paid/VST3/Gneiss.vst3/Contents/x86_64-linux/Gneiss.so+0x1a1511
+SEGV frame 0x7fffff186bc5 /tmp/p/Gneiss_v1.3.1_linux_x86_64_paid/VST3/Gneiss.vst3/Contents/x86_64-linux/Gneiss.so+0x196bc5
+SEGV frame 0x5555555a11a5 /usr/local/bin/validator+0x4d1a5
+SEGV frame 0x5555555aca00 /usr/local/bin/validator+0x58a00
+SEGV frame 0x5555555ac8b7 /usr/local/bin/validator+0x588b7
+SEGV frame 0x5555555ac8b7 /usr/local/bin/validator+0x588b7
+SEGV frame 0x5555555b2601 /usr/local/bin/validator+0x5e601
+SEGV frame 0x5555555b5491 /usr/local/bin/validator+0x61491
+SEGV frame 0x5555555aacf1 /usr/local/bin/validator+0x56cf1
+SEGV frame 0x7fffff4d0d90 /lib/x86_64-linux-gnu/libc.so.6+0x29d90
+SEGV frame 0x7fffff4d0e40 /lib/x86_64-linux-gnu/libc.so.6+0x29e40
+SEGV frame 0x5555555837e5 /usr/local/bin/validator+0x2f7e5
+hvoya::HostInfoModel<Gneiss>::buildTimeInfo() const
+IPlug2-T-021/hvoya/hvoya/utils/host_info_model.hpp:183
+hvoya::HostInfoModel<Gneiss>::updateHostPosition()
+IPlug2-T-021/hvoya/hvoya/utils/host_info_model.hpp:93
+hvoya::HostInfoModel<Gneiss>::reset()
+IPlug2-T-021/hvoya/hvoya/utils/host_info_model.hpp:100
+Gneiss::resetAudioState()
+hvoya/Gneiss-linux/Gneiss.cpp:1756
+Gneiss::ProcessBlock(double**, double**, int)
+hvoya/Gneiss-linux/Gneiss.cpp:655
+iplug::IPlugProcessor::ProcessBuffers(double, int)
+IPlug2-T-021/IPlug/IPlugProcessor.cpp:525 (discriminator 2)
+iplug::IPlugProcessor::ProcessBuffers(float, int)
+IPlug2-T-021/IPlug/IPlugProcessor.cpp:530 (discriminator 2)
+iplug::IPlugVST3ProcessorBase::Process(Steinberg::Vst::ProcessData&, Steinberg::Vst::ProcessSetup&, Steinberg::Vst::BusList const&, Steinberg::Vst::BusList const&, iplug::IPlugQueue<iplug::IMidiMsg>&, iplug::IPlugQueue<iplug::IMidiMsg>&, iplug::IPlugQueue<iplug::SysExData>&, iplug::SysExData&)
+IPlug2-T-021/IPlug/VST3/IPlugVST3_ProcessorBase.cpp:432
+non-virtual thunk to iplug::IPlugVST3::process(Steinberg::Vst::ProcessData&)
+IPlug2-T-021/IPlug/VST3/IPlugVST3.h:80
+
+   7efe1:	0f 2f 05 a8 a7 32 00 	comiss 0x32a7a8(%rip),%xmm0        # 3a9790 <ModuleExit@@Base+0x1e1690>
+   7efe8:	0f 83 9f 01 00 00    	jae    7f18d <dlclose@plt+0x25a6d>
+   7efee:	f3 48 0f 2c c0       	cvttss2si %xmm0,%rax
+   7eff3:	4c 63 c9             	movslq %ecx,%r9
+   7eff6:	31 d2                	xor    %edx,%edx
+   7eff8:	49 f7 f1             	div    %r9
+   7effb:	48 83 c2 01          	add    $0x1,%rdx
+   7efff:	0f                   	.byte 0xf

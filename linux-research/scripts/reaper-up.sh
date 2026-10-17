@@ -2,7 +2,8 @@
 # Start REAPER (aarch64/x86_64 Linux build in /opt/REAPER) with a fresh profile and the given plugins
 # installed into that profile's ~/.clap / ~/.vst3. Runs INSIDE the GUI container (gx.sh).
 # Usage: reaper-up.sh <plugin.clap|plugin.vst3> ...
-# Env: REAPER_UI_SCALE=1.5 sets SWELL's ui_scale (REAPER's own HiDPI setting, which it passes on to CLAP set_scale
+# Env: REAPER_EXIT_FILE=<path>: REAPER's exit status is written there when it ends.
+#      REAPER_UI_SCALE=1.5 sets SWELL's ui_scale (REAPER's own HiDPI setting, which it passes on to CLAP set_scale
 #      and VST3 setContentScaleFactor).
 # Then drive it with rpr.sh '<lua>' ; screenshots with shot.sh.
 set -euo pipefail
@@ -28,8 +29,15 @@ linux_audio_mode=2
 splashscreen=0
 EOF
 [ -n "${REAPER_UI_SCALE:-}" ] && printf '[.swell]\nui_scale=%s\n' "$REAPER_UI_SCALE" >> "$HOME/.config/REAPER/reaper.ini"
-nohup /opt/REAPER/reaper -nosplash -new > /tmp/reaper.log 2>&1 &
-echo $! > /tmp/reaper.pid
+if [ -n "${REAPER_EXIT_FILE:-}" ]; then
+  # A parent that outlives REAPER records how it ended (exit status 128+N = killed by signal N).
+  rm -f "$REAPER_EXIT_FILE"
+  ( /opt/REAPER/reaper -nosplash -new > /tmp/reaper.log 2>&1; echo $? > "$REAPER_EXIT_FILE" ) &
+  for i in $(seq 50); do pgrep -n -x reaper > /tmp/reaper.pid && break; sleep 0.1; done
+else
+  nohup /opt/REAPER/reaper -nosplash -new > /tmp/reaper.log 2>&1 &
+  echo $! > /tmp/reaper.pid
+fi
 for i in $(seq 100); do xdotool search --name '^REAPER v' >/dev/null 2>&1 && break; sleep 0.2; done
 sleep 2
 # dismiss the evaluation "About" nag. `xdotool windowclose` is XDestroyWindow on REAPER's window: on GNOME/X11 it
