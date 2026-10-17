@@ -101,3 +101,88 @@ Acceptance:
 - [ ] Independent review.
 
 Next: independent review; then hand-over. For the coordinator: cherry-pick ac4ca870f to `hvoya`; T21-3 decision; rebuild Sand archives once its fixes are on `linux-experiment`.
+
+**Review (round 1, 2026-10-17) — verdict: changes requested** (1 blocker, 2 major). Reviewed `hvoya-linux..linux/T-021` at f4fae7d71 and Gneiss 3b9767e. Most of the work holds up: the archives are well formed, the binary checks are real, the edition split is correct, and the hvoya fix is correct. But `install.sh` deletes Gneiss users' presets, and T21-4 is a bug in our harness, not in REAPER or Sand.
+
+What I re-ran myself:
+- Unpacked `Gneiss_v1.3.1_linux_x86_64_free.tar.gz` on the Mac. Layout, modes, owner 0, README and `.build-id` debug layout are as the Log says; `bash -n` / `sh -n` pass on `install.sh`, `package.sh`, `makedist-linux.sh` and all changed harness scripts.
+- Edition check: `strings` of all 12 Gneiss binaries (CLAP, VST3 .so and APP × 2 arches × 2 editions). Free ones contain only `edition: free`, paid ones only `edition: paid`.
+- `readelf` on x86_64 paid CLAP/VST3. The exports are exactly `clap_entry` / `GetPluginFactory ModuleEntry ModuleExit`, with 0 defined WEAK/UNIQUE symbols and no GLIBCXX/CXXABI. Inspect reports for all 6 archives: NEEDED libX11/libm/libc/ld-linux, GLIBC 2.35, APP list recorded.
+- Smoke cell `package-smoke.sh …aarch64_paid.tar.gz ../build/t021r-smoke/gneiss-u24 iplug2-rt:ubuntu24.04`: **RESULT: PASS**. I looked at the screenshots:
+  - CLAP and VST3 `r03`: two full UIs with fonts, icons and logo.
+  - `app.png`: the full standalone.
+  - `nores/r03`: the UI without text or images, no crash.
+  - The message is printed, and the Draw/X hits are all on tid=1.
+- `Scripts/linux/package.sh /Volumes/Storage/code/hvoya/Sand-linux --arch aarch64 --formats clap --out build/t021r-pkg` works end to end (incremental, 11 s). `Sand.clap`, `install.sh` and `README-Linux.txt` are byte-identical to those in the shipped `Sand_v1.1.10_linux_aarch64.tar.gz`.
+- The same with a relative path fails (R5).
+- I checked the evidence against the Log: the RESULT lines of `smoke/` and `smoke-r1/` match both tables, and clap-validator fails the same 4 tests in all 25 cells. I looked at the nores screenshots of all 9 final cells (contact sheet) and the x86_64 / Fedora REAPER screenshots: real UIs. Findings T21-1/T21-2 stacks are symbolized to source lines as claimed.
+- ac4ca870f: I compiled the old and the new `host_info_model.hpp` against a mock plug-in (Apple clang). On 22 680 valid inputs (num 1–13, den 1–32, tempo 40–999, ppq 0–123456.5, three sample positions, two rates) the output is **byte-identical**. The fix is correct and behaviour-neutral on valid input, and its comment is a WHY. This confirms the Log's claim, which had no artifact in `findings/`.
+- Probe for T21-4 (scratchpad copies of `gdb-count.sh`/`hover-stress.sh`, `iplug2-rt:ubuntu22.04`, Sand aarch64 with its debug archive in `/usr/lib/debug`), see R2.
+
+Findings:
+- **R1 — blocker. `install.sh` wipes Gneiss' user presets on every reinstall/upgrade and on `--uninstall`.**
+  - Where: `Scripts/linux/package.sh:311` (`APP_DIR=${XDG_DATA_HOME:-$HOME/.local/share}/$NAME`), `:340` (`replace` = `rm -rf "$APP_DIR"`), `:319` (uninstall `rm -rf "$APP_DIR"`).
+  - Why: on Linux `AppSupportPath()` is `$XDG_DATA_HOME` (`IPlugLinuxPaths.cpp:126`). Gneiss keeps its user presets in `AppSupportPath()/Gneiss/Presets` (`Gneiss.cpp:193-196`), which is the same folder.
+  - Reproduced in `iplug2-rt:ubuntu24.04` as user `customer`: after `./install.sh`, I created `~/.local/share/Gneiss/Presets/My.preset`; a second `./install.sh` removed it, and so did `--uninstall`.
+  - Fix:
+    - Put the per-user standalone where no plug-in keeps data, e.g. `~/.local/lib/<Name>/`; `/opt/<Name>` is fine.
+    - Never `rm -rf` a folder the product also writes to.
+    - Update README, §7 and `package-smoke-in.sh` (`APP=`, the `left=` check).
+    - Add a smoke step: a file in `~/.local/share/<Name>/Presets` must survive reinstall and uninstall.
+    - Rebuild the archives, since `install.sh` is inside them.
+- **R2 — major. T21-4 is a harness bug in `gdb-count.sh`, not REAPER or Sand.**
+  - Where: `linux-research/scripts/gdb-count.sh:11` (`printf "HIT %s tid=%d\n", "<sym>", $_thread`).
+  - Cause: gdb 12 (22.04) has to place the string-literal argument in the inferior, so it **calls `malloc` inside REAPER on every hit**. When the stop SIGINT arrives during such a call, gdb prints "The program received a signal in another thread while making a function call from GDB … (malloc) will be abandoned". The sourced script then aborts before `delete`/`detach`, gdb exits, and REAPER resumes from a broken dummy frame, which gives SEGV at garbage PCs. This matches both `findings/T21-4-*` traces.
+  - Reproduced: with the original line, REAPER died in round 1 and in round 4, both times right after that gdb error. With the symbol baked into the format string (`printf "HIT <sym> tid=%d\n", $_thread`, no inferior call), it stayed alive 8/8 rounds (~3 300 hits each).
+  - Side effect: thousands of inferior `malloc` calls per count also disturb the host under test.
+  - Fix:
+    - Apply that one-line change; `set unwindonsignal on` is a cheap extra guard.
+    - Re-run the Sand aarch64 22.04 / Debian 12 cells.
+    - Rewrite T21-4 in the Log: drop "SIGSEGV inside REAPER's own code" and "heap damage from Sand's F1 not excluded". The r1 "harness deaths" were most likely the same thing.
+- **R3 — major. The ldd check can never fail the smoke result.**
+  - Where: `package-smoke-in.sh:30-35`. The `for … done 2>&1 | tee "$OUT/ldd.txt"` loop runs in a subshell, so `fail` appends to a `FAILS` copy that is thrown away.
+  - Demonstrated with the same shape: "FAIL: ldd a" is printed, but the `FAILS` count is 0 afterwards.
+  - The evidence is still fine: every `ldd.txt` is empty.
+  - Fix: run the loop into the file, then `grep -q 'not found' "$OUT/ldd.txt" && fail …` in the main shell.
+- **R4 — minor. The smoke test still does not stop the standalone under Rosetta, although 850f99fb0 says it does.**
+  - Where: `package-smoke-in.sh:80` (`pkill -f "^$APP --no-io"` does not match the emulated process).
+  - Seen: the Gneiss standalone window is still on screen in the `nores/r03` screenshots of `gneiss-x86-64-paid-ubuntu22.04-amd64`, `-paid-debian12-amd64` and `-free-ubuntu22.04-amd64`. On aarch64 it is gone.
+  - Fix: `kill "$(cat /tmp/app.pid)"`, since `$!` in the customer's shell is the app itself, then check that it is gone.
+- **R5 — minor. A relative project dir breaks the Docker path.**
+  - Where: `package.sh:96-104`. `ORIG_ARGS` passes the relative path into a container whose cwd is `$PROJECT_DIR`.
+  - Reproduced: `Scripts/linux/package.sh ../hvoya/Sand-linux …` fails with `cd: ../hvoya/Sand-linux: No such file or directory`. The Log's own command `Scripts/linux/package.sh ../Sand` (lines 48, 97) would hit this.
+  - Fix: build the container's argument list from the parsed absolute values (`$PROJECT_DIR`, `--doc`/`--icon` as given relative to it, variants, formats …) instead of forwarding `ORIG_ARGS`. Also correct those Log lines.
+- **R6 — minor. The "minimal exports" check counts only GLOBAL binding.**
+  - Where: `package.sh:138`. WEAK/UNIQUE exports (vague-linkage templates, `operator new` overrides) would pass.
+  - None exist today.
+  - Fix: `$5 != "LOCAL"`.
+- **R7 — minor. The README names the wrong JACK package.**
+  - Where: README text, `package.sh:390`. `libjack0` is JACK1 on Debian/Ubuntu and conflicts with the default `libjack-jackd2-0`, so apt would remove jackd2.
+  - Fix: name `libjack-jackd2-0` (what `docker/runtime/Dockerfile` installs) "or PipeWire's JACK libraries".
+- **R8 — minor. clap-validator results are not checked.**
+  - Where: `package-smoke-in.sh:40-44`. Exit 1 is accepted and only "tests run" is required, so a new failing test would not be noticed.
+  - Fix: compare the failed test names with a per-product allowlist.
+  - Gneiss fails `param-conversions`, `process-audio-double-{in,out-of}-place` and `process-sleep-process-status`; Sand fails the first three plus `process-varying-sample-rates`.
+  - The Log (line 72, "Gneiss: the same families") should name `process-sleep-process-status`.
+- **R9 — nit. README and `install.sh` assume all three formats and a resources folder.**
+  - The README's Contents/Install text is fixed and ignores `--formats` (`package.sh:367-371`). In my `--formats clap` archive it lists `VST3/` and `Standalone/`, which are not there.
+  - `install.sh` `replace "$HERE/CLAP/$NAME.resources"` (`package.sh:332`) fails under `set -e` for a plug-in without a resources folder, which `package.sh` allows (it copies the folder only if it exists).
+  - Fix: generate those README lines from `FORMATS`, and guard the copy with `[ -d ]`.
+- **R10 — nit. The missing-resources message is wrong for VST3 and the standalone.**
+  - Where: `IPlugLinuxPaths.cpp:36`, "copy it next to the plug-in". For VST3 the folder is inside the bundle (`Contents/Resources`).
+  - Fix: a format-neutral text, e.g. "…not found; fonts and images will be missing".
+- **R11 — nit. Two small `package.sh` gaps.**
+  - `--variant`, `--arch` and the other options with a value die with "unbound variable" when the value is missing (`package.sh:39-46`). Fix: `${2:?--variant needs a value}`.
+  - On a Linux host newer than 22.04, a native build fails the GLIBC check. Fix: say so in `--help`/§7, or offer a way to force Docker.
+- **R12 — nit (process).**
+  - Gneiss `CLAUDE.md` says "Never `git commit` … unless explicitly told", and AGENTS §2 says to follow the product's commit rules. The coordinator should confirm that 3b9767e on `linux-experiment` was authorized.
+  - `makedist-linux.sh:15` defaults to `../../IPlug2` (main checkout, branch `hvoya`), which has no `package.sh` until the port lands there. The error message could say that.
+- **R13 — nit. The evidence could be smaller.** The full per-cell `vst3-validator*.txt` logs are 4.4 MB of the 12 MB; summaries plus failures would do.
+
+New cross-platform finding (report, don't fix):
+- **X1 — Low, display only. hvoya `HostInfoModel::buildTimeInfo` computes the beat correctly only at 120 BPM.**
+  - Where: `host_info_model.hpp:187`. The beat formula is `ppq*60/tempo*(den/8.)*(4./num)+1`; the bar position should be `ppq*den/(4.*num)+1`.
+  - Measured with the mock: 4/4 at ppq = 1 shows beat 4 at 40 BPM, 3 at 60, 2 at 120 and 1 at ≥ 133.7.
+  - It affects only the "host time" view in the Gneiss and Sand UIs. The bug is older than ac4ca870f, which leaves this path untouched.
+
+Not issues: no Xcode/VS/`config.h` changes. The shared code touched is `IPlugLinuxPaths.cpp` (Linux-only) and `host_info_model.hpp` (requested by the user, verified above); the comments are WHYs. My containers (`t021-smoke-iplug2-rt-ubuntu24-04`, `t021r-inst`, `t021r-elf`, `t021r-probe`) are removed. Round 2 should check R1–R5 and a re-run of one Gneiss and one Sand cell on 22.04.
