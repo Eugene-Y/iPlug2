@@ -207,3 +207,58 @@ Round 2 cells, archives from 6ad4c3d6b (Gneiss 3b9767e, Sand cec9c1d), `smoke-r2
 In every cell: install twice + uninstall keep `~/.local/share/<Name>/Presets/smoke-test.preset`; the standalone runs from `~/.local/lib/<Name>`; ldd clean; clap-validator failures exactly the known lists.
 
 - Intermittent Gneiss x86_64 VST3 validator SEGV, twice in 7 smoke runs, both in "Silence Processing" right after "Process function running in another thread" — the ProcessTest family where T-003's ASan caught the **X1** race (`SetLatency` from the fallback-thread `OnIdle` resizes the latency delay line while `process` runs: null in `NChanDelayLine::ProcessBlock` via `PassThroughBuffers`). Not reproduced in isolation: 30 runs with the crash handler, 24 as 4 parallel validators, 12 as user `customer` without the handler — 0 crashes (`findings/X1-*`). Both crashes came while the other smoke stream rendered REAPER, so it needs load; consistent with X1, which awaits the user's decision (STATUS "Waiting on the user" 2, T-010). Not a packaging defect; validator-only (REAPER drives `OnIdle` from its main thread).
+
+**Review (round 2, 2026-10-17) — verdict: accepted, with one open item for the coordinator (R2-1).** Reviewed 9a05996ac, 6ad4c3d6b and 06b9b71ba. R1–R11 and R13 are fixed; R12 is waiting on the user's confirmation.
+
+What I re-checked:
+- **R1 (blocker): fixed.**
+  - In `iplug2-rt:ubuntu24.04`, as user `customer`, with the current Gneiss aarch64 archive: `~/.local/share/Gneiss/Presets/My.preset` survives two installs and `--uninstall`. The standalone is in `~/.local/lib/Gneiss` with its marker file.
+  - A foreign `~/.local/lib/Gneiss` without the marker is left alone: exit 1, message, contents kept.
+  - The README's per-user line says `~/.local/lib/Gneiss`.
+  - The smoke test now checks that the preset survives, and that check passes in all of the worker's round-2 cells and in both of mine.
+- **R2: fixed.**
+  - `gdb-count.sh` now puts the symbol name in the printf format string, and the comment explains why (a WHY comment).
+  - My Sand aarch64 cell on 22.04 kept REAPER alive through both Draw counts. Every hit was on tid=1: 13 Draw calls per format, 2 000 / 3 980 OnDisplayTimer hits.
+- **R3: fixed.** `fail` is now called in the main shell; the output goes to `ldd.txt`, which is empty in all cells.
+- **R4: fixed.**
+  - The standalone is now stopped by PID.
+  - In the round-2 `nores/r03` screenshots of both x86_64 Gneiss cells, no standalone is left on screen. In round 1 it was still there.
+- **R5: fixed.**
+  - `Scripts/linux/package.sh ../hvoya/Sand-linux --arch aarch64 --formats clap` now gets through configure in the container.
+  - It then fails to compile, but for an unrelated reason (R2-3).
+  - `--arch` without a value gives "package.sh: --arch needs a value".
+- **R6 (+ follow-up): fixed.**
+  - `$1 ~ /^[0-9]+:$/ && $5 != "LOCAL"` is right.
+  - Current inspect reports: CLAP/VST3 exports are exactly the entry points in all 6 archives, GLIBC floor is 2.35 everywhere.
+  - The APP export counts rose to ~4 600 because WEAK symbols are now counted; they are reported only.
+- **R7–R11, R13: fixed as described.** I checked:
+  - the README text (libjack-jackd2-0, Contents and Install lines driven by `--formats`);
+  - the `[ -d ]` guard;
+  - the new message;
+  - `needs_value`;
+  - the clap allowlists;
+  - the trimmed VST3 logs.
+- **Round-2 screenshots:** contact sheets of all 5 `smoke-r2` cells (CLAP/VST3 `r03`, `app`, `nores`). Full UIs and standalones are shown; the nores runs show the UI without text or images.
+- **Smoke cells I re-ran on 22.04** against `build/t021-dist` (6ad4c3d6b):
+  - **Sand aarch64:** RESULT FAIL (1), the VST3 validator exit 139 (Sand F1/T21-1, known). Everything else passes: install ×2, preset kept, ldd, the known clap-validator failures only, REAPER CLAP/VST3, standalone, nores, system install, uninstall.
+  - **Gneiss x86_64 paid:** RESULT FAIL (1), the VST3 validator exit 139 again. Everything else passes.
+
+Findings:
+- **R2-1 — major, for the coordinator and user, not a packaging defect: the intermittent Gneiss x86_64 VST3 validator crash is more frequent than the Log says, and the evidence that it "needs load" is not valid.** I reproduced it in an idle `iplug2-rt:ubuntu22.04-amd64` container, with nothing else running:
+  - The smoke script's own install + validator steps, run 8 times: 3 crashes.
+  - The validator alone, as `customer`: 2/10 crashes with `timeout`, 2/10 without it, 1/10 on the unpacked `/tmp` copy.
+  - With `LD_PRELOAD=build/t021-segv/segv.so`: 0/10 here, 0/20 in another container, 0/25 more in two loops. **The crash-handler preload hides the crash.** So the "30 runs with the crash handler" in `findings/X1-*` say nothing.
+  - The crash point varies. 4 of 5 crashes stopped in the 64-bit "Process function running in another thread" test, 1 in the "Silence Processing" test right after it; the validator's output is flushed per line.
+  - Attribution to X1 (`SetLatency` from `OnIdle` on the fallback thread while `process` runs, as T-003's ASan caught it): **plausible but not proven**. There is no stack yet. gdb cannot run programs under Rosetta ("Couldn't get registers"), and `dock.sh` sets `core=0`.
+  - Fix:
+    - Correct the Log: about 1 in 5 validator runs crash on idle x86_64; drop "needs load" and "0 of 66 isolated".
+    - Mark `findings/X1-*` as taken with the preload, so not a valid isolation test.
+    - To confirm X1, either run the same loop on a build with the latency change deferred to the audio thread (T-010) and show 0/40, or get a stack on real x86_64 hardware or a VM.
+  - Impact beyond the validator: `IPlugLinuxHostLoopVST3.h` says the fallback thread also runs the timers in a real host whose only IRunLoop comes through the view's IPlugFrame, while the editor is closed. And X1 is cross-platform anyway (`OnIdle` runs off the audio thread everywhere). So "validator-only" overstates it.
+  - Until X1 is decided, the shipped x86_64 Gneiss VST3 fails the Steinberg validator about 1 run in 5. That belongs in the release notes or the decision list.
+- **R2-2 — nit: `install.sh` can stop halfway.** It installs CLAP and VST3 before it finds a foreign `APP_DIR`, then exits 1 with a partial install. Check `APP_DIR` before copying anything.
+  - The per-user uninstall still runs `rm -f ~/.local/bin/<Name>` without checking that it is our symlink. A `[ -L ] && readlink` check would make it safe.
+- **R2-3 — note for the coordinator: Sand `linux-experiment` can no longer be packaged against this tree.** It is now at a027e6d (T-024 F1–F8 merged). It does not compile against `linux/T-021`'s hvoya: `makeSegmentedParser` is missing and there is an `initializer_list` mismatch in `Sand.cpp:164-210`. Rebuild the Sand archives once the matching hvoya changes are on the integration branch. Until then the Sand archives in `build/t021-dist` remain from cec9c1d, with F1/T21-1.
+- **R2-4 — nit (my error in round 1): two different findings share the ID X1.** I named the round-1 beat-formula finding "X1", but X1 is already the `SetLatency` race in `CROSS_PLATFORM_FINDINGS.md`, and the Log now uses X1 for both. Rename the beat finding to **T21-5** (`host_info_model.hpp:187`, Low, display only).
+
+The worker's round-2 table matches the evidence (RESULT lines, the `clap-validator-failed.txt` files, the draw-thread counts all on tid=1). My containers (`t021-smoke-iplug2-rt-ubuntu22-04`, `t021-smoke-iplug2-rt-ubuntu22-04-amd64`, `t021r-inst2`, `t021r-x1`, `t021r-x1b`, `t021r-x1c`) are removed. Nothing more is needed from T-021 for the packaging itself; R2-1 goes to X1/T-010 and the release decision.
