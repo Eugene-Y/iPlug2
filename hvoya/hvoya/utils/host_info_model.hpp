@@ -173,19 +173,27 @@ namespace hvoya {
                 int num = 1;
                 int den = 1;
                 _pPlug->GetTimeSig (num, den);
-                
-                i.num = num;
-                i.den = den;
-                
+                const double tempo = _pPlug->GetTempo();
+
                 using std::floor;
 
-                float m = _pPlug->GetPPQPos() * 60. / _pPlug->GetTempo() * (den / 8.) * (4. / num) + 1;
-                float b = size_t (num * (m - 1)) % den + 1;
-                uint64_t f = 100 * (b - uint64_t (b));
-                
-                i.beat = floor (b);
-                i.fraction = f;
-                
+                // A host may report no time signature or tempo (a VST3 process call without a context leaves
+                // them 0); there is no musical position then, and `% den` with den 0 traps on x86 (SIGFPE).
+                const bool hasMusicalTime = num > 0 && den > 0 && tempo > 0;
+                if (hasMusicalTime) {
+                    i.num = num;
+                    i.den = den;
+
+                    float m = _pPlug->GetPPQPos() * 60. / tempo * (den / 8.) * (4. / num) + 1;
+                    float b = size_t (num * (m - 1)) % den + 1;
+                    uint64_t f = 100 * (b - uint64_t (b));
+
+                    i.beat = floor (b);
+                    i.fraction = f;
+                } else {
+                    i.beat = 1;
+                }
+
                 float sec = samplePos > 0 ? samplePos / _pPlug->GetSampleRate() : 0;
                 float hours = sec / 3600.;
                 float minutes = (hours - int (hours)) * 60.;
