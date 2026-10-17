@@ -45,3 +45,15 @@ Gneiss на mac/win использует нативные меню — его н
 | A1 | 7cce657a1 | `TryToChangeAudio`: null `mDAC`, если `Init()` остановился рано (нет папки настроек) |
 | A4 | 7cce657a1 | Плагин без входов (инструмент) требовал входное устройство («Please check the audio settings» на машине без микрофона) |
 | m7 | bb004604a | При отсутствии входного устройства список частот дискретизации был пуст; теперь частоты выхода |
+
+## Из T-012 (Sand и общий код hvoya; касается mac/win) — не исправлялось, решения за автором
+Подробности и ссылки на строки: `tasks/T-012-sand-linux-build.md`, раздел Log.
+| ID | Серьёзность | Суть |
+|---|---|---|
+| **F1** | **Высокая** | Sand обрабатывает блоки из 0 сэмплов: VST3-хосты зовут `process` с `numSamples = 0` (сброс параметров), `SandModule::process` читает `chan.back()/front()`, а `hvoya::utils::derivativeInplace` пишет в `data.front()` пустого span — выход за границы буферов хоста (ASan: heap-buffer-overflow / use-after-free; VST3-валидатор падает в 1–4 из 10 прогонов). Фикс: ранний выход из `Sand::ProcessBlock` при `nFrames == 0` и/или `derivativeInplace` терпит пустой span |
+| **F2** | Средняя | MIDI CC → значение параметра не доходит до VST3-хоста: `hvoya/utils/midi_cc/mediator.hpp` из аудиопотока зовёт `BeginInformHostOfParamChange`/`SendParameterValueFromDelegate` — в VST3 это вызовы `IComponentHandler` вне UI-потока (нарушение правил VST3), REAPER видит старое значение. Общий код hvoya: Gneiss/Scape/DMT тоже. Родственно C4 |
+| F3 | Низкая | NaN на выходе при 768 кГц с параметрами по умолчанию (clap-validator `process-varying-sample-rates`) |
+| F4 | Низкая | Текст `flt hz` не парсится обратно ('1.01 kHz' → 1.0 Hz), как C5 у Gneiss |
+| F5 | Низкая–средняя | Sand пишет во входной буфер хоста (как C3 у Gneiss): портит вход у out-of-place хостов в 64-bit |
+| **F7** | Средняя | **Windows-проекты Sand, вероятно, не линкуются:** с 6036dec (2026-05-13) детекторы огибающей hvoya зовут `hiir::PolyphaseIIR2Designer::compute_coefs`, Xcode-проект компилирует `PolyphaseIIR2Designer.cpp`, ни один `projects/*.vcxproj` — нет (на Windows не проверено) |
+| F8 | Низкая | `xcodebuild` Sand из командной строки (и на master) падает: `plog/Log.h` не найден, `$(HVOYA_PATH)/**` доходит до clang нераскрытым. Важно для CI/скриптов |

@@ -9,7 +9,11 @@ evidence look the same inside and outside the container.
 ```sh
 docker build -t iplug2-linux:24.04 linux-research/docker                            # main dev/test image
 docker build --build-arg UBUNTU=22.04 -t iplug2-linux:22.04 linux-research/docker   # old-glibc build check
+docker build -t iplug2-linux:22.04-gcc13 linux-research/docker/gcc13                # 22.04 + GCC 13 (C++20 <format>, C++23)
 ```
+
+Sand needs `<format>`, which 22.04's GCC 11 lacks: build it in `22.04-gcc13` with `DOCK_ENV="CC=gcc-13 CXX=g++-13"`.
+iPlug2 links libstdc++ statically, so the floor stays 22.04's glibc 2.35 and no GLIBCXX is needed.
 
 The 24.04 image has:
 - Toolchain: gcc 13, clang 18, cmake 3.28, ninja.

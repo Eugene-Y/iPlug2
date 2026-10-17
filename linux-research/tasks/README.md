@@ -17,10 +17,10 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | [T-006](T-006-clap-state-repro.md) | clap-validator `state-reproducibility` failures (Linux and mac) | **ready — good for a 2nd instance** (a shared-code fix waits for the user's decision before merging) | — | — | — |
 | [T-007](T-007-hidpi.md) | P5: HiDPI (CLAP set_scale, VST3 content scale, Xft.dpi) | **merged** 4d413d040 | coordinator | — | T-008 (IGraphicsLinux*): not in parallel |
 | [T-008](T-008-p3-polish.md) | P3 polish from the VM run (notes/14), listed below the table | **merged** fac9cc84d (VM re-check of the final focus build still open, see STATUS) | coordinator | — | — |
-| [T-009](T-009-visual-parity.md) | P6: visual parity of Gneiss and Sand vs mac/win | **ready** (Sand part after T-012; after T-019) | — | — | — |
+| [T-009](T-009-visual-parity.md) | P6: visual parity of Gneiss and Sand vs mac/win | **ready** (after T-019) | — | — | — |
 | [T-010](T-010-gneiss-linux-needs.md) | P9: Gneiss-side Linux needs (latency without a host loop, platform audit; menus and `openFolder` already done) | **ready** | — | — | Gneiss repo |
 | [T-011](T-011-duplicate-templates.md) | P11b: painless duplication (out-of-tree paths in `duplicate.py`) + Gneiss IDE setup | **ready** (user OK'd fixing the shared `duplicate.py`) | — | T-005 | `Examples/duplicate.py`, `gitignore_template`; Gneiss repo |
-| [T-012](T-012-sand-linux-build.md) | P11c: Sand Linux build (as T-003, for Sand); reuse the T-005/T-011 Linux template (presets, `-linux.code-workspace`, `.clangd`). Known: `SandUI.cpp` `getOsString()` has no Linux branch (falls off the end: UB) | **ready** | — | — | Sand repo |
+| [T-012](T-012-sand-linux-build.md) | P11c: Sand Linux build (as T-003, for Sand); reuse the T-005/T-011 Linux template (presets, `-linux.code-workspace`, `.clangd`). Known: `SandUI.cpp` `getOsString()` has no Linux branch (falls off the end: UB) | **merged** (see merge log; Sand side: local `linux-experiment` 4dcd5cd..cec9c1d) | 2nd instance | — | Sand repo |
 | [T-013](T-013-host-matrix.md) | P10: host matrix (Carla, Ardour, Renoise on the VM; Bitwig/x86_64 on a PC) | **ready** (best after T-019/T-010) | — | T-002, T-007 (merged) | uses the VM |
 | [T-022](T-022-app-jack-midi.md) | APP: JACK MIDI when the audio driver is JACK (split out of T-004) | todo (low priority, after the Gneiss/Sand work; user 2026-10-17) | — | T-004 | `IPlug/APP/*` |
 | T-014 | P12: LV2 | blocked | — | everything else | — |
@@ -29,7 +29,7 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | [T-018](T-018-skia.md) | Skia backend on Linux (build/fetch Skia for x86_64 + arm64, GL context) | **ready** | — | — | IGraphicsLinux*, `Scripts/` Skia fetch |
 | [T-019](T-019-tooltips-file-drop.md) | Platform features Gneiss/Sand use: tooltips (`SetTooltip`/`EnableTooltips`, now a no-op), files dropped onto the editor (XDND in; Gneiss USER tab `OnDrop`) | **ready** | — | — | IGraphicsLinux* (not in parallel with T-009/T-017/T-018/T-020) |
 | [T-020](T-020-platform-gaps.md) | Remaining platform gaps: GL3 context (`glXCreateContextAttribsARB` core 3.2), drag files out, file-path clipboard, dark/light appearance (portal), XInput2 multi-touch | **ready** after T-019 | — | T-019 | IGraphicsLinux* |
-| [T-021](T-021-release-packaging.md) | Release packaging of Gneiss and Sand: Release builds in the 22.04 container (glibc floor), CLAP + VST3 (+ APP) with resources, tarball + install notes, symbols split | **ready** (Sand part after T-012) | — | T-012 (for Sand) | `scripts/`, plug-in repos' local branches |
+| [T-021](T-021-release-packaging.md) | Release packaging of Gneiss and Sand: Release builds in the 22.04 container (glibc floor), CLAP + VST3 (+ APP) with resources, tarball + install notes, symbols split | **ready** (Sand: use `iplug2-linux:22.04-gcc13`, T-012) | — | T-012 (for Sand) | `scripts/`, plug-in repos' local branches |
 | T-015 | P13: repo `README.md` — what works on Linux and how (last of all) | blocked | — | everything else, incl. T-014, T-016..T-021 | `README.md` |
 
 ## Priority (user, 2026-10-16): Gneiss and Sand as fully working Linux plug-ins first
@@ -40,12 +40,12 @@ files dropped onto the editor (Gneiss USER tab), deferred `SetLatency`. Order:
 | # | Task | Who | Why this slot |
 |---|---|---|---|
 | 1 | VM re-check of T-008's final focus build | coordinator | short; closes T-008 |
-| 2 | T-012 Sand build | 2nd instance | separate repo, no conflicts |
+| 2 | ~~T-012 Sand build~~ merged | 2nd instance | — |
 | 3 | T-019 tooltips + XDND drop | coordinator | IGraphicsLinux; used by both plug-ins |
 | 4 | T-010 Gneiss-side Linux needs | coordinator | Gneiss `linux-experiment` |
 | 5 | T-006 CLAP `state-reproducibility` | 2nd instance | CLAP wrapper; shared-code fix goes to the user before merging |
 | 6 | T-009 visual parity, Gneiss and Sand | coordinator | IGraphicsLinux, after T-019 |
-| 7 | T-021 release packaging, Gneiss and Sand | 2nd instance | after T-012 |
+| 7 | T-021 release packaging, Gneiss and Sand | 2nd instance | ready now (T-012 merged) |
 | 8 | T-013 host matrix with Gneiss and Sand | coordinator | the VM |
 
 Then: developer experience T-011 (2nd), ~~standalone T-004~~ (merged), T-022 JACK MIDI (low); full parity T-016 audit (2nd, read-only, can run
@@ -65,6 +65,7 @@ hook is coordinated), T-020 (coordinator); last T-014 LV2, T-015 README.
 
 | Date | Task | Merge commit | Smoke tests |
 |---|---|---|---|
+| 2026-10-17 | T-012 | (this merge) | Docker 24.04 build Sand CLAP/VST3/APP, Gneiss CLAP, IPlugControls CLAP against the merged tree PASS; REAPER `steps/sand.txt` CLAP + VST3 PASS, `sand-app.txt` PASS (ALIVE), Gneiss `steps/gneiss.txt` CLAP PASS and IPlugControls P3b CLAP PASS (T-012 changed the shared `xact.sh`) (`evidence/merge-smoke/t012-*`). Findings F1–F8 → CROSS_PLATFORM_FINDINGS |
 | 2026-10-17 | T-004 | 5aab26db9 | Pulse cookies stripped from the branch history first (T-004 Log). Docker: build IPlugEffect/IPlugInstrument/IPlugControls APP + IPlugControls CLAP/VST3 PASS; `app-audio-test` IPlugEffect + IPlugInstrument PASS (after a harness fix: the shortcut click sat outside IPlugEffect's 450 px window); `app-switch-test` IPlugInstrument JACK↔PulseAudio PASS; IPlugControls APP P3b and CLAP P3b scripts PASS (`evidence/merge-smoke/t004-*`). mac: CMake IPlugInstrument APP links (T-004 evidence) |
 | 2026-10-16 | T-005 | 17675831f | Docker: `cmake --list-presets` + `cmake --preset linux-debug` + `cmake --build --preset linux-debug` in `Examples/IPlugEffect` PASS (CLAP, VST3, APP built); root `cmake --list-presets` on Linux lists upstream + new presets. mac (cmake 3.29): root `--list-presets` unchanged (macOS/iOS/visionOS/web), examples list nothing (m2) |
 | 2026-10-14 | T-001 | (committed directly on hvoya-linux, last 75e906365) | — (evidence/notes only) |

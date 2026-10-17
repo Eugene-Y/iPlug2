@@ -1,0 +1,65 @@
+# Sand smoke steps (REAPER, CLAP and VST3). Origin = editor view, 740x170 at 1x.
+# Parameters are looked up by name: the VST3 wrapper puts Bypass first.
+lua-expect amnt.0\.300 local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out(n,v) end end
+shot s00-start
+# comp knob: vertical drag; the host sees the new value
+drag 256 94 256 40
+wait 0.5
+shot s01-knob
+expect-change s00-start s01-knob 200 30 120 120
+lua-expect amnt.(0\.[4-9]|1\.) local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out(n,v) end end
+# filter pass type LP -> HP
+click 395 67
+wait 0.5
+shot s02-pass-type
+expect-change s01-knob s02-pass-type 370 20 40 60
+lua-expect type.HP local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="flt pass type" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out(n,v) end end
+# ENV tab
+click 350 49
+wait 0.5
+shot s03-env-tab
+expect-change s02-pass-type s03-env-tab 410 20 200 120
+# host -> UI: REAPER sets softness to 0; the soft knob follows
+# (CLAP applies the host's value at the next process call, so it reads back after the wait.)
+lua-expect set local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="softness" then reaper.TrackFX_SetParamNormalized(t,0,i,0); out("set") end end
+wait 1
+lua-expect softness.0\.000 local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="softness" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out(n,v) end end
+shot s04-host-sets-softness
+expect-change s03-env-tab s04-host-sets-softness 150 80 60 70
+# Context menu on the comp knob, then MIDI CC > Learn. CLAP: the IGraphics stand-in popup. VST3: the
+# plug-in's items inside REAPER's GTK host menu, which opens only on a held right click.
+[CLAP] rclick 256 94
+[VST3] rclick-hold 256 94
+wait 1.5
+shot s05-context-menu
+expect-change s04-host-sets-softness s05-context-menu 0 0 740 170
+[CLAP] move 230 81
+[VST3] move 311 240
+wait 1.5
+shot s05b-midi-cc-submenu
+[CLAP] click 373 21
+[VST3] click 545 244
+wait 0.5
+# MIDI CC in: CC 1 from REAPER's virtual keyboard (track armed, monitoring, input = all MIDI devices)
+# binds to the learning knob and then drives it to 0.
+lua-expect armed local t=reaper.GetTrack(0,0); reaper.SetMediaTrackInfo_Value(t,"I_RECINPUT",4096+63*32); reaper.SetMediaTrackInfo_Value(t,"I_RECMON",1); reaper.SetMediaTrackInfo_Value(t,"I_RECARM",1); out("armed")
+wait 1
+lua-expect sent reaper.StuffMIDIMessage(0,0xB0,1,64); out("sent")
+wait 1
+lua-expect sent reaper.StuffMIDIMessage(0,0xB0,1,0); out("sent")
+wait 1
+shot s05c-midi-cc
+expect-change s05b-midi-cc-submenu s05c-midi-cc 200 30 120 120
+# The host sees the CC-driven value in CLAP only: Sand informs the host from the audio thread
+# (hvoya midi_cc mediator), which iPlug's VST3 wrapper does not forward (T-012 Log, not Linux-specific).
+[CLAP] lua-expect amnt.0\.0 local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out(n,v) end end
+# "i": the about panel (OS / arch / build line)
+click 14 155
+wait 1
+shot s06-about
+expect-change s05c-midi-cc s06-about 0 0 740 170
+click 14 155
+wait 1
+shot s07-about-closed
+expect-change s06-about s07-about-closed 0 0 740 170
+alive __PROC__

@@ -14,7 +14,8 @@ Update it at every merge or user decision.
 | iPlug2 `hvoya-linux` (Linux integration) | `/Volumes/Storage/code/IPlug2-linux` | Pushed to `gene` up to b33e405b2 by the user on 2026-10-16; later commits are unpushed until the user pushes. Contains hvoya at 5d854712d + Linux P0–P5 + T-001/2/3/7 merges + the C1 cherry-pick e7c882995. HEAD ≈ 30580fe02 |
 | Gneiss `master` | `/Volumes/Storage/code/hvoya/Gneiss` (user's working tree, uncommitted .RPP/xcscheme edits) | 3cf2e2e (user's morph/preset-swap fix, 2026-10-16), pushed |
 | Gneiss `linux-experiment` | `/Volumes/Storage/code/hvoya/Gneiss-linux` (local only, never push) | master 3cf2e2e merged (4219350) + 52cb5d6 (CMakeLists.txt) + 7e3a1c9 (initializer_list UB fix, behaviour-neutral) |
-| Sand | `/Volumes/Storage/code/hvoya/Sand` | Untouched. T-012 must use a local experiment branch + worktree, like Gneiss |
+| Sand `master` | `/Volumes/Storage/code/hvoya/Sand` (user's main checkout) | Untouched (cd9f063) |
+| Sand `linux-experiment` | `/Volumes/Storage/code/hvoya/Sand-linux` (local only, never push) | T-012: 4dcd5cd CMake, 2456460 `std::isfinite`, 60c5b96 presets + workspace, e259e96 C++23, cec9c1d `.clangd` → `compile_flags.txt` (user's D1). Needs GCC 13 on 22.04 (`iplug2-linux:22.04-gcc13`) |
 
 ## In flight
 - **T-005 merged** (2026-10-16). T-011 is now ready.

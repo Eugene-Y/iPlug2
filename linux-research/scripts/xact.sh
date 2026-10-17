@@ -4,6 +4,7 @@
 #   origin X Y | origin-win REGEX      set coordinate origin (plugin view top-left on screen)
 #   scale S                            view coordinates and rect sizes in the steps that follow are logical: times S
 #   click X Y [button] | dclick X Y | rclick X Y
+#   rclick-hold X Y [SECS=0.15]        right press held SECS: REAPER's VST3 host menu (GTK) ignores a same-ms click
 #   drag X1 Y1 X2 Y2                   press, move in 10 steps, release
 #   click-click X1 Y1 X2 Y2 SECS       two clicks SECS apart in one xdotool call (faster than two click steps)
 #   key KEYS... | type TEXT...
@@ -13,7 +14,7 @@
 #   windows                            list named top-level windows
 #   expect-change A B X Y W H          shots A and B must differ inside the view rect; else a line in $OUT/xact-fails.txt
 #   expect-same A B X Y W H            shots A and B must be identical inside the view rect
-#   expect-param TRACK PARAM REGEX     REAPER: formatted value of FX 0's PARAM on track TRACK (0-based) matches REGEX
+#   expect-param TRACK INDEX REGEX     REAPER: formatted value of FX 0's parameter INDEX on track TRACK (0-based) matches REGEX
 #   expect-pointer X Y                 the pointer is at view X,Y (within 2 px)
 #   set-clipboard TEXT                 CLIPBOARD := TEXT (xclip)
 #   expect-clipboard TEXT              CLIPBOARD reads TEXT, both with xclip and with xsel
@@ -22,6 +23,7 @@
 #   expect-window REGEX                a visible window named REGEX exists
 #   expect-cursor NAME|blank           the pointer's cursor has this (theme) name, or no opaque pixel
 #   drag-check X1 Y1 X2 Y2 CHECK...    like drag, and runs the step CHECK... before the release
+#   [FMT] STEP...                      STEP only when XACT_FMT is FMT (CLAP, VST3: set by reaper-plugin-test.sh)
 #   # comment
 # Usage: OUT=<dir> xact.sh < steps.txt
 set -uo pipefail
@@ -32,9 +34,15 @@ sc() { awk -v v="$1" -v s="$SCALE" 'BEGIN { p = v * s; printf "%d", (p < 0 ? -in
 HERE="$(cd "$(dirname "$0")" && pwd)"
 log() { echo "[xact] $*"; }
 xfail() { log "FAIL $*"; echo "$*" >> "$OUT/xact-fails.txt"; }
+# compare's AE output is not a number when a shot is missing or unreadable; that must not count as "changed".
+shots_compared() { [ -f "$OUT/$1.png" ] && [ -f "$OUT/$2.png" ] && [[ "${3%% *}" =~ ^[0-9.e+]+$ ]]; }
 while read -r cmd a b c d rest; do
+  if [[ "$cmd" =~ ^\[([A-Z0-9]+)\]$ ]]; then
+    [ "${BASH_REMATCH[1]}" = "${XACT_FMT:-}" ] || { log "skip [${BASH_REMATCH[1]}] step (format ${XACT_FMT:-unset})"; continue; }
+    read -r cmd a b c d rest <<<"$a $b $c $d $rest"
+  fi
   case "$cmd" in
-    click|dclick|rclick|drag|drag-check|click-click|move|expect-pointer) a=$(sc "$a"); b=$(sc "$b")
+    click|dclick|rclick|rclick-hold|drag|drag-check|click-click|move|expect-pointer) a=$(sc "$a"); b=$(sc "$b")
       case "$cmd" in drag|drag-check|click-click) c=$(sc "$c"); d=$(sc "$d");; esac;;
     expect-change|expect-same) c=$(sc "$c"); d=$(sc "$d"); read -r w h <<<"$rest"; rest="$(sc "$w") $(sc "$h")";;
   esac
@@ -47,6 +55,7 @@ while read -r cmd a b c d rest; do
       eval "$(xdotool getwindowgeometry --shell "$w")"; OX=$X; OY=$Y; log "origin-win '$a' -> $OX,$OY (${WIDTH}x${HEIGHT})";;
     click) xdotool mousemove $((OX+a)) $((OY+b)) click "${c:-1}"; log "click $a $b";;
     rclick) xdotool mousemove $((OX+a)) $((OY+b)) click 3; log "rclick $a $b";;
+    rclick-hold) xdotool mousemove $((OX+a)) $((OY+b)) mousedown 3 sleep "${c:-0.15}" mouseup 3; log "rclick-hold $a $b";;
     dclick) xdotool mousemove $((OX+a)) $((OY+b)) click --repeat 2 --delay 80 1; log "dclick $a $b";;
     click-click) xdotool mousemove $((OX+a)) $((OY+b)) click 1 sleep "$rest" mousemove $((OX+c)) $((OY+d)) click 1; log "click $a $b, $rest s later click $c $d";;
     drag|drag-check)
@@ -71,13 +80,15 @@ while read -r cmd a b c d rest; do
       read -r w h _ <<<"$rest"
       crop="${w}x${h}+$((OX+c))+$((OY+d))"
       ae=$(compare -metric AE <(convert "$OUT/$a.png" -crop "$crop" +repage png:-) <(convert "$OUT/$b.png" -crop "$crop" +repage png:-) null: 2>&1)
-      if [ "${ae%% *}" = 0 ]; then xfail "expect-change: $a -> $b unchanged in view rect $c,$d ${w}x${h}"
+      if ! shots_compared "$a" "$b" "$ae"; then xfail "expect-change: cannot compare $a -> $b: $ae"
+      elif [ "${ae%% *}" = 0 ]; then xfail "expect-change: $a -> $b unchanged in view rect $c,$d ${w}x${h}"
       else log "changed $a -> $b in view rect $c,$d ${w}x${h} ($ae px)"; fi;;
     expect-same)
       read -r w h _ <<<"$rest"
       crop="${w}x${h}+$((OX+c))+$((OY+d))"
       ae=$(compare -metric AE <(convert "$OUT/$a.png" -crop "$crop" +repage png:-) <(convert "$OUT/$b.png" -crop "$crop" +repage png:-) null: 2>&1)
-      if [ "${ae%% *}" = 0 ]; then log "same $a -> $b in view rect $c,$d ${w}x${h}"
+      if ! shots_compared "$a" "$b" "$ae"; then xfail "expect-same: cannot compare $a -> $b: $ae"
+      elif [ "${ae%% *}" = 0 ]; then log "same $a -> $b in view rect $c,$d ${w}x${h}"
       else xfail "expect-same: $a -> $b differ in view rect $c,$d ${w}x${h} ($ae px)"; fi;;
     expect-param)
       v=$("$HERE/rpr.sh" "local t=reaper.GetTrack(0,$a); local ok,s=reaper.TrackFX_GetFormattedParamValue(t,0,$b,''); out(s)")

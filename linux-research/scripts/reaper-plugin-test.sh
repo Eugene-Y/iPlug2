@@ -57,7 +57,7 @@ render_check "$OUT/r01-open.png" first-open "${FX#*: }.*Track 1"
 read -r OX OY _ _ < <(view_geom "${FX#*: }.*Track 1")
 echo "view origin $OX $OY"
 if [ -n "$STEPS" ]; then
-  (echo "origin $OX $OY"; sed "s/__PROC__/$RPID/" "$STEPS") | OUT="$OUT" "$HERE/xact.sh"
+  (echo "origin $OX $OY"; sed "s/__PROC__/$RPID/" "$STEPS") | OUT="$OUT" XACT_FMT="${FX%%:*}" "$HERE/xact.sh"
   alive steps
   if [ -s "$OUT/xact-fails.txt" ]; then while read -r l; do fail "steps: $l"; done < "$OUT/xact-fails.txt"; fi
   if [ -f "$OUT/c00-start.png" ] && [ -f "$OUT/c02-xy-keyboard.png" ] && cmp -s "$OUT/c00-start.png" "$OUT/c02-xy-keyboard.png"; then

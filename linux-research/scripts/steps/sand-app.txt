@@ -1,0 +1,26 @@
+# Sand standalone (--no-io). Origin = editor view, 740x170 at 1x.
+wait 2
+shot a00-open
+drag 256 94 256 40
+wait 0.5
+shot a01-knob
+expect-change a00-open a01-knob 200 30 120 120
+click 350 49
+wait 0.5
+shot a02-env-tab
+expect-change a01-knob a02-env-tab 410 20 200 120
+rclick 256 94
+wait 1
+shot a03-context-menu
+expect-change a02-env-tab a03-context-menu 0 0 740 170
+key Escape
+wait 0.8
+shot a04-menu-dismissed
+expect-same a02-env-tab a04-menu-dismissed 0 0 740 170
+click 14 155
+wait 1
+shot a05-about
+expect-change a04-menu-dismissed a05-about 0 0 740 170
+click 14 155
+wait 1
+alive __PROC__
