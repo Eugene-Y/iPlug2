@@ -64,7 +64,8 @@ Update it at every merge or user decision.
     - Do churn and other GL-heavy loops only in Docker (llvmpipe).
     - Check `timeout 8 xdpyinfo` before and after each VM batch.
     - Open question, worth a task later: does our GL usage (context per editor, swap interval 0, open/close churn) trigger a virgl/ANGLE fence hang? Real drivers may not care, but it is worth a probe with a GL-only loop.
-  - Agents must kill everything they start on the VM (APP, REAPER, xclip, jackd) when they finish.
+  - **Before removing a worktree, check `git status --porcelain --ignored` too, not just tracked/untracked.** The repo ignores `build-*` and `_*`, so a helper named `build-*.sh` is never committed and dies with the worktree (lost T-024's `build-sand.sh` this way, 2026-10-17).
+- Agents must kill everything they start on the VM (APP, REAPER, xclip, jackd) when they finish.
 - The VM (UTM, 192.168.64.2) is unreachable when the Mac slept or UTM is stopped; there is no `bridge100`. Ask the user. Key: `~/.ssh/claude_linux_vm`. Never use the password.
 - Docker: colima. If it's down: `colima start` with the mounts in AGENTS §3.
 - REAPER `linux_audio_mode`: 0 JACK, 2 Dummy Audio (the harness's), 3 PulseAudio; 1 presumably ALSA. Without a working device REAPER never calls `ProcessBlock`.
