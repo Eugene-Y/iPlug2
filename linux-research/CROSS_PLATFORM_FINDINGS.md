@@ -56,10 +56,22 @@ Gneiss на mac/win использует нативные меню — его н
 Подробности и ссылки на строки: `tasks/T-012-sand-linux-build.md`, раздел Log.
 | ID | Серьёзность | Суть |
 |---|---|---|
-| **F1** | **Высокая** | Sand обрабатывает блоки из 0 сэмплов: VST3-хосты зовут `process` с `numSamples = 0` (сброс параметров), `SandModule::process` читает `chan.back()/front()`, а `hvoya::utils::derivativeInplace` пишет в `data.front()` пустого span — выход за границы буферов хоста (ASan: heap-buffer-overflow / use-after-free; VST3-валидатор падает в 1–4 из 10 прогонов). Фикс: ранний выход из `Sand::ProcessBlock` при `nFrames == 0` и/или `derivativeInplace` терпит пустой span |
-| **F2** | Средняя | MIDI CC → значение параметра не доходит до VST3-хоста: `hvoya/utils/midi_cc/mediator.hpp` из аудиопотока зовёт `BeginInformHostOfParamChange`/`SendParameterValueFromDelegate` — в VST3 это вызовы `IComponentHandler` вне UI-потока (нарушение правил VST3), REAPER видит старое значение. Общий код hvoya: Gneiss/Scape/DMT тоже. Родственно C4 |
-| F3 | Низкая | NaN на выходе при 768 кГц с параметрами по умолчанию (clap-validator `process-varying-sample-rates`) |
-| F4 | Низкая | Текст `flt hz` не парсится обратно ('1.01 kHz' → 1.0 Hz), как C5 у Gneiss |
-| F5 | Низкая–средняя | Sand пишет во входной буфер хоста (как C3 у Gneiss): портит вход у out-of-place хостов в 64-bit |
-| **F7** | Средняя | **Windows-проекты Sand, вероятно, не линкуются:** с 6036dec (2026-05-13) детекторы огибающей hvoya зовут `hiir::PolyphaseIIR2Designer::compute_coefs`, Xcode-проект компилирует `PolyphaseIIR2Designer.cpp`, ни один `projects/*.vcxproj` — нет (на Windows не проверено) |
-| F8 | Низкая | `xcodebuild` Sand из командной строки (и на master) падает: `plog/Log.h` не найден, `$(HVOYA_PATH)/**` доходит до clang нераскрытым. Важно для CI/скриптов |
+| **F1** ✅ исправлено (T-024, Sand `e8cb1f0`) | **Высокая** | Sand обрабатывает блоки из 0 сэмплов: VST3-хосты зовут `process` с `numSamples = 0` (сброс параметров), `SandModule::process` читает `chan.back()/front()`, а `hvoya::utils::derivativeInplace` пишет в `data.front()` пустого span — выход за границы буферов хоста (ASan: heap-buffer-overflow / use-after-free; VST3-валидатор падает в 1–4 из 10 прогонов). Фикс: ранний выход из `Sand::ProcessBlock` при `nFrames == 0` и/или `derivativeInplace` терпит пустой span |
+| **F2** — предложение в T-024 Log, ждёт решения | Средняя | MIDI CC → значение параметра не доходит до VST3-хоста: `hvoya/utils/midi_cc/mediator.hpp` из аудиопотока зовёт `BeginInformHostOfParamChange`/`SendParameterValueFromDelegate` — в VST3 это вызовы `IComponentHandler` вне UI-потока (нарушение правил VST3), REAPER видит старое значение. Общий код hvoya: Gneiss/Scape/DMT тоже. Родственно C4 |
+| **F3** — частично (T-024: Sand `da0e4bc`; общий hvoya — предложение, ждёт решения). Серьёзность поднята до средней–высокой: порча памяти | Низкая | NaN на выходе при 768 кГц с параметрами по умолчанию (clap-validator `process-varying-sample-rates`) |
+| F4 — предложение в T-024 Log, ждёт решения | Низкая | Текст `flt hz` не парсится обратно ('1.01 kHz' → 1.0 Hz), как C5 у Gneiss |
+| F5 ✅ исправлено (T-024, Sand `00cbc41`) | Низкая–средняя | Sand пишет во входной буфер хоста (как C3 у Gneiss): портит вход у out-of-place хостов в 64-bit |
+| **F7** ✅ исправлено (T-024, Sand `87beabb`; на Windows не собрано) | Средняя | **Windows-проекты Sand, вероятно, не линкуются:** с 6036dec (2026-05-13) детекторы огибающей hvoya зовут `hiir::PolyphaseIIR2Designer::compute_coefs`, Xcode-проект компилирует `PolyphaseIIR2Designer.cpp`, ни один `projects/*.vcxproj` — нет (на Windows не проверено) |
+| F8 ✅ исправлено (T-024, Sand `aed6804`; причина другая, см. ниже) | Низкая | `xcodebuild` Sand из командной строки (и на master) падает: `plog/Log.h` не найден, `$(HVOYA_PATH)/**` доходит до clang нераскрытым. Важно для CI/скриптов |
+
+Итоги T-024 (подробности, доказательства и предложения — `tasks/T-024-sand-cross-platform-fixes.md`, Log):
+- F1: кроме падений, каждый пустой блок давал щелчок (до 0.31 при пике 0.69).
+- F3: две причины, обе — порча памяти на высоких частотах модуля (частота хоста × оверсэмплинг):
+  - **`hvoya/utils/hilbert_envelope_detector.hpp`**: выше 384 кГц нужно больше коэффициентов, чем `kMaxCoefs = 14`; проверка только `assert`. Отсюда NaN. В реальности бывает при 88.2/96 кГц с os 8x, 176.4/192 кГц с os 4x/8x. Исправление в общем коде hvoya — **предложение**.
+  - `dmt_grind.hpp` (Sand): хранилище рассчитано на 3.07 МГц. **Исправлено** (`da0e4bc`).
+- F8: причина не в «нераскрытом `/**`». WIP cd9f063 убрал `/**` только у таргета CLAP — он не собирался и в IDE; VST3/APP собирались.
+- Новое, не исправлялось:
+  - **N1:** `SandModule::process` выделяет память в аудиопотоке (`AudioBuffer dryCopy (processed)` на каждый блок).
+  - **N2:** свежий клон Sand не собирается на маке: macOS `Info.plist` убраны из git (9d0c8ea), а `prepare_resources-mac.py` их только обновляет.
+  - **N3:** `Sand-aax.vcxproj` устарел целиком (нет `SandUI.cpp` и исходников hvoya).
+  - **N4:** краш в FL Studio из BACKLOG — кандидаты F1/F3, не проверено.

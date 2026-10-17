@@ -1,0 +1,358 @@
+# excerpt of vst3-asan-1.txt (   74480 lines): test progression, Result lines, ASan reports, last 30 lines
+Info:  ===Scan Editor Classes ====================================
+Info:  ===Scan Buses ====================================
+Info:  ===Scan Parameters ====================================
+Info:  ===MIDI Mapping ====================================
+Info:  ===MIDI Learn ====================================
+Info:  ===Scan Units ====================================
+Info:  ===Scan Programs ====================================
+Info:  ===Terminate/Initialize ====================================
+Info:  ===Check Unit Structure ====================================
+Info:  ===Valid State Transition 32bits ====================================
+Info:  ===Valid State Transition 64bits ====================================
+Info:  ===Bus Consistency ====================================
+Info:  ===Bus Activation ====================================
+Info:  ===Check Audio Bus Arrangement ====================================
+Info:  ===SideChain Arrangement ====================================
+Info:  ===Suspend/Resume ====================================
+Info:  ===Note Expression ====================================
+Info:  ===Keyswitch ====================================
+Info:  ===ProcessContext Requirements ====================================
+Info:  ===Process function running in another thread ====================================
+Info:  ===Silence Flags ====================================
+Info:  ===Silence Processing ====================================
+Info:  ===Parameters Flush (no Buffer) ====================================
+Info:  ===Parameters Flush 2 (only numChannel==0) ====================================
+Info:  ===Parameters Flush 2 (no Buffer, no parameter change) ====================================
+Info:  ===Variable Block Size ====================================
+Info:  ===Process Format ====================================
+Info:  ===Parameter Bypass persistence ====================================
+Info:  ===In: Mono: 1 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: Mono: 1 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: Stereo: 2 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: StereoSurround: 2 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: StereoCenter: 2 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: StereoSide: 2 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: StereoCLfe: 2 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: 30Cine: 3 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: 30Music: 3 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: 31Cine: 4 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: 31Music: 4 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: 40Cine: 4 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: 40Music: 4 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: 41Cine: 5 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: 41Music: 5 Channels, Out: 50: 5 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: Mono: 1 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: Stereo: 2 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: StereoSurround: 2 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: StereoCenter: 2 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: StereoSide: 2 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: StereoCLfe: 2 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: 30Cine: 3 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: 30Music: 3 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: 31Cine: 4 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: 31Music: 4 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: 40Cine: 4 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: 40Music: 4 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: 41Cine: 5 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: 41Music: 5 Channels ====================================
+Info:  ===In: 50: 5 Channels, Out: 50: 5 Channels ====================================
+Info:  ===Accuracy: Block, 1 Parameters, Change every100 Samples ====================================
+Info:  ===Accuracy: Sample, 1 Parameters, Change every100 Samples ====================================
+Info:  ===Accuracy: Block, 1 Parameters, Change every50 Samples ====================================
+Info:  ===Accuracy: Sample, 1 Parameters, Change every50 Samples ====================================
+Info:  ===Accuracy: Block, 1 Parameters, Change every1 Samples ====================================
+Info:  ===Accuracy: Sample, 1 Parameters, Change every1 Samples ====================================
+Info:  ===Accuracy: Block, 2 Parameters, Change every100 Samples ====================================
+Info:  ===Accuracy: Sample, 2 Parameters, Change every100 Samples ====================================
+Info:  ===Accuracy: Block, 2 Parameters, Change every50 Samples ====================================
+Info:  ===Accuracy: Sample, 2 Parameters, Change every50 Samples ====================================
+Info:  ===Accuracy: Block, 2 Parameters, Change every1 Samples ====================================
+Info:  ===Accuracy: Sample, 2 Parameters, Change every1 Samples ====================================
+Info:  ===Accuracy: Block, 10 Parameters, Change every100 Samples ====================================
+Info:  ===Accuracy: Sample, 10 Parameters, Change every100 Samples ====================================
+Info:  ===Accuracy: Block, 10 Parameters, Change every50 Samples ====================================
+Info:  ===Accuracy: Sample, 10 Parameters, Change every50 Samples ====================================
+Info:  ===Accuracy: Block, 10 Parameters, Change every1 Samples ====================================
+Info:  ===Accuracy: Sample, 10 Parameters, Change every1 Samples ====================================
+Info:  ===Accuracy: Block, 159 Parameters, Change every100 Samples ====================================
+Info:  ===Accuracy: Sample, 159 Parameters, Change every100 Samples ====================================
+Info:  ===Accuracy: Block, 159 Parameters, Change every50 Samples ====================================
+Info:  ===Accuracy: Sample, 159 Parameters, Change every50 Samples ====================================
+Info:  ===Accuracy: Block, 159 Parameters, Change every1 Samples ====================================
+Info:  ===Accuracy: Sample, 159 Parameters, Change every1 Samples ====================================
+Info:  ===Process function running in another thread ====================================
+Info:  ===Silence Flags ====================================
+Info:  ===Silence Processing ====================================
+Info:  ===Parameters Flush (no Buffer) ====================================
+Info:  ===Parameters Flush 2 (only numChannel==0) ====================================
+Info:  ===Parameters Flush 2 (no Buffer, no parameter change) ====================================
+Info:  ===Variable Block Size ====================================
+Info:  ===Process Format ====================================
+==1975==ERROR: AddressSanitizer: heap-buffer-overflow on address 0xe40d419af478 at pc 0xe40d41be08ec bp 0xffffc8b47000 sp 0xffffc8b46ff0
+WRITE of size 8 at 0xe40d419af478 thread T0
+    #0 0xe40d41be08e8 in __gnu_cxx::__enable_if<std::__is_scalar<double>::__value, void>::__type std::__fill_a1<double*, double>(double*, double*, double const&) /usr/include/c++/13/bits/stl_algobase.h:931
+    #1 0xe40d41be08e8 in void std::__fill_a1<double*, std::span<double, 18446744073709551615ul>, double>(__gnu_cxx::__normal_iterator<double*, std::span<double, 18446744073709551615ul> >, __gnu_cxx::__normal_iterator<double*, std::span<double, 18446744073709551615ul> >, double const&) /usr/include/c
+    #2 0xe40d41be08e8 in void std::__fill_a<__gnu_cxx::__normal_iterator<double*, std::span<double, 18446744073709551615ul> >, double>(__gnu_cxx::__normal_iterator<double*, std::span<double, 18446744073709551615ul> >, __gnu_cxx::__normal_iterator<double*, std::span<double, 18446744073709551615ul> >,
+    #3 0xe40d41be08e8 in void std::fill<__gnu_cxx::__normal_iterator<double*, std::span<double, 18446744073709551615ul> >, double>(__gnu_cxx::__normal_iterator<double*, std::span<double, 18446744073709551615ul> >, __gnu_cxx::__normal_iterator<double*, std::span<double, 18446744073709551615ul> >, dou
+    #4 0xe40d41be08e8 in hvoya::DelayLineWithFeedback<double>::clear() /Volumes/Storage/code/hvoya/Sand-t024-linux/delay_line.hpp:69
+    #5 0xe40d41be08e8 in hvoya::DelayLineWithFeedback<double>::setBuffer(std::span<double, 18446744073709551615ul>) /Volumes/Storage/code/hvoya/Sand-t024-linux/delay_line.hpp:30
+    #6 0xe40d41be08e8 in hvoya::DmtGrind::assignStorageAndLengths() /Volumes/Storage/code/hvoya/Sand-t024-linux/dmt_grind.hpp:293
+    #7 0xe40d41be08e8 in hvoya::DmtGrind::setSampleRate(double) /Volumes/Storage/code/hvoya/Sand-t024-linux/dmt_grind.hpp:162
+    #8 0xe40d41be08e8 in hvoya::SandModule::setSampleRate(double) /Volumes/Storage/code/hvoya/Sand-t024-linux/sand_module.hpp:154
+    #9 0xe40d41bce5ec in Sand::applyOversampling(double) /Volumes/Storage/code/hvoya/Sand-t024-linux/Sand.hpp:185
+    #10 0xe40d41bce5ec in Sand::updateOversampling(double) /Volumes/Storage/code/hvoya/Sand-t024-linux/Sand.hpp:191
+    #11 0xe40d41bce5ec in Sand::OnReset() /Volumes/Storage/code/hvoya/Sand-t024-linux/Sand.cpp:245
+    #12 0xe40d41cac610 in iplug::IPlugVST3ProcessorBase::SetupProcessing(Steinberg::Vst::ProcessSetup const&, Steinberg::Vst::ProcessSetup&) /Volumes/Storage/code/IPlug2-T-024-log/IPlug/VST3/IPlugVST3_ProcessorBase.cpp:228
+    #13 0xe40d41c96f40 in non-virtual thunk to iplug::IPlugVST3::setupProcessing(Steinberg::Vst::ProcessSetup&) (/Volumes/Storage/code/IPlug2-T-024-log/linux-research/build/t024-f15-asan/out/Sand.vst3/Contents/aarch64-linux/Sand.so+0x186f40) (BuildId: 3a0f78a6160e42a88e693eac8f1ef14133118b71)
+    #14 0xc4784d50180c in Steinberg::Vst::ProcessFormatTest::run(Steinberg::ITestResult*) (/usr/local/bin/validator+0x3180c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #15 0xc4784d50cc64 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cc64) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #16 0xc4784d50cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #17 0xc4784d50cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #18 0xc4784d5135d0 in Steinberg::Vst::Validator::testModule(std::shared_ptr<VST3::Hosting::Module>, Steinberg::Vst::Validator::ModuleTestConfig const&) (/usr/local/bin/validator+0x435d0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #19 0xc4784d515930 in Steinberg::Vst::Validator::run() (/usr/local/bin/validator+0x45930) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #20 0xc4784d50ab8c in run(int, char**) (/usr/local/bin/validator+0x3ab8c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #21 0xe40d44ab84c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #22 0xe40d44ab8594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #23 0xc4784d4e03ec in _start (/usr/local/bin/validator+0x103ec) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+
+0xe40d419af478 is located 0 bytes after 19934328-byte region [0xe40d406ac800,0xe40d419af478)
+allocated by thread T0 here:
+    #0 0xe40d450b8324 in operator new(unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:95
+    #1 0xe40d41bd14bc in iplug::MakePlug(iplug::InstanceInfo const&) /Volumes/Storage/code/IPlug2-T-024-log/IPlug/IPlug_include_in_plug_src.h:472
+    #2 0xe40d41bd16e8 in createInstance /Volumes/Storage/code/IPlug2-T-024-log/IPlug/IPlug_include_in_plug_src.h:137
+    #3 0xe40d41d096a0 in Steinberg::CPluginFactory::createInstance(char const*, char const*, void**) /Volumes/Storage/code/IPlug2-T-024-log/Dependencies/IPlug/VST3_SDK/public.sdk/source/main/pluginfactory.cpp:235
+    #4 0xc4784d4f6c08 in Steinberg::Vst::PlugProvider::setupPlugin(Steinberg::FUnknown*) (/usr/local/bin/validator+0x26c08) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #5 0xc4784d4f70c0 in non-virtual thunk to Steinberg::Vst::PlugProvider::getComponent() (/usr/local/bin/validator+0x270c0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #6 0xc4784d505e70 in Steinberg::Vst::TestBase::setup() (/usr/local/bin/validator+0x35e70) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #7 0xc4784d50cd9c in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cd9c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #8 0xc4784d50cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #9 0xc4784d50cb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #10 0xc4784d5135d0 in Steinberg::Vst::Validator::testModule(std::shared_ptr<VST3::Hosting::Module>, Steinberg::Vst::Validator::ModuleTestConfig const&) (/usr/local/bin/validator+0x435d0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #11 0xc4784d515930 in Steinberg::Vst::Validator::run() (/usr/local/bin/validator+0x45930) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+# --- last 30 lines
+  0xe40d419af200: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0xe40d419af280: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0xe40d419af300: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0xe40d419af380: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0xe40d419af400: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00[fa]
+  0xe40d419af480: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0xe40d419af500: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0xe40d419af580: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0xe40d419af600: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0xe40d419af680: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==1975==ABORTING

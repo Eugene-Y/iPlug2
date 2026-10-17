@@ -1,0 +1,96 @@
+# excerpt of vst3-asan-1.txt (    3061 lines): test progression, Result lines, ASan reports, last 30 lines
+Info:  ===Scan Editor Classes ====================================
+Info:  ===Scan Buses ====================================
+Info:  ===Scan Parameters ====================================
+Info:  ===MIDI Mapping ====================================
+Info:  ===MIDI Learn ====================================
+Info:  ===Scan Units ====================================
+Info:  ===Scan Programs ====================================
+Info:  ===Terminate/Initialize ====================================
+Info:  ===Check Unit Structure ====================================
+Info:  ===Valid State Transition 32bits ====================================
+Info:  ===Valid State Transition 64bits ====================================
+Info:  ===Bus Consistency ====================================
+Info:  ===Bus Activation ====================================
+Info:  ===Check Audio Bus Arrangement ====================================
+Info:  ===SideChain Arrangement ====================================
+Info:  ===Suspend/Resume ====================================
+Info:  ===Note Expression ====================================
+Info:  ===Keyswitch ====================================
+Info:  ===ProcessContext Requirements ====================================
+Info:  ===Process function running in another thread ====================================
+Info:  ===Silence Flags ====================================
+Info:  ===Silence Processing ====================================
+Info:  ===Parameters Flush (no Buffer) ====================================
+==599==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x5330000007f8 at pc 0xf16faf1ecfd8 bp 0xffffe408a950 sp 0xffffe408a940
+READ of size 8 at 0x5330000007f8 thread T0
+    #0 0xf16faf1ecfd4 in void hvoya::utils::derivativeInplace<double>(std::span<double, 18446744073709551615ul>, double*) /Volumes/Storage/code/IPlug2-T-024-log/hvoya/hvoya/utils/utils.hpp:132
+    #1 0xf16faf1ecfd4 in void hvoya::utils::derivativeNthInplace<double>(std::span<double, 18446744073709551615ul>, unsigned long, std::span<double, 18446744073709551615ul>) /Volumes/Storage/code/IPlug2-T-024-log/hvoya/hvoya/utils/utils.hpp:143
+    #2 0xf16faf1ecfd4 in hvoya::SandModule::process(hvoya::AudioBuffer&) /Volumes/Storage/code/hvoya/Sand-t024-linux/sand_module.hpp:381
+    #3 0xf16faf1cef18 in Sand::ProcessBlock(double**, double**, int) /Volumes/Storage/code/hvoya/Sand-t024-linux/Sand.cpp:109
+    #4 0xf16faf33bce0 in iplug::IPlugProcessor::ProcessBuffers(double, int) /Volumes/Storage/code/IPlug2-T-024-log/IPlug/IPlugProcessor.cpp:525
+    #5 0xf16faf33bce0 in iplug::IPlugProcessor::ProcessBuffers(float, int) /Volumes/Storage/code/IPlug2-T-024-log/IPlug/IPlugProcessor.cpp:530
+    #6 0xf16faf2ad2b0 in iplug::IPlugVST3ProcessorBase::Process(Steinberg::Vst::ProcessData&, Steinberg::Vst::ProcessSetup&, Steinberg::Vst::BusList const&, Steinberg::Vst::BusList const&, iplug::IPlugQueue<iplug::IMidiMsg>&, iplug::IPlugQueue<iplug::IMidiMsg>&, iplug::IPlugQueue<iplug::SysExData>&,
+    #7 0xf16faf296170 in non-virtual thunk to iplug::IPlugVST3::process(Steinberg::Vst::ProcessData&) (/Volumes/Storage/code/IPlug2-T-024-log/linux-research/build/t024-before-asan/out/Sand.vst3/Contents/aarch64-linux/Sand.so+0x186170) (BuildId: 95c7e25be52da01a2a759122abba9e8d6d9bad95)
+    #8 0xc7da264ce160 in Steinberg::Vst::FlushParamTest::run(Steinberg::ITestResult*) (/usr/local/bin/validator+0x2e160) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #9 0xc7da264dcc64 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cc64) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #10 0xc7da264dcb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #11 0xc7da264dcb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #12 0xc7da264e35d0 in Steinberg::Vst::Validator::testModule(std::shared_ptr<VST3::Hosting::Module>, Steinberg::Vst::Validator::ModuleTestConfig const&) (/usr/local/bin/validator+0x435d0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #13 0xc7da264e5930 in Steinberg::Vst::Validator::run() (/usr/local/bin/validator+0x45930) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #14 0xc7da264dab8c in run(int, char**) (/usr/local/bin/validator+0x3ab8c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #15 0xf16fb20384c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #16 0xf16fb2038594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #17 0xc7da264b03ec in _start (/usr/local/bin/validator+0x103ec) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+
+0x5330000007f8 is located 8 bytes before 98208-byte region [0x533000000800,0x5330000187a0)
+allocated by thread T0 here:
+    #0 0xf16fb263646c in realloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:85
+    #1 0xf16faf1d6658 in WDL_HeapBuf::Resize(int, bool) /Volumes/Storage/code/IPlug2-T-024-log/WDL/heapbuf.h:177
+    #2 0xf16faf33c4c4 in WDL_TypedBuf<double>::Resize(int, bool) /Volumes/Storage/code/IPlug2-T-024-log/WDL/heapbuf.h:280
+    #3 0xf16faf33c4c4 in iplug::IPlugProcessor::SetBlockSize(int) /Volumes/Storage/code/IPlug2-T-024-log/IPlug/IPlugProcessor.cpp:592
+    #4 0xf16faf2ab234 in iplug::IPlugVST3ProcessorBase::SetupProcessing(Steinberg::Vst::ProcessSetup const&, Steinberg::Vst::ProcessSetup&) /Volumes/Storage/code/IPlug2-T-024-log/IPlug/VST3/IPlugVST3_ProcessorBase.cpp:226
+    #5 0xf16faf295d80 in non-virtual thunk to iplug::IPlugVST3::setupProcessing(Steinberg::Vst::ProcessSetup&) (/Volumes/Storage/code/IPlug2-T-024-log/linux-research/build/t024-before-asan/out/Sand.vst3/Contents/aarch64-linux/Sand.so+0x185d80) (BuildId: 95c7e25be52da01a2a759122abba9e8d6d9bad95)
+    #6 0xc7da264d04c0 in Steinberg::Vst::ProcessTest::prepareProcessing() (/usr/local/bin/validator+0x304c0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #7 0xc7da264d06a8 in Steinberg::Vst::ProcessTest::setup() (/usr/local/bin/validator+0x306a8) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #8 0xc7da264dcd9c in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cd9c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #9 0xc7da264dcb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #10 0xc7da264dcb74 in Steinberg::Vst::Validator::runTestSuite(Steinberg::Vst::TestSuite*, char const*) (/usr/local/bin/validator+0x3cb74) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #11 0xc7da264e35d0 in Steinberg::Vst::Validator::testModule(std::shared_ptr<VST3::Hosting::Module>, Steinberg::Vst::Validator::ModuleTestConfig const&) (/usr/local/bin/validator+0x435d0) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #12 0xc7da264e5930 in Steinberg::Vst::Validator::run() (/usr/local/bin/validator+0x45930) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #13 0xc7da264dab8c in run(int, char**) (/usr/local/bin/validator+0x3ab8c) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+    #14 0xf16fb20384c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #15 0xf16fb2038594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #16 0xc7da264b03ec in _start (/usr/local/bin/validator+0x103ec) (BuildId: 66fac1c3a452d38cd56db7e216d20fff482dacfb)
+
+# --- last 30 lines
+  0x533000000580: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x533000000600: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x533000000680: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x533000000700: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x533000000780: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa[fa]
+  0x533000000800: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x533000000880: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x533000000900: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x533000000980: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x533000000a00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==599==ABORTING
