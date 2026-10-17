@@ -2,7 +2,7 @@
 
 - **Status:** in review (work done 2026-10-17; independent review pending, see Log)
 - **Owner:** T-026 chat (2026-10-17). Task file, Log and evidence: iPlug2 branch `linux/T-026` (from `hvoya-linux` ab632ec4e) in `/Volumes/Storage/code/IPlug2-T-026-log`. Lock `.linux-port-locks/T-026`.
-- **Where the work is:** Sand `fix/t026-followups` in `hvoya/Sand-t026` (N1 `22d920c`, N3 `e026630`); iPlug2 `fix/host-info-beat` in `IPlug2-T-026` (T21-5 proposal `6dc1564d3`). Details: Log, "Where everything is".
+- **Where the work is:** Sand `fix/t026-followups` in `hvoya/Sand-t026` (N1 `9a89783`, N3 `aacc040`); iPlug2 `fix/host-info-beat` in `IPlug2-T-026` (T21-5 proposal `b36d0d545`). Details: Log, "Where everything is".
 - **Branches/worktrees:**
   - Sand repo: branch `fix/t026-followups` from `master` (54be993 or newer), in a new worktree `/Volumes/Storage/code/hvoya/Sand-t026` (`git -C /Volumes/Storage/code/hvoya/Sand worktree add ../Sand-t026 -b fix/t026-followups master`). Never the main checkout `/Volumes/Storage/code/hvoya/Sand` (the user's working tree; its untracked `Media/` stays). Never push; the coordinator merges at the user's command.
   - iPlug2/hvoya only if an item needs shared code (item 6): branch from `hvoya` in `/Volumes/Storage/code/IPlug2-T-026`. Never `/Volumes/Storage/code/IPlug2` itself (Gneiss builds against it).
@@ -79,7 +79,7 @@ New tools in `evidence/t026/`:
 - `run-allocs.sh` (N1 matrix, Linux), `run-allocs-debug.sh`, `symbolize.sh`, `run-stress.sh` (N4, Linux), `mac-checks.sh` (renders before/after, VST3 ×20, clap-validator), `n3-sync-aax-sources.py`, `f2-sweep-steps.txt` + `f2-stepback.py` (F2), `t21-5-beat-table.cpp`.
 - Large outputs (raw renders, full validator logs, full REAPER stderr) stay in the session scratchpad (`evidence-big/`); the repo keeps hashes, summaries and excerpts.
 
-#### 1. N1 — allocation on the audio thread: fixed (Sand `22d920c`)
+#### 1. N1 — allocation on the audio thread: fixed (Sand `9a89783`)
 
 Audit of the audio path, `Sand::ProcessBlock` → `SandModule::process` and everything they call (file:line on `fix/t026-followups` / hvoya 228f1ea8e). "Measured" = seen by the counter (Release unless noted):
 
@@ -91,12 +91,17 @@ Audit of the audio path, `Sand::ProcessBlock` → `SandModule::process` and ever
 | `sand_module.hpp:187-188` `_tempBuffers` (7), `:194` `_cosRampBuf`, `:914` `_grindBuf`, `:1083` `_dryHpBufs` | block longer than 1024 frames (os ≥ 2x at 512) | measured | `SandModule::prepare` (`:170`) reserves them — 0 |
 | `Sand.cpp:105` `applyOversampling` on the audio thread (os param change) | `setSampleRate`/`reset` of the module, grind storage reassignment | measured: 13 per change, all from the buffer growth above, none from setSampleRate/reset themselves | 0 (buffers reserved for 8x) |
 | `Sand.cpp:95` `HostInfoModel::updateAll`; `Sand.cpp:117` `SoftLimiter::processBuffer`; `SandModule` filters, envelope/Hilbert detectors, `DmtGrind` (inline `std::array` storage), mid/side, companders, `derivativeNthInplace` | never | 0 | 0 |
+| MIDI CC: `Sand::ProcessMidiMsg` → `CCMediator::ProcessMidiCC` (`mediator.hpp:127`) → `Mapper::processMidiCC` (`mapper.hpp:97`, lock-free read of the published table) → `OnParamChange` → atomics | never (by reading; not measured: the renderer sends no MIDI) | — | — |
 | `Sand::OnParamChange` on the audio thread (VST3/CLAP param events): `isSettingNewVal`, module setters | never in Release | 0 (sweeps of every filter param, mix, os) | 0 |
-| plog `LOGD`/`LOGE`: `sand_module.hpp:206` (declickFront), `:339`, `:760` (`setJointMix`), `Sand.cpp:333`, hvoya `host_info_model.hpp:58/71/81` (chans/sr/buf size change), `audio_buffer.cpp:19` (size mismatch) | only in logging builds: Release defines `PLOG_DISABLE_LOGGING` on mac (xcconfig), win (props) and Linux (`hvoya.cmake`) | Debug/RelWithDebInfo: measured (`allocs-after/debug-logging-allocs.txt`: first block 10–12; a block-size change 4, from the HostInfoModel "buf size" log; ≈ 3 per joint-mix change) | unchanged — Debug only, the user's own logging; not changed |
+| plog `LOGD`/`LOGE`: `sand_module.hpp:206` (declickFront), `:339`, `:760` (`setJointMix`), `Sand.cpp:333`, hvoya `host_info_model.hpp:58/71/81` (chans/sr/buf size change), `audio_buffer.cpp:19` (size mismatch), `dmt_grind.hpp:148-153` (`DmtGrind::reset`, runs on every os change on the audio thread), `svf_zdf.hpp:263` (`checkSubnormal`, assert path) | only in logging builds: Release defines `PLOG_DISABLE_LOGGING` on mac (xcconfig), win (props) and Linux (`hvoya.cmake`) | Debug/RelWithDebInfo: measured (`allocs-after/debug-logging-allocs.txt`: first block 10–12; a block-size change 4, from the HostInfoModel "buf size" log; ≈ 3 per joint-mix change) | unchanged — Debug only, the user's own logging; not changed |
 | hvoya `midi_cc/mapper.cpp:128` `advanceLearning` → `publishLocked` (`:230`) | the CC that completes a MIDI learn (once per learn, under `try_lock`) | by design, documented in the code | unchanged; shared code → item 6 list, no proposal (one allocation per user learn gesture) |
 | iPlug `IPlugAAX.cpp:291` `SetBlockSize` + `OnReset` from the render callback when a block grows | AAX only, iPlug core | pre-existing (iPlug's own scratch buffers) | `OnReset` now also reserves Sand's buffers there; same class, not new. Not measured (no AAX here) |
 
-Fix: the dry copy is a `subBuffer` view of `_dryBuf` (like the other scratch buffers); `Sand::OnReset` → `prepareProcessBuffers()` reserves `_osBuffer` and the module's buffers for `GetBlockSize() × 8` (the factor changes on the audio thread without an OnReset) and calls `Oversampler::prepare`. Every format sets the block size before `OnReset` (VST3 `setupProcessing`, CLAP `activate`, AU `MaximumFramesPerSlice`, VST2 `effSetBlockSize`, AAX, APP). The grow-on-demand checks stay for hosts that exceed their announced block. Memory held per instance: ≈ 15 buffers × (8 × max block) doubles, ≈ 1 MB at a 1024 max block.
+Fix: the dry copy is a `subBuffer` view of `_dryBuf` (like the other scratch buffers); `Sand::OnReset` → `prepareProcessBuffers()` reserves `_osBuffer` and the module's buffers for `GetBlockSize() × 8` (the factor changes on the audio thread without an OnReset) and calls `Oversampler::prepare`. Every format sets the block size before `OnReset` (VST3 `setupProcessing`, CLAP `activate`, AU `MaximumFramesPerSlice`, VST2 `effSetBlockSize`, AAX, APP). Sand's own buffers still grow on demand for a block longer than the host announced (iPlug's 32-bit scratch does not: review R1, `CROSS_PLATFORM_FINDINGS` T26-b). After review round 1, `prepareProcessBuffers` returns early unless the max block grew (`_preparedMaxFrames`), see the thread-safety note below. Memory held per instance: ≈ 15 buffers × (8 × max block) doubles, ≈ 1 MB at a 1024 max block.
+
+Thread safety (review R2): not every `OnReset` runs while the plug-in is idle — CLAP `reset()` runs on the audio thread, AAX calls `SetBlockSize` + `OnReset` from the render call, and AU calls it from `DoReset` and `kAudioUnitProperty_BypassEffect`, possibly while another thread renders. `reserve` reallocates only when the block grew, and the block grows only in calls made while not processing (VST3 `setupProcessing`, CLAP `activate`, AU `MaximumFramesPerSlice`) or, in AAX, on the audio thread itself. The `_preparedMaxFrames` guard makes the other `OnReset` calls leave the buffers alone entirely. The `updateOversampling` in the same `OnReset` (module reset + rate change while `ProcessBlock` may run) is an older race of that AU path, not touched here: `CROSS_PLATFORM_FINDINGS` T26-c.
+
+Coverage: the counter measures the CLAP wrapper only; the VST3/AU/AAX wrappers' own per-block code is not measured (Sand's code is the same in every format).
 
 Proof (Linux Docker, Release CLAP, `run-allocs.sh`, 47 configurations: 44.1/48/96/192 kHz × os 1/2/4/8, default and every-stage-on, block lists `1024,64,333,512,1`, random blocks with 0-frame blocks, f64 in-place, filter/mix/os sweeps every block, re-activation 48→96 kHz with blocks 4096/128 and 44.1 kHz os 8x with 2048/7):
 - before (`allocs-before/allocs.txt`): 1 allocation in every block (316 958 blocks), plus 12–24 in the first block and 13 at each os change;
@@ -106,13 +111,13 @@ Proof (Linux Docker, Release CLAP, `run-allocs.sh`, 47 configurations: 44.1/48/9
 
 CPU (`cpu/linux-cpu-n1.txt`, best of 7, builds alternating): 0.1688 → 0.1687 s (100 s f64), 0.1856 → 0.1857 s (block 64), 1.394 → 1.400 s (all stages, os 4x, block 128; the spread between runs is ±5%). No measurable change: glibc's small allocation was cheap on average; the fix removes the worst case (allocator locks, page faults), which a mean does not show.
 
-mac (`mac-branch/`, Apple clang, CLAP Release, branch vs the N2 fresh-clone build of master): 46 render pairs (rates 44.1–192 kHz × os 1–8x, sweeps with null-pointer 0-frame blocks, f64 in-place, os sweep, re-activation) **bit-identical**.
+mac (`mac-branch/`, Apple clang, CLAP Release, branch vs the N2 fresh-clone build of master): 46 render pairs (rates 44.1–192 kHz × os 1–8x, sweeps with null-pointer 0-frame blocks, f64 in-place, os sweep, re-activation) **bit-identical**. The malloc counter is Linux-only: the `allocs=0` in the mac render lines means nothing (only the hashes count).
 
 #### 2. N2 — fresh clone on mac: verified, closed by 961be6c (no change)
 
 `git clone` of master 54be993 into `scratchpad/n2/root/hvoya/Sand`, `root/IPlug2` → `IPlug2-T-026` (hvoya 228f1ea8e): xcodebuild Release **CLAP, VST3, AUv2, APP all exit 0**, every bundle holds a universal (x86_64 + arm64) binary. The tracked `resources/*-Info.plist` (11) are enough; `plug_build_info.hpp` (git-ignored) is generated by the build phase. The build regenerates the tracked `resources/main.rc_mac_dlg` (known; in the throwaway clone).
 
-#### 3. N3 — `Sand-aax.vcxproj`: file list fixed (Sand `e026630`), not built
+#### 3. N3 — `Sand-aax.vcxproj`: file list fixed (Sand `aacc040`), not built
 
 ClCompile/ClInclude and `.filters` now carry exactly Sand-vst3's non-format sources: + 8 hvoya .cpp, `PolyphaseIIR2Designer.cpp`, `SandUI.cpp`; Sand/hvoya/plog headers; the stale `..\Sand.h` entry goes; filter "hvoya" added. AAX-specific sources (`AAX_Exports.cpp`, `IPlugAAX*.cpp`) were already as in `IPlugEffect-aax.vcxproj`. BOM/LF and all settings byte-identical; both files parse as XML; project and filters list the same items. **Not built (no Windows/AAX here): the user verifies.**
 
@@ -137,7 +142,7 @@ Still missing in that project — settings, so left alone per the task: `Languag
 #### 5. F2 in other hosts
 
 - **REAPER (Linux 7.82, Docker; diagnostic build, `f2-sweep-{vst3,clap}/`):** CC learn on the comp knob (T-024's menu path), then a MIDI item with CC1 ramps 127→0 in 200 ms, 0→127 in 100 ms, 127→0 in 50 ms, 0→127 in 20 ms (a CC every 2 ms, faster than the 20 ms idle tick), played in automation mode read and then write. The diagnostic build (`tmp/t026-diag`) logs every comp-amount change with its source.
-  - VST3: REAPER sends each value Sand reported from `OnIdle` back as a host parameter change in the next block (35 echoes). **0 of 35 were stale**: a newer CC in that block is applied after the echo (params before MIDI), so the block always ends on the CC value (`f2-stepback.py`). **No step-back at any of the 8 sweep ends.** Host value and recorded envelope follow (17 points in write mode); Sand's knob matches the host (screenshot `f01-end.png`: comp 0.000 — REAPER itself sends CC1 = 0 at the end of the item).
+  - VST3: REAPER sends each value Sand reported from `OnIdle` back as a host parameter change in the next block (35 echoes). **All 35 echoes carried the latest CC value** (`f2-stepback.py`: 0 stale), so no step-back was possible; the ordering within a block (params before MIDI) was never needed. Note: iPlug's VST3 wrapper takes only the last point of each parameter queue per block (`IPlugVST3_ProcessorBase.cpp:297`) and MIDI CC reaches VST3 plug-ins through IMidiMapping parameters, so VST3 applies at most one CC per block (71 CC applications against 381 in CLAP for the same item) — this limits how fine a VST3 sweep can be. **No step-back at any of the 8 sweep ends.** Host value and recorded envelope follow (17 points in write mode); Sand's knob matches the host (screenshot `f01-end.png`: comp 0.000 — REAPER itself sends CC1 = 0 at the end of the item).
   - CLAP: no echoes at all, so no step-back is possible.
   - Remaining window, not observed: an idle tick that reads the pending value while the audio thread is already applying the final CC of a sweep; the host's echo of the older value would then be undone by the next tick (≤ 20 ms + one block). No fix proposed: it needs both a fast sweep ending in that sub-block window and a host that echoes; the T-024 fix idea (ignore an echo of a value Sand reported earlier) would add per-param bookkeeping to shared code for an unobserved case.
 - **mac — not automated.** REAPER 7.76 with an alternate resource dir (`-cfgfile` in the scratchpad) rescans every system plug-in and shows the evaluation dialog (the license file lives in the user's resource dir), which I cannot dismiss: no GUI control in this session. My two REAPER processes were closed; the user's REAPER config was not touched. The AU of this branch is invisible to macOS unless installed into `~/Library/Audio/Plug-Ins/Components` (forbidden here), and the installed `Sand.component` is the user's 2026-09-13 dev build (before F2), so `auval` of it proves nothing about this branch. Bitwig and Live: no way to drive them here.
@@ -150,10 +155,10 @@ Still missing in that project — settings, so left alone per the task: `Languag
 
 #### 6. Shared code → proposals (waiting for the user)
 
-- **T21-5 — proposal committed** on iPlug2 `fix/host-info-beat` (from hvoya 228f1ea8e) in `IPlug2-T-026`: `6dc1564d3` "hvoya HostInfoModel: the beat number is right at every tempo and time signature".
+- **T21-5 — proposal committed** on iPlug2 `fix/host-info-beat` (from hvoya 228f1ea8e) in `IPlug2-T-026`: `b36d0d545` "hvoya HostInfoModel: the beat number is right at every tempo and time signature".
   - Root cause (`host_info_model.hpp:187`): `GetPPQPos() * 60 / tempo` — PPQ already counts quarter notes, the factor converts it to seconds, so it is right only at 120 BPM; also the beat wrapped at `den` instead of `num` (3/4 showed beat 4, 6/8 beats 7–8) and the fraction was always 0.
   - Fix: `beats = PPQ * den / 4`, `beat = floor(beats mod num) + 1`, fraction = its hundredths.
-  - Table test `t21-5-beat-table.cpp` (6 tempos × 6 signatures × 12 positions, against the header itself): **265/432 wrong before, 0 after, on Apple clang (`t21-5-apple-clang.txt`) and GCC 13 (`t21-5-gcc.txt`)**; 4/4 one quarter in: before 4/3/2/2/1/1 at 40/60/90/120/134/180 BPM, after 2 everywhere. Sand CLAP Release builds on mac against the branch.
+  - Table test `t21-5-beat-table.cpp` runs the header itself against hand-written expectations (after review R4: 36 cases incl. count-in/negative PPQ, 6/8, 7/8, 2/2 and the fraction, × 6 tempos): **beat or fraction wrong in 168/216 before, 0 after, on Apple clang (`t21-5-apple-clang.txt`) and GCC 13 (`t21-5-gcc.txt`)**; a PPQ a hair below 0 showed beat num+1 (review R5), now the bar start; 4/4 one quarter in: before 4/3/2/2/1/1 at 40/60/90/120/134/180 BPM, after 2 everywhere. Sand CLAP Release builds on mac against the branch.
   - Behaviour change: display only (the host-time line), Sand, Gneiss, Scape, DMT, Melter, every format. Bars still count from PPQ 0 (an in-project time-signature change can offset the beat); iPlug's `ITimeInfo::mLastBar` has no getter, so using it would touch iPlug core — not proposed.
 - Smaller shared-code findings, no proposal unless wanted: `host_time_info.hpp` does not include `<cstdint>` (compiles only after other headers; GCC fails on it alone); `HostInfoModel` skips the update at sample position 0 because `_lastSamplePos` starts at 0, and its constructor logs "UI update trigger not set!" when the trigger **is** set (`host_info_model.hpp:35`, Debug log only); the mapper's learn allocation (table above).
 
@@ -172,6 +177,8 @@ Also stale since N1 (Oversampling section):
 - `user only controls oversampling factor (1x/2x/4x/8x/16x)` → `(1x/2x/4x/8x; the Oversampler itself supports 16x)`;
 - `Buffers and filters grow automatically — no \`prepare()\` call needed. \`ensureCapacity()\` is called inside \`upsample\`/\`downsample\`.` → `Buffers and filters grow on demand (\`ensureCapacity()\` inside \`upsample\`/\`downsample\`), but Sand calls \`prepare()\` from \`OnReset\` (\`prepareProcessBuffers\`) for the max block, so the audio thread never grows them.`
 
+- `Latency is measured once per factor via impulse response (6/7/8/8 samples for 2x/4x/8x/16x). Reported to host via \`SetLatency()\`.` → `Latency per factor comes from \`Oversampler::latencyForFactor\` (6/7/8/8 for 2x/4x/8x/16x), reported via \`SetLatency()\` from \`OnReset\`.` (review R8)
+
 Architecture Notes, after "All DSP memory (delay line buffers) is inline …":
 > Scratch `AudioBuffer`s (module temp buffers, dry copy, `_osBuffer`) are heap-backed but reserved in `Sand::OnReset` (`prepareProcessBuffers`) for the host's max block × the highest oversampling factor; `process()` must not grow them (it only does for a block longer than the host announced).
 
@@ -181,8 +188,8 @@ Optional: the Grind "Parameter" bullet says `grind ∈ [−1, 1]`; the host para
 
 | Repo | Branch (from) | Worktree | Commits |
 |---|---|---|---|
-| Sand | `fix/t026-followups` (master 54be993) | `hvoya/Sand-t026` | `22d920c` N1 · `e026630` N3 |
-| iPlug2 | `fix/host-info-beat` (hvoya 228f1ea8e) | `IPlug2-T-026` | `6dc1564d3` T21-5 (proposal: merge only after the user's OK) |
+| Sand | `fix/t026-followups` (master 54be993) | `hvoya/Sand-t026` | `9a89783` N1 · `aacc040` N3 |
+| iPlug2 | `fix/host-info-beat` (hvoya 228f1ea8e) | `IPlug2-T-026` | `b36d0d545` T21-5 (proposal: merge only after the user's OK) |
 | iPlug2 | `linux/T-026` (hvoya-linux ab632ec4e) | `IPlug2-T-026-log` | this file, `CROSS_PLATFORM_FINDINGS.md` rows, `evidence/t026/` |
 
 Behaviour changes on mac/win: N1 — none audible (bit-identical), no allocation in the audio path, ≈ 1 MB more held per instance at a 1024 max block; N3 — the Windows AAX project compiles Sand's real sources (not built). Proposals change nothing until accepted.
@@ -330,3 +337,26 @@ The audio is identical: the dry copy holds the same values as before.
   - `f2-stepback.py`: VST3 has 35 echoes, 0 stale, 0 step-backs; CLAP has 0 echoes. See R6 for the wording.
 
 Required before handover: R1–R4 (text and test only; no product-code change is required). R5–R9 are optional.
+
+### 2026-10-18 — fixes after review round 1
+
+All of R1–R9 taken (the earlier sections above now carry the corrected text and hashes):
+- **R1:** N1 commit message and Log reworded ("Sand's own buffers still grow on demand …; iPlug's 32-bit scratch does not"); `CROSS_PLATFORM_FINDINGS` row **T26-b** (iPlug core, report only).
+- **R2:** thread-safety note added under N1. Code: `Sand::prepareProcessBuffers` returns unless the max block grew (`_preparedMaxFrames`), so audio-thread / AU-bypass `OnReset` calls no longer touch the buffers. Row **T26-c** for the older AU `OnReset` → `updateOversampling` race (report only).
+- **R3:** audit table: MIDI CC row (by reading, not measured), `dmt_grind.hpp:148-153` and `svf_zdf.hpp:263` added to the plog row, CLAP-only coverage stated.
+- **R4:** the T21-5 test now checks the header against 36 hand-written cases (count-in, fraction, 6/8, 7/8, 5/4, 2/2) × 6 tempos: 168/216 wrong before, 0 after, Apple clang and GCC 13.
+- **R5:** `host_info_model.hpp`: a PPQ a hair below 0 shows the bar start instead of beat num+1 (a case in the table).
+- **R6:** F2 wording: all echoes carried the latest CC; the one-CC-per-block limit of iPlug's VST3 path noted.
+- **R7:** note at the top of `mac-branch/renders.txt` and in the Log: the counter is Linux-only.
+- **R8:** the stale latency line added to the CLAUDE.md proposal.
+- **R9:** container `t026` removed.
+
+New hashes (branches rewritten before any merge; nothing was pushed or merged):
+- Sand `fix/t026-followups`: `9a89783` N1 (was 22d920c) · `aacc040` N3 (was e026630, unchanged content).
+- iPlug2 `fix/host-info-beat`: `b36d0d545` T21-5 (was 6dc1564d3).
+
+Re-run on the new N1 (`evidence/t026/round1/`):
+- Linux Release: `run-allocs.sh` **47/47 configurations with 0 allocations**, `render.sha256` = before (47/47, incl. the re-activation cases where the max block grows and `prepare` runs again); VST3 validator ×20: 20 × 537/537.
+- mac (rsync copy, against `IPlug2-T-026` now on `fix/host-info-beat`, so Sand also compiles with the T21-5 change): CLAP Release + VST3 Debug build; 46/46 render pairs bit-identical to master; VST3 Debug ×20: 0 failures; clap-validator 38/0.
+
+Next: review round 2.
