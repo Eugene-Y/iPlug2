@@ -320,17 +320,21 @@ fi
 DESKTOP_FILE="$DESKTOP_DIR/$(echo "$NAME" | tr 'A-Z ' 'a-z-').desktop"
 APP_MARKER=".installed-by-$NAME-install.sh"
 
-# Only a folder this script created is removed whole.
-remove_app_dir() {
-  [ -e "$APP_DIR" ] || return 0
-  [ -f "$APP_DIR/$APP_MARKER" ] || { echo "$APP_DIR was not created by this installer; leaving it alone" >&2; exit 1; }
-  rm -rf "$APP_DIR"
-}
+# Only what this script created is removed or replaced. Checked before anything is touched, so a refusal
+# never leaves a half-done install.
+if [ $APP = 1 ]; then
+  if [ -e "$APP_DIR" ] && [ ! -f "$APP_DIR/$APP_MARKER" ]; then
+    echo "$APP_DIR was not created by this installer; leaving it alone" >&2; exit 1
+  fi
+  if [ -e "$BIN_DIR/$NAME" ] && [ "$(readlink "$BIN_DIR/$NAME")" != "$APP_DIR/$NAME" ]; then
+    echo "$BIN_DIR/$NAME is not this installer's link; leaving it alone" >&2; exit 1
+  fi
+fi
 
 if [ $UNINSTALL = 1 ]; then
   [ $CLAP = 0 ] || rm -rf "$CLAP_DIR/$NAME.clap" "$CLAP_DIR/$NAME.resources"
   [ $VST3 = 0 ] || rm -rf "$VST3_DIR/$NAME.vst3"
-  if [ $APP = 1 ]; then remove_app_dir; rm -f "$BIN_DIR/$NAME" "$DESKTOP_FILE"; fi
+  if [ $APP = 1 ]; then rm -rf "$APP_DIR"; rm -f "$BIN_DIR/$NAME" "$DESKTOP_FILE"; fi
   echo "$NAME removed."
   exit 0
 fi
@@ -353,7 +357,6 @@ if [ $VST3 = 1 ]; then
   echo "VST3 -> $VST3_DIR/$NAME.vst3"
 fi
 if [ $APP = 1 ]; then
-  remove_app_dir
   replace "$HERE/Standalone" "$APP_DIR"
   : > "$APP_DIR/$APP_MARKER"
   mkdir -p "$BIN_DIR" "$DESKTOP_DIR"

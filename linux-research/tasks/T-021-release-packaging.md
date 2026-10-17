@@ -1,6 +1,6 @@
 # T-021 — Release packaging of Gneiss and Sand for Linux
 
-- **Status:** in progress
+- **Status:** review-done (review round 2 accepted 86d598736; open items below)
 - **Owner:** T-021 worker (claimed 2026-10-17)
 - **Branches/worktrees:**
   - iPlug2: `linux/T-021` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-021` (scripts, docs).
@@ -191,7 +191,7 @@ Not issues: no Xcode/VS/`config.h` changes. The shared code touched is `IPlugLin
 - R1 (blocker) fixed: per-user standalone in `~/.local/lib/<Name>`; `install.sh` removes only a folder carrying its marker file; the smoke test writes `~/.local/share/<Name>/Presets/smoke-test.preset` before installing twice and checks it after `--uninstall`.
 - **R2: T21-4 was the harness, not REAPER or Sand.** `gdb-count.sh` passed the symbol name to gdb's `printf` as a string argument, so gdb 12 called `malloc` in REAPER on every hit; a stop during that call ("will be abandoned") left REAPER crashing after the detach — hence a crash in REAPER's own code and never in the module. With the name in the format string: `probe/hover-stress.sh` Sand, 22.04, `COUNT_SECS=20`: 10/10 rounds alive (before: died in round 1–3, 3/3). My earlier reading ("possibly Sand's F1") was wrong; T21-4 is withdrawn as a finding.
 - R3–R11, R13 fixed as listed in the commit. R12: Gneiss `CLAUDE.md` says to commit only when told; 3b9767e was made under this task's brief ("product repos changed only on their local branches"), as T-003/T-012 did — **for the user to confirm**. `makedist-linux.sh` defaults to `../../IPlug2` like the product's CMakeLists, which has no `Scripts/linux/package.sh` until `hvoya-linux` reaches `hvoya`; until then it needs `IPLUG2_DIR` (its error says so).
-- X1 (reviewer, cross-platform, Low, display only, not changed): hvoya `host_info_model.hpp:187`'s beat is right only at 120 BPM (4/4, one quarter in: beat 4 at 40 BPM, 3 at 60, 2 at 120, 1 from ~134). Predates ac4ca870f.
+- T21-5 (reviewer, cross-platform, Low, display only, not changed; was mislabelled X1): hvoya `host_info_model.hpp:187`'s beat is right only at 120 BPM (4/4, one quarter in: beat 4 at 40 BPM, 3 at 60, 2 at 120, 1 from ~134). Predates ac4ca870f.
 - R6 follow-up 6ad4c3d6b: `$5 != "LOCAL"` let readelf's header line through ("Name" counted as an export) and failed every package; the check now reads only symbol rows. The round-2 script now stops when packaging fails (a first round-2 run had smoke-tested the previous archives; moved out, not evidence).
 
 Round 2 cells, archives from 6ad4c3d6b (Gneiss 3b9767e, Sand cec9c1d), `smoke-r2/` (`log-round2.txt`):
@@ -262,3 +262,15 @@ Findings:
 - **R2-4 — nit (my error in round 1): two different findings share the ID X1.** I named the round-1 beat-formula finding "X1", but X1 is already the `SetLatency` race in `CROSS_PLATFORM_FINDINGS.md`, and the Log now uses X1 for both. Rename the beat finding to **T21-5** (`host_info_model.hpp:187`, Low, display only).
 
 The worker's round-2 table matches the evidence (RESULT lines, the `clap-validator-failed.txt` files, the draw-thread counts all on tid=1). My containers (`t021-smoke-iplug2-rt-ubuntu22-04`, `t021-smoke-iplug2-rt-ubuntu22-04-amd64`, `t021r-inst2`, `t021r-x1`, `t021r-x1b`, `t021r-x1c`) are removed. Nothing more is needed from T-021 for the packaging itself; R2-1 goes to X1/T-010 and the release decision.
+
+**2026-10-17 — after review round 2** (verdict: accepted; R2-1 open for the user):
+- **R2-1 accepted, my earlier reading corrected.** The Gneiss x86_64 VST3 validator crash does not need load: the reviewer saw it in an idle container in 3/8 smoke-step runs and 5/40 validator runs, and my `segv.so` preload hides it (0/55 with it loaded), so my 30 + 24 handler runs prove nothing and "needs load" was wrong; my 0/12 without the handler was luck at a ~1-in-5–8 rate. It sits in or right after the 64-bit "Process function running in another thread" test, which fits X1, but there is no stack (gdb cannot run programs under Rosetta; the containers have core dumps off). Not validator-only either: a host that gives its IRunLoop only through the editor leaves `OnIdle` on the fallback thread while the editor is closed, and X1 exists on mac/win anyway. **Until X1 is decided, the x86_64 Gneiss VST3 fails the Steinberg validator about 1 run in 5** — for the release notes / the user's decision on X1. Proof options: a T-010 build that changes latency only on the audio thread (expect 0/40), or a stack on real x86_64 hardware.
+- R2-2 fixed (this commit): `install.sh` checks, before touching anything, that `~/.local/lib/<Name>` carries its marker and that `~/.local/bin/<Name>` is its own link; uninstall then removes them. Checked on an IPlugEffect archive made by `package.sh` from this tree (`build/t021-example`): a foreign folder and a foreign file each stop the install with nothing copied; install ×2 + uninstall leave `~/.local/share/<Name>` intact. IPlugEffect also packs clean: `clap_entry` / `GetPluginFactory ModuleEntry ModuleExit`, NEEDED libX11/libm/libc, GLIBC 2.35.
+- **R2-3: both products have moved past this tree.** Sand `linux-experiment` is at a027e6d (T-024 fixes) and Gneiss at 8a0f05b (master 4dc02eb "OnIdle pumps the MIDI CC mediator", needs hvoya 083bc87c5); neither compiles against `linux/T-021`'s hvoya (`makeSegmentedParser`, `CCMediator::OnIdle` missing). So `build/t021-dist` holds Sand cec9c1d and Gneiss 3b9767e archives from 6ad4c3d6b, i.e. **without R2-2's install.sh and, for Sand, with F1/T21-1**. Rebuild both (one command each) once `hvoya-linux` has the new hvoya.
+- R2-4 done: the beat finding is T21-5.
+
+Hand-over:
+- Commits `hvoya-linux..linux/T-021` (this file lists them; the last is this one). Gneiss: 3b9767e on local `linux-experiment` (R12: the user decides whether it stays). Sand: none.
+- Evidence `evidence/t021/` (dist, smoke-r1, smoke, smoke-r2, findings); full screenshots and logs only in the session scratchpad.
+- For the coordinator/user: cherry-pick ac4ca870f (T21-2) to `hvoya`; decide X1 (now also R2-1), T21-3, T21-5; rebuild the archives after the hvoya update; R12.
+- Containers removed, lock released, worktree left in place. Docker images added: `iplug2-linux:22.04-amd64`, `iplug2-linux:22.04-gcc13-amd64`, `iplug2-rt:{ubuntu22.04,ubuntu24.04,debian12,fedora}` and `…-amd64` (no Fedora amd64).
