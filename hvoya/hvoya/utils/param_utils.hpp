@@ -15,9 +15,10 @@
 namespace hvoya::params {
 
     // Describes one display segment for makeSegmentedDisplay.
-    // Values < upTo are formatted as: (value / divisor) with decimals places, followed by unit.
+    // Values whose shown (rounded) value stays below upTo are formatted as: (value / divisor) with
+    // decimals places, followed by unit.
     struct DisplaySegment {
-        double      upTo;      // exclusive upper bound; use 1e9 (or similar) for the last segment
+        double      upTo;      // exclusive bound on the shown value; use 1e9 (or similar) for the last segment
         double      divisor;   // divide value by this before formatting (1.0 = no change)
         const char* unit;      // suffix appended after a space ("ms", "s", "Hz", "kHz", …)
         int         decimals;  // decimal places

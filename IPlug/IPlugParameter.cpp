@@ -174,6 +174,7 @@ IParam* IParam::InitDouble(const char* name, double defaultVal, double minVal, d
   mUnit = unit;
   mFlags = flags;
   mDisplayFunction = displayFunc;
+  mTextToValueFunction = nullptr;
 
   Set(defaultVal);
   
