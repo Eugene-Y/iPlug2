@@ -42,7 +42,9 @@ echo "vst3 validator exit=$rc :: $(grep -E 'Result: [0-9]+ tests passed' "$OUT/v
 grep -qE 'Result: [0-9]+ tests passed, 0 tests failed' "$OUT/vst3-validator.txt" || fail "VST3 validator (exit $rc)"
 grep -qE '[0-9]+ tests run, [0-9]+ passed' "$OUT/clap-validator.txt" || fail "clap-validator did not run its tests"
 
-# gdb finds the split symbols by build id, as it would for a crash report from the field.
+# gdb finds the split symbols by build id, as it would for a crash report from the field. Reading them takes
+# a few seconds, hence the longer count window.
+export GDB_COUNT_SECS=20
 DEBUG_ARCHIVE="${ARCHIVE%.tar.gz}_debug-symbols.tar.gz"
 if [ -f "$DEBUG_ARCHIVE" ]; then
   mkdir -p /usr/lib/debug && tar -xzf "$DEBUG_ARCHIVE" -C /usr/lib/debug --strip-components=1
