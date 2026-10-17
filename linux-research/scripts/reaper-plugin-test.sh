@@ -10,7 +10,10 @@
 #   - REAPER main PID died, or a helper `reaper -nonewinst` turned into a fresh instance
 #   - any LUA ERROR from rpr.sh
 #   - no Draw/OnDisplayTimer hits observed
-# Env: GDB_CATCH_EARLY=1 attaches the crash catcher before the editor opens (catches crashes on
+# Env: GDB_COUNT_SECS (5): the Draw/thread count window; stripped plug-ins with split symbols need longer
+#      (gdb reads them first; ~7 s for Gneiss). 0 skips the count: gdb breakpoints never fire under Rosetta.
+#      REAPER_OPEN_WAIT (3): seconds between adding/showing an FX and the screenshot (emulated llvmpipe is slow).
+#      GDB_CATCH_EARLY=1 attaches the crash catcher before the editor opens (catches crashes on
 #      open, but the ptrace attach perturbs startup timing — it made PR #1336's timer-start race
 #      lose almost every time). Default: attach right after the first open.
 set -uo pipefail
@@ -50,7 +53,7 @@ start_catch() { ( "$HERE/gdb-catch.sh" "$RPID" "$OUT/gdb-crash.txt" & ); sleep 2
 RPID=$(cat /tmp/reaper.pid)
 [ "${GDB_CATCH_EARLY:-0}" = 1 ] && start_catch
 rpr "reaper.InsertTrackAtIndex(0,true); local t=reaper.GetTrack(0,0); local i=reaper.TrackFX_AddByName(t,\"$FX\",false,-1); out('add',i); reaper.TrackFX_Show(t,0,3)"
-sleep 3
+sleep "${REAPER_OPEN_WAIT:-3}"
 import -window root "$OUT/r01-open.png"; alive open
 render_check "$OUT/r01-open.png" first-open "${FX#*: }.*Track 1"
 [ "${GDB_CATCH_EARLY:-0}" = 1 ] || start_catch
@@ -72,23 +75,29 @@ done
 import -window root "$OUT/r02-after-reopen.png"
 render_check "$OUT/r02-after-reopen.png" after-reopen "${FX#*: }.*Track 1"
 rpr "reaper.InsertTrackAtIndex(1,true); local t=reaper.GetTrack(0,1); local i=reaper.TrackFX_AddByName(t,\"$FX\",false,-1); out('add2',i); reaper.TrackFX_Show(t,0,3)"
-sleep 3
+sleep "${REAPER_OPEN_WAIT:-3}"
 import -window root "$OUT/r03-two-instances.png"; alive "two instances"
 render_check "$OUT/r03-two-instances.png" second-instance "${FX#*: }.*Track 2"
 xwininfo -root -tree > "$OUT/xwininfo-tree.txt"
 pkill -INT -f "gdb -q -batch -p $RPID" 2>/dev/null; sleep 1
 "$HERE/threads.sh" "$RPID" 10 > "$OUT/threads.txt" 2>&1
-# Hover across the 2nd instance's editor while counting, so that a UI without animations still has dirty controls to draw.
-read -r PX PY PW PH < <(view_geom "${FX#*: }.*Track 2")
-( sleep 1; for i in $(seq 0 19); do xdotool mousemove $((PX + PW * i / 20)) $((PY + PH * (i % 3 + 1) / 4)); sleep 0.2; done ) &
-"$HERE/gdb-count.sh" "$RPID" 5 iplug::igraphics::IGraphicsLinux::OnDisplayTimer 'iplug::igraphics::IGraphicsLinux::ProcessXEvents()' 'iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&)' > "$OUT/draw-threads.txt" 2>&1
-wait
-echo "--- draw/timer hits by gdb thread id (1 = REAPER main thread):"; cat "$OUT/draw-threads.txt"
-[ -s "$OUT/draw-threads.txt" ] || fail "no Draw/OnDisplayTimer/ProcessXEvents hits in 5 s (editor not rendering, or REAPER gone)"
-grep -q 'IGraphics::Draw' "$OUT/draw-threads.txt" || fail "no Draw hits in 5 s, even with the mouse moving over the editor"
-# host-driven editors (P3 on): X events and drawing only on the host main thread
-if grep -q 'ProcessXEvents' "$OUT/draw-threads.txt" && grep -v 'tid=1$' "$OUT/draw-threads.txt" | grep -q HIT; then
-  fail "editor work off REAPER's main thread: $(grep -v 'tid=1$' "$OUT/draw-threads.txt" | tr -s ' ' | tr '\n' ';')"
+if [ "${GDB_COUNT_SECS:-5}" = 0 ]; then
+  echo "draw/timer thread count skipped (GDB_COUNT_SECS=0)"
+else
+  # Hover across the 2nd instance's editor while counting, so that a UI without animations still has dirty controls to draw.
+  # The hover fills the window's last 4 s: before that gdb may still be loading the plug-in's symbols.
+  read -r PX PY PW PH < <(view_geom "${FX#*: }.*Track 2")
+  COUNT_SECS="${GDB_COUNT_SECS:-5}"
+  ( sleep $((COUNT_SECS - 4)); for i in $(seq 0 19); do xdotool mousemove $((PX + PW * i / 20)) $((PY + PH * (i % 3 + 1) / 4)); sleep 0.2; done ) &
+  "$HERE/gdb-count.sh" "$RPID" "$COUNT_SECS" iplug::igraphics::IGraphicsLinux::OnDisplayTimer 'iplug::igraphics::IGraphicsLinux::ProcessXEvents()' 'iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&)' > "$OUT/draw-threads.txt" 2>&1
+  wait
+  echo "--- draw/timer hits by gdb thread id (1 = REAPER main thread):"; cat "$OUT/draw-threads.txt"
+  [ -s "$OUT/draw-threads.txt" ] || fail "no Draw/OnDisplayTimer/ProcessXEvents hits in $COUNT_SECS s (editor not rendering, or REAPER gone)"
+  grep -q 'IGraphics::Draw' "$OUT/draw-threads.txt" || fail "no Draw hits in $COUNT_SECS s, even with the mouse moving over the editor"
+  # host-driven editors (P3 on): X events and drawing only on the host main thread
+  if grep -q 'ProcessXEvents' "$OUT/draw-threads.txt" && grep -v 'tid=1$' "$OUT/draw-threads.txt" | grep -q HIT; then
+    fail "editor work off REAPER's main thread: $(grep -v 'tid=1$' "$OUT/draw-threads.txt" | tr -s ' ' | tr '\n' ';')"
+  fi
 fi
 # PR #1336-style IPlugTimer: one Timer_impl pthread per plugin instance drives OnIdle/ISender;
 # a thread that lost the start race leaves that instance without OnIdle while the editor may still paint.

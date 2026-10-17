@@ -10,9 +10,11 @@
 
 #include <dlfcn.h>
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <filesystem>
 
 #include "IPlugPaths.h"
@@ -21,6 +23,18 @@
 BEGIN_IPLUG_NAMESPACE
 
 namespace {
+
+// A .clap or standalone copied without its <Name>.resources/ folder still loads, with no fonts or images; the
+// customer gets a hint where it was expected instead of a silently blank UI.
+void WarnIfResourceFolderMissing(const char* resourcePath)
+{
+  static std::atomic<bool> warned {false};
+  std::error_code error;
+  if (std::filesystem::is_directory(resourcePath, error) || warned.exchange(true))
+    return;
+
+  fprintf(stderr, "iPlug2: resource folder %s not found; fonts and images will be missing.\n", resourcePath);
+}
 
 bool ModuleFilePath(void* symbol, std::filesystem::path& result)
 {
@@ -178,6 +192,7 @@ EResourceLocation LocateResource(
   BundleResourcePath(bundlePath, pHInstance);
   if (bundlePath.GetLength() > 0)
   {
+    WarnIfResourceFolderMissing(bundlePath.Get());
     const auto resource = linux_paths::FindResource(bundlePath.Get(), name);
     if (!resource.empty())
     {

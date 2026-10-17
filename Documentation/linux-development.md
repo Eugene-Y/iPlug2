@@ -123,3 +123,40 @@ Both read the same `CMakePresets.json`, so build settings need no extra files.
 `<New>-linux.code-workspace` with `<New>-clap`/`-vst3`/`-app` targets, and `.clangd`. Builds live in
 `build-linux/`, which `duplicate.py` does not copy. Duplicate inside `Examples/` for now. Duplicating to a path
 outside the iPlug2 tree leaves `../..` paths that need fixing (T-011).
+
+## 7. Release packages
+
+```sh
+Scripts/linux/package.sh <project-dir> [--arch aarch64|x86_64] [--variant NAME:CMAKE_ARGS] [--doc FILE] [--icon FILE]
+```
+
+builds Release CLAP, VST3 and APP and writes to `<project>/build-linux/dist/`:
+
+| File | For |
+|---|---|
+| `<Name>_v<version>_linux_<arch>[_<variant>].tar.gz` | customers: `CLAP/`, `VST3/`, `Standalone/` (each with its resources), `install.sh`, `README-Linux.txt`, the `--doc` files |
+| `…_debug-symbols.tar.gz` | you: the stripped binaries' symbols, for crash reports (below) |
+| `….inspect.txt`, `….files.txt` | the binary checks and the archive's file list |
+
+- The version is `PLUG_VERSION_STR` from `config.h`. Each `--variant` is a separate build with its own CMake
+  arguments, e.g. `--variant free:-DHVOYA_IS_PAID=0`.
+- **glibc**: binaries need the build machine's glibc or newer. Build on Ubuntu 22.04 (glibc 2.35: Ubuntu 22.04,
+  Debian 12, Fedora 36 and later). The script refuses binaries above `--glibc-max` (2.35), libstdc++ imports,
+  extra exports, and plug-in dependencies beyond libX11 and libc. 22.04's GCC 11 lacks C++20 `<format>`; use
+  `gcc-13` from the `ubuntu-toolchain-r/test` PPA (the script picks `gcc-13` when it is installed).
+- **On macOS** (or for the other architecture) the script runs itself in Docker, by default
+  `iplug2-linux:22.04-gcc13` and `…-amd64` for x86_64 (`linux-research/docker/README.md`; colima with Rosetta
+  builds x86_64 on Apple silicon). Without `--arch` it builds both there, and the host's architecture on Linux.
+- `install.sh` installs for the current user (`~/.clap`, `~/.vst3`, the APP in `~/.local/share/<Name>` with a menu
+  entry), or for everyone with `sudo ./install.sh --system` (`/usr/lib/clap`, `/usr/lib/vst3`, `/opt/<Name>`);
+  `--uninstall` removes either.
+- A `.clap` needs its `<Name>.resources/` folder beside it; copied alone it loads, but without its fonts and
+  images. The README tells customers.
+
+Crash reports: unpack the matching `_debug-symbols` archive and point gdb at it; it matches the binary by build
+id (`readelf -n <binary>` shows it; `….inspect.txt` lists them):
+
+```sh
+tar -xzf Name_v1.0.0_linux_x86_64_debug-symbols.tar.gz
+gdb -iex "set debug-file-directory $PWD/Name_v1.0.0_linux_x86_64_debug-symbols" /opt/REAPER/reaper core
+```

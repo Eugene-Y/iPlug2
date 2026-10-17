@@ -30,6 +30,26 @@ The 22.04 image is for building only. Its validators were built on 24.04, becaus
 CMake 3.25 or newer, so they need glibc 2.38 and will not run in the 22.04 image. Run tests in the
 24.04 image.
 
+### Release builds and clean-machine tests (T-021)
+
+```sh
+# x86_64 build images, run under Rosetta (tags must differ: one tag holds one architecture)
+docker build --platform linux/amd64 --build-arg UBUNTU=22.04 -t iplug2-linux:22.04-amd64 linux-research/docker
+docker build --platform linux/amd64 --build-arg BASE=iplug2-linux:22.04-amd64 -t iplug2-linux:22.04-gcc13-amd64 linux-research/docker/gcc13
+# customer machines: runtime packages only (the build fails if a compiler or a -dev package slips in)
+docker build --build-arg BASE=ubuntu:22.04 -t iplug2-rt:ubuntu22.04 linux-research/docker/runtime   # also ubuntu:24.04, debian:12, fedora:latest
+docker build --platform linux/amd64 --build-arg BASE=ubuntu:22.04 -t iplug2-rt:ubuntu22.04-amd64 linux-research/docker/runtime
+```
+
+`Scripts/linux/package.sh` uses `iplug2-linux:22.04-gcc13` and `…-amd64`. `scripts/package-smoke.sh <archive> <outdir>
+<image>` installs an archive in an `iplug2-rt` image and runs the validators, REAPER and the standalone; its
+validators are built on 22.04, so they run on every image.
+
+Under Rosetta (x86_64 on Apple silicon): a 22.04 build image takes ~6 min and Gneiss ~5 min per edition.
+gdb attaches but its breakpoints never fire, so the smoke test skips the Draw-thread count there
+(`package-smoke.sh` sets it up). Fedora's GNU tar fails under Rosetta ("Function not implemented"), so there is
+no x86_64 Fedora image; Fedora is tested on aarch64.
+
 ## SDKs
 
 ```sh

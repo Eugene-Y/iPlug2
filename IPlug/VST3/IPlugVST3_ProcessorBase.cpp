@@ -258,12 +258,18 @@ void IPlugVST3ProcessorBase::PrepareProcessContext(ProcessData& data, ProcessSet
   if (mProcessContext.state & ProcessContext::kProjectTimeMusicValid)
     timeInfo.mSamplePos = (double) mProcessContext.projectTimeSamples;
   timeInfo.mPPQPos = mProcessContext.projectTimeMusic;
-  timeInfo.mTempo = mProcessContext.tempo;
+  // Without these flags the fields are not set (a process call may come without any context, leaving them 0);
+  // keep ITimeInfo's defaults then, as the CLAP wrapper does.
+  if (mProcessContext.state & ProcessContext::kTempoValid)
+    timeInfo.mTempo = mProcessContext.tempo;
   timeInfo.mLastBar = mProcessContext.barPositionMusic;
   timeInfo.mCycleStart = mProcessContext.cycleStartMusic;
   timeInfo.mCycleEnd = mProcessContext.cycleEndMusic;
-  timeInfo.mNumerator = mProcessContext.timeSigNumerator;
-  timeInfo.mDenominator = mProcessContext.timeSigDenominator;
+  if (mProcessContext.state & ProcessContext::kTimeSigValid)
+  {
+    timeInfo.mNumerator = mProcessContext.timeSigNumerator;
+    timeInfo.mDenominator = mProcessContext.timeSigDenominator;
+  }
   timeInfo.mTransportIsRunning = mProcessContext.state & ProcessContext::kPlaying;
   timeInfo.mTransportLoopEnabled = mProcessContext.state & ProcessContext::kCycleActive;
   const bool offline = setup.processMode == Steinberg::Vst::kOffline;
