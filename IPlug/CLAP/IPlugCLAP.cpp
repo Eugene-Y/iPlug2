@@ -461,8 +461,14 @@ bool IPlugCLAP::stateLoad(const clap_istream* pStream) noexcept
   bool restoredOK = UnserializeState(chunk, 0) >= 0;
   
   if (restoredOK)
+  {
     OnRestoreState();
-  
+
+    // Otherwise the host keeps showing (and automating from) the pre-load values.
+    if (GetClapHost().canUseParams())
+      GetClapHost().paramsRescan(CLAP_PARAM_RESCAN_VALUES);
+  }
+
   return restoredOK;
 }
 
