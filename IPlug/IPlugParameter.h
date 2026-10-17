@@ -70,6 +70,9 @@ public:
   /** DisplayFunc allows custom parameter display functions, defined by a lambda matching this signature */
   using DisplayFunc = std::function<void(double, WDL_String&)>;
 
+  /** TextToValueFunc parses the text a DisplayFunc produces (or a user types) into a non-normalized value */
+  using TextToValueFunc = std::function<double(const char*)>;
+
 #pragma mark - Shape
 
   /** Base struct for parameter shaping */
@@ -343,6 +346,11 @@ public:
    * @param func A function conforming to DisplayFunc */
   IParam* SetDisplayFunc(DisplayFunc func) { mDisplayFunction = std::move(func); return this; }
 
+  /** Set the function StringToValue() uses instead of its default parsing (atof, display texts).
+   * Pair it with a DisplayFunc whose text atof cannot read back, e.g. with unit prefixes ("1.2 kHz")
+   * @param func A function conforming to TextToValueFunc */
+  IParam* SetTextToValueFunc(TextToValueFunc func) { mTextToValueFunction = std::move(func); return this; }
+
   /** Replace the parameter's shape. Safe to call during initialization, before audio starts.
    * @param shape The new shape */
   IParam* SetShape(const Shape& shape) {
@@ -537,6 +545,7 @@ private:
   
   std::unique_ptr<Shape> mShape;
   DisplayFunc mDisplayFunction = nullptr;
+  TextToValueFunc mTextToValueFunction = nullptr;
 
   WDL_TypedBuf<DisplayText> mDisplayTexts;
 } WDL_FIXALIGN;

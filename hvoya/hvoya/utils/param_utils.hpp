@@ -1,5 +1,9 @@
 #pragma once
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <cstdlib>
 #include <memory>
 #include <vector>
 #include <string>
@@ -11,17 +15,20 @@
 namespace hvoya::params {
 
     // Describes one display segment for makeSegmentedDisplay.
-    // Values < upTo are formatted as: (value / divisor) with decimals places, followed by unit.
+    // Values whose shown (rounded) value stays below upTo are formatted as: (value / divisor) with
+    // decimals places, followed by unit.
     struct DisplaySegment {
-        double      upTo;      // exclusive upper bound; use 1e9 (or similar) for the last segment
+        double      upTo;      // exclusive bound on the shown value; use 1e9 (or similar) for the last segment
         double      divisor;   // divide value by this before formatting (1.0 = no change)
         const char* unit;      // suffix appended after a space ("ms", "s", "Hz", "kHz", …)
         int         decimals;  // decimal places
     };
 
     // Builds an IParam::DisplayFunc that switches format based on the parameter value.
-    // Segments are checked in order; the first one with value < upTo is used.
+    // Segments are checked in order; the first one whose displayed (rounded) value stays below upTo
+    // is used, so 999.97 shows as "1.00 kHz", not "1000.0 Hz", and the text parses back to its segment.
     // If no segment matches, the last segment is used as a fallback.
+    // Pair it with makeSegmentedParser (same segments) so hosts can turn the text back into a value.
     //
     // Example — time parameter stored in ms, range 0.1 – 3000 ms:
     //   makeSegmentedDisplay({
@@ -29,18 +36,47 @@ namespace hvoya::params {
     //       {1000.0,    1.0, "ms", 0 },   // 10 – 999 ms    → "42 ms"
     //       {  1e9,  1000.0,  "s", 1 },   // 1000+ ms       → "1.2 s"
     //   })
-    inline IParam::DisplayFunc makeSegmentedDisplay (std::initializer_list <DisplaySegment> segments)
+    inline IParam::DisplayFunc makeSegmentedDisplay (std::vector <DisplaySegment> segs)
     {
-        std::vector <DisplaySegment> segs (segments);
         return [segs = std::move (segs)](double value, WDL_String& str) {
             for (const auto& seg : segs) {
-                if (value < seg.upTo) {
-                    str.SetFormatted(64, "%.*f %s", seg.decimals, value / seg.divisor, seg.unit);
+                // The rounding tie goes to the next segment too: its text parses back to exactly the
+                // tie, which a normalized round trip moves by an ulp to either side.
+                const double halfUnit = 0.5 * seg.divisor * std::pow (10.0, -seg.decimals);
+                const double tolerance = 1e-9 * std::max (1.0, std::abs (seg.upTo));
+                if (value < seg.upTo - halfUnit - tolerance || &seg == &segs.back()) {
+                    const double shown = std::abs (value) < halfUnit ? 0.0 : value / seg.divisor; // "-0.00" would read back as 0
+                    str.SetFormatted(64, "%.*f %s", seg.decimals, shown, seg.unit);
                     return;
                 }
             }
-            const auto& last = segs.back();
-            str.SetFormatted(64, "%.*f %s", last.decimals, value / last.divisor, last.unit);
+        };
+    }
+
+
+    // Builds an IParam::TextToValueFunc that reads what makeSegmentedDisplay prints with the same
+    // segments: "1.25 kHz" -> 1250, "40 ms" -> 40. The unit is matched case-insensitively; a bare
+    // number or an unknown unit is taken as the parameter's own unit (divisor 1).
+    inline IParam::TextToValueFunc makeSegmentedParser (std::vector <DisplaySegment> segs)
+    {
+        return [segs = std::move (segs)](const char* str) {
+            char* unit = nullptr;
+            const double number = std::strtod (str, &unit);
+            while (std::isspace (static_cast <unsigned char> (*unit))) ++unit;
+            const char* unitEnd = unit;
+            while (*unitEnd && !std::isspace (static_cast <unsigned char> (*unitEnd))) ++unitEnd;
+
+            const auto sameUnit = [unit, unitEnd] (const char* candidate) {
+                const char* u = unit;
+                for (; u != unitEnd && *candidate; ++u, ++candidate)
+                    if (std::tolower (static_cast <unsigned char> (*u)) != std::tolower (static_cast <unsigned char> (*candidate)))
+                        return false;
+                return u == unitEnd && *candidate == 0;
+            };
+            for (const auto& seg : segs)
+                if (unit != unitEnd && sameUnit (seg.unit))
+                    return number * seg.divisor;
+            return number;
         };
     }
 
