@@ -59,7 +59,7 @@ Commits, iPlug2 `linux/T-012`: d3497e960 claim + `docker/gcc13/Dockerfile` (`ipl
 
 Build: `DOCK_MOUNTS="/Volumes/Storage/code/hvoya/Sand-linux /Volumes/Storage/code/hvoya/Sand/.git:ro" DOCK_ENV="EXTRA_CMAKE_ARGS=-DIPLUG2_DIR=/Volumes/Storage/code/IPlug2-T-012" scripts/dock.sh -- scripts/build-cmake.sh /Volumes/Storage/code/hvoya/Sand-linux build/t012-sand Sand-clap Sand-vst3 Sand-app`; 22.04: add `IMAGE=iplug2-linux:22.04-gcc13` and `CC=gcc-13 CXX=g++-13` to `DOCK_ENV`.
 
-Results [D] = Docker, REAPER 7.82, llvmpipe (final run after the C++23 commit, `build-*.log`):
+Results [D] = Docker, REAPER 7.82, llvmpipe (final run after the C++23 commit, `log-build-*.txt`):
 - 24.04 CLAP/VST3/APP and 22.04 CLAP/VST3 build. **22.04 needs GCC 13**: Sand uses `std::format`, GCC 11 has no `<format>`; GCC 13 from the toolchain PPA in a derived image. iPlug2 links libstdc++ statically → no GLIBCXX. Exports `clap_entry` / `GetPluginFactory ModuleEntry ModuleExit`; NEEDED libX11 + libc/libm. **GLIBC floor 2.35** (22.04), 2.38 on 24.04 (`inspect-*.txt`).
 - UI in REAPER CLAP + VST3 and APP `--no-io`: fonts, SVG logo, tabs, sliders; reopen ×5, two instances. `steps/sand.txt` PASS in CLAP and VST3: comp knob drag (host value 0.300 → 1.000), LP→HP (host sees HP), ENV tab, host sets softness → knob follows, context menu → MIDI CC → Learn, then CC 1 from REAPER's virtual keyboard binds and drives comp to 0, about panel reads "Linux aarch64 release / linux-experiment e259e96". VST3: the menu is REAPER's GTK host menu with the plug-in's items (held right click). `steps/sand-app.txt` PASS (drag, tab, stand-in menu + Escape, about). Draw and X events on tid 1.
 - MIDI notes: Sand ignores them (`ProcessMidiMsg` kNoteOn is empty); CC is what it uses, covered above. Presets: `kNumPresets = 1`, no preset UI, so "preset switch" is replaced by host-sets-param.
@@ -90,3 +90,48 @@ Decisions for the user:
 VM state left: `~/dev/IPlug2` (T-012 tree, no .git), `~/dev/hvoya/Sand-linux` (clone, `build-linux/linux-debug`), `clangd-19` installed, Debug `Sand.clap`/`Sand.vst3` in `~/.clap`/`~/.vst3`. Nothing running.
 
 Next: independent review; then hand over. T-021 can use `iplug2-linux:22.04-gcc13` for Sand.
+
+**Review (round 1, 2026-10-17) — verdict: approve after R1 (no blockers; 1 major, 1 minor, nits).** Fresh-context reviewer; read AGENTS.md, this file, Sand's CLAUDE.md; reviewed `hvoya-linux..linux/T-012` (3 commits) and Sand `master..linux-experiment` (4 commits).
+
+Re-run [D] (own container `t012r`, build dir `build/t012r-sand`, evidence `evidence/t012/review/`, untracked):
+- 24.04 build of Sand-clap/-vst3/-app: all PASS (warnings only in VST3 SDK/iPlug core/libstdc++ atomics, plus `SandUI.cpp:515` implicit `this` capture, pre-existing).
+- `steps/sand.txt` CLAP and VST3: RESULT PASS, `xact-fails.txt` empty, every lua-expect matched (0.300 → 1.000, HP, softness 0.000, CLAP host sees amnt 0.000 after CC). The log shows `[CLAP] rclick`/`move 230 81`/`click 373 21` in CLAP and `[VST3] rclick-hold`/`move 311 240`/`click 545 244` in VST3, i.e. the prefixes select correctly. I looked at the sheets (`review/reaper-{clap,vst3}/sheet.png`): they match the worker's: IGraphics popup in CLAP, REAPER's host menu with the MIDI CC > Learn submenu in VST3, comp at 0.000 after the CC, about panel "SAND v1.1.10 Sand / Linux aarch64 release / linux-experiment e259e96".
+- `steps/sand-app.txt`: all expectations pass, Sand ALIVE, EXIT=0. `review/app/a05-about.png` reads "SAND v1.1.10 Sand / Linux aarch64 release" (see R1).
+- F1: `validator -e` ×10 on my build: 1 segfault (exit 139) out of 10; the other runs report 537/537. Intermittent, as described (worker saw 4/10). The cited lines check out: `sand_module.hpp:375-376,381,421`, `utils.hpp:131-134`, `IPlugVST3_ProcessorBase.cpp:432`. The ASan trace is `FlushParamTest` → `derivativeInplace`.
+- xact self-test (`review/xact-selftest/`, no X needed): `expect-change`/`expect-same` against a missing shot now FAIL with "cannot compare". A real change passes, identical shots give "same". `[CLAP]` is skipped under `XACT_FMT=VST3`. With `XACT_FMT` unset both prefixes are skipped. Lowercase `[clap]` logs "unknown step". No existing step file references a shot it never takes, and none starts with `[`, so the change doesn't affect the other step files. Before this change, `expect-same` on a missing shot already failed; only `expect-change` gave a false PASS.
+- Container `t012r` removed.
+
+Checked and fine:
+- The Sand diff matches the Log: 5 files. `SandUI.cpp` gets the `OS_LINUX` branch and file-scope `boundsPad`/`headerH`; the one comment says why. `svf_zdf.hpp` gets `std::isfinite`, and `<cmath>` is already included. All edits are behaviour-neutral. No xcodeproj/vcxproj/xcconfig/props/config.h/.clangd/.gitignore change. Nothing pushed (no remote contains e259e96 or linux/T-012). The main checkouts `hvoya/Sand` (master cd9f063, only its own `Media/` untracked) and `IPlug2` (hvoya, clean) are untouched. `VST3_SDK/README.md` is not committed. Trailers are present.
+- Evidence matches the Log:
+  - inspect: exports `clap_entry` and `GetPluginFactory/ModuleEntry/ModuleExit`; NEEDED libX11/libm/libc; GLIBC 2.35 (22.04) and 2.38 (24.04); no GLIBCXX.
+  - churn 20× CLAP/VST3: fds/sockets/threads back to the closed baseline.
+  - hostloop: every HIT is on lwp = REAPER pid (45417/46783); RESULT PASS.
+  - draw/X events: tid 1.
+  - validators: 31/7/6, and the 7 failures are the ones listed.
+  - VS Code VM sheet: preset picker, F7 build with "exit code 0", CLAP copied to `~/.clap`.
+- Cross-platform findings are reported, not fixed: F1–F5, F7 and F8 have no code change in Sand or hvoya. F7 is verified: the macOS/iOS pbxproj compile `PolyphaseIIR2Designer.cpp`, no vcxproj does, and the vcxproj was last touched 2026-03-30, before 6036dec (2026-05-13).
+- No restating comments. `xact.sh:37` (compare AE not numeric) and `Sand-linux/CMakeLists.txt` (C++23, relative iPlug2 location) state reasons.
+
+Findings:
+- **R1 — major (evidence + latent build hazard).** `evidence/t012/app/sheet.png` (a05-about) reads "SAND v1.1.10 **CLAP** / Linux **arm64** release". A CMake build would give "Sand / aarch64".
+  - Cause, verified: `ninja -t deps` of `build/t012-sand` `Sand-app.dir/SandUI.cpp.o` lists `/Volumes/Storage/code/hvoya/Sand-linux/plug_build_info.hpp`. The CLAP and VST3 objects list `generated/plug_build_info.hpp`. The mac TU check (scratchpad `xcb-sand.log`: `PhaseScriptExecution … write plugin build info … Sand-linux/build-mac/…CLAP.build`, 02:37) wrote a mac `plug_build_info.hpp` into the Sand-linux source dir while `rerun.sh` was building Sand-app (`SandUI.cpp.o` 02:37:28). The file has since been removed, but the APP binary and its evidence came from it.
+  - Hazard: `Sand.hpp:9` `#include "plug_build_info.hpp"` finds the source-dir copy first, which the Xcode/VS pre-builds write (gitignored). On any checkout that is also built by Xcode/VS, the Linux build silently embeds stale mac/win build info.
+  - Fix in this task: re-shoot `evidence/t012/app` from a clean build, and never run the mac check in the worktree while a Docker build runs.
+  - For the coordinator (hvoya.cmake is shared with Gneiss, not this task's file): have `hvoya_write_plug_build_info` warn or fail when `${CMAKE_CURRENT_SOURCE_DIR}/plug_build_info.hpp` exists.
+- **R2 — minor.** The Log cites `build-*.log` as the final-run record, but `evidence/t012/build-2404.log` and `build-2204.log` are ignored by `.gitignore:31` (`build-*`), so they are not in the commit. Rename them (e.g. `log-build-2404.txt`) or `git add -f` them, or drop the reference.
+- R3 — nit. `evidence/t012/reaper-vst3/sheet.png` has a stray, almost blank tile `s06-about-crop`. Regenerate the sheet without it.
+- R4 — nit. `xact.sh:40-43`: when `XACT_FMT` is unset, `[FMT]` steps are skipped without a log line. Callers other than `reaper-plugin-test.sh` (`input-thread-check.sh`, `app-input-thread-check.sh`, `probe/*.sh`, `vm/probe/app-test.sh`) would drop the CLAP/VST3 menu steps of `sand.txt` unnoticed. Suggest `log "skip [$fmt] …"`.
+- R5 — nit. `xact.sh:38`: `shots_compared` reads the caller's `$ae` implicitly; pass it as a third argument so the helper reads on its own.
+- R6 — nit. `Sand-linux/CMakePresets.json` includes `../../IPlug2/…` no matter what `IPLUG2_DIR` is. That is fine for the documented Linux layout (the VM used it). On this Mac it resolves to the main checkout, which has no Linux presets, so `cmake --preset` works only with `-DIPLUG2_DIR`/Docker builds as used here. Worth one line in the hand-over.
+- R7 — nit. `docker/gcc13/Dockerfile:1-3` and `docker/README.md` both explain "libstdc++ static → no GLIBCXX" ("say it once"). Keep it in one place.
+
+Not checked by me: the VM/VS Code run (judged from `vm/contact-vscode.png` and the Log only, as instructed), the mac TU compile (Log only), the 22.04 build (its inspect output only).
+
+**Fixes after review round 1 (2026-10-17):**
+- R1: rebuilt `build/t012-sand` after the stray mac `plug_build_info.hpp` was gone: only `Sand` (APP) relinked; `ninja -t deps` of `Sand-app.dir/SandUI.cpp.o` now lists `generated/plug_build_info.hpp` (CLAP/VST3 objects already did, nothing to rebuild). `evidence/t012/app` re-shot: PASS, about reads "SAND v1.1.10 Sand / Linux aarch64 release / linux-experiment e259e96". My mistake: I checked the about panel only in the VST3 shots. Latent hazard for the coordinator (shared `hvoya/hvoya.cmake`, Gneiss too): a `plug_build_info.hpp` that an Xcode/VS pre-build leaves in the plug-in's source dir shadows the generated one (`#include "…"` looks next to the includer first) — `hvoya_write_plug_build_info` could warn or fail when `${CMAKE_CURRENT_SOURCE_DIR}/plug_build_info.hpp` exists.
+- R2: build logs renamed to `log-build-{2404,2204}.txt` (the `build-*` names were git-ignored).
+- R3: VST3 sheet regenerated without the stray crop.
+- R4: xact logs `skip [FMT] step (format …)`; R5: `shots_compared` takes the compare output as an argument. Re-checked: `sand.txt` VST3 PASS with 4 logged `[CLAP]` skips (`evidence/t012/review/xact-recheck`); missing-shot FAIL still works.
+- R6: noted for the hand-over: `CMakePresets.json` assumes iPlug2 at `../../IPlug2` (the Xcode/VS layout). On this Mac that is the main checkout (`hvoya`, no Linux presets), so presets work on a Linux machine with that layout (VM) or once the port is merged into `hvoya`; Docker builds here pass `-DIPLUG2_DIR`.
+- R7: the GLIBCXX rationale now lives only in `docker/README.md`.

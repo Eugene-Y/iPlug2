@@ -1,4 +1,4 @@
-pid=42108 cmd=build/t012-sand/out/Sand --no-io 
+pid=48 cmd=build/t012-sand/out/Sand --no-io 
 --- threads (count name)
       7 Sand
       1 Sand:disk$0
@@ -10,120 +10,120 @@ pid=42108 cmd=build/t012-sand/out/Sand --no-io
       1 llvmpipe-4
       1 llvmpipe-5
 --- backtraces
-Thread 15 (Thread 0xf61ba244bde0 (LWP 42109) "gmain"):
-#0  0x0000f61ba55e0bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba6071b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
-#2  0x0000f61ba600ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
-#3  0x0000f61ba600ec24 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
-#4  0x0000f61ba603f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 14 (Thread 0xf61ba145ede0 (LWP 42110) "llvmpipe-0"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9999012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 13 (Thread 0xf61ba0c4ede0 (LWP 42111) "llvmpipe-1"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9999012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 12 (Thread 0xf61b8ee7ede0 (LWP 42112) "llvmpipe-2"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9999012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 11 (Thread 0xf61b8e66ede0 (LWP 42113) "llvmpipe-3"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9999012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 10 (Thread 0xf61b8de5ede0 (LWP 42114) "llvmpipe-4"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9999012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 9 (Thread 0xf61b8d64ede0 (LWP 42115) "llvmpipe-5"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9999012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 8 (Thread 0xf61b8ce3ede0 (LWP 42116) "Sand"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 7 (Thread 0xf61b87ffede0 (LWP 42117) "Sand"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 6 (Thread 0xf61b877eede0 (LWP 42118) "Sand"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 5 (Thread 0xf61b86fdede0 (LWP 42119) "Sand"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 4 (Thread 0xf61b867cede0 (LWP 42120) "Sand"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 3 (Thread 0xf61b85fbede0 (LWP 42121) "Sand"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b9998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 2 (Thread 0xf61b857aede0 (LWP 42122) "Sand:disk$0"):
-#0  0x0000f61ba5581d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba55849f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
-#2  0x0000f61b996eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#3  0x0000f61b996c8cdc [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#4  0x0000f61b996eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
-#5  0x0000f61ba558582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-#6  0x0000f61ba55ebb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
-Thread 1 (Thread 0xf61ba6314ac0 (LWP 42108) "Sand"):
-#0  0x0000f61ba55e0bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
-#1  0x0000f61ba6071b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
-#2  0x0000f61ba600ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
-#3  0x0000b4621403e77c [PAC] in main ()
+Thread 15 (Thread 0xf97b9ad4bde0 (LWP 49) "gmain"):
+#0  0x0000f97bab840bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bac2d1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f97bac26ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000f97bac26ec24 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#4  0x0000f97bac29f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 14 (Thread 0xf97b9a53bde0 (LWP 50) "llvmpipe-0"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 13 (Thread 0xf97b99d2bde0 (LWP 51) "llvmpipe-1"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 12 (Thread 0xf97b9951bde0 (LWP 52) "llvmpipe-2"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 11 (Thread 0xf97b98d0bde0 (LWP 53) "llvmpipe-3"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 10 (Thread 0xf97b8bffede0 (LWP 54) "llvmpipe-4"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 9 (Thread 0xf97b8b7eede0 (LWP 55) "llvmpipe-5"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72d012c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 8 (Thread 0xf97b8afdede0 (LWP 56) "Sand"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 7 (Thread 0xf97b8a7cede0 (LWP 57) "Sand"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 6 (Thread 0xf97b89fbede0 (LWP 58) "Sand"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 5 (Thread 0xf97b897aede0 (LWP 59) "Sand"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 4 (Thread 0xf97b88f9ede0 (LWP 60) "Sand"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 3 (Thread 0xf97b67ffede0 (LWP 61) "Sand"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba72cbf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 2 (Thread 0xf97b677eede0 (LWP 62) "Sand:disk$0"):
+#0  0x0000f97bab7e1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bab7e49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000f97ba702ed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000f97ba7008cdc [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000f97ba702ebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000f97bab7e582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000f97bab84bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 1 (Thread 0xf97bac5c2ac0 (LWP 48) "Sand"):
+#0  0x0000f97bab840bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000f97bac2d1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f97bac26ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000baf4dff6e77c [PAC] in main ()

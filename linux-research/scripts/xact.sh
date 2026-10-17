@@ -35,10 +35,10 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 log() { echo "[xact] $*"; }
 xfail() { log "FAIL $*"; echo "$*" >> "$OUT/xact-fails.txt"; }
 # compare's AE output is not a number when a shot is missing or unreadable; that must not count as "changed".
-shots_compared() { [ -f "$OUT/$1.png" ] && [ -f "$OUT/$2.png" ] && [[ "${ae%% *}" =~ ^[0-9.e+]+$ ]]; }
+shots_compared() { [ -f "$OUT/$1.png" ] && [ -f "$OUT/$2.png" ] && [[ "${3%% *}" =~ ^[0-9.e+]+$ ]]; }
 while read -r cmd a b c d rest; do
   if [[ "$cmd" =~ ^\[([A-Z0-9]+)\]$ ]]; then
-    [ "${BASH_REMATCH[1]}" = "${XACT_FMT:-}" ] || continue
+    [ "${BASH_REMATCH[1]}" = "${XACT_FMT:-}" ] || { log "skip [${BASH_REMATCH[1]}] step (format ${XACT_FMT:-unset})"; continue; }
     read -r cmd a b c d rest <<<"$a $b $c $d $rest"
   fi
   case "$cmd" in
@@ -80,14 +80,14 @@ while read -r cmd a b c d rest; do
       read -r w h _ <<<"$rest"
       crop="${w}x${h}+$((OX+c))+$((OY+d))"
       ae=$(compare -metric AE <(convert "$OUT/$a.png" -crop "$crop" +repage png:-) <(convert "$OUT/$b.png" -crop "$crop" +repage png:-) null: 2>&1)
-      if ! shots_compared "$a" "$b"; then xfail "expect-change: cannot compare $a -> $b: $ae"
+      if ! shots_compared "$a" "$b" "$ae"; then xfail "expect-change: cannot compare $a -> $b: $ae"
       elif [ "${ae%% *}" = 0 ]; then xfail "expect-change: $a -> $b unchanged in view rect $c,$d ${w}x${h}"
       else log "changed $a -> $b in view rect $c,$d ${w}x${h} ($ae px)"; fi;;
     expect-same)
       read -r w h _ <<<"$rest"
       crop="${w}x${h}+$((OX+c))+$((OY+d))"
       ae=$(compare -metric AE <(convert "$OUT/$a.png" -crop "$crop" +repage png:-) <(convert "$OUT/$b.png" -crop "$crop" +repage png:-) null: 2>&1)
-      if ! shots_compared "$a" "$b"; then xfail "expect-same: cannot compare $a -> $b: $ae"
+      if ! shots_compared "$a" "$b" "$ae"; then xfail "expect-same: cannot compare $a -> $b: $ae"
       elif [ "${ae%% *}" = 0 ]; then log "same $a -> $b in view rect $c,$d ${w}x${h}"
       else xfail "expect-same: $a -> $b differ in view rect $c,$d ${w}x${h} ($ae px)"; fi;;
     expect-param)
