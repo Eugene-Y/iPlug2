@@ -1,6 +1,6 @@
 # T-012 — Sand: Linux CMake build (CLAP, VST3, APP)
 
-- **Status:** in-progress
+- **Status:** review-done (2026-10-17; independent review approved in round 2)
 - **Owner:** T-012 instance (2026-10-17)
 - **Branches/worktrees:**
   - Sand repo (`/Volumes/Storage/code/hvoya/Sand`, own git repo, `master`): create a local-only branch `linux-experiment` in a new worktree `/Volumes/Storage/code/hvoya/Sand-linux` (`git -C /Volumes/Storage/code/hvoya/Sand worktree add ../Sand-linux -b linux-experiment master`). Never push it. Never touch the main checkout (its untracked `Media/` and any WIP stay as they are).
@@ -36,12 +36,12 @@ Sand builds on Linux as CLAP, VST3 and standalone APP from a CMake project, load
 7. Sand bugs that are not Linux-specific: note them in `CROSS_PLATFORM_FINDINGS.md` style in your Log, don't fix.
 
 ## Acceptance
-- [ ] CLAP/VST3/APP build on 24.04; CLAP/VST3 on 22.04; exports minimal; GLIBC floor recorded.
-- [ ] Validators recorded; failures explained or ticketed.
-- [ ] UI renders in REAPER (CLAP, VST3) and APP (`--no-io`); step scripts PASS; churn 20× PASS; trace clean.
-- [ ] Opens and builds in VS Code via the presets (Docker or the VM, take the VM lock).
-- [ ] Sand main checkout and `/Volumes/Storage/code/IPlug2` untouched; nothing pushed; Sand diff = Linux build files + the `getOsString` branch.
-- [ ] Independent review (AGENTS §4); evidence in `evidence/t012/`; Log complete.
+- [x] CLAP/VST3/APP build on 24.04; CLAP/VST3 on 22.04; exports minimal; GLIBC floor recorded.
+- [x] Validators recorded; failures explained or ticketed.
+- [x] UI renders in REAPER (CLAP, VST3) and APP (`--no-io`); step scripts PASS; churn 20× PASS; trace clean.
+- [x] Opens and builds in VS Code via the presets (Docker or the VM, take the VM lock).
+- [x] Sand main checkout and `/Volumes/Storage/code/IPlug2` untouched; nothing pushed; Sand diff = Linux build files + the `getOsString` branch.
+- [x] Independent review (AGENTS §4); evidence in `evidence/t012/`; Log complete.
 
 ## Log
 (append: date — what was done — commits — next)
@@ -135,3 +135,24 @@ Not checked by me: the VM/VS Code run (judged from `vm/contact-vscode.png` and t
 - R4: xact logs `skip [FMT] step (format …)`; R5: `shots_compared` takes the compare output as an argument. Re-checked: `sand.txt` VST3 PASS with 4 logged `[CLAP]` skips (`evidence/t012/review/xact-recheck`); missing-shot FAIL still works.
 - R6: noted for the hand-over: `CMakePresets.json` assumes iPlug2 at `../../IPlug2` (the Xcode/VS layout). On this Mac that is the main checkout (`hvoya`, no Linux presets), so presets work on a Linux machine with that layout (VM) or once the port is merged into `hvoya`; Docker builds here pass `-DIPLUG2_DIR`.
 - R7: the GLIBCXX rationale now lives only in `docker/README.md`.
+
+**Review (round 2, 2026-10-17) — verdict: approved; all round-1 findings resolved, nothing new.** I checked commit 514e9ec8a.
+- R1 fixed:
+  - `ninja -C build/t012-sand -t deps CMakeFiles/Sand-app.dir/SandUI.cpp.o` (inside `dock.sh`) lists only `build/t012-sand/generated/plug_build_info.hpp`.
+  - The strings in the `out/Sand` binary now read "Linux / aarch64 / release / linux-experiment / e259e96".
+  - There is no `plug_build_info.hpp` in `Sand-linux/`.
+  - I looked at `evidence/t012/app/sheet.png`: a00–a04 are as before, and a05-about reads "SAND v1.1.10 Sand / Linux aarch64 release / linux-experiment e259e96 2026.10.17". `app/xact.log` passes all expectations; Sand is ALIVE.
+  - The hvoya.cmake shadowing hazard is in the Log for the coordinator.
+- R2 fixed: `evidence/t012/log-build-{2404,2204}.txt` are tracked.
+- R3 fixed: `reaper-vst3/sheet.png` has no stray tile (s00–s07 plus r03), and the content is unchanged.
+- R4 and R5 fixed (`xact.sh:38-41`):
+  - I re-ran the selftest (no X). It logs `skip [CLAP] step (format VST3)`, and `skip [VST3] step (format unset)` when `XACT_FMT` is unset.
+  - A missing shot still FAILs with "cannot compare"; a real change and identical shots behave as before.
+  - `shots_compared` takes the compare output as `$3`.
+  - `review/xact-recheck/run.log`: VST3 `sand.txt` PASS, 4 `[CLAP]` skips logged, `rclick-hold` used.
+  - I did not re-run REAPER.
+- R6: recorded as a hand-over note. That is acceptable.
+- R7 fixed: the Dockerfile header points to `docker/README.md`, which keeps the GLIBCXX rationale (line 16).
+- No containers left (`docker ps -a` is empty). Nothing committed by me. My round-1 run outputs under `evidence/t012/review/` were committed in 514e9ec8a. That is fine as evidence; only `review/xact-selftest/` stays untracked scratch.
+
+**Hand-over (2026-10-17):** status `review-done`. iPlug2 `linux/T-012`: d3497e960, 5391d32a9, c168d83c1, 514e9ec8a, + this commit. Sand `linux-experiment` (local only): 4dcd5cd, 2456460, 60c5b96, e259e96. Evidence `evidence/t012/`. Open for the user/coordinator: F1 (High, 0-frame blocks) and F2/F7 first, then F3–F5, F8; decisions D1 (`.clangd`) and D2 (clangd ≥ 19); the `plug_build_info.hpp` shadowing hazard in `hvoya.cmake`; R6 (presets assume `../../IPlug2`). No containers left; VM and task locks released; worktrees `/Volumes/Storage/code/IPlug2-T-012` and `/Volumes/Storage/code/hvoya/Sand-linux` left in place.
