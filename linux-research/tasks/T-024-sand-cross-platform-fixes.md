@@ -1,6 +1,6 @@
 # T-024 — Sand: cross-platform fixes F1–F8 (not Linux work)
 
-- **Status:** done, independent review (AGENTS §4) not run yet — every item implemented after the user's decisions; see "Where everything is" in the Log
+- **Status:** review-done (independent review approved in round 2, 2026-10-17); see "Where everything is" and the Hand-over at the end of the Log
 - **Owner:** T-024 chat (2026-10-17). Task file, Log and evidence: iPlug2 branch `linux/T-024` (from `hvoya-linux`) in `/Volumes/Storage/code/IPlug2-T-024-log`.
 - **Branches/worktrees:**
   - Sand repo: branch `fix/cross-platform-f1-f8` from `master` (cd9f063 or newer), in a new worktree `/Volumes/Storage/code/hvoya/Sand-fixes` (`git -C /Volumes/Storage/code/hvoya/Sand worktree add ../Sand-fixes -b fix/cross-platform-f1-f8 master`). Not `linux-experiment`, and never the main checkout `/Volumes/Storage/code/hvoya/Sand` (the user's working tree). Never push; the user merges.
@@ -339,7 +339,7 @@ Independent reviewer, fresh context. Read AGENTS.md, this file, Sand `CLAUDE.md`
 
 **Fixes after review round 1 (2026-10-17):**
 - **R1:** `grep ProcessMidiCC` over every hvoya plug-in finds Sand, Gneiss, DMT, Scape, **Melter** and **Crust_new**. Melter and Crust_new get the `OnIdle` line in new worktrees `hvoya/Melter-t024` and `hvoya/Crust_new-t024` (branch `fix/midi-cc-host-notify`, uncommitted, like Gneiss/DMT). The branch table above and CROSS_PLATFORM_FINDINGS now list them.
-  - Build check on mac (scratch layout against all iPlug2 commits): Melter fails with or without the line. `mapper_serializer::unserialize` takes 5 arguments since hvoya e33a71700, and `Melter.cpp:1301` passes 4: pre-existing, like DMT.
+  - Build check on mac (scratch layout against all iPlug2 commits): Melter fails with or without the line. `mapper_serializer::unserialize` needs 5 arguments since hvoya eff076c16 (2026-10-10; e33a71700 had added a 4-argument form with a default), and `Melter.cpp:1301` passes 4: pre-existing, like DMT. (Round 2 corrected the commit.)
   - Crust_new is stale since 2026-04 and was not built.
   - Gneiss builds with the line.
 - **R2:** `f2-steps.txt` now expects `host-value.*amnt.0\.000` and `env-points.[1-9]`. On the old VST3 build it **FAILs** (0.300, `none`; `f2r2-old-vst3/xact-fails.txt`), on the full build it PASSes (`f2r2-new-vst3`). The earlier `f2-*` runs still show the printed values, which is what the Log quotes.
@@ -347,3 +347,54 @@ Independent reviewer, fresh context. Read AGENTS.md, this file, Sand `CLAUDE.md`
 - **R5:** `2447c9103`: the `kMaxCoefs` comment says where each quality reaches 18 (Ultra 1.5 MHz, High 3 MHz) and where the floor binds (Ultra 2 MHz, High 4 MHz).
 - **R6:** not changed. Sand's `CLAUDE.md` is the user's instruction file; reported: the Grind section says 2 bands / `sr*0.6/1000`, the code has 5 bands / `sr*0.6/10000`.
 - The test trees `IPlug2-T-024-f3test` / `IPlug2-T-024-all` do not have bae0a54d4 / 2447c9103: comment-only, except the one-line InitDouble reset, which no Sand path depends on (Sand calls `SetTextToValueFunc` after `InitDouble`).
+
+### Review (round 2, 2026-10-17) — verdict: approved; two nits left (R7, R8), neither blocks
+
+Same reviewer, against commit 8caf4d0a1 and the worktrees and branches named in "Fixes after review round 1". I changed no code and committed nothing. The container `t024rgui` is removed.
+
+- **R1 — resolved.**
+  - `hvoya/Melter-t024` (branch `fix/midi-cc-host-notify` from master 2ce2399) adds `_midiCCMediator.OnIdle();` as the first line of `Melter::OnIdle`.
+  - `hvoya/Crust_new-t024` (from main b20479a) adds the same line in `Crust::OnIdle`.
+  - Both are uncommitted one-line diffs. The branch table, the F2 row in `CROSS_PLATFORM_FINDINGS.md` and the merge-order note ("every plug-in using the mediator") now cover them.
+  - The main checkouts `Melter` and `Crust_new` are untouched: their modified files date from Jun 22 and Apr 14.
+  - The user's `Crust_new` has large staged and unstaged edits to `Crust.cpp` on top of b20479a. The worktree line is against the committed file, so it has to be re-applied by hand there.
+  - **Melter's build break is pre-existing, confirmed by reading the code:**
+    - `Melter.cpp:1301` calls `mapper_serializer::unserialize(skip, chunk, pos, int(vHex))` with 4 arguments.
+    - hvoya's declaration (`mapper_serializer.hpp:14`) is `(Mapper&, const IByteChunk&, int startPos, int plugVersion, int numParams)` with no default.
+    - `fix/midi-cc-host-notify` touches only `mediator.hpp`, so F2 neither causes nor fixes it.
+- **R2 — resolved.** `f2-steps.txt:31-32` now use `host-value.*amnt.0\.000` and `env-points.[1-9]`. I re-ran it myself (REAPER VST3, Docker):
+  - my full build `build/t024r-full`: **PASS** (0.000, 9 points), in `evidence/t024/review/f2r2-new-vst3`;
+  - the master build `build/t024-before`: **FAIL (2)** (0.300, `none`), in `evidence/t024/review/f2r2-before-vst3`.
+  - This matches the worker's `f2r2-old-vst3` (FAIL) and `f2r2-new-vst3` (PASS).
+- **R3 — resolved.** `bae0a54d4` adds `mTextToValueFunction = nullptr;` in `InitDouble`.
+  - Every other initialiser reaches `InitDouble`: `InitInt`, `InitEnum` ×3 (via `InitInt`), `InitBool` (via `InitEnum`), `InitPitch`, `InitFrequency`, `InitSeconds`, `InitMilliseconds`, `InitGain`, `InitPercentage`, `InitAngleDegrees`.
+  - `Init(const IParam&)` copies the parser after its `InitDouble`.
+  - Sand calls `SetTextToValueFunc` after `InitDouble`, so not having this commit in the test trees does not affect the results.
+- **R4 — resolved.** The `DisplaySegment` comments describe the shown-value rule.
+- **R5 — resolved.** `2447c9103`'s numbers agree with my `compute_coefs` table: Ultra 18 at 1.536 MHz, High at 3.072 MHz, and the floor binds at 2 MHz for Ultra and 4 MHz for High. 18 actually starts a little lower (transition 1.465e-5: Ultra ≈ 1.37 MHz, High ≈ 2.73 MHz), but "from 1.5 / 3 MHz on" stays true.
+- **R6** — reported only, which is right: Sand's `CLAUDE.md` is the user's file.
+
+**Remaining nits (optional):**
+- **R7 — nit.** The message of `17765295e` still names only "(Sand, Gneiss, Scape, DMT)". Round 1 suggested amending it before the merge.
+  - Fix: before the user merges, amend it to add Melter and Crust_new, or leave the Log as the reference.
+- **R8 — nit.** The Log says the 5-argument `unserialize` dates from "hvoya e33a71700". That commit added a 4-argument form with `plugVersion = 0`. The required `numParams` came with **eff076c16** (2026-10-10, "CC map + patch identity readers: reject counts…"). The conclusion is unchanged: the break is pre-existing and not caused by F2.
+  - Fix: cite eff076c16.
+
+**Not verified** (as in round 1): Windows (F7), mac builds (Melter/Gneiss/Crust_new were not built by me), and F2 in non-REAPER hosts and plug-in formats.
+
+**After review round 2 (2026-10-17):**
+- **R8:** the citation above is corrected (eff076c16).
+- **R7:** not amended. The message of iPlug2 17765295e lists the plug-ins that need the OnIdle line as "Sand, Gneiss, Scape, DMT"; the full list is Sand, Gneiss, Melter, Scape, DMT, Crust_new (this Log, the branch table and CROSS_PLATFORM_FINDINGS). Rewriting would change the hashes of both commits on `fix/midi-cc-host-notify` that the docs reference. The user can amend it when merging if wanted.
+- The user's `Crust_new` main checkout has uncommitted edits to `Crust.cpp`, so the one line from `Crust_new-t024` will need re-applying by hand there.
+
+### Hand-over (2026-10-17)
+- Status `review-done`. Branches, commits and merge order: "Where everything is" (section 2026-10-17 (2)) plus the R1/R3–R5 commits listed in the round-1 fixes. Nothing pushed.
+- Open for the user:
+  - the Windows build (F7);
+  - committing the OnIdle line in Gneiss, DMT, Melter and Crust_new, and adding it to Scape by hand;
+  - DMT and Melter do not build against current hvoya regardless of this task (removed `UpdateMidiControllableUI`; 5-argument `unserialize`);
+  - N1–N4;
+  - R6 (Sand `CLAUDE.md` Grind section is stale);
+  - hvoya-linux's `ef002e167` (CLAP stepped params) into hvoya, for mac `param-conversions`;
+  - F2 in hosts other than REAPER, and the VST3 echo at the end of a fast CC sweep.
+- Containers: none left. The T-024 lock is released. Worktrees to keep: `hvoya/Sand-fixes`, `IPlug2-T-024`, `IPlug2-T-024-f3`, `IPlug2-T-024-f4`, `IPlug2-T-024-log`, `hvoya/{Gneiss,DMT,Melter,Crust_new}-t024`. Throwaway: `hvoya/Sand-t024-linux` (+ `tmp/t024-linux`), `IPlug2-T-024-f3test`, `IPlug2-T-024-all`, `linux-research/build/t024*`.
