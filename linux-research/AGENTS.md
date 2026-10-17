@@ -9,6 +9,7 @@ Several Claude instances work on this port in parallel; none of them shares memo
   - iPlug2 fork `/Volumes/Storage/code/IPlug2`: the main checkout, branch `hvoya` — the product branch. **Never touch it.** Gneiss on the Mac builds against it.
   - Gneiss `/Volumes/Storage/code/hvoya/Gneiss`: the main checkout, the user's working tree. **Never touch it.**
   - Sand `/Volumes/Storage/code/hvoya/Sand`: never touch.
+  - (Only the coordinator, and only on the user's explicit command, commits there — e.g. merging a reviewed fix. See `COORDINATOR.md`.)
 - **Integration branch:** `hvoya-linux`, in the worktree `/Volumes/Storage/code/IPlug2-linux`. Only the coordinator commits there (see §4).
 - **Plan and history:**
   - `linux-research/PLAN.md` — §1–2 are **binding decisions**; then the Progress table and phases P0–P12.
@@ -21,6 +22,7 @@ Several Claude instances work on this port in parallel; none of them shares memo
   - P3b: keyboard, focus, text entry, clipboard, menus, fonts.
 - **Tasks:** `linux-research/tasks/` — one file per task, board in `tasks/README.md`.
 - **Current state of branches, waiting items and user decisions:** `linux-research/STATUS.md` (coordinator snapshot).
+- **Taking over the coordinator role** (merging, the board, talking to the user about the whole port): `linux-research/COORDINATOR.md`.
 - **Cross-platform (mac/win) bugs found during the port:** `linux-research/CROSS_PLATFORM_FINDINGS.md`.
 
 ## 2. Non-negotiable rules (from PLAN §1–2 and the user's CLAUDE.md)

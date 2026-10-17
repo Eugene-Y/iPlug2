@@ -1,6 +1,6 @@
-# Coordinator status — snapshot 2026-10-16
+# Coordinator status — snapshot 2026-10-17 (end of the first coordinator's session)
 
-This is the coordinator's handover file: where things stand and what waits on whom. A cold session reads it after `AGENTS.md`.
+This is the coordinator's handover file: where things stand and what waits on whom. A cold session reads it after `AGENTS.md`; a new **coordinator** then reads `COORDINATOR.md` (how the role works).
 - Task-level detail lives in `tasks/README.md` and the task files.
 - Design and decisions live in `PLAN.md` §1–2 and `notes/`.
 
@@ -10,27 +10,29 @@ Update it at every merge or user decision.
 
 | Repo / branch | Where | State |
 |---|---|---|
-| iPlug2 `hvoya` (product) | `/Volumes/Storage/code/IPlug2` (main checkout, Gneiss builds against it) | **Local commits since 3474f3d55/0b2d8dbef, unpushed:** T-024 merges a865ee9f7 (F3 Hilbert), 228f2efc2 (F4 TextToValueFunc), 083bc87c5 (F2 MIDI CC → host on the main thread: every plug-in with a mediator needs `_midiCCMediator.OnIdle()`), fa98170e8 (cherry-pick ef002e167, CLAP stepped-param text). Earlier, all with the user's OK: logger fix, `SetFont`, upstream merge 5d854712d, H1, C1, CLAUDE.md. T-006's CLAP rescan cherry-picked as f71ddd876 (user, 2026-10-17). mac builds of Sand + Gneiss CLAP/VST3/APP against it PASS (2026-10-17) |
-| iPlug2 `hvoya-linux` (Linux integration) | `/Volumes/Storage/code/IPlug2-linux` | Pushed to `gene` up to b33e405b2 by the user on 2026-10-16; later commits are unpushed until the user pushes. Contains hvoya at 5d854712d + Linux P0–P5 + T-001/2/3/7 merges + the C1 cherry-pick e7c882995. HEAD ≈ 30580fe02 |
+| iPlug2 `hvoya` (product) | `/Volumes/Storage/code/IPlug2` (main checkout, Gneiss builds against it) | **Local commits since 3474f3d55/0b2d8dbef, unpushed:** T-024 merges a865ee9f7 (F3 Hilbert), 228f2efc2 (F4 TextToValueFunc), 083bc87c5 (F2 MIDI CC → host on the main thread: every plug-in with a mediator needs `_midiCCMediator.OnIdle()`), fa98170e8 (cherry-pick ef002e167, CLAP stepped-param text). Earlier, all with the user's OK: logger fix, `SetFont`, upstream merge 5d854712d, H1, C1, CLAUDE.md. T-006's CLAP rescan cherry-picked as f71ddd876 (user, 2026-10-17). T-021's fixes committed there by the 2nd instance at the user's decision: 59c33feec (hvoya `HostInfoModel` SIGFPE on x86, T21-2), 228f1ea8e (VST3 tempo/time signature only when valid, T21-3). **HEAD 228f1ea8e, unpushed.** mac builds of Sand + Gneiss CLAP/VST3/APP against it (at 083bc87c5+) PASS (2026-10-17) |
+| iPlug2 `hvoya-linux` (Linux integration) | `/Volumes/Storage/code/IPlug2-linux` | Pushed by the user up to b33e405b2 (2026-10-16); **everything after is unpushed** (HEAD ab632ec4e + this handover). Contains hvoya up to 228f1ea8e, Linux P0–P5, and the merges of T-001…T-008, T-012, T-021, T-024 (merge log in `tasks/README.md`) |
 | Gneiss `master` | `/Volumes/Storage/code/hvoya/Gneiss` (user's working tree, uncommitted .RPP/xcscheme/main.rc_mac_dlg edits) | 4dc02eb (`_midiCCMediator.OnIdle()`, needs hvoya 083bc87c5; committed at the user's command 2026-10-17, unpushed) on 3cf2e2e |
-| Gneiss `linux-experiment` | `/Volumes/Storage/code/hvoya/Gneiss-linux` (local only, never push) | master 3cf2e2e merged (4219350) + 52cb5d6 (CMakeLists.txt) + 7e3a1c9 (initializer_list UB fix, behaviour-neutral); master 4dc02eb merged (8a0f05b, 2026-10-17) |
+| Gneiss `linux-experiment` | `/Volumes/Storage/code/hvoya/Gneiss-linux` (local only, never push) | 52cb5d6 (CMakeLists.txt), 7e3a1c9 (initializer_list UB fix, behaviour-neutral), 3b9767e (`scripts/makedist-linux.sh`, T-021; the user kept it, R12), master merged up to 4dc02eb (8a0f05b, 2026-10-17) |
 | Sand `master` | `/Volumes/Storage/code/hvoya/Sand` (user's main checkout) | 54be993 merge of T-024 `fix/cross-platform-f1-f8` (at the user's command 2026-10-17, unpushed) on the user's 961be6c |
 | Sand `linux-experiment` | `/Volumes/Storage/code/hvoya/Sand-linux` (local only, never push) | T-012: 4dcd5cd CMake, 2456460 `std::isfinite`, 60c5b96 presets + workspace, e259e96 C++23, cec9c1d `.clangd` → `compile_flags.txt` (user's D1). Needs GCC 13 on 22.04 (`iplug2-linux:22.04-gcc13`); master 54be993 merged (a027e6d, 2026-10-17) |
 
 ## In flight
-- **T-005 merged** (2026-10-16). T-011 is now ready.
-- **T-008 merged** (fac9cc84d). **Open VM-only re-check of its final focus build** (light, short): `scripts/vm/vm-run.sh vm/probe/focus-edit.sh` CLAP + VST3 ×10 and the APP P3b script ×3. Earlier VM passes used the first focus version. Check `timeout 8 xdpyinfo` before and after.
+- **T-026** (Sand follow-ups: N1 audio-thread allocation, N2–N4, F2 host checks) — **claimed by the Sand chat** 2026-10-17 21:54 (lock `T-026`; worktrees `IPlug2-T-026-log` on `linux/T-026`, `hvoya/Sand-t026` on `fix/t026-followups`, `Sand-t026-base`, `Sand-t026-linux` on `tmp/t026-linux`). Merge it like T-024 when the user says so: Sand fixes into Sand `master` (main checkout) only at the user's command; any shared hvoya change is a proposal for the user first.
+- **Open VM-only re-check of T-008's final focus build** (light, short; coordinator): `scripts/vm/vm-run.sh vm/probe/focus-edit.sh` CLAP + VST3 ×10 and the APP P3b script ×3, `timeout 8 xdpyinfo` before and after. Needs the VM up (ask the user).
+- Nothing else is mid-merge. Latest release archives (T-021 flow on the merged tree, smoke PASS): `linux-research/build/m021-dist/` (ignored, local only).
 
 ## Waiting on the user
-1. ~~Gneiss morph bugs on mac~~ — **fixed by the user 2026-10-16** (hvoya 0b2d8dbef, Gneiss 3cf2e2e) and synced into hvoya-linux (e393b6398) / linux-experiment (4219350); Linux smoke PASS. Old note: Then the coordinator merges Gneiss `master` → `linux-experiment` and `hvoya` → `hvoya-linux`, with builds plus REAPER runs (`steps/gneiss.txt`).
-   - **Hints given to the user:**
-     - C2 analysis in `CROSS_PLATFORM_FINDINGS.md` and `evidence/t003/reviews/2-findings-review.md`: the `_prevParamVals` dedup cache is not updated by direct `IParam::Set` in `applyMorphModeParams`/`snapshotPatchMorphOff`/`morph_file_router`.
-     - To check whether the upstream merge is to blame: build Gneiss against hvoya `3a05dd2f4` (pre-merge) vs `5d854712d` (post-merge).
-2. **Cross-platform findings** in `CROSS_PLATFORM_FINDINGS.md`. C1 is fixed. Open for the user's decision: X1 (`SetLatency` race), C3 (input buffer overwrite in 64-bit), C2/C4 (preset/morph/host notification), L1 (stale editor size on mac VST3/CLAP), C5 (text→value parsing, tail).
-3. **Push `hvoya-linux`.** The auto-mode classifier blocks pushes from Claude.
-   - The `gene` remote is https without stored credentials. Push via `git@github.com:Eugene-Y/iPlug2.git`, or the user runs `git remote set-url gene git@github.com:Eugene-Y/iPlug2.git`.
+1. **Pushes** (Claude never pushes; the classifier blocks it): iPlug2 `hvoya` (HEAD 228f1ea8e), `hvoya-linux` (everything after b33e405b2), Sand `master` (54be993), Gneiss `master` (4dc02eb). Product `linux-experiment` branches stay local. The `gene` remote is https without stored credentials: push via `git@github.com:Eugene-Y/iPlug2.git`, or `git remote set-url gene git@github.com:Eugene-Y/iPlug2.git`.
+2. **After T-024 (F2):** add `_midiCCMediator.OnIdle();` to `OnIdle` in DMT, Melter, Crust_new (uncommitted one-line changes are ready in `hvoya/DMT-t024`, `Melter-t024`, `Crust_new-t024`; DMT and Melter don't build with current hvoya anyway; Crust_new has the user's own uncommitted edits) and in Scape (not git). Without it their knobs stop following CC (audio still follows).
+3. **Windows**: build Sand after F7 (`PolyphaseIIR2Designer.cpp` added to the vcxproj); T-026 will touch `Sand-aax.vcxproj` too.
+4. **F2 in other hosts** (AU, AAX, VST2) and the possible ≤ 20 ms value step-back at the end of a fast CC sweep in VST3 — T-026 prepares checks/checklists; FL Studio crash (N4) checklist too.
+5. **Cross-platform findings still open** (`CROSS_PLATFORM_FINDINGS.md`): C2/C4 (preset/morph/host notification; T6-1 covers only iPlug's own state load), C3 (Gneiss writes the host's input buffer, 64-bit), C5 (text→value, Gneiss), L1 (stale editor size on mac VST3/CLAP), T8-1..3 (IPopupMenuControl), T21-5 (beat display right only at 120 BPM), T5-1 (fixed in T-011 when it runs). X1 → **T-025** (the user: must be fixed).
+6. Gneiss morph bugs (2026-10-16): fixed by the user (hvoya 0b2d8dbef, Gneiss 3cf2e2e), synced.
 
 ## Decisions already made by the user (don't re-ask)
+- **2026-10-17:** T-004's shared APP fixes (013328ba4 A2/A3, 7cce657a1 A1/A4, bb004604a m7) approved. T-006's CLAP rescan after state load (T6-1) approved, also into `hvoya` (f71ddd876). T-024: all Sand fixes into Sand `master`, the hvoya parts (F2, F3, F4) into `hvoya`, the `OnIdle` line committed in Gneiss `master`; ef002e167 (CLAP stepped-param text) cherry-picked into `hvoya`. T-021: T21-2 and T21-3 fixed on `hvoya`; Gneiss 3b9767e kept (R12); X1 must be fixed (T-025). Sand may be built (its CLAUDE.md "do not build" is outdated). Sand's cross-platform fixes go to a separate chat (T-024, now T-026), not to the Linux instances. After each merged task: clean up its worktrees/branches/containers.
+- **2026-10-16:** the repo `README.md` gets the Linux section **last** (P13 / T-015). Only NanoVG GL2 is tested on Linux (noted in code and docs); GL3 is T-020.
 - **T-005 m2 (2026-10-16): keep as is.** The examples' Linux-only `CMakePresets.json` stays; the empty presets list in VS Code CMake Tools on mac/win is documented in `Documentation/linux-development.md` (workaround `cmake.useCMakePresets: never`).
 - **IDE (2026-10-16, provisional):** VS Code is the primary Linux IDE; IPlugEffect and IPlugControls are the templates to develop in and duplicate from. Qt Creator is the documented alternative; CLion only with a paid licence (its free licence forbids sold products). notes/20, `Documentation/linux-development.md`.
 - **Rough edges must be fixed, not just noted (2026-10-16):** every known gap gets a task file. For T-011 this includes changing the shared `Examples/duplicate.py` (out-of-tree path rewrite), which also changes mac/win output (for the better).
@@ -40,7 +42,7 @@ Update it at every merge or user decision.
 - **Priority (2026-10-16): Gneiss and Sand as fully working Linux plug-ins first**; order in `tasks/README.md` "Priority".
 - **Feature parity with mac/win is required (2026-10-16):** Linux must not be poorer than mac or win, WebView included. Gaps and tasks: notes/22, T-016..T-021.
 - First milestone = CLAP + VST3 + APP, NanoVG GL2, X11. **LV2 is the last phase (P12)**, after P11 (developer experience: IDE research — CLion is non-commercial-only; presets, `duplicate.py`, one-command flows, for IPlugEffect/IPlugControls/Gneiss/Sand).
-- Gneiss/Sand experiments only on local branches in separate worktrees. Never touch the main checkouts.
+- Gneiss/Sand experiments only on local branches in separate worktrees. Main checkouts only on the user's explicit command (see `COORDINATOR.md`).
 - **Minimal footprint** (AGENTS §2): the port must not change mac/win behaviour, projects or flags. Report cross-platform bugs; don't fix them in port branches.
 - Multi-instance workflow (AGENTS §4–5).
   - The coordinator = the main chat: it merges, keeps the board, runs smoke tests.
@@ -75,6 +77,11 @@ Update it at every merge or user decision.
   - `~/dev/iPlug2` holds a hvoya-linux clone with T-005's files;
   - `~/.clap` and `~/.vst3` hold Debug builds of IPlugEffect and IPlugControls.
 - **Starting an IDE on the VM from `vm-display-env`** puts the sudo gdb wrapper on PATH. The debuggee (REAPER) then runs as root. Start IDEs with a plain PATH (`scripts/vm/README.md`).
+
+- **mac tooling** (2026-10-17): Homebrew `rust` is installed (T-006); no clap-validator binary is kept on the Mac (build 0.4.1 in a scratchpad, T-006 Log). `auval` is there. mac hosts installed: REAPER, Bitwig Studio, Ableton Live 11 Lite. Command-line `xcodebuild` of Sand works since F8; build products from a detached temporary worktree into a scratch dir (`scripts/coord/mac-xcodebuild.sh`) so the main checkouts stay clean (builds regenerate `main.rc_mac_dlg` and `plug_build_info.hpp`).
+- **Docker images** (2026-10-17): `iplug2-linux:{24.04,22.04,22.04-gcc13}` (+ `-amd64` variants, Rosetta), runtime-only `iplug2-rt:{ubuntu22.04,ubuntu24.04,debian12,fedora}` (+ `-amd64`). Sand needs GCC 13 on 22.04 (`std::format`).
+- `DOCK_ENV` splits on spaces and `build-cmake.sh` word-splits `EXTRA_CMAKE_ARGS`: pass multi-word flags via `CFLAGS`/`CXXFLAGS` in a `bash -c` (see `scripts/sand-build.sh`).
+- Smoke scripts of earlier merges: `scripts/coord/` (copy and adapt).
 
 ## Next tasks
 See `tasks/README.md`, section "Priority" (who does what, in which order).

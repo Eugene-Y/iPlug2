@@ -70,3 +70,5 @@ You are on (or near) branch `hvoya-linux`. **For any Linux-port work, read `linu
 It has the shared instructions (rules, Docker/VM tools, locks, workflow), and `linux-research/tasks/` holds
 self-contained task files. The main checkout `/Volumes/Storage/code/IPlug2` stays on `hvoya` (Gneiss builds
 against it) — never modify it from Linux work.
+**Taking over as coordinator** (the user says so, or asks you to merge tasks / run the board): after `AGENTS.md`,
+read `linux-research/STATUS.md` and `linux-research/COORDINATOR.md`.
