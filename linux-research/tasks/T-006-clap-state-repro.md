@@ -91,3 +91,16 @@ Fresh-context review of 46d10516c, 5512f7be5, 0020953f9 (`git diff hvoya-linux..
   - Containers are removed.
   - Build dirs `build/t006-*` and `build/t006r*` are left in the worktree (gitignored).
 - **Mac tooling added:** Homebrew `rust` (cargo 1.99.1). The clap-validator 0.4.1 binary is in this session's scratchpad (`cv/target/release/clap-validator`); it disappears with the scratchpad.
+
+### Review round 2 (independent reviewer)
+Checked 62a8544a6 against each round-1 finding; docs only, no code touched (`IPlug/` unchanged since 46d10516c), so no re-run was needed.
+- **1 (Debug/Release labels):** fixed. README now names each config; I confirmed them: `build/t006-base` Release, `linux-research/build/t006-gneiss` Debug (a `-rel` sibling is Release, matching the Log's "both Debug and Release" process-sleep point), mac Debug. AGENTS §3 `DOCK_ENV` line is correct (`dock.sh` passes only `DOCK_ENV`). *Nit:* the README says `build/t006-gneiss`; the dir is `linux-research/build/t006-gneiss` (relative to where the scripts run), and the hand-over's "`build/t006-*`" therefore covers it only loosely.
+- **2 (InformHostOfPresetChange scope):** fixed, accurately, in the Log and under T6-1.
+- **3 (clap-juce-extensions wording):** fixed.
+- **4 (sync vs `runOnMainThread`):** not adopted; the reasoning is sound and fairly presented. Verified: clap-helpers' `runOnMainThread` (`plugin.hxx:2431`) runs inline only if the host has `thread-check`, else queues under a mutex and calls `request_callback`, even on a compliant host; and a host calling `state.load` off the main thread already gets the params restored and the editor updated (`OnRestoreState` → `SendCurrentParamValuesFromDelegate`) on that thread, so the extra rescan does not create a new class of breakage. Framed as "kept, for the user to overrule", with the dirty-project check left open for the decision. Fine.
+- **5 (thread-check caveat):** fixed.
+- **6 (status/acceptance):** fixed; Status `review-done — awaiting user decision (shared-code fix, T6-1)`, boxes ticked, Hand-over lists commits/evidence/open items.
+- **Forbidden file:** `Dependencies/IPlug/VST3_SDK/README.md` is in no commit of `hvoya-linux..linux/T-006` (its history touches are T-008's net-zero pair already in `hvoya-linux`); still only an unstaged local change. 62a8544a6 carries the trailer.
+- *Note for the user (not a finding):* the worker installed Homebrew `rust` on the Mac (disclosed in the Hand-over); the task allowed rustup into the home dir.
+
+**Verdict: pass.** All round-1 findings are resolved or deliberately declined with sound, accurately presented reasoning. Ready for the coordinator; merge still waits for the user's decision on T6-1.
