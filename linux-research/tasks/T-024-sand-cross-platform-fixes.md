@@ -1,6 +1,6 @@
 # T-024 — Sand: cross-platform fixes F1–F8 (not Linux work)
 
-- **Status:** in-progress (F1, F5, F7, F8 committed; F2, F3, F4 wait for the user's decision, see Log)
+- **Status:** in-progress — F1, F5, F7, F8 and the Sand part of F3 committed; waiting for the user's decisions on F2, F3-hvoya, F4 (see Log)
 - **Owner:** T-024 chat (2026-10-17). Task file, Log and evidence: iPlug2 branch `linux/T-024` (from `hvoya-linux`) in `/Volumes/Storage/code/IPlug2-T-024-log`.
 - **Branches/worktrees:**
   - Sand repo: branch `fix/cross-platform-f1-f8` from `master` (cd9f063 or newer), in a new worktree `/Volumes/Storage/code/hvoya/Sand-fixes` (`git -C /Volumes/Storage/code/hvoya/Sand worktree add ../Sand-fixes -b fix/cross-platform-f1-f8 master`). Not `linux-experiment`, and never the main checkout `/Volumes/Storage/code/hvoya/Sand` (the user's working tree). Never push; the user merges.
@@ -91,19 +91,22 @@ Scripts in `evidence/t024/`:
   - Harness (Debug, grind ±0.8): finite at 3.07 / 6.14 / 9.88 MHz, where the old tree asserts.
   - The file is CRLF; endings were kept.
 
-**Results** (before = master / `linux-experiment`; after = F1+F5 (+F7, F8)). Linux = Docker 24.04 Release; mac = Apple clang Release CLAP, Debug VST3.
+**Results.** before = master / `linux-experiment`. Linux = Docker 24.04, Release (ASan: RelWithDebInfo). mac = Apple clang, CLAP Release, VST3 **Debug** (asserts live). Branch = F1+F5+F3 Sand part+F7+F8. "+ hvoya" = branch built against `IPlug2-T-024-f3test` (Linux) or `HVOYA_PATH` pointing there (mac): the F3 proposal applied, uncommitted.
 
-| Check | before | after F1+F5 | after F1+F5 + F3 proposal |
-|---|---|---|---|
-| Linux VST3 `validator -e` ×20 | 5 segfaults (FlushParamTest) | 11 segfaults, all in "Process Format" (F3, see below) | T024_F3P_VST3 |
-| Linux ASan VST3 ×3 | 3× heap-buffer-overflow `derivativeInplace` | T024_F15_ASAN | T024_F3P_ASAN |
-| mac VST3 (Debug) ×20 | 20 aborts: `assert(!data.empty())` derivativeInplace | 20 aborts: `assert(nc <= kMaxCoefs)` HilbertEnvelopeDetector (F3) | — |
-| clap-validator Linux | 34 pass / 4 fail | T024_F15_CV | T024_F3P_CV |
-| clap-validator mac (main IPlug2 has no T-006 fix, so +3 state-*) | 31 / 7 | 33 / 5 (double in/out-of-place pass) | — |
-| render 64-bit out-of-place: input changed | 192000 samples | 0 | 0 |
-| render 768 kHz default params: non-finite | 458 | 458 (F3) | T024_F3P_768 |
+| Check | before | F1+F5 | branch | branch + hvoya F3 proposal |
+|---|---|---|---|---|
+| Linux VST3 `validator -e` ×20 | 5 segfaults (FlushParamTest) | 11 segfaults ("Process Format") | **0** | **0** |
+| Linux ASan VST3 ×3 | 3× heap-buffer-overflow `derivativeInplace` | 1× heap-buffer-overflow `DelayLineWithFeedback::clear` ← `DmtGrind::setSampleRate` | 0 | 0 |
+| Linux ASan clap-validator | 0 | 0 | 0 | 0 |
+| mac VST3 (Debug) ×20 | 20 aborts `assert(!data.empty())` derivativeInplace | 20 aborts `assert(nc <= kMaxCoefs)` Hilbert | 20 aborts, same Hilbert assert | **0** |
+| clap-validator Linux | 34 pass / 4 fail | 36 / 2 | 36 / 2 (varying-sample-rates, param-conversions) | **37 / 1** (param-conversions = F4) |
+| clap-validator mac (+3 `state-reproducibility-*`: main IPlug2 has no T-006) | 31 / 7 | 33 / 5 | 33 / 5 | **34 / 4** (param-conversions + 3 state-*) |
+| render 64-bit out-of-place: input samples changed | 192000 | 0 | 0 | 0 |
+| render 768 kHz, default params: non-finite samples | 458 | 458 | 458 | **0** (mac) / **0** (Linux) |
 
-- **Audio identical** (`render.sha256`, mac and Linux): 12 of 13 renders are bit-identical before/after. Covered: 32/64-bit, in-place/out-of-place, 44.1/48/96/192/384 kHz, block 64/512/1000, order 3 + os 2x, grind + AM.
+So F1's acceptance (VST3 ×20 with no crash) holds in Release with the branch alone. In Debug (asserts) and for the 768 kHz NaN it needs the hvoya F3 fix. In Release the Hilbert overflow corrupts silently instead of crashing, and ASan cannot see it (intra-object).
+
+- **Audio identical** (`render.sha256`, mac and Linux, every variant): every render below 768 kHz is bit-identical before/after except the empty-block one. Covered: 32/64-bit, in-place/out-of-place, 44.1/48/96/192/384 kHz, block 64/512/1000, order 3 + os 2x, grind + AM.
   - The 13th is random block sizes with 0-frame blocks.
   - after-with-empty-blocks = after-without = **before with the host skipping the empty calls** (`skipzero=1`), all sha 6a738b9c….
   - Before, each empty block disturbed the output: 152 samples, max |diff| 0.31 against a 0.69 peak, i.e. **audible clicks on hosts that send empty blocks**, not only crashes.
