@@ -54,7 +54,7 @@ Flow (one command per product, from the Mac; Docker per arch):
 - Times on this Mac (6 cores, colima): aarch64 Sand 2.4 min, Gneiss both editions 5 min; x86_64 under Rosetta Sand 4 min, Gneiss both editions 10 min (with image builds running alongside); incremental rebuilds of everything ~6 min. x86_64 build images: ~6 min to build.
 - Reproducible: a `--clean` Sand rebuild into a second dir gave the same `files.txt`, the same `tar -tv` headers, and byte-identical CLAP/README/install.sh.
 - Crash reports work: a stripped x86_64 release crash symbolized to source lines from the debug archive (`findings/T21-*`), via `addr2line` and via gdb's build-id lookup (the smoke test's Draw count uses it).
-- A `.clap` copied without its `.resources/`: loads, editor opens without text/images, no crash (REAPER, 2 instances, reopen ×5), and stderr now says `iPlug2: resource folder …/Gneiss.resources/ not found; copy it next to the plug-in.` README and §7 tell users to copy both.
+- A `.clap` copied without its `.resources/`: loads, editor opens without text/images, no crash (REAPER, 2 instances, reopen ×5), and stderr now says `iPlug2: resource folder …/Gneiss.resources/ not found; fonts and images will be missing.` (wording after review R10) README and §7 tell users to copy both.
 
 Smoke test per archive (runtime-only image, `install.sh` as user `customer`, then `--system` as root, then uninstall): ldd all resolved; clap-validator + VST3 validator `-e` on the installed copies; REAPER CLAP + VST3 (open, reopen ×5, 2 instances, render check, Draw/X on REAPER's main thread via the split symbols); standalone `--no-io` window; CLAP without resources (message, no crash); `--system` copies world-readable and loadable by `customer`; nothing left after `--uninstall`. I looked at the screenshots (e.g. `smoke-r1/gneiss-aarch64-paid-ubuntu24.04/reaper-vst3/r03-two-instances.jpg`, `…/app.jpg`, `smoke/gneiss-x86-64-paid-ubuntu22.04-amd64/reaper-vst3/r03-two-instances.jpg`): full UIs, fonts, icons, logo.
 
@@ -69,7 +69,7 @@ Round 1, archives before ac4ca870f (`smoke-r1/matrix-*.txt`):
 | Gneiss paid x86_64 | VST3 validator SIGFPE = T21-2 | T21-2 | T21-2 | no image (*) |
 | Gneiss free x86_64 | T21-2 | — | — | — |
 
-Everything else in the x86_64 cells passed (install, ldd, clap-validator, REAPER render in CLAP and VST3, standalone, missing-resources message, system install, uninstall). clap-validator: 4 failures everywhere, the known ones (Sand: `process-audio-double-{in,out}-of-place` F5, `process-varying-sample-rates` F3, `param-conversions` F4; Gneiss: the same families); `state-reproducibility-*` pass since T-006.
+Everything else in the x86_64 cells passed (install, ldd, clap-validator, REAPER render in CLAP and VST3, standalone, missing-resources message, system install, uninstall). clap-validator: 4 failures everywhere, the known ones (Sand: `process-audio-double-{in,out}-of-place` F5, `process-varying-sample-rates` F3, `param-conversions` F4; Gneiss: `process-audio-double-{in,out}-of-place` C3, `process-sleep-process-status` and `param-conversions` C5 — lists in `scripts/known-clap-failures/`); `state-reproducibility-*` pass since T-006.
 (*) Fedora's GNU tar fails under Rosetta ("Function not implemented"), so no x86_64 Fedora image; Fedora is covered on aarch64 with the same build.
 Harness deaths: REAPER died right after the gdb Draw count twice, both in loaded runs (two matrices + builds in parallel). The plug-in's Draw/X hits were all on tid 1 before it. Not reproduced in 25 + 25 stress cycles with the old and new `gdb-count.sh`; the new one deletes its breakpoints before detaching.
 
@@ -186,3 +186,24 @@ New cross-platform finding (report, don't fix):
   - It affects only the "host time" view in the Gneiss and Sand UIs. The bug is older than ac4ca870f, which leaves this path untouched.
 
 Not issues: no Xcode/VS/`config.h` changes. The shared code touched is `IPlugLinuxPaths.cpp` (Linux-only) and `host_info_model.hpp` (requested by the user, verified above); the comments are WHYs. My containers (`t021-smoke-iplug2-rt-ubuntu24-04`, `t021r-inst`, `t021r-elf`, `t021r-probe`) are removed. Round 2 should check R1–R5 and a re-run of one Gneiss and one Sand cell on 22.04.
+
+**2026-10-17 — review round 1 fixes** (9a05996ac; the reviewer's findings are in its section above):
+- R1 (blocker) fixed: per-user standalone in `~/.local/lib/<Name>`; `install.sh` removes only a folder carrying its marker file; the smoke test writes `~/.local/share/<Name>/Presets/smoke-test.preset` before installing twice and checks it after `--uninstall`.
+- **R2: T21-4 was the harness, not REAPER or Sand.** `gdb-count.sh` passed the symbol name to gdb's `printf` as a string argument, so gdb 12 called `malloc` in REAPER on every hit; a stop during that call ("will be abandoned") left REAPER crashing after the detach — hence a crash in REAPER's own code and never in the module. With the name in the format string: `probe/hover-stress.sh` Sand, 22.04, `COUNT_SECS=20`: 10/10 rounds alive (before: died in round 1–3, 3/3). My earlier reading ("possibly Sand's F1") was wrong; T21-4 is withdrawn as a finding.
+- R3–R11, R13 fixed as listed in the commit. R12: Gneiss `CLAUDE.md` says to commit only when told; 3b9767e was made under this task's brief ("product repos changed only on their local branches"), as T-003/T-012 did — **for the user to confirm**. `makedist-linux.sh` defaults to `../../IPlug2` like the product's CMakeLists, which has no `Scripts/linux/package.sh` until `hvoya-linux` reaches `hvoya`; until then it needs `IPLUG2_DIR` (its error says so).
+- X1 (reviewer, cross-platform, Low, display only, not changed): hvoya `host_info_model.hpp:187`'s beat is right only at 120 BPM (4/4, one quarter in: beat 4 at 40 BPM, 3 at 60, 2 at 120, 1 from ~134). Predates ac4ca870f.
+- R6 follow-up 6ad4c3d6b: `$5 != "LOCAL"` let readelf's header line through ("Name" counted as an export) and failed every package; the check now reads only symbol rows. The round-2 script now stops when packaging fails (a first round-2 run had smoke-tested the previous archives; moved out, not evidence).
+
+Round 2 cells, archives from 6ad4c3d6b (Gneiss 3b9767e, Sand cec9c1d), `smoke-r2/` (`log-round2.txt`):
+
+| Cell | Result |
+|---|---|
+| Gneiss paid aarch64, Ubuntu 22.04 | PASS |
+| Gneiss free x86_64, Ubuntu 22.04 | PASS |
+| Gneiss paid x86_64, Ubuntu 22.04 | everything passes except one VST3 validator SEGV in "Silence Processing" (below) |
+| Sand aarch64, Ubuntu 22.04 | VST3 validator SEGV (Sand F1/T21-1) — everything else passes, REAPER alive through the gdb count |
+| Sand aarch64, Debian 12 | same |
+
+In every cell: install twice + uninstall keep `~/.local/share/<Name>/Presets/smoke-test.preset`; the standalone runs from `~/.local/lib/<Name>`; ldd clean; clap-validator failures exactly the known lists.
+
+- Intermittent Gneiss x86_64 VST3 validator SEGV, twice in 7 smoke runs, both in "Silence Processing" right after "Process function running in another thread" — the ProcessTest family where T-003's ASan caught the **X1** race (`SetLatency` from the fallback-thread `OnIdle` resizes the latency delay line while `process` runs: null in `NChanDelayLine::ProcessBlock` via `PassThroughBuffers`). Not reproduced in isolation: 30 runs with the crash handler, 24 as 4 parallel validators, 12 as user `customer` without the handler — 0 crashes (`findings/X1-*`). Both crashes came while the other smoke stream rendered REAPER, so it needs load; consistent with X1, which awaits the user's decision (STATUS "Waiting on the user" 2, T-010). Not a packaging defect; validator-only (REAPER drives `OnIdle` from its main thread).
