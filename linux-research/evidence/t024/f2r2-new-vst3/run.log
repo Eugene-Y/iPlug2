@@ -1,0 +1,41 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=1691 (open)
+render[first-open] ok (stddev 0.177166)
+view origin 113 188
+[xact] origin 113,188
+[xact] lua 'compression amnt 0.300' (matches amnt.0\.300)
+[xact] shot f00-start
+[xact] skip [CLAP] step (format VST3)
+[xact] rclick-hold 256 94
+[xact] skip [CLAP] step (format VST3)
+[xact] move 311 240
+[xact] skip [CLAP] step (format VST3)
+[xact] click 545 244
+[xact] lua 'armed' (matches armed)
+[xact] lua 'sent' (matches sent)
+[xact] lua 'mode 3.0' (matches mode)
+[xact] lua 'sent' (matches sent)
+[xact] lua 'sent' (matches sent)
+[xact] lua 'sent' (matches sent)
+[xact] lua 'stopped' (matches stopped)
+[xact] shot f01-after-cc
+[xact] changed f00-start -> f01-after-cc in view rect 200,30 120x120 (2009 px)
+[xact] lua 'host-value compression amnt 0.000' (matches host-value.*amnt.0\.000)
+[xact] lua 'env-points 9' (matches env-points.[1-9])
+[xact] ALIVE pid 1691
+REAPER ALIVE pid=1691 (steps)
+REAPER ALIVE pid=1691 (reopen 1)
+REAPER ALIVE pid=1691 (reopen 2)
+REAPER ALIVE pid=1691 (reopen 3)
+REAPER ALIVE pid=1691 (reopen 4)
+REAPER ALIVE pid=1691 (reopen 5)
+render[after-reopen] ok (stddev 0.167862)
+add2 0
+REAPER ALIVE pid=1691 (two instances)
+render[second-instance] ok (stddev 0.177166)
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+     13 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=1
+   1057 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
+REAPER ALIVE pid=1691 (end)
+RESULT: PASS

@@ -1,0 +1,51 @@
+FAILED param-conversions
+FAILED state-reproducibility-basic
+FAILED state-reproducibility-binary
+FAILED state-reproducibility-buffered
+│ │ │ The plugin can be scanned in 10 milliseconds.
+│ │ │ The plugin does not implement the 'clap.preset-discovery-
+│ │ │ factory/2' factory.
+│ │ │ The plugin does not implement the 'clap.preset-discovery-
+│ │ │ factory/2' factory.
+│ │ │ The plugin does not implement the 'clap.preset-discovery-
+│ │ │ factory/2' factory.
+│ │ │ The plugin never set the constant flag on any output
+│ │ │ The plugin never went to sleep during the test.
+│ │ │ The plugin does not have any input note ports that support CLAP
+│ │ │ events
+│ │ │ The plugin does not implement the 'audio-ports-activation'
+│ │ │ extension.
+│ │ │ The plugin does not implement the 'configurable-audio-ports'
+│ │ │ extension.
+│ │ │ Converting 0.020202020202020204 to a string, back to a value,
+│ │ │ and then back to a string again for parameter 'comp stages' (1)
+│ │ │ results in '0' -> 0.0 -> 'x1', which is not consistent.
+│ └── FAILED ─ 28ms
+│ │ │ After reloading the state, these parameter values changed
+│ │ │ without a rescan request:
+│ │ │  - compression amnt (0) - 0.300 (0.3000) vs 0.056 (0.0556)
+│ │ │  - softness (2) - 1.000 (1.0000) vs 0.545 (0.5452)
+│ │ │  - order (3) - 1 (1.0000) vs 7 (7.0000)
+│ │ │  - mix (5) - 0.500 (0.5000) vs 0.839 (0.8394)
+│ │ │  - dry (6) - 0.500 (0.5000) vs 0.200 (0.2002)
+│ │ │ ...and 19 more
+│ └── FAILED ─ 33ms
+│ │ │ After reloading the state, these parameter values changed
+│ │ │ without a rescan request:
+│ │ │  - compression amnt (0) - 0.300 (0.3000) vs 0.056 (0.0556)
+│ │ │  - softness (2) - 1.000 (1.0000) vs 0.545 (0.5452)
+│ │ │  - order (3) - 1 (1.0000) vs 7 (7.0000)
+│ │ │  - mix (5) - 0.500 (0.5000) vs 0.839 (0.8394)
+│ │ │  - dry (6) - 0.500 (0.5000) vs 0.200 (0.2002)
+│ │ │ ...and 19 more
+│ └── FAILED ─ 31ms
+│ │ │ After reloading the state, these parameter values changed
+│ │ │ without a rescan request:
+│ │ │  - compression amnt (0) - 0.300 (0.3000) vs 0.056 (0.0556)
+│ │ │  - softness (2) - 1.000 (1.0000) vs 0.545 (0.5452)
+│ │ │  - order (3) - 1 (1.0000) vs 7 (7.0000)
+│ │ │  - mix (5) - 0.500 (0.5000) vs 0.839 (0.8394)
+│ │ │  - dry (6) - 0.500 (0.5000) vs 0.200 (0.2002)
+│ │ │ ...and 19 more
+│ └── FAILED ─ 32ms
+44 tests run, 34 passed, 4 failed, 0 warnings, 6 skipped

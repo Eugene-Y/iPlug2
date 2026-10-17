@@ -1,0 +1,29 @@
+--- a/hvoya/hvoya/utils/hilbert_envelope_detector.hpp	2026-08-08 13:11:55
++++ b/hvoya/hvoya/utils/hilbert_envelope_detector.hpp	2026-10-17 10:59:05
+@@ -29,7 +29,8 @@
+ // kMaxCoefs was determined by running PolyphaseIIR2Designer::compute_coefs for all
+ // Quality × SR combinations up to 192 kHz at kAttenuation dB:
+ //   max nc = 14 (Ultra / 192 kHz).
+-// For SR > 192 kHz the lower frequency bound shifts up proportionally.
++// Above that design point (e.g. High above 384 kHz) the lower frequency bound shifts up
++// proportionally, so the coefficient count never exceeds kMaxCoefs.
+ 
+ template <typename T = sample_t>
+ class HilbertEnvelopeDetector {
+@@ -113,6 +114,7 @@
+ private:
+ 	static constexpr double kAttenuation = 60.0;
+ 	static constexpr double kQualityHz[] = { 100.0, 40.0, 20.0, 10.0 };
++	static constexpr double kMinTransition = 10.0 / (192000.0 * 0.5);
+ 
+ 	struct Stage { T coef { T (0) };  T mem { T (0) }; };
+ 
+@@ -127,7 +129,7 @@
+ 
+ 	void _recompute() noexcept {
+ 		const double lowestHz   = kQualityHz [static_cast<int> (_quality)];
+-		const double transition = std::clamp (lowestHz / (double (_sampleRate) * 0.5), 1e-5, 0.499);
++		const double transition = std::clamp (lowestHz / (double (_sampleRate) * 0.5), kMinTransition, 0.499);
+ 
+ 		double raw [kMaxCoefs + 4];
+ 		const int nc = hiir::PolyphaseIIR2Designer::compute_coefs (raw, kAttenuation, transition);

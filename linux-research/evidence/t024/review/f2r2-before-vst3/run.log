@@ -1,0 +1,45 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=1687 (open)
+render[first-open] ok (stddev 0.177166)
+view origin 113 188
+[xact] origin 113,188
+[xact] lua 'compression amnt 0.300' (matches amnt.0\.300)
+[xact] shot f00-start
+[xact] skip [CLAP] step (format VST3)
+[xact] rclick-hold 256 94
+[xact] skip [CLAP] step (format VST3)
+[xact] move 311 240
+[xact] skip [CLAP] step (format VST3)
+[xact] click 545 244
+[xact] lua 'armed' (matches armed)
+[xact] lua 'sent' (matches sent)
+[xact] lua 'mode 3.0' (matches mode)
+[xact] lua 'sent' (matches sent)
+[xact] lua 'sent' (matches sent)
+[xact] lua 'sent' (matches sent)
+[xact] lua 'stopped' (matches stopped)
+[xact] shot f01-after-cc
+[xact] changed f00-start -> f01-after-cc in view rect 200,30 120x120 (2009 px)
+[xact] FAIL lua-expect: 'host-value compression amnt 0.300', expected /host-value.*amnt.0\.000/ from: local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out("host-value", n, v) end end
+[xact] FAIL lua-expect: 'env-points none', expected /env-points.[1-9]/ from: local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local e=reaper.GetFXEnvelope(t,0,i,false); out("env-points", e and reaper.CountEnvelopePoints(e) or "none") end end
+[xact] ALIVE pid 1687
+REAPER ALIVE pid=1687 (steps)
+FAIL: steps: lua-expect: 'host-value compression amnt 0.300', expected /host-value.*amnt.0\.000/ from: local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out("host-value", n, v) end end
+FAIL: steps: lua-expect: 'env-points none', expected /env-points.[1-9]/ from: local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local e=reaper.GetFXEnvelope(t,0,i,false); out("env-points", e and reaper.CountEnvelopePoints(e) or "none") end end
+REAPER ALIVE pid=1687 (reopen 1)
+REAPER ALIVE pid=1687 (reopen 2)
+REAPER ALIVE pid=1687 (reopen 3)
+REAPER ALIVE pid=1687 (reopen 4)
+REAPER ALIVE pid=1687 (reopen 5)
+render[after-reopen] ok (stddev 0.167862)
+add2 0
+REAPER ALIVE pid=1687 (two instances)
+render[second-instance] ok (stddev 0.177166)
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+     13 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=1
+    998 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
+REAPER ALIVE pid=1687 (end)
+RESULT: FAIL (2)
+  - steps: lua-expect: 'host-value compression amnt 0.300', expected /host-value.*amnt.0\.000/ from: local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out("host-value", n, v) end end
+  - steps: lua-expect: 'env-points none', expected /env-points.[1-9]/ from: local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local e=reaper.GetFXEnvelope(t,0,i,false); out("env-points", e and reaper.CountEnvelopePoints(e) or "none") end end
