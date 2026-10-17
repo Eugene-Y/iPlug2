@@ -64,6 +64,8 @@ Gneiss на mac/win использует нативные меню — его н
 | **F7** ✅ исправлено (T-024, Sand `87beabb`; на Windows не собрано) | Средняя | **Windows-проекты Sand, вероятно, не линкуются:** с 6036dec (2026-05-13) детекторы огибающей hvoya зовут `hiir::PolyphaseIIR2Designer::compute_coefs`, Xcode-проект компилирует `PolyphaseIIR2Designer.cpp`, ни один `projects/*.vcxproj` — нет (на Windows не проверено) |
 | F8 ✅ исправлено (T-024, Sand `aed6804`; причина другая, см. ниже) | Низкая | `xcodebuild` Sand из командной строки (и на master) падает: `plog/Log.h` не найден, `$(HVOYA_PATH)/**` доходит до clang нераскрытым. Важно для CI/скриптов |
 
+**Влито 2026-10-17** (по команде автора): iPlug2 `hvoya` — a865ee9f7 (F3), 228f2efc2 (F4), 083bc87c5 (F2), fa98170e8 (cherry-pick ef002e167, CLAP-текст для шаговых параметров); Sand `master` — 54be993 (все F); Gneiss `master` — 4dc02eb (строка `_midiCCMediator.OnIdle()`). DMT, Melter, Crust_new, Scape: строку `OnIdle` автор добавляет сам (DMT и Melter и так не собираются с текущим hvoya; в Crust_new незакоммиченные правки). Не запушено.
+
 Итоги T-024 (подробности, доказательства и предложения — `tasks/T-024-sand-cross-platform-fixes.md`, Log):
 - F1: кроме падений, каждый пустой блок давал щелчок (до 0.31 при пике 0.69).
 - F3: две причины, обе — порча памяти на высоких частотах модуля (частота хоста × оверсэмплинг):
