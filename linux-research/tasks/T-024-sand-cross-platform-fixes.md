@@ -1,6 +1,6 @@
 # T-024 — Sand: cross-platform fixes F1–F8 (not Linux work)
 
-- **Status:** in-progress — F1, F5, F7, F8 and the Sand part of F3 committed; waiting for the user's decisions on F2, F3-hvoya, F4 (see Log)
+- **Status:** done, independent review (AGENTS §4) not run yet — every item implemented after the user's decisions; see "Where everything is" in the Log
 - **Owner:** T-024 chat (2026-10-17). Task file, Log and evidence: iPlug2 branch `linux/T-024` (from `hvoya-linux`) in `/Volumes/Storage/code/IPlug2-T-024-log`.
 - **Branches/worktrees:**
   - Sand repo: branch `fix/cross-platform-f1-f8` from `master` (cd9f063 or newer), in a new worktree `/Volumes/Storage/code/hvoya/Sand-fixes` (`git -C /Volumes/Storage/code/hvoya/Sand worktree add ../Sand-fixes -b fix/cross-platform-f1-f8 master`). Not `linux-experiment`, and never the main checkout `/Volumes/Storage/code/hvoya/Sand` (the user's working tree). Never push; the user merges.
@@ -180,3 +180,76 @@ So F1's acceptance (VST3 ×20 with no crash) holds in Release with the branch al
 - **N4:** the BACKLOG report "Sand crashes 100% in FL Studio when adjusting the filter settings, particularly the mix knob" (Win 10). Not reproduced here (no Windows/FL). Candidates, unconfirmed: F1, if FL sends empty blocks (VST3 flushes do); F3, if the project runs at ≥ 88.2 kHz with os 8x. Worth re-testing with this branch.
 
 Next: the user's decisions on F2, F3, F4 → implement what is approved → the independent review (AGENTS §4) → hand-over.
+
+### 2026-10-17 (2) — user decisions implemented: F3 hvoya (kMaxCoefs 18), F2, F4
+
+User decisions (chat, 2026-10-17):
+- **F3:** "fix it properly". The coefficients were never wrong; the array holding them was too small. `kMaxCoefs` 14 → 18 instead of the clamp I proposed first: the existing 1e-5 transition floor already caps compute_coefs at 18, so the design and the 20 Hz tracking stay unchanged.
+  - The question "are you testing outside the design range?" is answered by renders: master Sand at **88.2/96 kHz with os 8x, or 192 kHz with os 4x, outputs NaN almost throughout** (default params), inside Sand's range (max os 8x).
+- **F2:** "look closer; fix if real". Reproduced first (see the F2 bullet above: REAPER VST3 keeps 0.300, no automation), then implemented.
+  - The proposal alone was not enough for VST3: REAPER reads values through `getParamNormalized()`, i.e. iPlug's controller-side `ParameterContainer`. The UI path updates it before `performEdit`; a direct `InformHostOfParamChange` did not. Fixed in iPlug's single-component VST3 wrapper.
+- **F4:** opt-in hook as proposed.
+  - The display also needed a fix: the segment is now chosen by the value as shown, with the rounding tie going to the next segment, and no "-0.00".
+  - Checked with a validator-style round trip on real IParams: 50 000 points per param, all of Sand's params pass (`scratchpad f4/roundtrip.cpp`, not kept).
+- Other chat's T21-1 (DmtGrind overflow above 3.072 MHz): the same bug as F3's Sand part, already fixed in `da0e4bc`. The 768 kHz NaN was the Hilbert bug.
+
+#### Where everything is (nothing pushed; the user merges)
+
+| Repo | Branch (from) | Worktree | Commits |
+|---|---|---|---|
+| Sand | `fix/cross-platform-f1-f8` (master cd9f063) | `hvoya/Sand-fixes` | `e8cb1f0` F1 · `00cbc41` F5 · `87beabb` F7 · `aed6804` F8 · `da0e4bc` F3 Sand part · `cdad970` F2 Sand part · `e9ea624` F4 Sand part |
+| iPlug2 | `fix/hilbert-max-coefs` (hvoya 0b2d8dbef) | `IPlug2-T-024-f3` | `a29b8dfd7` F3: HilbertEnvelopeDetector kMaxCoefs 18 |
+| iPlug2 | `fix/midi-cc-host-notify` (hvoya 0b2d8dbef) | `IPlug2-T-024` | `17765295e` F2: midi_cc mediator → main thread (`CCMediator::OnIdle`) · `8f40400b4` F2: VST3 InformHostOfParamChange syncs the controller copy (iPlug core, single-component VST3) |
+| iPlug2 | `fix/param-text-to-value` (hvoya 0b2d8dbef) | `IPlug2-T-024-f4` | `32d7a3ac5` F4: `IParam::SetTextToValueFunc` (iPlug core, opt-in) · `cd9e8922f` F4: hvoya `makeSegmentedParser` + display segment by shown value |
+| iPlug2 | `linux/T-024` (hvoya-linux 195fc5517) | `IPlug2-T-024-log` | this task file, CROSS_PLATFORM_FINDINGS rows, `evidence/t024/` (scripts, results) |
+| Gneiss | `fix/midi-cc-host-notify` (master 3cf2e2e) | `hvoya/Gneiss-t024` | **uncommitted** one line `_midiCCMediator.OnIdle();` in `Gneiss::OnIdle` (Gneiss CLAUDE.md: no commits unless asked) |
+| DMT | `fix/midi-cc-host-notify` (main 2c181c7) | `hvoya/DMT-t024` | **uncommitted**, the same line in `DMT::OnIdle` |
+| Scape | — (not a git repo) | — | needs the same line by hand in `Scape::OnIdle` |
+
+Dependencies and merge order:
+- The three iPlug2 branches are independent of each other.
+- Sand's `cdad970` (F2) needs `fix/midi-cc-host-notify`, and `e9ea624` (F4) needs `fix/param-text-to-value`: neither compiles without them. The F1/F3/F5/F7/F8 commits stand alone.
+- After merging `fix/midi-cc-host-notify`, every plug-in using the mediator must call `_midiCCMediator.OnIdle()` from `OnIdle`. Without it, its knobs stop following MIDI CC (the DSP still reacts).
+- All iPlug2 commits cherry-pick cleanly onto `hvoya-linux` (tested), for the coordinator.
+- `steps/sand.txt` checks the host value after CC for CLAP only. After F2 is merged into hvoya-linux the `[CLAP]` prefix on that line can go, since VST3 now passes too: `f2-full-reaper-vst3`.
+
+Behaviour changes on mac/win, by item:
+- **F1:** hosts sending 0-frame blocks no longer crash or click.
+- **F3:** at module rates above 384 kHz (88.2/96k × os 8x, 192k × os 4x/8x, …) Sand works instead of NaN/memory corruption. Identical below.
+- **F5:** 64-bit hosts' input buffer is left intact. Output is identical.
+- **F2:** VST3/AU/VST2/AAX hosts receive CC-driven values (display, automation recording), and CLAP gets explicit Value events. Sand's knob follows within one idle tick (20 ms) instead of being set from the audio thread. Sound is unchanged.
+  - Residual risk to watch in a DAW: a VST3 host echoes the reported value back as a parameter change; at the end of a fast CC sweep that can step the value back to the previous tick's for ≤ 20 ms.
+- **F4:** "1.01 kHz", "1.5khz", "1.50 s" typed in a host or in Sand set the right value. The segmented display text changes only for values that rounded up to a boundary (999.97 Hz → "1.00 kHz"), in Sand, Gneiss and Melter; and "-0.00" → "0.00". Gneiss/Melter parsing is unchanged unless they opt in (Gneiss C5).
+- **F7:** Windows CLAP/VST3/VST2/APP should link. **Not built on Windows.**
+- **F8:** the CLAP target compiles again (IDE and xcodebuild).
+
+Final results:
+- **Linux** (Docker 24.04, Sand branch + `hvoya-linux` + all iPlug2 commits; `linux-full`, `f2-full-reaper-*`, `sand-steps-full-*`):
+  - clap-validator **38 pass / 0 fail** (before 34/4);
+  - VST3 `-e` ×20 **0 crashes** (before 5);
+  - ASan VST3 ×3 + CLAP **0 errors**;
+  - REAPER F2: CLAP and **VST3 host value 0.000, 9 automation points** (VST3 before: 0.300, none);
+  - `steps/sand.txt` CLAP **PASS**, VST3 **PASS**.
+- **mac** (scratch layout `root/hvoya/Sand` + `root/IPlug2` → hvoya + all iPlug2 commits; `mac-full`):
+  - CLAP Release, VST3 Debug and APP Debug build;
+  - VST3 Debug ×20 **0 aborts** (before 20);
+  - 768 kHz 0 non-finite;
+  - clap-validator 34/4. The 4 are 3× `state-reproducibility-*` (T-006 fix not in hvoya yet) and `param-conversions` on enum 'comp stages' ('0.0202' → '0' → 'x1'). That is fixed on hvoya-linux by `ef002e167` (CLAP snaps stepped params), not yet in hvoya; Linux passes because it has it.
+- **Audio:** bit-identical to master in every render below 768 kHz except the 0-frame-block one (F1's click). Linux and mac.
+- **Gneiss** with the F2 line builds on mac (VST3 Debug, against all iPlug2 commits).
+- **DMT** does not build against current hvoya with or without F2: `CCMediator::UpdateMidiControllableUI` was removed in hvoya 4021b5df1, DMTUI.cpp:246 still calls it, and the project has absolute include paths into `/Volumes/Storage/code/IPlug2`. Pre-existing, not changed.
+- clap-validator `process-audio-denormals` warned once (2.03× slower with denormals) on a loaded Docker run. Sand sets no flush-to-zero (README "TODO subnormals"); pre-existing, load-dependent.
+
+Throwaway, safe to delete:
+- `hvoya/Sand-t024-linux` + branch `tmp/t024-linux`;
+- `IPlug2-T-024-f3test`;
+- `IPlug2-T-024-all` (+ the SDKs copied into it);
+- build dirs `linux-research/build/t024-*`.
+
+Stash snapshots: "T-024: before restoring regenerated main.rc_mac_dlg" ×2 and "T-024: f3test clamp prototype before reset".
+
+Open:
+- the independent review (AGENTS §4) is not run yet;
+- F7 needs a Windows build;
+- N1–N4 above;
+- the enum CLAP fix `ef002e167` → hvoya.
