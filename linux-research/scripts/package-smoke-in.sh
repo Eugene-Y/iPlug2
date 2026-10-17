@@ -76,7 +76,8 @@ if xdotool search --onlyvisible --name "^$NAME\$" >/dev/null 2>&1 && kill -0 "$(
 else
   fail "standalone: no window or process died"; import -window root "$OUT/app.png"
 fi
-pkill -x "$NAME" 2>/dev/null; sleep 1
+# By path, not by name: under Rosetta the process name is not the binary's.
+pkill -f "^$APP --no-io" 2>/dev/null; sleep 1
 
 echo "--- CLAP without its .resources folder"
 mkdir -p /tmp/nores && cp "$CLAP" /tmp/nores/
