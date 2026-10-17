@@ -200,6 +200,8 @@ void IPlugVST3::BeginInformHostOfParamChange(int idx)
 void IPlugVST3::InformHostOfParamChange(int idx, double normalizedValue)
 {
   Trace(TRACELOC, "%d:%f", idx, normalizedValue);
+  // Hosts read the value back through getParamNormalized(), i.e. from the controller's copy
+  IPlugVST3ControllerBase::SetVST3ParamNormalized(idx, normalizedValue);
   performEdit(idx, normalizedValue);
 }
 

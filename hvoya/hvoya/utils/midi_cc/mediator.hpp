@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include <atomic>
+#include <memory>
+
 #include "mapper.hpp"
 #include "control_decorator.hpp"
 #include "mapper_serializer.hpp"
@@ -19,7 +22,8 @@ namespace hvoya::midi_cc {
         
         public:
         
-            CCMediator (PluginType* p) : _plugin (p) {}
+            CCMediator (PluginType* p)
+                : _plugin (p), _toHost (std::make_unique <PendingValue[]> (size_t (p->NParams()))) {}
             ~CCMediator() = default;
 
             // Accent color for the CC presence dot's mouse-down fill — set once by the UI so the dot
@@ -137,13 +141,27 @@ namespace hvoya::midi_cc {
                             return;
                         }
                     }
-                    IParam* param = _plugin->GetParam (id);
-                    _plugin->BeginInformHostOfParamChange (id);
-                    param->SetNormalized (mappedNormalizedVal);
+                    _plugin->GetParam (id)->SetNormalized (mappedNormalizedVal);
                     _plugin->OnParamChange (id, EParamSource::kDelegate);
-                    _plugin->SendParameterValueFromDelegate (id, mappedNormalizedVal, true);
-                    _plugin->EndInformHostOfParamChange (id);
+                    _toHost [id].value.store (mappedNormalizedVal, std::memory_order_relaxed);
+                    _toHost [id].pending.store (true, std::memory_order_release);
                 });
+            }
+
+
+            // Main thread, from the plug-in's OnIdle. Host notifications and editor updates must not
+            // come from the audio thread (VST3 IComponentHandler, IGraphics controls), so ProcessMidiCC
+            // only applies the value and leaves the latest one per param here.
+            void OnIdle() {
+                for (PId_t id = 0; id < _plugin->NParams(); ++id) {
+                    if (!_toHost [id].pending.exchange (false, std::memory_order_acquire))
+                        continue;
+                    const double v = _toHost [id].value.load (std::memory_order_relaxed);
+                    _plugin->BeginInformHostOfParamChange (id);
+                    _plugin->InformHostOfParamChange (id, v);
+                    _plugin->SendParameterValueFromDelegate (id, v, true);
+                    _plugin->EndInformHostOfParamChange (id);
+                }
             }
 
 
@@ -257,6 +275,12 @@ namespace hvoya::midi_cc {
         
             PluginType* _plugin;
             Mapper _mapper;
+
+            struct PendingValue {
+                std::atomic <double> value { 0 };
+                std::atomic <bool>   pending { false };
+            };
+            std::unique_ptr <PendingValue[]> _toHost;
             IColor _presenceDotAccent;
             bool   _hasPresenceDotAccent = false;
             IColor _modArcColor;
