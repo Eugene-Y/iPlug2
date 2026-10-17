@@ -156,6 +156,10 @@ So F1's acceptance (VST3 ×20 with no crash) holds in Release with the branch al
     1. `InformHostOfParamChange` is never called, so VST3/AU/VST2 hosts never get the value. VST3 has no `performEdit`, AU no `kAudioUnitEvent_ParameterValueChange`, VST2 no automate. Hosts that keep their own value (REAPER VST3) show the old one, and nothing records automation. CLAP hosts see it only by polling `get_value`.
     2. VST3 `beginEdit/endEdit` (IComponentHandler) are called off the UI thread: a spec violation.
     3. `SendParameterValueFromDelegate` sets IGraphics controls from the audio thread: a data race in every format. It also makes the audio thread a second producer on CLAP's single-producer `mParamValuesToHost` queue, alongside UI gestures.
+  - **Reproduced (2026-10-17, REAPER 7.82 in Docker, `evidence/t024/f2-steps.txt`, `f2-reaper-{clap,vst3}/`).** CC 1 is learned on the comp knob; the track is in automation mode "write" during playback; then a CC sweep 100 → 30 → 0.
+    - **VST3:** Sand's own knob goes to 0.000 (screenshot `f01-after-cc.png`), but REAPER still reports **0.300** and records **no envelope**.
+    - **CLAP:** REAPER reports 0.000 and records 9 envelope points.
+    - Why the user has not noticed: the sound and Sand's own UI follow the CC, and project recall works through Sand's state chunk. What breaks is everything host-side in VST3/AU/VST2: the host's value display, automation recording of CC moves, and anything that reads the parameter from the host.
   - Proposal:
     - The audio thread keeps only `SetNormalized` + `OnParamChange`, so the DSP reacts in the same block as now, and stores the value in a preallocated per-param slot (`std::atomic<double>` + `std::atomic<bool> dirty`; lock-free, no queue overflow, coalesces a CC sweep).
     - A new `CCMediator::onIdle()`, called from each plug-in's `OnIdle` (main thread), sends dirty params as `Begin` → `InformHostOfParamChange` → `SendParameterValueFromDelegate` → `End`.
