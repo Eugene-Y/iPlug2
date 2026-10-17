@@ -28,8 +28,9 @@ namespace hvoya {
 //
 // kMaxCoefs is what PolyphaseIIR2Designer::compute_coefs returns at kAttenuation dB for the
 // narrowest allowed transition (kMinTransition), so every Quality × SR fits: 14 at 192 kHz Ultra
-// or 384 kHz High, 18 from about 3 MHz on: oversampling plug-ins run it far above 384 kHz.
-// Only above the floor (High: ~4 MHz) does the lowest tracked frequency shift up.
+// or 384 kHz High, 18 from 1.5 MHz (Ultra) or 3 MHz (High) on: oversampling plug-ins run it far
+// above 384 kHz. Only where the floor binds (Ultra above 2 MHz, High above 4 MHz) does the lowest
+// tracked frequency shift up.
 
 template <typename T = sample_t>
 class HilbertEnvelopeDetector {
