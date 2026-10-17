@@ -23,7 +23,8 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | [T-012](T-012-sand-linux-build.md) | P11c: Sand Linux build (as T-003, for Sand); reuse the T-005/T-011 Linux template (presets, `-linux.code-workspace`, `.clangd`). Known: `SandUI.cpp` `getOsString()` has no Linux branch (falls off the end: UB) | **merged** (see merge log; Sand side: local `linux-experiment` 4dcd5cd..cec9c1d) | 2nd instance | — | Sand repo |
 | [T-013](T-013-host-matrix.md) | P10: host matrix (Carla, Ardour, Renoise on the VM; Bitwig/x86_64 on a PC) | **ready** (best after T-019/T-010) | — | T-002, T-007 (merged) | uses the VM |
 | [T-022](T-022-app-jack-midi.md) | APP: JACK MIDI when the audio driver is JACK (split out of T-004) | todo (low priority, after the Gneiss/Sand work; user 2026-10-17) | — | T-004 | `IPlug/APP/*` |
-| [T-023](T-023-clap-validator-sweep.md) | CLAP: every clap-validator failure of Gneiss and Sand, Linux and mac (C3, C5, Gneiss `process-sleep` Linux-only, Sand `process-varying-sample-rates`, …) | **ready** after T-006 merges (user 2026-10-17) | — | T-006 | `IPlug/CLAP/*`; Gneiss, Sand repos |
+| [T-023](T-023-clap-validator-sweep.md) | CLAP: every clap-validator failure of Gneiss and Sand, Linux and mac (C3, C5, Gneiss `process-sleep` Linux-only, Sand `process-varying-sample-rates`, …) | **ready** after T-024 and T-010 (Sand cross-platform items moved to T-024) | — | T-006 | `IPlug/CLAP/*`; Gneiss, Sand repos |
+| [T-024](T-024-sand-cross-platform-fixes.md) | Sand: cross-platform fixes F1–F8 (0-frame blocks, NaN at 768 kHz, kHz text, input-buffer writes, vcxproj, xcodebuild; F2 hvoya MIDI CC → proposal) — not Linux work | **ready** (user 2026-10-17; building allowed) | — | — | Sand repo (own branch/worktree), `hvoya/utils/midi_cc` (F2) |
 | T-014 | P12: LV2 | blocked | — | everything else | — |
 | [T-016](T-016-parity-audit.md) | Feature-parity audit: complete notes/22 (every IGraphics/IPlug platform API, Extras, formats incl. REAPER extension) and file tasks for each gap | **ready** | — | — | — |
 | [T-017](T-017-webview.md) | WebView on Linux: `IWebViewEditorDelegate`, `IWebViewControl`, platform child views. **Design decided: out-of-process WebKitGTK helper embedded via XEmbed** (notes/22) | **ready** | — | — | `IPlug/Extras/WebView`, IGraphicsLinux* (platform views) |
@@ -47,6 +48,7 @@ files dropped onto the editor (Gneiss USER tab), deferred `SetLatency`. Order:
 | 5 | T-006 CLAP `state-reproducibility` | 2nd instance | CLAP wrapper; shared-code fix goes to the user before merging |
 | 6 | T-009 visual parity, Gneiss and Sand | coordinator | IGraphicsLinux, after T-019 |
 | 7 | T-021 release packaging, Gneiss and Sand | 2nd instance | ready now (T-012 merged) |
+| — | T-024 Sand cross-platform fixes | another chat | independent of the Linux tasks (user 2026-10-17) |
 | 8 | T-013 host matrix with Gneiss and Sand | coordinator | the VM |
 
 Then: developer experience T-011 (2nd), ~~standalone T-004~~ (merged), T-022 JACK MIDI (low); full parity T-016 audit (2nd, read-only, can run
@@ -66,7 +68,7 @@ hook is coordinated), T-020 (coordinator); last T-014 LV2, T-015 README.
 
 | Date | Task | Merge commit | Smoke tests |
 |---|---|---|---|
-| 2026-10-17 | T-006 | (this merge) | User approved T6-1 (shared CLAP rescan). Docker: clap-validator `state-reproducibility-*` now pass on IPlugControls, IPlugEffect and Gneiss (Gneiss: 4 left = C3 ×2, process-sleep, param-conversions → T-023/T-024); REAPER `state-roundtrip.txt` IPlugControls + Gneiss CLAP PASS; IPlugControls P3b CLAP and Gneiss `steps/gneiss.txt` CLAP PASS (`evidence/merge-smoke/t006-*`) |
+| 2026-10-17 | T-006 | a9e19e15e | User approved T6-1 (shared CLAP rescan). Docker: clap-validator `state-reproducibility-*` now pass on IPlugControls, IPlugEffect and Gneiss (Gneiss: 4 left = C3 ×2, process-sleep, param-conversions → T-023/T-024); REAPER `state-roundtrip.txt` IPlugControls + Gneiss CLAP PASS; IPlugControls P3b CLAP and Gneiss `steps/gneiss.txt` CLAP PASS (`evidence/merge-smoke/t006-*`) |
 | 2026-10-17 | T-012 | e881f867f | Docker 24.04 build Sand CLAP/VST3/APP, Gneiss CLAP, IPlugControls CLAP against the merged tree PASS; REAPER `steps/sand.txt` CLAP + VST3 PASS, `sand-app.txt` PASS (ALIVE), Gneiss `steps/gneiss.txt` CLAP PASS and IPlugControls P3b CLAP PASS (T-012 changed the shared `xact.sh`) (`evidence/merge-smoke/t012-*`). Findings F1–F8 → CROSS_PLATFORM_FINDINGS |
 | 2026-10-17 | T-004 | 5aab26db9 | Pulse cookies stripped from the branch history first (T-004 Log). Docker: build IPlugEffect/IPlugInstrument/IPlugControls APP + IPlugControls CLAP/VST3 PASS; `app-audio-test` IPlugEffect + IPlugInstrument PASS (after a harness fix: the shortcut click sat outside IPlugEffect's 450 px window); `app-switch-test` IPlugInstrument JACK↔PulseAudio PASS; IPlugControls APP P3b and CLAP P3b scripts PASS (`evidence/merge-smoke/t004-*`). mac: CMake IPlugInstrument APP links (T-004 evidence) |
 | 2026-10-16 | T-005 | 17675831f | Docker: `cmake --list-presets` + `cmake --preset linux-debug` + `cmake --build --preset linux-debug` in `Examples/IPlugEffect` PASS (CLAP, VST3, APP built); root `cmake --list-presets` on Linux lists upstream + new presets. mac (cmake 3.29): root `--list-presets` unchanged (macOS/iOS/visionOS/web), examples list nothing (m2) |

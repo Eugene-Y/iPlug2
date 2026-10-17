@@ -5,6 +5,7 @@
 - **Branch/worktree:** `linux/T-023` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-023`. Gneiss/Sand side: local experiment branches in their own worktrees (AGENTS §4), never the main checkouts.
 - **Depends on:** T-006 merged (its state fix removes 3 failures from every list below).
 - **Conflicts:** `IPlug/CLAP/IPlugCLAP.*` (shared with mac/win); Gneiss and Sand sources.
+- **Scope narrowed (user, 2026-10-17):** Sand's cross-platform items (F1, F3, F4, F5 = `process-varying-sample-rates`, `param-conversions`, `process-audio-double-*` for Sand) are fixed in **T-024**. This task covers Gneiss, the Linux-only items (Gneiss `process-sleep-process-status`), the iPlug CLAP items below, and a final re-run of the validators on Sand after T-024 is merged. Run it after T-024, and not in parallel with T-010 (both may touch `IPlug/CLAP` and Gneiss `linux-experiment`).
 
 ## Why
 The user (2026-10-17): CLAP has needed fixes "here and there" over time. Instead of meeting them one by one in hosts, sweep everything clap-validator finds in the two products at once, on both platforms, and fix or decide each item.
