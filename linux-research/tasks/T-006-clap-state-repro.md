@@ -1,6 +1,6 @@
 # T-006 — clap-validator `state-reproducibility` failures
 
-- **Status:** review-done — awaiting user decision (shared-code fix, T6-1)
+- **Status:** review-done — **user approved T6-1 (2026-10-17)**, ready to merge
 - **Owner:** 2nd instance (T-006 session, 2026-10-17)
 - **Branch/worktree:** `linux/T-006` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-006`.
 - **Depends on:** nothing.
@@ -104,3 +104,6 @@ Checked 62a8544a6 against each round-1 finding; docs only, no code touched (`IPl
 - *Note for the user (not a finding):* the worker installed Homebrew `rust` on the Mac (disclosed in the Hand-over); the task allowed rustup into the home dir.
 
 **Verdict: pass.** All round-1 findings are resolved or deliberately declined with sound, accurately presented reasoning. Ready for the coordinator; merge still waits for the user's decision on T6-1.
+
+### User decision (2026-10-17)
+T6-1 approved: the synchronous rescan after `stateLoad` goes in as is (shared code, mac/win included). The coordinator can merge `linux/T-006`.
