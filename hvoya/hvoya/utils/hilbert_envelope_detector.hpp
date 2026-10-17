@@ -26,10 +26,11 @@ namespace hvoya {
 //   High    ~20 Hz  (default)
 //   Ultra   ~10 Hz
 //
-// kMaxCoefs was determined by running PolyphaseIIR2Designer::compute_coefs for all
-// Quality × SR combinations up to 192 kHz at kAttenuation dB:
-//   max nc = 14 (Ultra / 192 kHz).
-// For SR > 192 kHz the lower frequency bound shifts up proportionally.
+// kMaxCoefs is what PolyphaseIIR2Designer::compute_coefs returns at kAttenuation dB for the
+// narrowest allowed transition (kMinTransition), so every Quality × SR fits: 14 at 192 kHz Ultra
+// or 384 kHz High, 18 from 1.5 MHz (Ultra) or 3 MHz (High) on: oversampling plug-ins run it far
+// above 384 kHz. Only where the floor binds (Ultra above 2 MHz, High above 4 MHz) does the lowest
+// tracked frequency shift up.
 
 template <typename T = sample_t>
 class HilbertEnvelopeDetector {
@@ -37,7 +38,7 @@ public:
 
 	enum class Quality { Low, Medium, High, Ultra };
 
-	static constexpr size_t kMaxCoefs  = 14;
+	static constexpr size_t kMaxCoefs  = 18;
 	static constexpr size_t kMaxStages = kMaxCoefs + 2; // first 2 are input memory holders
 
 	HilbertEnvelopeDetector (T sampleRate = T (48000),
@@ -113,6 +114,7 @@ public:
 private:
 	static constexpr double kAttenuation = 60.0;
 	static constexpr double kQualityHz[] = { 100.0, 40.0, 20.0, 10.0 };
+	static constexpr double kMinTransition = 1e-5;
 
 	struct Stage { T coef { T (0) };  T mem { T (0) }; };
 
@@ -127,7 +129,7 @@ private:
 
 	void _recompute() noexcept {
 		const double lowestHz   = kQualityHz [static_cast<int> (_quality)];
-		const double transition = std::clamp (lowestHz / (double (_sampleRate) * 0.5), 1e-5, 0.499);
+		const double transition = std::clamp (lowestHz / (double (_sampleRate) * 0.5), kMinTransition, 0.499);
 
 		double raw [kMaxCoefs + 4];
 		const int nc = hiir::PolyphaseIIR2Designer::compute_coefs (raw, kAttenuation, transition);
