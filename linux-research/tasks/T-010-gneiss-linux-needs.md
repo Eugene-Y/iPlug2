@@ -24,7 +24,7 @@ Everything Gneiss needs on Linux beyond the build (T-003), the platform features
 3. **Licence/feature gate** (`feature_gate.hpp`, `HVOYA_IS_PAID`): confirm both variants build and behave as on mac/win (don't change the mechanism).
 4. Anything Gneiss-specific T-003/T-008/T-019 runs found that is Linux-only and not yet fixed (check their Logs).
 
-Explicitly NOT here (user's decisions pending, all platforms): C2, C3, C4, X1, L1, C5 in `CROSS_PLATFORM_FINDINGS.md`.
+Explicitly NOT here (user's decisions pending, all platforms): C2, C3, C4, X1, L1, C5 in `CROSS_PLATFORM_FINDINGS.md`. X1 is now T-025 (user decided 2026-10-17 to fix it); item 1 above may be folded into it.
 
 ## Acceptance
 - [ ] Latency reaches the host correctly with and without a host loop (CLAP + VST3, REAPER); evidence.

@@ -25,6 +25,7 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | [T-022](T-022-app-jack-midi.md) | APP: JACK MIDI when the audio driver is JACK (split out of T-004) | todo (low priority, after the Gneiss/Sand work; user 2026-10-17) | — | T-004 | `IPlug/APP/*` |
 | [T-023](T-023-clap-validator-sweep.md) | CLAP: every clap-validator failure of Gneiss and Sand, Linux and mac (C3, C5, Gneiss `process-sleep` Linux-only, Sand `process-varying-sample-rates`, …) | **ready** after T-024 and T-010 (Sand cross-platform items moved to T-024) | — | T-006 | `IPlug/CLAP/*`; Gneiss, Sand repos |
 | [T-024](T-024-sand-cross-platform-fixes.md) | Sand: cross-platform fixes F1–F8 (0-frame blocks, NaN at 768 kHz, kHz text, input-buffer writes, vcxproj, xcodebuild; F2 hvoya MIDI CC → proposal) — not Linux work | **ready** (user 2026-10-17; building allowed) | — | — | Sand repo (own branch/worktree), `hvoya/utils/midi_cc` (F2) |
+| [T-025](T-025-setlatency-race.md) | **X1: `SetLatency` races the audio thread** (crash, all platforms; ~1 in 5 VST3 validator runs of release Gneiss x86_64) — framework fix in iPlug2 | **ready — important** (user 2026-10-17: must be fixed) | — | — | `IPlug/IPlugProcessor.*`, `NChanDelay.h`; T-010 item 1 |
 | T-014 | P12: LV2 | blocked | — | everything else | — |
 | [T-016](T-016-parity-audit.md) | Feature-parity audit: complete notes/22 (every IGraphics/IPlug platform API, Extras, formats incl. REAPER extension) and file tasks for each gap | **ready** | — | — | — |
 | [T-017](T-017-webview.md) | WebView on Linux: `IWebViewEditorDelegate`, `IWebViewControl`, platform child views. **Design decided: out-of-process WebKitGTK helper embedded via XEmbed** (notes/22) | **ready** | — | — | `IPlug/Extras/WebView`, IGraphicsLinux* (platform views) |
@@ -49,6 +50,7 @@ files dropped onto the editor (Gneiss USER tab), deferred `SetLatency`. Order:
 | 6 | T-009 visual parity, Gneiss and Sand | coordinator | IGraphicsLinux, after T-019 |
 | 7 | T-021 release packaging, Gneiss and Sand | 2nd instance | ready now (T-012 merged) |
 | — | T-024 Sand cross-platform fixes | another chat | independent of the Linux tasks (user 2026-10-17) |
+| ! | **T-025 X1 `SetLatency` race** | — | important (user 2026-10-17); crashes on every platform; shared-code fix goes to the user before merging |
 | 8 | T-013 host matrix with Gneiss and Sand | coordinator | the VM |
 
 Then: developer experience T-011 (2nd), ~~standalone T-004~~ (merged), T-022 JACK MIDI (low); full parity T-016 audit (2nd, read-only, can run
