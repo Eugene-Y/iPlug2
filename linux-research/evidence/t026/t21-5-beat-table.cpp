@@ -3,7 +3,7 @@
 // Build (one line): c++ -std=c++20 -include cstdint -I<iPlug2>/hvoya -I<iPlug2>/hvoya/hvoya/libs/plog/include
 //   -I<iPlug2>/IPlug -I<iPlug2>/WDL -I<any plug-in dir, for config.h> -DPLOG_DISABLE_LOGGING
 //   t21-5-beat-table.cpp <iPlug2>/hvoya/hvoya/utils/host_time_info.cpp -o beat-table
-// Exit status 1 if the header disagrees with the expected beat anywhere.
+// Exit status 1 if the header disagrees with the expected beat or fraction anywhere.
 #include <cmath>
 #include <cstdio>
 #include <IPlugConstants.h>
