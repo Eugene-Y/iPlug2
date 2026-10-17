@@ -360,3 +360,51 @@ Re-run on the new N1 (`evidence/t026/round1/`):
 - mac (rsync copy, against `IPlug2-T-026` now on `fix/host-info-beat`, so Sand also compiles with the T21-5 change): CLAP Release + VST3 Debug build; 46/46 render pairs bit-identical to master; VST3 Debug ×20: 0 failures; clap-validator 38/0.
 
 Next: review round 2.
+
+### Review (round 2, 2026-10-18) — verdict: pass (review-done); two optional nits
+
+Same reviewer, round 2 of 2. Reviewed: Sand `master..fix/t026-followups` = `9a89783` N1 + `aacc040` N3; iPlug2 `hvoya..fix/host-info-beat` = `b36d0d545` (single commit on 228f1ea8e); `linux/T-026` `0ef90e21d`. Main checkouts are still untouched: `hvoya/Sand` 54be993 with only `?? Media/`; `IPlug2` 228f1ea8e, clean. `Sand-t026` and `Sand-t026-linux` are clean. No container is left running; the worker's `t026` is gone and I removed mine (`--rm`).
+
+**R1–R9 fixes, each checked:**
+- **Rewrite = content.** `git patch-id` of `Sand.cpp`+`sand_module.hpp` is identical for 22d920c and 9a89783. The only N1 delta is the `Sand.hpp` guard (+6/−1). `aacc040` has the same patch-id and message as e026630.
+- **R1:** the commit message and Log now say "Sand's own buffers still grow on demand … iPlug's 32-bit scratch does not". Row T26-b is accurate (iPlug core, report only).
+- **R2 — the `_preparedMaxFrames` guard (`Sand.hpp:180-191`) is correct:**
+  - `AudioBuffer::reserve` and `Oversampler::prepare` never shrink, and nothing in Sand drops capacity: there is no move-assign or rebuild of `_osBuffer`, the module buffers or the oversampler.
+  - So skipping preparation when `GetBlockSize()` ≤ the prepared size loses nothing.
+  - `GetBlockSize() == 0` returns early and leaves the old grow-on-demand behaviour; a later larger block size prepares normally.
+  - A sample-rate change needs no re-preparation: the buffer sizes depend only on frames × 8.
+  - The thread-safety note and row T26-c are accurate.
+- **R3:** the audit table now has the MIDI CC row, the two Debug plog sites and the CLAP-only coverage sentence.
+- **R4:** the test now checks the real header against 36 hand-written cases, beat and fraction, × 6 tempos.
+- **R5:** `if (beatInBar >= num) beatInBar = 0;` makes ppq −1e-17 show 1.00, the bar start. This is a reasonable reading of "≈ 0". At −1e-9 it still shows 4.99, checked with my round-1 `neg.cpp`.
+- **R6, R7, R8:** the wording, the header note in `mac-branch/renders.txt` and the latency line in the CLAUDE.md proposal are all as asked.
+- **R9:** done.
+
+**Re-run by the reviewer** (new dirs `build/t026-review2-*`):
+
+| Check | Build / dir | Result |
+|---|---|---|
+| `run-allocs.sh` | `t026-r1-rel` → `build/t026-review2-allocs` (I checked this build is the tree `Sand-t026-linux` = a027e6d + merge of 9a89783/aacc040, Release) | **47/47 configurations with 0 allocations**; `render.sha256` = base (47/47) = the worker's `round1/linux/render.sha256` |
+| Guard regression, Release, malloc counter + bit-exact vs base | `build/t026-review2-extra/guard.txt` | See the case table below |
+| Fresh ASan CLAP build | `build/t026-review2-asan` (`sand-build.sh … asan`) | `guard-asan.txt`: the shrink, same-sr and grow cases, os swept every block with null-pointer 0-frame blocks, filter sweep at 192 kHz os 8x, and the f64 announce case — **0 ASan reports, 0 non-finite** |
+| T21-5, Apple clang, new test | branch header | "header's beat or fraction wrong in 0", rc 0 |
+| T21-5, Apple clang, new test | old 228f1ea8e header (`git archive` into the scratchpad) | **168**, as in `t21-5-apple-clang.txt` / `t21-5-gcc.txt` |
+| mac round-1 evidence | `round1/mac` | 46/46 hashes before = after; VST3 Debug ×20 clean; clap-validator 38/0 |
+
+Guard-regression cases (Release, malloc counter, bit-exact vs base):
+
+| Case | Base | r1 | Renders |
+|---|---|---|---|
+| Re-activation with a **smaller** max block at another rate (1024 → 1024/128,64 at 96 kHz) | allocates | **0** | bit-identical |
+| Re-activation at **another rate, same** max block (44.1 → 96 kHz, 512) | allocates | **0** | bit-identical |
+| Re-activation with a **larger** max block (64 → 4096) | allocates | **0** | bit-identical |
+| Announced max 1 | allocates | **0** | bit-identical |
+| Host exceeding its announced max (f64) | — | 16 allocations on each of the 2 oversized blocks only | bit-identical |
+
+The 0 for the larger max block shows that `prepare` runs again when the max block grows.
+
+**Nits (optional, cosmetic; no re-review needed):**
+- **R10 — nit — `Sand.hpp:182-183` comment:** "Some OnReset calls race ProcessBlock (CLAP reset, AU bypass/reset, AAX from the render call)" is inaccurate for CLAP and AAX. CLAP `reset()` and the AAX render-call `OnReset` run *on* the audio thread, not beside it; only the AU calls can race. Suggested: "Some OnReset calls run on the audio thread (CLAP reset, AAX render call) or beside it (AU bypass/reset), so the buffers are touched only when the block grows." The commit message's parentheticals already say this correctly.
+- **R11 — nit — `evidence/t026/t21-5-beat-table.cpp:6`:** "Exit status 1 if the header disagrees with the expected beat" should now read "beat or fraction".
+
+Task-file housekeeping for the worker/coordinator: the **Status** line (line 3) still says "independent review pending". Set it to `review-done`.
