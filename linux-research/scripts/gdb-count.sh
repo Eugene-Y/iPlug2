@@ -12,5 +12,15 @@ CMDS=$(mktemp /tmp/gdbc-XXXX)
   done
   echo "continue"
 } > "$CMDS"
-# gdb sometimes ignores the INT while it is still reading symbols; -k kills it so the caller never hangs.
-timeout -s INT -k 10 "$SECS" gdb -q -batch -p "$P" -x "$CMDS" </dev/null 2>&1 | grep -E '^HIT' | sort | uniq -c
+# Stop gdb with SIGINT so it detaches and removes its breakpoints. With breakpoints firing hundreds of times a
+# second it can miss one INT, so repeat it; SIGKILL is the last resort, since a killed gdb leaves its breakpoint
+# traps in the process, which then dies on the next hit.
+OUTF=$(mktemp /tmp/gdbo-XXXX)
+gdb -q -batch -p "$P" -x "$CMDS" </dev/null > "$OUTF" 2>&1 &
+G=$!
+sleep "$SECS"
+for i in $(seq 30); do kill -0 $G 2>/dev/null || break; kill -INT $G 2>/dev/null; sleep 1; done
+kill -0 $G 2>/dev/null && { echo "gdb-count: gdb ignored SIGINT for 30 s, killing it" >&2; kill -9 $G; }
+wait $G 2>/dev/null
+grep -E '^HIT .* tid=[0-9]+$' "$OUTF" | sort | uniq -c
+rm -f "$OUTF" "$CMDS"
