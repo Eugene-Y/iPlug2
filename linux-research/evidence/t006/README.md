@@ -1,7 +1,7 @@
 # T-006 evidence: clap-validator `state-reproducibility-*`
 
 clap-validator 0.4.1 everywhere (Docker image on Linux; built from the 0.4.1 tag with Homebrew cargo on the Mac).
-"Before" = `hvoya-linux` baaecb936, "after" = `linux/T-006` 46d10516c (rescan after `stateLoad`). Builds: Linux examples **Release** (`build/t006-base`; `BUILD_TYPE=Debug` before `dock.sh` does not reach the container), Linux Gneiss **Debug** (`build/t006-gneiss`, via `DOCK_ENV`), mac IPlugEffect **Debug**. The reviewer re-ran the examples in both configs with the same results.
+"Before" = `hvoya-linux` baaecb936, "after" = `linux/T-006` 46d10516c (rescan after `stateLoad`). Builds: Linux examples **Release** (`build/t006-base`; `BUILD_TYPE=Debug` before `dock.sh` does not reach the container), Linux Gneiss **Debug** (`linux-research/build/t006-gneiss`, via `DOCK_ENV`), mac IPlugEffect **Debug**. The reviewer re-ran the examples in both configs with the same results.
 
 | File | Platform | Plug-in | Result |
 |---|---|---|---|
