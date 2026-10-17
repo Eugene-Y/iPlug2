@@ -139,7 +139,7 @@ export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$PROJECT_DIR" log -1 --
 glibc_floor() { readelf -W --dyn-syms "$1" | grep -oE '@GLIBC_[0-9.]+' | sed 's/@GLIBC_//' | sort -Vu | tail -1; }
 version_gt() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ] && [ "$1" != "$2" ]; }
 needed() { readelf -d "$1" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'; }
-exports() { readelf -W --dyn-syms "$1" | awk '$7 != "UND" && $5 != "LOCAL" && $4 != "NOTYPE" {print $8}' | sed 's/@.*//' | sort -u; }
+exports() { readelf -W --dyn-syms "$1" | awk '$1 ~ /^[0-9]+:$/ && $7 != "UND" && $5 != "LOCAL" && $4 != "NOTYPE" {print $8}' | sed 's/@.*//' | sort -u; }
 
 # Fails the package rather than shipping a binary a customer's distro cannot load, or one that leaks
 # symbols into the host. The standalone's NEEDED list is reported, not limited: it links the audio/MIDI
