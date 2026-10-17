@@ -5,7 +5,7 @@
 #
 #   Scripts/linux/package.sh <project-dir> [--arch aarch64|x86_64]... [--variant NAME[:CMAKE_ARGS]]...
 #                            [--doc FILE]... [--icon FILE] [--formats "clap vst3 app"] [--out DIR]
-#                            [--glibc-max 2.35] [--keep-going]
+#                            [--glibc-max 2.35] [--clean] [--keep-going]
 #
 # On Linux it builds for the host architecture with the host toolchain. On any other host, or for another
 # architecture, it runs itself in Docker (image per arch: $IPLUG_LINUX_IMAGE_<arch>, default
@@ -31,6 +31,7 @@ FORMATS="clap vst3 app"
 OUT=""
 GLIBC_MAX="2.35"
 KEEP_GOING=0
+CLEAN=0
 IN_CONTAINER=0
 ORIG_ARGS=("$@")
 
@@ -44,6 +45,7 @@ while [ $# -gt 0 ]; do
     --out)        OUT="$2"; shift ;;
     --glibc-max)  GLIBC_MAX="$2"; shift ;;
     --keep-going) KEEP_GOING=1 ;;
+    --clean)      CLEAN=1 ;;
     --in-container) IN_CONTAINER=1 ;;
     -h|--help)    sed -n '2,17p' "$SELF" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*)           die "unknown option $1 (see --help)" ;;
@@ -200,6 +202,7 @@ package_variant() {  # variant-spec
   local suffix="${vname:+_$vname}"
   local build="$PROJECT_DIR/build-linux/package/$ARCH$suffix"
   echo "=== $ARCH${vname:+ $vname}: configure ($build)"
+  [ $CLEAN = 0 ] || rm -rf "$build"
   mkdir -p "$build"
 
   # -g does not change GCC's generated code; it only feeds the split debug-symbol archive.
@@ -267,7 +270,7 @@ package_variant() {  # variant-spec
   deterministic_tar "$OUT/$pkg.tar.gz" "$(dirname "$stage")" "$pkg"
   deterministic_tar "$OUT/${pkg}_debug-symbols.tar.gz" "$(dirname "$dstage")" "${pkg}_debug-symbols"
   (cd "$(dirname "$stage")" && find "$pkg" | sort) > "$OUT/$pkg.files.txt"
-  echo "=== $OUT/$pkg.tar.gz ($(du -h "$OUT/$pkg.tar.gz" | cut -f1)), symbols: ${pkg}_debug-symbols.tar.gz"
+  echo "=== $OUT/$pkg.tar.gz ($(($(stat -c %s "$OUT/$pkg.tar.gz") / 1024)) KiB), symbols: ${pkg}_debug-symbols.tar.gz"
 }
 
 write_install_sh() {  # path name icon
