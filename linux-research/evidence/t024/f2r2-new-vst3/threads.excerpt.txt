@@ -1,0 +1,32 @@
+# excerpt of threads.txt (     335 lines): test progression, Result lines, ASan reports, last 30 lines
+# --- last 30 lines
+#1  0x0000ff299cec49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ff29843eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ff298468bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ff29843eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ff299cec582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ff299cf2bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 3 (Thread 0xff2916fdf160 (LWP 3168) "reaper"):
+#0  0x0000ff299cec1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ff299cec49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ff29843eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ff298468bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ff29843eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ff299cec582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ff299cf2bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 2 (Thread 0xff29167cf160 (LWP 3169) "reaper:disk$0"):
+#0  0x0000ff299cec1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ff299cec49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ff29843eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ff29843c8cdc [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#4  0x0000ff29843eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#5  0x0000ff299cec582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ff299cf2bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 1 (Thread 0xff299d53b460 (LWP 1691) "reaper"):
+#0  0x0000ff299cefbd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ff299cf060bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ff299cf2b5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x000000000040b698 in ??? ()
+#4  0x0000ff299ce684c4 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#5  0x0000ff299ce68598 in __libc_start_main () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000000000418ee8 in _start ()

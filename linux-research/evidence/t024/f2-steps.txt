@@ -28,6 +28,6 @@ lua-expect stopped reaper.OnStopButton(); out("stopped")
 wait 1
 shot f01-after-cc
 expect-change f00-start f01-after-cc 200 30 120 120
-lua-expect host-value local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out("host-value", n, v) end end
-lua-expect env-points local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local e=reaper.GetFXEnvelope(t,0,i,false); out("env-points", e and reaper.CountEnvelopePoints(e) or "none") end end
+lua-expect host-value.*amnt.0\.000 local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local _,v=reaper.TrackFX_GetFormattedParamValue(t,0,i,""); out("host-value", n, v) end end
+lua-expect env-points.[1-9] local t=reaper.GetTrack(0,0); for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,""); if n=="compression amnt" then local e=reaper.GetFXEnvelope(t,0,i,false); out("env-points", e and reaper.CountEnvelopePoints(e) or "none") end end
 alive __PROC__

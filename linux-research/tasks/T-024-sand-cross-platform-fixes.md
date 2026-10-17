@@ -198,12 +198,14 @@ User decisions (chat, 2026-10-17):
 | Repo | Branch (from) | Worktree | Commits |
 |---|---|---|---|
 | Sand | `fix/cross-platform-f1-f8` (master cd9f063) | `hvoya/Sand-fixes` | `e8cb1f0` F1 · `00cbc41` F5 · `87beabb` F7 · `aed6804` F8 · `da0e4bc` F3 Sand part · `cdad970` F2 Sand part · `e9ea624` F4 Sand part |
-| iPlug2 | `fix/hilbert-max-coefs` (hvoya 0b2d8dbef) | `IPlug2-T-024-f3` | `a29b8dfd7` F3: HilbertEnvelopeDetector kMaxCoefs 18 |
+| iPlug2 | `fix/hilbert-max-coefs` (hvoya 0b2d8dbef) | `IPlug2-T-024-f3` | `a29b8dfd7` F3: HilbertEnvelopeDetector kMaxCoefs 18 · `2447c9103` comment (review R5) |
 | iPlug2 | `fix/midi-cc-host-notify` (hvoya 0b2d8dbef) | `IPlug2-T-024` | `17765295e` F2: midi_cc mediator → main thread (`CCMediator::OnIdle`) · `8f40400b4` F2: VST3 InformHostOfParamChange syncs the controller copy (iPlug core, single-component VST3) |
-| iPlug2 | `fix/param-text-to-value` (hvoya 0b2d8dbef) | `IPlug2-T-024-f4` | `32d7a3ac5` F4: `IParam::SetTextToValueFunc` (iPlug core, opt-in) · `cd9e8922f` F4: hvoya `makeSegmentedParser` + display segment by shown value |
+| iPlug2 | `fix/param-text-to-value` (hvoya 0b2d8dbef) | `IPlug2-T-024-f4` | `32d7a3ac5` F4: `IParam::SetTextToValueFunc` (iPlug core, opt-in) · `cd9e8922f` F4: hvoya `makeSegmentedParser` + display segment by shown value · `bae0a54d4` review R3/R4 |
 | iPlug2 | `linux/T-024` (hvoya-linux 195fc5517) | `IPlug2-T-024-log` | this task file, CROSS_PLATFORM_FINDINGS rows, `evidence/t024/` (scripts, results) |
 | Gneiss | `fix/midi-cc-host-notify` (master 3cf2e2e) | `hvoya/Gneiss-t024` | **uncommitted** one line `_midiCCMediator.OnIdle();` in `Gneiss::OnIdle` (Gneiss CLAUDE.md: no commits unless asked) |
 | DMT | `fix/midi-cc-host-notify` (main 2c181c7) | `hvoya/DMT-t024` | **uncommitted**, the same line in `DMT::OnIdle` |
+| Melter | `fix/midi-cc-host-notify` (master 2ce2399) | `hvoya/Melter-t024` | **uncommitted**, the same line in `Melter::OnIdle` (review R1) |
+| Crust_new | `fix/midi-cc-host-notify` (main b20479a) | `hvoya/Crust_new-t024` | **uncommitted**, the same line in `Crust::OnIdle` (review R1) |
 | Scape | — (not a git repo) | — | needs the same line by hand in `Scape::OnIdle` |
 
 Dependencies and merge order:
@@ -253,3 +255,95 @@ Open:
 - F7 needs a Windows build;
 - N1–N4 above;
 - the enum CLAP fix `ef002e167` → hvoya.
+
+### Review (round 1, 2026-10-17) — verdict: approve after R1; R2–R6 optional
+
+Independent reviewer, fresh context. Read AGENTS.md, this file, Sand `CLAUDE.md`. Reviewed all 7 Sand commits, the 5 iPlug2 commits and the Gneiss/DMT worktree diffs. Changed no code and committed nothing.
+
+**Re-run by me:**
+- Checked first: the cherry-picks in `IPlug2-T-024-f3test` have the same `git patch-id` as the five branch commits, and `Sand-t024-linux` contains `e9ea624`.
+- Docker Linux, Release + ASan (`build/t024r-full*`, evidence in `evidence/t024/review/linux/`):
+  - clap-validator: **38 pass / 0 fail**;
+  - VST3 `validator -e` ×20: **0 non-zero exits** (537/537 each);
+  - ASan VST3 ×3 + clap-validator: **0 ASan errors**.
+- Renders: `render.sha256` is **identical to `linux-full`**. Against `linux-before`, only `default-768000`, `default-767999.5` (NaN fixed) and `random-blocks-48k-f32` (0-frame blocks) differ. 384 kHz and below, 32/64-bit, in-place/out-of-place: bit-identical. 768 kHz: 0 non-finite samples.
+- REAPER VST3 F2 (`evidence/t024/review/f2-vst3/`): host value **0.000**, **9** envelope points, RESULT PASS.
+  - Screenshot `f01-after-cc.png`: knob at 0.000, envelope lane present.
+- Containers `t024r-build` and `t024rgui` are removed. The build dirs `build/t024r-full*` are throwaway.
+- F3 bound, on mac (scratchpad `f3/nc.cpp`, HIIR's real `compute_coefs`):
+  - sweeping the transition 0.499 → 1e-5 gives max nc = **18**. compute_coefs writes exactly nc values, so `raw[kMaxCoefs + 4]` (22) is enough.
+  - Per quality at 192k / 384k / 768k / 1.536M / 3.072M: High 13/14/16/17/18; Ultra 14/16/17/18/18.
+- F4, on mac (scratchpad `f4/rt.cpp`, real `IParam` + `param_utils.hpp` from the branches): normalized → text → value → text, 200 000 points each for flt hz, grind cutoff, am release and am lp cutoff with Sand's exact init: **0 failures**.
+  - "1.01 kHz" → 1010, "1.5khz" → 1500, "  2 KHZ" → 2000, "1.50 s" → 1500 ms, "40" → 40.
+  - Ties: 999.949 → "999.9 Hz", 999.95 → "1.00 kHz", 99.95 → "100.0 Hz", −0.001 → "0.0 Hz".
+
+**Opened myself:**
+- `f2-reaper-vst3/f01-after-cc.png` (knob 0.000, no envelope lane), `f2-full-reaper-vst3/f00-start.png` and `f01-after-cc.png` (lane present, "Record envelope automation").
+- `run.log` of `f2-{,full-,after-}reaper-{vst3,clap}`. They confirm 0.300/none (before), 0.000/9 (full), and 0.300/none for VST3 with the mediator alone. So the claim that 8f40400b4 is needed holds.
+- `linux-before`: 5/20 VST3 exits; ASan heap-buffer-overflow in `derivativeInplace` ← `SandModule::process`.
+- `mac-before`: 20/20 aborts. `mac-full`: 0/20, clap-validator 34/4, 768 kHz 0 non-finite.
+- `gdb-crash.excerpt.txt` in the passing GUI runs is the harness's thread dump, not a crash.
+
+**Checks out:**
+- **F1:** the early return is correct. Params and MIDI are applied before `ProcessBlock`. The deferred `applyOversampling` on an empty block is harmless.
+- **F5:**
+  - `fillFrom` is an element-wise loop, so `ins == outs` (in-place) is a self-copy, which is fine. Channel handling is unchanged (`numChans` as before; outs beyond it were never written).
+  - A side benefit: Sand no longer writes into iPlug's buffers for disconnected inputs.
+- **F3 Sand (`designRate`):**
+  - Line lengths, `maxBandDelaySamples()` (and so the warm-up) and LFO depth all use the same capped rate, so they stay consistent.
+  - The LFO frequency stays on the true rate.
+  - `sum(len) ≤ totalStorage` still holds, and the remaining assert in `assignStorageAndLengths` documents it.
+- **F3 hvoya:** 18 is a true upper bound (see above). The commit's numbers are right.
+- **F2 slots:**
+  - Ordering: relaxed value store, then release `pending`; on the other side, acquire `exchange(false)`, then relaxed load. A race only re-sends the newer value on the next tick; nothing is lost and nothing stale sticks.
+  - Lock-free; allocated in the constructor, which runs after the `Plugin` base has created its params; no allocation on the audio thread.
+  - `OnIdle` runs from `IPlugAPIBase::OnTimer` in every format (`CreateTimer` in AAX/APP/AU/CLAP/VST2/VST3), plus `OnActivate` → `OnIdle` in Sand/DMT/Scape/Melter. iPlug calls `OnActivate` from main-thread entry points.
+  - CLAP: the param-to-host queue now has the main thread as its only producer.
+- **8f40400b4:** existing callers (`SendParameterValueFromUI`, `DirtyParametersFromUI`) already set the same value, so for them it is a no-op. VST3P/VST3C is untouched, as stated. No hvoya plug-in calls `InformHostOfParamChange` / `SetParameterValue` directly.
+- **F4:**
+  - The default parsing is unchanged unless a parser is set.
+  - All host and editor paths go through `StringToValue`: CLAP `:524`, VST3 `IPlugVST3_Parameter.h:59`, AUv2/AUv3, VST2, `IGraphics.cpp:268`.
+  - Braced-list callers in Gneiss/Melter compile unchanged (vector parameter).
+  - Unit matching is a full-token, case-insensitive compare, so "ms" ≠ "s".
+- **F7:** the files keep LF endings like the rest of each file. The four vcxproj source lists now match the Xcode CLAP target's non-format sources.
+- **F8:** a 3-line pbxproj change. Not rebuilt by me on mac.
+- DMT's pre-existing break (`UpdateMidiControllableUI`, DMTUI.cpp:246, absent from hvoya since 4021b5df1) is confirmed.
+- Comments added in the Sand and iPlug code state only the WHY (except R4 and R5).
+
+**Findings:**
+- **R1 — major.** Merging F2 silently breaks **Melter**, which the hand-over doesn't mention.
+  - Where: `hvoya/Melter/Melter.cpp:477` calls `_midiCCMediator.ProcessMidiCC(m)` against the same hvoya mediator, but `Melter::OnIdle` (`Melter.cpp:717`) does not call `_midiCCMediator.OnIdle()`.
+  - Effect: after `fix/midi-cc-host-notify` is merged, Melter's knobs stop following CC and no host hears about the change.
+  - Where it is missed: 17765295e's message ("Sand, Gneiss, Scape, DMT"), the "Where everything is" table and the F2 row in `CROSS_PLATFORM_FINDINGS.md` all leave Melter out.
+  - `Crust_new/Crust/Crust.cpp:381` uses `ProcessMidiCC` too (last commit 2026-04; it may no longer build against hvoya).
+  - Fix:
+    - add the one line to `Melter::OnIdle`, uncommitted in a Melter worktree as for Gneiss/DMT;
+    - list Melter (and Crust, if it is still built) in the table, the commit message (amend before merge) and the findings row;
+    - grep every hvoya plug-in for `ProcessMidiCC` before hand-over.
+- **R2 — minor (test quality).** The F2 checks in `evidence/t024/f2-steps.txt:31-32` (`lua-expect host-value`, `lua-expect env-points`) match only the label, so they pass before and after. `f2-reaper-vst3` reports RESULT PASS with 0.300/none. The proof currently rests on reading `run.log`.
+  - Fix: `lua-expect host-value.*amnt.0\.000` and `lua-expect env-points.[1-9]`. Do the same when the `[CLAP]` prefix of `steps/sand.txt:55` is dropped after the merge.
+- **R3 — nit.** `IPlugParameter.cpp:176`: re-initialising a param (`InitDouble/InitInt/InitEnum…`) resets `mDisplayFunction` but keeps `mTextToValueFunction`, so a re-initialised param can keep a parser that no longer matches its display.
+  - Fix: `mTextToValueFunction = nullptr;` next to `mDisplayFunction = displayFunc;`. `Init(const IParam&)` then copies it explicitly, as it does now.
+- **R4 — nit (stale comment).** `hvoya/utils/param_utils.hpp:18,20` (branch `fix/param-text-to-value`) still says "Values < upTo are formatted as…" and "exclusive upper bound". Since cd9e8922f the segment is chosen by the rounded value, and the tie goes to the next segment.
+  - Fix: e.g. "upTo: the segment is used while the value, rounded to its decimals, stays below upTo".
+- **R5 — nit (comment accuracy).** `hilbert_envelope_detector.hpp:31` (branch `fix/hilbert-max-coefs`): "18 from about 3 MHz on" is true only for High. Ultra reaches 18 at 1.536 MHz; Medium and Low reach it much higher.
+  - Fix: "18 at the floor kMinTransition (High reaches it near 3 MHz)", or drop the rate.
+- **R6 — nit (stale project doc, pre-existing, not from this task).** Sand `CLAUDE.md`'s Grind section ("Two parallel bands of 4 delay lines", "SR scaling `sr * 0.6 / 1000`") doesn't match `dmt_grind.hpp`: 5 bands (`lfoFreq*` size 5), `srScale = sr * 0.6 / 10000`, and `maxSR` 3.07 MHz is not mentioned.
+  - Fix: the user decides; noted only because the comment rule calls stale docs defects.
+
+**Not verified by me:**
+- the Windows build (F7);
+- mac builds (F8, Gneiss with the F2 line), which I did not rebuild;
+- F2 behaviour in AU/AAX/VST2 hosts and in DAWs other than REAPER, including the documented VST3 echo risk at the end of a fast CC sweep;
+- CLAP F2 in REAPER (not re-run; the worker's `f2-full-reaper-clap` was read only).
+
+**Fixes after review round 1 (2026-10-17):**
+- **R1:** `grep ProcessMidiCC` over every hvoya plug-in finds Sand, Gneiss, DMT, Scape, **Melter** and **Crust_new**. Melter and Crust_new get the `OnIdle` line in new worktrees `hvoya/Melter-t024` and `hvoya/Crust_new-t024` (branch `fix/midi-cc-host-notify`, uncommitted, like Gneiss/DMT). The branch table above and CROSS_PLATFORM_FINDINGS now list them.
+  - Build check on mac (scratch layout against all iPlug2 commits): Melter fails with or without the line. `mapper_serializer::unserialize` takes 5 arguments since hvoya e33a71700, and `Melter.cpp:1301` passes 4: pre-existing, like DMT.
+  - Crust_new is stale since 2026-04 and was not built.
+  - Gneiss builds with the line.
+- **R2:** `f2-steps.txt` now expects `host-value.*amnt.0\.000` and `env-points.[1-9]`. On the old VST3 build it **FAILs** (0.300, `none`; `f2r2-old-vst3/xact-fails.txt`), on the full build it PASSes (`f2r2-new-vst3`). The earlier `f2-*` runs still show the printed values, which is what the Log quotes.
+- **R3:** iPlug2 `bae0a54d4`: `InitDouble` clears the TextToValueFunc. R4: same commit, `DisplaySegment` comments describe the shown-value rule.
+- **R5:** `2447c9103`: the `kMaxCoefs` comment says where each quality reaches 18 (Ultra 1.5 MHz, High 3 MHz) and where the floor binds (Ultra 2 MHz, High 4 MHz).
+- **R6:** not changed. Sand's `CLAUDE.md` is the user's instruction file; reported: the Grind section says 2 bands / `sr*0.6/1000`, the code has 5 bands / `sr*0.6/10000`.
+- The test trees `IPlug2-T-024-f3test` / `IPlug2-T-024-all` do not have bae0a54d4 / 2447c9103: comment-only, except the one-line InitDouble reset, which no Sand path depends on (Sand calls `SetTextToValueFunc` after `InitDouble`).

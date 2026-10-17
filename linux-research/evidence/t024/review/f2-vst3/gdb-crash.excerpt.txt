@@ -1,0 +1,32 @@
+# excerpt of gdb-crash.txt (     544 lines): test progression, Result lines, ASan reports, last 30 lines
+# --- last 30 lines
+#5  0x0000ecb47c86582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ecb47c8cbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 16 (Thread 0xecb4624df160 (LWP 92) "reaper/livefx"):
+#0  0x0000ecb47c861d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ecb47c864d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ecb47c71cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000ecb47c71d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ecb47c86582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ecb47c8cbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 15 (Thread 0xecb461ccf160 (LWP 93) "reaper/livefx"):
+#0  0x0000ecb47c861d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ecb47c864d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ecb47c71cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000ecb47c71d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000ecb47c86582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000ecb47c8cbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 1 (Thread 0xecb47cecf460 (LWP 65) "reaper"):
+#0  0x0000ecb47c89bd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ecb47c8a60bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ecb47c8cb5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x000000000040b698 in ??? ()
+#4  0x0000ecb47c8084c4 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#5  0x0000ecb47c808598 in __libc_start_main () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000000000418ee8 in _start ()
+[Inferior 1 (process 65) detached]
