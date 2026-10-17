@@ -33,9 +33,13 @@ GLIBC_MAX="2.35"
 KEEP_GOING=0
 CLEAN=0
 IN_CONTAINER=0
-ORIG_ARGS=("$@")
+
+needs_value() { [ $# -ge 2 ] || die "$1 needs a value"; }
 
 while [ $# -gt 0 ]; do
+  case "$1" in
+    --arch|--variant|--doc|--icon|--formats|--out|--glibc-max) needs_value "$@" ;;
+  esac
   case "$1" in
     --arch)       ARCHS+=("$2"); shift ;;
     --variant)    VARIANTS+=("$2"); shift ;;
@@ -92,12 +96,12 @@ run_in_docker() {  # arch
     case "$common" in ""|"$dir"/*) ;; *) mounts+=(-v "$common:$common:ro") ;; esac
   done
 
-  local args=() skip=0 a
-  for a in "${ORIG_ARGS[@]}"; do  # pass everything but --arch/--out on; the container gets one arch
-    if [ $skip = 1 ]; then skip=0; continue; fi
-    case "$a" in --arch|--out) skip=1; continue ;; esac
-    args+=("$a")
-  done
+  local args=("$PROJECT_DIR" --formats "$FORMATS" --glibc-max "$GLIBC_MAX") v
+  for v in "${VARIANTS[@]}"; do [ -z "$v" ] || args+=(--variant "$v"); done
+  for v in "${DOCS[@]+"${DOCS[@]}"}"; do args+=(--doc "$v"); done
+  [ -z "$ICON" ] || args+=(--icon "$ICON")
+  [ $KEEP_GOING = 0 ] || args+=(--keep-going)
+  [ $CLEAN = 0 ] || args+=(--clean)
 
   echo "=== $arch: running in $image ($platform)"
   docker run --rm --platform "$platform" "${mounts[@]}" -w "$PROJECT_DIR" \
@@ -135,7 +139,7 @@ export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$PROJECT_DIR" log -1 --
 glibc_floor() { readelf -W --dyn-syms "$1" | grep -oE '@GLIBC_[0-9.]+' | sed 's/@GLIBC_//' | sort -Vu | tail -1; }
 version_gt() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ] && [ "$1" != "$2" ]; }
 needed() { readelf -d "$1" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'; }
-exports() { readelf -W --dyn-syms "$1" | awk '$7 != "UND" && $5 == "GLOBAL" && $4 != "NOTYPE" {print $8}' | sed 's/@.*//' | sort -u; }
+exports() { readelf -W --dyn-syms "$1" | awk '$7 != "UND" && $5 != "LOCAL" && $4 != "NOTYPE" {print $8}' | sed 's/@.*//' | sort -u; }
 
 # Fails the package rather than shipping a binary a customer's distro cannot load, or one that leaks
 # symbols into the host. The standalone's NEEDED list is reported, not limited: it links the audio/MIDI
@@ -155,7 +159,7 @@ check_binary() {  # file kind report
     fi
   } >> "$report"
   if version_gt "$floor" "$GLIBC_MAX"; then
-    echo "$f needs GLIBC_$floor > $GLIBC_MAX: build on an older distro (Ubuntu 22.04)" >&2; ok=1
+    echo "$f needs GLIBC_$floor > $GLIBC_MAX: build on Ubuntu 22.04 (or in Docker from another host), or raise --glibc-max" >&2; ok=1
   fi
   if readelf -W --dyn-syms "$f" | grep -qE '@(GLIBCXX|CXXABI)_'; then
     echo "$f imports libstdc++ symbols; it must link libstdc++ statically" >&2; ok=1
@@ -255,7 +259,7 @@ package_variant() {  # variant-spec
   done
   local doc
   for doc in "${DOCS[@]+"${DOCS[@]}"}"; do cp "$PROJECT_DIR/$doc" "$stage/"; done
-  if [ -n "$ICON" ] && [[ " $FORMATS " == *" app "* ]]; then
+  if [ -n "$ICON" ] && has_format app; then
     cp "$PROJECT_DIR/$ICON" "$stage/Standalone/$name.${ICON##*.}"
   fi
   write_install_sh "$stage/install.sh" "$name" "$([ -n "$ICON" ] && echo "$name.${ICON##*.}")"
@@ -301,6 +305,8 @@ done
 [ -d "$HERE/VST3" ] || VST3=0
 [ -d "$HERE/Standalone" ] || APP=0
 
+# The standalone gets a folder of its own: ~/.local/share/<Name> is where the product keeps the user's
+# data (presets), which an install or uninstall must never touch.
 if [ $SYSTEM = 1 ]; then
   [ "$(id -u)" = 0 ] || { echo "--system needs root: sudo ./install.sh --system" >&2; exit 1; }
   CLAP_DIR=/usr/lib/clap; VST3_DIR=/usr/lib/vst3
@@ -308,15 +314,23 @@ if [ $SYSTEM = 1 ]; then
 else
   [ "$(id -u)" != 0 ] || { echo "run without sudo for a per-user install, or pass --system" >&2; exit 1; }
   CLAP_DIR=$HOME/.clap; VST3_DIR=$HOME/.vst3
-  APP_DIR=${XDG_DATA_HOME:-$HOME/.local/share}/$NAME; BIN_DIR=$HOME/.local/bin
+  APP_DIR=$HOME/.local/lib/$NAME; BIN_DIR=$HOME/.local/bin
   DESKTOP_DIR=${XDG_DATA_HOME:-$HOME/.local/share}/applications
 fi
 DESKTOP_FILE="$DESKTOP_DIR/$(echo "$NAME" | tr 'A-Z ' 'a-z-').desktop"
+APP_MARKER=".installed-by-$NAME-install.sh"
+
+# Only a folder this script created is removed whole.
+remove_app_dir() {
+  [ -e "$APP_DIR" ] || return 0
+  [ -f "$APP_DIR/$APP_MARKER" ] || { echo "$APP_DIR was not created by this installer; leaving it alone" >&2; exit 1; }
+  rm -rf "$APP_DIR"
+}
 
 if [ $UNINSTALL = 1 ]; then
   [ $CLAP = 0 ] || rm -rf "$CLAP_DIR/$NAME.clap" "$CLAP_DIR/$NAME.resources"
   [ $VST3 = 0 ] || rm -rf "$VST3_DIR/$NAME.vst3"
-  [ $APP = 0 ] || rm -rf "$APP_DIR" "$BIN_DIR/$NAME" "$DESKTOP_FILE"
+  if [ $APP = 1 ]; then remove_app_dir; rm -f "$BIN_DIR/$NAME" "$DESKTOP_FILE"; fi
   echo "$NAME removed."
   exit 0
 fi
@@ -329,15 +343,19 @@ replace() {  # src dest
 }
 if [ $CLAP = 1 ]; then
   replace "$HERE/CLAP/$NAME.clap" "$CLAP_DIR/$NAME.clap"
-  replace "$HERE/CLAP/$NAME.resources" "$CLAP_DIR/$NAME.resources"
-  echo "CLAP -> $CLAP_DIR/$NAME.clap (+ $NAME.resources)"
+  if [ -d "$HERE/CLAP/$NAME.resources" ]; then
+    replace "$HERE/CLAP/$NAME.resources" "$CLAP_DIR/$NAME.resources"
+  fi
+  echo "CLAP -> $CLAP_DIR/$NAME.clap"
 fi
 if [ $VST3 = 1 ]; then
   replace "$HERE/VST3/$NAME.vst3" "$VST3_DIR/$NAME.vst3"
   echo "VST3 -> $VST3_DIR/$NAME.vst3"
 fi
 if [ $APP = 1 ]; then
+  remove_app_dir
   replace "$HERE/Standalone" "$APP_DIR"
+  : > "$APP_DIR/$APP_MARKER"
   mkdir -p "$BIN_DIR" "$DESKTOP_DIR"
   ln -sf "$APP_DIR/$NAME" "$BIN_DIR/$NAME"
   {
@@ -356,22 +374,24 @@ EOF
   chmod 755 "$1"
 }
 
+has_format() { [[ " $FORMATS " == *" $1 "* ]]; }
+
 write_readme() {  # path name variant report
   local name="$2" title floor
   title="$name $VERSION${3:+ ($3)} for Linux ($ARCH)"
   floor="$(sed -n 's/^GLIBC floor: //p' "$4" | sort -Vu | tail -1)"
-  cat > "$1" <<EOF
-$title
-$(printf '%s' "$title" | tr '[:print:]' '=')
-
-Contents
-  CLAP/        $name.clap and $name.resources/ (the plug-in needs both, side by side)
-  VST3/        $name.vst3 (a folder; its resources are inside)
-  Standalone/  $name, a standalone application, and $name.resources/
-  install.sh   copies them to the standard locations
+  {
+    echo "$title"
+    printf '%s\n\n' "$(printf '%s' "$title" | tr '[:print:]' '=')"
+    echo "Contents"
+    has_format clap && echo "  CLAP/        $name.clap and $name.resources/ (the plug-in needs both, side by side)"
+    has_format vst3 && echo "  VST3/        $name.vst3 (a folder; its resources are inside)"
+    has_format app && echo "  Standalone/  $name, a standalone application, and $name.resources/"
+    echo "  install.sh   copies them to the standard locations"
+    cat <<EOF
 
 Install
-  ./install.sh                 for your user:   ~/.clap, ~/.vst3, ~/.local/share/$name
+  ./install.sh                 for your user:   ~/.clap, ~/.vst3, ~/.local/lib/$name
   sudo ./install.sh --system   for all users:   /usr/lib/clap, /usr/lib/vst3, /opt/$name
   Options: --no-clap, --no-vst3, --no-app, --uninstall. Then rescan plug-ins in your host.
 
@@ -386,13 +406,15 @@ Requirements
   - libX11, and an OpenGL 2.1 driver (libGL.so.1, from Mesa or your GPU vendor).
   - Optional: libfontconfig (fonts in menus), libXcursor (themed cursors), and zenity,
     kdialog or xdg-desktop-portal for file dialogs.
-  - The standalone application also needs GTK 3, ALSA, PulseAudio and JACK client
-    libraries: libgtk-3-0, libasound2, libpulse0 and libjack0 (or PipeWire's JACK
-    libraries) on Debian/Ubuntu; gtk3, alsa-lib, pulseaudio-libs and
-    pipewire-jack-audio-connection-kit-libs on Fedora. Most desktops have them.
-
-Build: $GIT_COMMIT$DIRTY
 EOF
+    has_format app && cat <<EOF
+  - The standalone application also needs GTK 3, ALSA, PulseAudio and JACK client
+    libraries: libgtk-3-0, libasound2, libpulse0 and libjack-jackd2-0 (or PipeWire's
+    JACK libraries) on Debian/Ubuntu; gtk3, alsa-lib, pulseaudio-libs and
+    pipewire-jack-audio-connection-kit-libs on Fedora. Most desktops have them.
+EOF
+    printf '\nBuild: %s\n' "$GIT_COMMIT$DIRTY"
+  } > "$1"
 }
 
 for spec in "${VARIANTS[@]}"; do

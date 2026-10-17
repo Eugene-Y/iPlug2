@@ -8,7 +8,9 @@ CMDS=$(mktemp /tmp/gdbc-XXXX)
 {
   echo "set pagination off"; echo "set breakpoint pending on"
   for s in "$@"; do
-    echo "break $s"; echo "commands"; echo "silent"; echo "printf \"HIT %s tid=%d\\n\", \"$s\", \$_thread"; echo "continue"; echo "end"
+    # The symbol goes into the format string: a string argument makes gdb allocate it in the inferior (malloc
+    # in REAPER), and a stop that lands during that call left REAPER crashing after the detach.
+    echo "break $s"; echo "commands"; echo "silent"; echo "printf \"HIT $s tid=%d\\n\", \$_thread"; echo "continue"; echo "end"
   done
   echo "continue"
   # Reached when the INT below stops the process: remove the breakpoints while it is stopped, then let go.

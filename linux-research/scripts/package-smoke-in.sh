@@ -19,28 +19,44 @@ echo "=== $PKG on $(. /etc/os-release && echo "$PRETTY_NAME") $(uname -m), glibc
 
 as_customer "rm -rf ~/pkg && mkdir ~/pkg && tar -xzf '$ARCHIVE' -C ~/pkg"
 SRC=/home/customer/pkg/$PKG
+# The product's own data (presets) lives in ~/.local/share/<Name>; installs and uninstalls must leave it alone.
+USER_DATA=/home/customer/.local/share/$NAME
+as_customer "mkdir -p '$USER_DATA/Presets' && echo keep > '$USER_DATA/Presets/smoke-test.preset'"
 as_customer "cd '$SRC' && ./install.sh" > "$OUT/install-user.txt" 2>&1 || fail "install.sh (user) exit $?"
+as_customer "cd '$SRC' && ./install.sh" >> "$OUT/install-user.txt" 2>&1 || fail "install.sh (user, again) exit $?"
 cat "$OUT/install-user.txt"
 CLAP=/home/customer/.clap/$NAME.clap
 VST3=/home/customer/.vst3/$NAME.vst3
-APP=/home/customer/.local/share/$NAME/$NAME
+APP=/home/customer/.local/lib/$NAME/$NAME
 for f in "$CLAP" "$(dirname "$CLAP")/$NAME.resources" "$VST3" "$APP" /home/customer/.local/bin/$NAME \
          "/home/customer/.local/share/applications/$(echo "$NAME" | tr 'A-Z ' 'a-z-').desktop"; do
   [ -e "$f" ] || fail "per-user install: missing $f"
 done
 
 echo "--- ldd"
+: > "$OUT/ldd.txt"
 for f in "$CLAP" "$VST3"/Contents/*-linux/"$NAME".so "$APP"; do
-  if ldd "$f" | grep 'not found'; then fail "ldd $(basename "$f"): unresolved libraries"; fi
-done 2>&1 | tee "$OUT/ldd.txt"
+  if ldd "$f" 2>&1 | grep 'not found' >> "$OUT/ldd.txt"; then fail "ldd $(basename "$f"): unresolved libraries"; fi
+done
+cat "$OUT/ldd.txt"
 
 echo "--- validators (installed per-user copies, run as customer)"
 as_customer "timeout 900 clap-validator validate '$CLAP'" 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > "$OUT/clap-validator.txt"
 echo "clap-validator exit=${PIPESTATUS[0]} :: $(grep -E 'tests run' "$OUT/clap-validator.txt" | tail -1)"
-as_customer "timeout 900 validator -e '$VST3'" > "$OUT/vst3-validator.txt" 2>&1; rc=$?
+as_customer "timeout 900 validator -e '$VST3'" > /tmp/vst3-validator-full.txt 2>&1; rc=$?
+# The full log is ~190 KB of passing test names; keep what explains a failure.
+{ grep -iE 'fail|error' /tmp/vst3-validator-full.txt | grep -v ' 0 tests failed'; echo '...'; tail -25 /tmp/vst3-validator-full.txt; } > "$OUT/vst3-validator.txt"
 echo "vst3 validator exit=$rc :: $(grep -E 'Result: [0-9]+ tests passed' "$OUT/vst3-validator.txt" | tail -1)"
 grep -qE 'Result: [0-9]+ tests passed, 0 tests failed' "$OUT/vst3-validator.txt" || fail "VST3 validator (exit $rc)"
 grep -qE '[0-9]+ tests run, [0-9]+ passed' "$OUT/clap-validator.txt" || fail "clap-validator did not run its tests"
+# Known failures are the product's own, reported elsewhere; any other failing test fails the smoke test.
+grep -oE "┌─ [a-z0-9-]+|FAILED" "$OUT/clap-validator.txt" | awk '/┌─/{n=$2} /FAILED/{print n}' | sort > "$OUT/clap-validator-failed.txt"
+KNOWN="$HERE/known-clap-failures/$NAME.txt"
+if [ -f "$KNOWN" ]; then
+  new_fails=$(grep -vxF -f <(grep -v '^#' "$KNOWN") "$OUT/clap-validator-failed.txt" || true)
+  [ -z "$new_fails" ] || fail "clap-validator: failures not in $(basename "$KNOWN"): $(echo $new_fails)"
+fi
+echo "clap-validator failed: $(echo $(cat "$OUT/clap-validator-failed.txt"))"
 
 # gdb finds the split symbols by build id, as it would for a crash report from the field. Reading them takes
 # a few seconds, hence the longer count window. Under emulation (SMOKE_EMULATED=1, x86_64 on Apple silicon)
@@ -76,8 +92,8 @@ if xdotool search --onlyvisible --name "^$NAME\$" >/dev/null 2>&1 && kill -0 "$(
 else
   fail "standalone: no window or process died"; import -window root "$OUT/app.png"
 fi
-# By path, not by name: under Rosetta the process name is not the binary's.
-pkill -f "^$APP --no-io" 2>/dev/null; sleep 1
+# By PID: under Rosetta neither the name nor the command line matches the binary.
+kill "$(cat /tmp/app.pid)" 2>/dev/null; sleep 1; kill -9 "$(cat /tmp/app.pid)" 2>/dev/null
 
 echo "--- CLAP without its .resources folder"
 mkdir -p /tmp/nores && cp "$CLAP" /tmp/nores/
@@ -108,9 +124,10 @@ echo "--- uninstall"
 (cd "$SRC" && ./install.sh --system --uninstall) >/dev/null 2>&1
 as_customer "cd '$SRC' && ./install.sh --uninstall" >/dev/null 2>&1
 left=$(ls -d /usr/lib/clap/$NAME.* /usr/lib/vst3/$NAME.vst3 /opt/$NAME /usr/local/bin/$NAME \
-           /home/customer/.clap/$NAME.* /home/customer/.vst3/$NAME.vst3 /home/customer/.local/share/$NAME \
+           /home/customer/.clap/$NAME.* /home/customer/.vst3/$NAME.vst3 /home/customer/.local/lib/$NAME \
            /home/customer/.local/bin/$NAME 2>/dev/null)
 [ -z "$left" ] || fail "uninstall left: $left"
+[ -f "$USER_DATA/Presets/smoke-test.preset" ] || fail "install/uninstall removed the user's data in $USER_DATA"
 
 if [ ${#FAILS[@]} -eq 0 ]; then echo "RESULT: PASS"; else echo "RESULT: FAIL (${#FAILS[@]})"; printf '  - %s\n' "${FAILS[@]}"; fi | tee "$OUT/RESULT.txt"
 [ ${#FAILS[@]} -eq 0 ]

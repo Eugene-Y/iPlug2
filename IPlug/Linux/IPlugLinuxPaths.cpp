@@ -33,7 +33,7 @@ void WarnIfResourceFolderMissing(const char* resourcePath)
   if (std::filesystem::is_directory(resourcePath, error) || warned.exchange(true))
     return;
 
-  fprintf(stderr, "iPlug2: resource folder %s not found; copy it next to the plug-in.\n", resourcePath);
+  fprintf(stderr, "iPlug2: resource folder %s not found; fonts and images will be missing.\n", resourcePath);
 }
 
 bool ModuleFilePath(void* symbol, std::filesystem::path& result)
