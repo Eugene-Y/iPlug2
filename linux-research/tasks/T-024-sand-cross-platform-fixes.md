@@ -58,7 +58,7 @@ Tools, all in this chat's scratchpad, nothing in `~/Library`:
 - the VST3 validator from the cached SDK v3.8.1 (`cache/sdks/VST3_SDK`; the SDK in `IPlug2/Dependencies` has an empty `cmake/`).
 
 Scripts in `evidence/t024/`:
-- `build-sand.sh`: Linux CLAP+VST3, Release or RelWithDebInfo+ASan.
+- `build-sand.sh`: Linux CLAP+VST3, Release or RelWithDebInfo+ASan. (Git-ignored by `build-*` and lost with the worktree; recreated by the coordinator as `scripts/sand-build.sh`.)
 - `run-checks.sh`: clap-validator, VST3 `-e` ×20, ASan VST3 ×3 + CLAP, renders.
 - `mac-checks.sh`: the same on mac, without ASan.
 - `render-clap.cpp`: offline CLAP host. Writes the output and reports non-finite samples, whether the input buffer was changed, and process() time.

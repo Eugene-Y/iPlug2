@@ -12,7 +12,7 @@
 ## Read first
 - `AGENTS.md`, Sand `CLAUDE.md` (its "do not build" line predates 2026-10-17: **building is allowed**, user), `README.md`, `BACKLOG.md`.
 - `tasks/T-024-sand-cross-platform-fixes.md` Log: N1–N4 (~line 177), F2 residual risk (~line 222), reviews R6/R7; `tasks/T-021-release-packaging.md` Log: T21-1, T21-5; `CROSS_PLATFORM_FINDINGS.md` sections "Из T-012" and the T-024 summary.
-- T-024's helpers in `linux-research/evidence/t024/`: `run-checks.sh` (clap-validator, VST3 `-e` ×20, ASan VST3 ×3 + CLAP, renders), `mac-checks.sh`, `render-clap.cpp` (offline CLAP host: output, non-finite samples, input-buffer change, process() time), `cpu-bench.sh`, `xcb-sand.sh` (command-line xcodebuild with every install path in a scratch dir). Its `build-sand.sh` (Linux CLAP+VST3, Release or RelWithDebInfo+ASan) was git-ignored (`build-*`) and is lost: rebuild it from the T-012 Log's build command (`DOCK_MOUNTS`, `EXTRA_CMAKE_ARGS=-DIPLUG2_DIR=…`, `DOCK_ENV="BUILD_TYPE=…"`) and commit it under a name the ignore rules don't match (e.g. `sand-build.sh`).
+- T-024's helpers in `linux-research/evidence/t024/`: `run-checks.sh` (clap-validator, VST3 `-e` ×20, ASan VST3 ×3 + CLAP, renders), `mac-checks.sh`, `render-clap.cpp` (offline CLAP host: output, non-finite samples, input-buffer change, process() time), `cpu-bench.sh`, `xcb-sand.sh` (command-line xcodebuild with every install path in a scratch dir). Its `build-sand.sh` was git-ignored (`build-*`) and lost; the coordinator recreated it as `scripts/sand-build.sh <tree> <builddir> [release|asan] [targets]` (2026-10-17: release and ASan builds of Sand-linux PASS; ASan VST3 validator 537/537, no ASan report).
 
 ## Items
 
