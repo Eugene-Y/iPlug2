@@ -1,7 +1,7 @@
 # T-021 — Release packaging of Gneiss and Sand for Linux
 
-- **Status:** ready for Gneiss; Sand part after T-012 is merged.
-- **Owner:** —
+- **Status:** in progress
+- **Owner:** T-021 worker (claimed 2026-10-17)
 - **Branches/worktrees:**
   - iPlug2: `linux/T-021` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-021` (scripts, docs).
   - Gneiss `linux-experiment` (`/Volumes/Storage/code/hvoya/Gneiss-linux`) and Sand `linux-experiment` (`/Volumes/Storage/code/hvoya/Sand-linux`, from T-012): only if a product needs a packaging hook. Local only, never push; main checkouts untouched.
