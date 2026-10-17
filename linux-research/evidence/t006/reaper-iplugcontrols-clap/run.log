@@ -1,0 +1,30 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=3148 (open)
+render[first-open] ok (stddev 0.196553)
+view origin 113 188
+[xact] origin 113,188
+[xact] lua 'SET' (matches ^SET$)
+[xact] lua 'SAVED=0.250' (matches ^SAVED=0\.250$)
+[xact] lua 'SET' (matches ^SET$)
+[xact] lua 'MOVED=0.900' (matches ^MOVED=0\.900$)
+[xact] shot before-load
+[xact] lua 'LOADED=0.250' (matches ^LOADED=0\.250$)
+[xact] shot after-load
+[xact] lua 'STILL=0.250' (matches ^STILL=0\.250$)
+[xact] ALIVE reaper
+REAPER ALIVE pid=3148 (steps)
+REAPER ALIVE pid=3148 (reopen 1)
+REAPER ALIVE pid=3148 (reopen 2)
+REAPER ALIVE pid=3148 (reopen 3)
+REAPER ALIVE pid=3148 (reopen 4)
+REAPER ALIVE pid=3148 (reopen 5)
+render[after-reopen] ok (stddev 0.195321)
+add2 0
+REAPER ALIVE pid=3148 (two instances)
+render[second-instance] ok (stddev 0.196633)
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+    161 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=1
+    161 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
+REAPER ALIVE pid=3148 (end)
+RESULT: PASS
