@@ -74,7 +74,7 @@ Gneiss на mac/win использует нативные меню — его н
 - F8: причина не в «нераскрытом `/**`». WIP cd9f063 убрал `/**` только у таргета CLAP — он не собирался и в IDE; VST3/APP собирались.
 - Новое, не исправлялось:
   - **N1:** `SandModule::process` выделяет память в аудиопотоке (`AudioBuffer dryCopy (processed)` на каждый блок).
-  - **N2:** свежий клон Sand не собирается на маке: macOS `Info.plist` убраны из git (9d0c8ea), а `prepare_resources-mac.py` их только обновляет.
+  - **N2:** свежий клон Sand не собирается на маке: macOS `Info.plist` убраны из git (9d0c8ea), а `prepare_resources-mac.py` их только обновляет. → вероятно, закрыто коммитом автора 961be6c «puts back plists» (plist'ы снова в git).
   - **N3:** `Sand-aax.vcxproj` устарел целиком (нет `SandUI.cpp` и исходников hvoya).
   - **N4:** краш в FL Studio из BACKLOG — кандидаты F1/F3, не проверено.
   - На маке `param-conversions` ещё падает на enum-параметрах ('0.0202' → '0' → 'x1'). Исправлено в hvoya-linux `ef002e167`, в hvoya ещё нет.
