@@ -190,3 +190,143 @@ Behaviour changes on mac/win: N1 — none audible (bit-identical), no allocation
 Throwaway, safe to delete after the merge: `hvoya/Sand-t026-{base,linux,pre,diag}` + branches `tmp/t026-linux`, `tmp/t026-diag`; build dirs `linux-research/build/t026-*`. Stash snapshot: "T-026: before restoring regenerated main.rc_mac_dlg (mac branch build)".
 
 Next: independent review (AGENTS §4).
+
+
+### Review (round 1, 2026-10-17) — verdict: accept with minor fixes (no blockers)
+
+Independent reviewer (AGENTS §4), fresh context. Reviewed: Sand `master..fix/t026-followups` (22d920c N1, e026630 N3), iPlug2 `hvoya..fix/host-info-beat` (6dc1564d3 T21-5), `hvoya-linux...linux/T-026` (586b0a940: this file, `CROSS_PLATFORM_FINDINGS.md` rows, `evidence/t026/`). Nothing in product code or the worker's commits was changed.
+
+**Scope checks.** Main checkouts untouched: `hvoya/Sand` status = only the untracked `Media/` at 54be993; `IPlug2` clean at hvoya 228f1ea8e. `Sand-t026` clean. Shared code touched only on the T21-5 proposal branch (one file, `host_info_model.hpp`). N1 is 3 files / +30 −4, no unrelated refactor. Commit messages state mac/win behaviour per item. Nothing pushed.
+
+**N1 is correct.** Every audio-path buffer either already lived in a member or is now reserved in `OnReset`. The AudioBuffer semantics hold:
+- `reserve` only raises the vector's capacity.
+- `resize`/`setNumFrames` within that capacity does not reallocate.
+- `_tempBuffers`/`_dryHpBufs` are set to 1 channel in the constructor, so `reserve (1, …)` is enough.
+- `_dryBuf` grows only upward, so the stride of the `subBuffer (0, numFrames, numChans)` view is always ≥ numFrames.
+- `numChans` is clamped to `MAX_NUM_CHAN` in `ProcessBlock`.
+- The oversampler's `prepare (maxFrames, 2)` sizes every stage's scratch for 16x, so it covers every factor.
+- `GetBlockSize() == 0` only degrades to the old grow-on-demand behaviour.
+
+The audio is identical: the dry copy holds the same values as before.
+
+#### Findings
+
+**R1 — minor — commit 22d920c message and Log N1 "Fix" paragraph (line 99): "a host sending a block longer than its announced max still works (one allocation then)" is true for Sand only.**
+- With 32-bit I/O, iPlug core overflows first: `IPlugProcessor::AttachBuffers` copies into the per-channel scratch sized by the block size (`IPlug/IPlugProcessor.cpp:485`, `CastCopy`).
+- Reproduced with my copy of the renderer that announces a smaller max (`announce=64`, blocks up to 2048, f32):
+  - ASan reports a heap-buffer-overflow in `CastCopy`.
+  - Release dies with glibc "corrupted size" / "double free", **before and after N1 alike**.
+- With f64 I/O it works as claimed: N1 allocates only on the 2 oversized blocks (16 each), base and N1 renders are bit-identical, and ASan is clean (`build/t026-review-extra/over*.txt`).
+- Fix:
+  - Reword to "Sand's own buffers still grow on demand for such a block (iPlug's 32-bit scratch does not)".
+  - Add a low-severity `CROSS_PLATFORM_FINDINGS` row for iPlug core: a host that exceeds its announced max block with f32 I/O causes a heap overflow in AttachBuffers. VST3/CLAP hosts are not supposed to do this; AU rejects it.
+  - Report it, don't fix it.
+
+**R2 — minor — Log N1: the thread-safety argument for calling `prepareProcessBuffers()` from `OnReset` is missing.**
+- `OnReset` does not always run in a quiet setup call:
+  - CLAP `reset()` runs on the audio thread (`IPlugCLAP.h:107`).
+  - AAX calls `SetBlockSize`+`OnReset` inside the render callback (`IPlugAAX.cpp:290-292`).
+  - AU calls it from `DoReset` and from `kAudioUnitProperty_BypassEffect` (`IPlugAU.cpp:1237, 2448`). Hosts make those calls on a non-render thread, possibly while rendering.
+- The change is still safe:
+  - `reserve` can reallocate only when `GetBlockSize()` grew.
+  - Outside AAX, the block size grows only in calls that come while the plug-in is not processing (VST3 `setupProcessing`, CLAP `activate`, AU `MaximumFramesPerSlice`).
+  - In AAX, the growth happens on the audio thread itself.
+- Residue: in the AU bypass/reset path, `AudioBuffer::reserve` still rewrites `_channels` with identical pointers (and `_dataView` in Debug). That is formally a data race, though harmless.
+- A bigger race already existed there: the `updateOversampling` in the same `OnReset` resets the module and changes its rate (grind storage/lengths) while `ProcessBlock` may run.
+- Fix:
+  - Add these 3–4 lines to the Log.
+  - Optional, Sand-side: skip `prepareProcessBuffers()` when `GetBlockSize()` ≤ the size already prepared (a `_preparedMaxFrames` member), so audio-thread and AU-bypass resets don't touch the buffers at all.
+  - Add a `CROSS_PLATFORM_FINDINGS` row (report only) for the existing AU `BypassEffect`/`Reset` → `OnReset` → `updateOversampling` race with `ProcessBlock`.
+
+**R3 — minor — Log N1 audit table: not complete, and the proof's coverage is not stated.**
+- (a) The normal MIDI CC path has no row and is not exercised by the counter (`render-t026.cpp` sends no MIDI). The path is `Sand::ProcessMidiMsg` → `CCMediator::ProcessMidiCC` (`mediator.hpp:127`) → `Mapper::processMidiCC` (`mapper.hpp:97`: template callback, lock-free hazard-pointer read of the published `RTTable`) → `OnParamChange` → atomics. On reading, it does not allocate.
+- (b) The Debug-only plog sites on the audio path miss:
+  - `dmt_grind.hpp:148-153`: `DmtGrind::reset` logs 2 + 1 per line, per grinder. It runs from `SandModule::reset` on every oversampling change on the audio thread.
+  - `svf_zdf.hpp:263`: `checkSubnormal`, assert path.
+- (c) The measurement covers the CLAP wrapper only. The VST3/AU/AAX wrappers' own per-block code is not measured.
+- Fix: add a row for (a) ("by reading: none; not measured"), add (b) to the plog row, and add one sentence for (c).
+
+**R4 — minor — T21-5 test `evidence/t026/t21-5-beat-table.cpp:26-29`: the oracle is the fix's formula itself.**
+- The test runs the real header through a mock plug (`HostInfoModel::updateAll` → `getInfo`), so it proves that the header implements that formula and that the old formula disagreed in 265/432 cases.
+- But the "expected" values are not independent of the fix, and these cases are missing:
+  - negative PPQ (count-in);
+  - the fraction;
+  - 7/8 printed rows.
+- I checked these against hand-written expectations (`scratchpad/review/t215/neg.cpp`, Apple clang), at 97 BPM:
+
+  | Case | Result |
+  |---|---|
+  | 4/4 ppq −1, −0.5, −4.25 | beat 4 with fraction 0/50/75 — correct |
+  | 3/4 ppq −1; 6/8 ppq −0.5; 7/8 ppq 3.5, 3.75, −0.25 | correct |
+  | 4/4 ppq 1.25; 6/8 ppq 0.75; 2/2 ppq 3; 5/4 ppq 4.5 | correct |
+
+  The root cause and the formula are right, including negative PPQ through the floor-based modulo, fractional beats, 6/8 and 7/8.
+- Fix: replace `expectedBeat` with a hand-written table {num, den, ppq, beat, fraction} that includes negative PPQ, and check the fraction too.
+
+**R5 — nit — `host_info_model.hpp:189-191`: for a PPQ a hair below 0 (|beats| ≲ num·1e-16), `beats - num*floor(beats/num)` rounds to exactly `num` and the beat shows `num + 1`.**
+- Reproduced: 4/4 at ppq −1e-17 shows beat 5. At −1e-9 it shows beat 4, fraction 99, which is correct.
+- Display only, and a host must hand over such a PPQ.
+- Fix: `if (beatInBar >= num) beatInBar = 0;`, or clamp `i.beat` to `num`. Add that case to the R4 table.
+
+**R6 — nit — Log F2 (line 140): "0 of 35 were stale: a newer CC in that block is applied after the echo (params before MIDI), so the block always ends on the CC value" says more than the data shows.**
+- `f2-stepback.py` (re-run) prints `stale: 0; overridden by a newer CC in the same block: 0`. Every echo already equalled the latest CC, so the same-block-ordering mechanism was never exercised.
+- Also worth stating: iPlug's VST3 wrapper takes only the last point of each parameter queue per block (`IPlugVST3_ProcessorBase.cpp:297`). MIDI CC arrives through IMidiMapping params, so VST3 applies at most one CC per block. That is why the logs show 71 CC applications in VST3 against 381 in CLAP for the same item. It limits what the VST3 fast-sweep run can show.
+- Fix:
+  - Reword to "all 35 echoes carried the latest CC value, so no step-back was possible; the same-block ordering was never needed".
+  - Add the one-CC-per-block note.
+
+**R7 — nit — `evidence/t026/mac-branch/renders.txt`: the mac lines print `allocs=0` for master too.**
+- The malloc counter is Linux-only and compiled out on mac, so these zeros mean nothing. A reader could take them as a mac allocation proof.
+- Fix: add a header line to the file (or a word in the Log) saying "counter inactive on mac; only the hashes count".
+
+**R8 — nit — item 7 proposal: the Oversampling section has one more stale line.**
+- "Latency is measured once per factor via impulse response (6/7/8/8 …)" (`CLAUDE.md:70`) is out of date: the latency now comes from the `constexpr latencyForFactor` table (`oversampler.hpp:131`), and Sand does not use `measure_latency.hpp`.
+- The rest of the proposed text matches the code:
+  - 5 bands × 4 lines, lengths 53–887;
+  - cross-band injection, LFO on the first and last lines, `sum / numBands * _grindGain`;
+  - `srScale = sr*0.6/10000`, `maxSR = 192000*16`, `designRate()` for line lengths and LFO depth;
+  - the `grind` parameter range is 0–1 (`Sand.cpp:179`).
+- Fix: add "Latency per factor comes from `Oversampler::latencyForFactor` (6/7/8/8 for 2x/4x/8x/16x), reported via `SetLatency()` from `OnReset`."
+
+**R9 — nit (process) — a Docker container named `t026` (iplug2-linux:24.04, Xvfb) was still running at review time.** It was started about 20 minutes before the review began and is not mine. AGENTS §4.5: remove your containers at handover. Fix: `docker rm -f t026` once it is no longer needed.
+
+**Checked and fine:**
+- **N3:**
+  - Diffed with a script against `Sand-vst3.vcxproj`. The only differences are the VST3-format sources/headers (vst3 side) and the AAX-format ones (aax side).
+  - The project and `.filters` list identical ClCompile/ClInclude sets, and every filter used is defined.
+  - BOM and LF are preserved on both files; both parse as XML.
+  - The diff contains only item-list lines, the removal of `Sand.h`, and the new "hvoya" filter. No setting changed.
+  - `proposals/n3-aax-settings.diff` passes `git apply --check` on the branch and mirrors Sand-vst3 (`stdcpp23`/`stdc17`, the PreBuildEvent with "AAX").
+- **Audit-table line references** (`Sand.cpp:95/105/108-109/117/333`, `sand_module.hpp:170/187-188/194/317/914/1083`, master `:304`, hvoya `host_info_model.hpp:58/71/81`, `audio_buffer.cpp:19`, `mapper.cpp:128/230`, `oversampler.hpp:163/202`, `IPlugAAX.cpp:291`) all point at the code described.
+- `PLOG_DISABLE_LOGGING` is set in Release in `Sand-mac.xcconfig:29`, `Sand-win.props:8` and `hvoya.cmake:61`.
+- The CPU and mac render evidence matches the Log: 46/46 mac hashes are equal; the CPU spreads are as stated.
+- The commit messages for N1, N3 and T21-5 explain the mac/win behaviour, and the Log states honestly what was not done: no Windows/AAX build; mac F2, auval, Bitwig and Live left to the user's checklist.
+
+#### Re-run by the reviewer (new output dirs only)
+
+- **N1 allocations, Linux Docker, the worker's builds, `run-allocs.sh`:**
+  - after (`build/t026-review-allocs-after`): **47/47 configurations with `allocs=0` in total, first block included**;
+  - before (`build/t026-review-allocs-before`): 1 per block, 316 958 blocks, plus 12–24 on the first block and 13 per os change;
+  - **`render.sha256` before = after (47/47)**, and equal to the worker's `allocs-after/render.sha256`; non-finite 0.
+  - I checked that the n1 build's source tree (`Sand-t026-linux`) matches `fix/t026-followups` in `Sand.cpp`/`Sand.hpp`/`sand_module.hpp`, and that the base build is `Sand-t026-base`.
+- **Extra N1 cases** (`build/t026-review-extra/extra.txt`):
+
+  | Case | Result |
+  |---|---|
+  | Announced max 1 | 0 allocations |
+  | os swept every block at max 256 | 0 allocations |
+  | Both, ASan | clean |
+  | Both, base vs N1 renders | bit-identical |
+
+  Oversized blocks: see R1.
+- **N4 stress, quick** (`run-stress.sh … build/t026-review-stress quick`): **160 Release + 160 ASan renders, 0 crashes, 0 ASan reports, 0 non-finite** (rates 44.1–192 kHz × os 1–8x × filter/mix sweeps × 0-frame blocks with valid/null pointers), as the Log claims.
+- **T21-5:**
+  - built with Apple clang into the scratchpad from the line in the test's header comment (plus `-I Sand-t026`);
+  - result: "old formula wrong in 265, header wrong in 0", rc 0, the same as `t21-5-apple-clang.txt`;
+  - my additional hand-written cases: R4/R5.
+- **F2:**
+  - opened `f2-sweep-vst3/f01-end.png`: REAPER 7.82, VST3 Sand open, comp knob at 0.000 at the end, transport stopped;
+  - `run.log` has `host-value compression amnt 0.000 env-points 17`;
+  - `f2-stepback.py`: VST3 has 35 echoes, 0 stale, 0 step-backs; CLAP has 0 echoes. See R6 for the wording.
+
+Required before handover: R1–R4 (text and test only; no product-code change is required). R5–R9 are optional.
