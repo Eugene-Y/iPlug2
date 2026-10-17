@@ -8,8 +8,9 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ARCHIVE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"; OUT="$2"; IMAGE="${3:-iplug2-rt:ubuntu22.04}"
 C="t021-smoke-$(echo "$IMAGE" | tr -c 'a-zA-Z0-9\n' '-')"
 mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"
-PLATFORM=linux/arm64; [[ "$IMAGE" == *-amd64 ]] && PLATFORM=linux/amd64
+PLATFORM=linux/arm64; EMULATED=0
+[[ "$IMAGE" == *-amd64 ]] && { PLATFORM=linux/amd64; [ "$(uname -m)" = arm64 ] && EMULATED=1; }
 IMAGE="$IMAGE" DOCK_PLATFORM="$PLATFORM" "$HERE/gui-up.sh" "$C" >/dev/null
 trap 'docker rm -f "$C" >/dev/null 2>&1' EXIT
-"$HERE/gx.sh" "$C" scripts/package-smoke-in.sh "$ARCHIVE" "$OUT" 2>&1 | tee "$OUT/smoke.log"
+"$HERE/gx.sh" "$C" env SMOKE_EMULATED=$EMULATED scripts/package-smoke-in.sh "$ARCHIVE" "$OUT" 2>&1 | tee "$OUT/smoke.log"
 grep -q 'RESULT: PASS' "$OUT/smoke.log"

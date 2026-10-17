@@ -12,4 +12,5 @@ CMDS=$(mktemp /tmp/gdbc-XXXX)
   done
   echo "continue"
 } > "$CMDS"
-timeout -s INT "$SECS" gdb -q -batch -p "$P" -x "$CMDS" </dev/null 2>&1 | grep -E '^HIT' | sort | uniq -c
+# gdb sometimes ignores the INT while it is still reading symbols; -k kills it so the caller never hangs.
+timeout -s INT -k 10 "$SECS" gdb -q -batch -p "$P" -x "$CMDS" </dev/null 2>&1 | grep -E '^HIT' | sort | uniq -c

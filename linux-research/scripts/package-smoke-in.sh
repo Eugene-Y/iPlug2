@@ -43,8 +43,15 @@ grep -qE 'Result: [0-9]+ tests passed, 0 tests failed' "$OUT/vst3-validator.txt"
 grep -qE '[0-9]+ tests run, [0-9]+ passed' "$OUT/clap-validator.txt" || fail "clap-validator did not run its tests"
 
 # gdb finds the split symbols by build id, as it would for a crash report from the field. Reading them takes
-# a few seconds, hence the longer count window.
-export GDB_COUNT_SECS=20
+# a few seconds, hence the longer count window. Under emulation (SMOKE_EMULATED=1, x86_64 on Apple silicon)
+# gdb breakpoints never fire and llvmpipe is slow: skip the count, wait longer for the first frame.
+if [ "${SMOKE_EMULATED:-0}" = 1 ]; then
+  export GDB_COUNT_SECS=0 REAPER_OPEN_WAIT=10
+else
+  export GDB_COUNT_SECS=20
+fi
+# A REAPER left behind by an earlier phase would take over the next start ("activating running instance").
+stop_reaper() { pkill -x reaper 2>/dev/null; sleep 1; pkill -9 -x reaper 2>/dev/null; true; }
 DEBUG_ARCHIVE="${ARCHIVE%.tar.gz}_debug-symbols.tar.gz"
 if [ -f "$DEBUG_ARCHIVE" ]; then
   mkdir -p /usr/lib/debug && tar -xzf "$DEBUG_ARCHIVE" -C /usr/lib/debug --strip-components=1
@@ -53,13 +60,14 @@ fi
 echo "--- REAPER"
 for P in "$CLAP" "$VST3"; do
   FMT=$(echo "${P##*.}" | tr a-z A-Z)
-  timeout 900 "$HERE/reaper-plugin-test.sh" "$OUT/reaper-${FMT,,}" "$FMT: $NAME" "$P" "" > "$OUT/reaper-${FMT,,}.log" 2>&1
+  stop_reaper
+  timeout -k 10 900 "$HERE/reaper-plugin-test.sh" "$OUT/reaper-${FMT,,}" "$FMT: $NAME" "$P" "" > "$OUT/reaper-${FMT,,}.log" 2>&1
   echo "$FMT: $(tail -n +1 "$OUT/reaper-${FMT,,}/RESULT.txt" 2>/dev/null | head -1)"
   grep -q 'RESULT: PASS' "$OUT/reaper-${FMT,,}/RESULT.txt" 2>/dev/null || fail "REAPER $FMT (see reaper-${FMT,,}.log)"
 done
 
 echo "--- standalone (as customer, --no-io)"
-pkill -x reaper 2>/dev/null; sleep 1
+stop_reaper
 as_customer "DISPLAY=:99 '$APP' --no-io > /tmp/app-stderr.txt 2>&1 & echo \$! > /tmp/app.pid"
 sleep 6
 cp /tmp/app-stderr.txt "$OUT/app-stderr.txt" 2>/dev/null
@@ -72,14 +80,15 @@ pkill -x "$NAME" 2>/dev/null; sleep 1
 
 echo "--- CLAP without its .resources folder"
 mkdir -p /tmp/nores && cp "$CLAP" /tmp/nores/
-timeout 600 "$HERE/reaper-plugin-test.sh" "$OUT/nores" "CLAP: $NAME" /tmp/nores/"$NAME".clap "" > "$OUT/nores.log" 2>&1
+stop_reaper
+timeout -k 10 600 "$HERE/reaper-plugin-test.sh" "$OUT/nores" "CLAP: $NAME" /tmp/nores/"$NAME".clap "" > "$OUT/nores.log" 2>&1
 grep -E 'REAPER ALIVE|render\[|RESULT' "$OUT/nores.log" | head -8
 grep -i 'iPlug2:' /tmp/reaper.log > "$OUT/nores-messages.txt"
 cat "$OUT/nores-messages.txt"
 grep -q "resource folder .*/$NAME.resources/ not found" "$OUT/nores-messages.txt" \
   || fail "CLAP without resources: no message naming the missing folder"
 grep -q 'REAPER pid .* dead' "$OUT/nores.log" && fail "CLAP without resources crashed REAPER"
-pkill -x reaper 2>/dev/null; sleep 1
+stop_reaper
 
 echo "--- system install"
 (cd "$SRC" && ./install.sh --system) > "$OUT/install-system.txt" 2>&1 || fail "install.sh --system exit $?"
