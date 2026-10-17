@@ -274,3 +274,9 @@ Hand-over:
 - Evidence `evidence/t021/` (dist, smoke-r1, smoke, smoke-r2, findings); full screenshots and logs only in the session scratchpad.
 - For the coordinator/user: cherry-pick ac4ca870f (T21-2) to `hvoya`; decide X1 (now also R2-1), T21-3, T21-5; rebuild the archives after the hvoya update; R12.
 - Containers removed, lock released, worktree left in place. Docker images added: `iplug2-linux:22.04-amd64`, `iplug2-linux:22.04-gcc13-amd64`, `iplug2-rt:{ubuntu22.04,ubuntu24.04,debian12,fedora}` and `…-amd64` (no Fedora amd64).
+
+**2026-10-17 — user decisions after hand-over, carried out:**
+- **X1 must be fixed** → new task **T-025** (`tasks/T-025-setlatency-race.md`, board row, priority "important"; 8ef86da9c). T-010 had explicitly excluded X1, so nothing covered it; T-010 now points to T-025.
+- **T21-2 cherry-picked to `hvoya`** (main checkout, user-approved): `59c33feec` (`-x` from ac4ca870f), clean apply, not pushed. Checked on macOS: Gneiss `master` 4dc02eb CLAP Release builds against that `hvoya` with xcodebuild (temporary detached worktree `hvoya/Gneiss-t021mac`, removed; SYMROOT/OBJROOT/DSTROOT in the session scratchpad; nothing installed in `~/Library`).
+- **R12: keep** Gneiss 3b9767e.
+- **T21-3 fixed** (kept because it makes hosts' missing context safe): ca34a2e69 — the VST3 wrapper takes tempo and time signature only with `kTempoValid`/`kTimeSigValid`, as the CLAP wrapper does with its flags. macOS IPlugEffect VST3 Debug builds (xcodebuild, scratch paths; the `plug_build_info.hpp` it writes into `Examples/IPlugEffect` was moved out, hvoya.cmake's guard caught it). Linux IPlugEffect VST3 validator: 536/537, the same single failure as `hvoya-linux` without the change — "Parameter 001 (id=0): has no title" (IPlugEffect example on `hvoya-linux`; not looked into, for whoever owns the examples). **Not yet on `hvoya`**: cherry-pick only with the user's OK.
