@@ -49,6 +49,9 @@ On first open, pick a configure preset: **Linux Debug** (or Linux Release). VS C
 that checkout, and configuring runs on its own from then on. clangd gets its compile database from
 `build-linux/compile_commands.json`, which CMake Tools refreshes after each configure.
 
+Projects built as C++23 that use hvoya's `constexpr` lookup tables (Sand) need clangd 19 or newer; Ubuntu 24.04's
+default is 18. Install `clangd-19` and set `"clangd.path": "clangd-19"` in your own VS Code user settings.
+
 `<Name>.code-workspace` and `.vscode/c_cpp_properties.json` in the same folder belong to the macOS/Windows setup;
 use the `-linux` workspace on Linux.
 

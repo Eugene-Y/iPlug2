@@ -59,4 +59,17 @@ function(hvoya_add_utils name product)
     ${_build_info_dir})
   target_sources(${name} INTERFACE ${_utils_sources})
   target_compile_definitions(${name} INTERFACE $<$<CONFIG:Release>:PLOG_DISABLE_LOGGING>)
+
+  # The Xcode/VS pre-builds write plug_build_info.hpp next to the plug-in's sources, and #include "…"
+  # finds that copy before the generated one: a CMake build in the same checkout would silently embed
+  # the other build's platform, product and commit. Checked at every build, since that copy can appear
+  # after the configure.
+  set(_check_script ${CMAKE_CURRENT_BINARY_DIR}/${name}-check-build-info.cmake)
+  file(WRITE ${_check_script}
+"if(EXISTS \"${CMAKE_CURRENT_SOURCE_DIR}/plug_build_info.hpp\")
+  message(FATAL_ERROR \"${CMAKE_CURRENT_SOURCE_DIR}/plug_build_info.hpp (written by an Xcode/VS build) would shadow the generated build info. Delete it; Xcode/VS write it again on their next build.\")
+endif()
+")
+  add_custom_target(${name}-check-build-info COMMAND ${CMAKE_COMMAND} -P ${_check_script} VERBATIM)
+  add_dependencies(${name} ${name}-check-build-info)
 endfunction()
