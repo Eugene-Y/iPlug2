@@ -1,0 +1,17 @@
+# T-006: REAPER state round trip of FX 0 on track 0, for any plug-in (layout-independent).
+# GetTrackStateChunk saves the plug-in state (CLAP stateSave); SetTrackStateChunk loads it back (stateLoad, which
+# now calls params->rescan(VALUES) from inside the host's call). REAPER hands TrackFX_SetParam* to a CLAP through
+# process/flush, i.e. later, hence one step per change with a wait in between.
+wait 1
+lua-expect ^SET$ local t=reaper.GetTrack(0,0); reaper.TrackFX_SetParamNormalized(t,0,0,0.25); out("SET")
+wait 1
+lua-expect ^SAVED=0\.250$ local t=reaper.GetTrack(0,0); local _,ch=reaper.GetTrackStateChunk(t,"",false); reaper.SetExtState("t006","chunk",ch,false); out(string.format("SAVED=%.3f", reaper.TrackFX_GetParamNormalized(t,0,0)))
+lua-expect ^SET$ local t=reaper.GetTrack(0,0); reaper.TrackFX_SetParamNormalized(t,0,0,0.9); out("SET")
+wait 1
+lua-expect ^MOVED=0\.900$ local t=reaper.GetTrack(0,0); out(string.format("MOVED=%.3f", reaper.TrackFX_GetParamNormalized(t,0,0)))
+shot before-load
+lua-expect ^LOADED=0\.250$ local t=reaper.GetTrack(0,0); reaper.SetTrackStateChunk(t,reaper.GetExtState("t006","chunk"),false); out(string.format("LOADED=%.3f", reaper.TrackFX_GetParamNormalized(t,0,0)))
+wait 1
+shot after-load
+lua-expect ^STILL=0\.250$ local t=reaper.GetTrack(0,0); out(string.format("STILL=%.3f", reaper.TrackFX_GetParamNormalized(t,0,0)))
+alive reaper
