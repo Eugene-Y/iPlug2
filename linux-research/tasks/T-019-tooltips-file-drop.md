@@ -209,3 +209,33 @@ key tests pass on re-run.
 - **R6:** for T-013 (REAPER forwards only the first three types of a source; GNOME Files lists text/uri-list third).
 - **R7:** `notes/22` is updated by the coordinator at the merge.
 
+### Review round 2 (independent reviewer, 2026-10-18)
+Checked the diff `f987ca7a1..91eb15c82`: code changes only in `IGraphicsLinux.cpp` and `IGraphicsLinuxDrop.h`.
+- **R1 is fixed.** `MakeInputTransparent` dlopens `libXext.so.6`, the same way libXcursor, fontconfig and libGL
+  are loaded, and sets an empty `ShapeInput` region. The constants are right (ShapeInput 2, ShapeSet 0,
+  Unsorted 0), and the call runs inside `ShowTooltip`'s X error trap. The fallback `mTooltipTakesPointer` hides the
+  tooltip once the pointer moves more than 4 px; it re-arms only on another control, consistent with the click rule.
+  In Docker, my round-1 overlap steps (`review/tooltip-overlap.txt`) on Sand CLAP:
+  - Before the fix: the tooltip disappeared, the hover dropped, and it came back only after another move.
+  - Now the tooltip stays where it was in `o02`, `o03` and `o05`, and the spurious mouse-out is gone. Screenshots
+    looked at: `evidence/t019/review2/tooltip-overlap/`.
+- **R2 is fixed.** `Release()` sends `XdndFinished(false)` while a read is in progress, before the display closes.
+  `SendFinished` still guards against a missing source.
+- **R3 and R5 are fixed**, and the reasons given for keeping R4 and for R6/R7 are fine.
+
+Re-run in Docker (container `t019r`):
+- Sand clap+vst3 release build: PASS.
+- `review/tooltip-overlap.txt` on CLAP: PASS. The tooltip stays while the pointer passes over it.
+- `scripts/steps/sand-tooltip.txt` on CLAP: PASS, including the new `t01b` step. I looked at `t01b`: the tooltip is
+  still shown with the pointer on it. The close/reopen ×5 loop and the second instance also ran; REAPER stayed alive.
+- NEEDED of `Sand.clap`: libX11, libm, libc and ld-linux only (`review2/needed.txt`).
+
+New findings (nits only, no fix required):
+- **N1 — nit — `IGraphicsLinux.cpp` `MakeInputTransparent`.** It checks only `XShapeQueryExtension`, not
+  `XShapeQueryVersion` ≥ 1.1. A Shape 1.0-only server would reject `ShapeInput` with an error (trapped), yet the
+  function returns true, so the fallback would not engage. Shape 1.1 dates from 2006, so this is theoretical.
+- **N2 — nit.** The fallback path (no libXext, or no Shape extension) was not exercised. Xvfb, like GNOME, has
+  Shape. It reads correct.
+
+**Final verdict: accept.**
+

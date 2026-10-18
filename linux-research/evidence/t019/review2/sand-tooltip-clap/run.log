@@ -1,0 +1,37 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=1618 (open)
+render[first-open] ok (stddev 0.177166)
+view origin 113 188
+[xact] origin 113,188
+[xact] move 256 -40
+[xact] shot t00-no-tooltip
+[xact] move 256 94
+[xact] shot t01-tooltip
+[xact] changed t00-no-tooltip -> t01-tooltip in view rect 310,120 90x30 (2695 px)
+[xact] move 262 128
+[xact] shot t01b-pointer-on-tooltip
+[xact] same t01-tooltip -> t01b-pointer-on-tooltip in view rect 310,120 90x30
+[xact] move 256 -40
+[xact] shot t02-gone
+[xact] same t00-no-tooltip -> t02-gone in view rect 310,120 90x30
+[xact] move 256 94
+[xact] shot t03-tooltip-again
+[xact] changed t02-gone -> t03-tooltip-again in view rect 310,120 90x30 (2695 px)
+[xact] ALIVE pid 1618
+REAPER ALIVE pid=1618 (steps)
+REAPER ALIVE pid=1618 (reopen 1)
+REAPER ALIVE pid=1618 (reopen 2)
+REAPER ALIVE pid=1618 (reopen 3)
+REAPER ALIVE pid=1618 (reopen 4)
+REAPER ALIVE pid=1618 (reopen 5)
+render[after-reopen] ok (stddev 0.177166)
+add2 0
+REAPER ALIVE pid=1618 (two instances)
+render[second-instance] ok (stddev 0.177166)
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+     13 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=1
+    274 HIT iplug::igraphics::IGraphicsLinux::OnDisplayTimer tid=1
+    274 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
+REAPER ALIVE pid=1618 (end)
+RESULT: PASS
