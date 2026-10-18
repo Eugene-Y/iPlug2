@@ -330,3 +330,39 @@ Gneiss branch now: `b600156` C3 · `36e1712` C5 · `75109bb` tail · `f3b6b77` d
    - Optional: the stash entries "T-028: before restoring regenerated main.rc_mac_dlg (1–3)".
 
 CROSS_PLATFORM_FINDINGS: T28-a and T28-b are now fixed in Gneiss; in iPlug they remain report-only.
+
+### Review round 3 (independent reviewer)
+
+**Verdict: approved.** Gneiss `0f912c3`, the Log (5)–(6) (`0f744f80a`) and the merge order were checked. There are no findings.
+
+**Code (`0f912c3`):**
+- **`setNumberText` prints the same text as iPlug's default display.**
+  - iPlug's `IParam::GetDisplay` falls through to `"%.*f", mDisplayPrecision` when the precision is > 0 and neither `kFlagSignDisplay` nor `kFlagNegateDisplay` is set.
+  - All 13 params are `InitDouble` without flags, at step 0.001 or 0.0001, so precision 3 or 4.
+  - The only difference is |v| < half a display step → 0 instead of "-0.000".
+  - `halfUnit` matches the rounding boundary: `0.5 * 10^-3` is exactly `double (0.0005)`, and `-0.0005` itself still prints "-0.001".
+  - The count of 13 is right: tilt, band mode, 5 main UB, 6 pre-filter UB.
+- **The parsers keep atof's reading.** `readNumber` is `strtod (text, nullptr)`, i.e. `atof`, except that NaN gives 0.
+- **The probe loop catches exactly the right params, in the right place.**
+  - `IParam::Init` resets `mTextToValueFunction` (`IPlugParameter.cpp:177`), so the loop has to run last. It does: after every `Init*` and `setText` in `initializeParams`, and nothing re-inits a param later.
+  - The probe `StringToValue ("nan")` has no side effects (`Constrain` is pure).
+  - It skips params that already have a parser, which return 0, and enums/bools, which never reach atof.
+  - It catches doubles and `InitInt` params: the int path is atof → `Constrain`, and rounding still happens in `Constrain` after the new parser.
+  - Gneiss has no `SetDisplayText` or `kFlagNegateDisplay`, so the replaced default path was atof alone.
+- **Audio and state cannot change:** only display and parse functions are touched, set once at construction; nothing new reaches the audio thread.
+- **Comments are WHY only** (the loop's ordering constraint, the reason for `setNumberText`).
+
+**Re-run by me** on `build/t028-after` (built 19:15 from `tmp/t028-linux` 10475c7 = `linux-experiment` + `0f912c3`; `Gneiss.cpp` differs only by `linux-experiment`'s own delta, and `param_text.hpp` is identical). Outputs are in `build/t028r-val/pt-after-r3.txt` and `build/t028r-renders-after-r3/`, not committed.
+- param-text: **FAIL 0, JUMP 13** (the sat-type ring top, expected), **nan-fails 0, typed 0** (55 cases).
+- Renders vs base: **54/54 render + 54/54 state identical**. Input changed 0, allocations 0, non-finite 0.
+- clap-validator ×3: 38 / 0 / 0 warnings.
+- I read the mac evidence but did not re-run it: `auval/auval-after.txt` says "AU VALIDATION SUCCEEDED" with Tail Time verified, and `mac-validators/summary-final.txt` agrees with the Log.
+
+**Branch history.** It was rewritten once more for R2-N1/N2: `5b31aa0` and `fac2232` have the same trees as `75109bb` and `f3b6b77`, and `4ce2594` differs from `725dfa7` only by the ARCHITECTURE §7 wording. R2-N1 is fixed: the VST2 tail is now "2 instead of 1". R2-N2 is fixed: "besides re-declaring the host-facing tail".
+
+**Merge order (6) is right:**
+1. Gneiss branch → `master`. It needs `SetTextToValueFunc` / `makeSegmentedParser` from 228f2efc2, which is in both `hvoya` and `hvoya-linux`.
+2. `master` → `linux-experiment`, then rebuild. Do not merge `tmp/t028-linux`, which carries pre-rewrite SHAs.
+3. `linux/T-028` → `hvoya-linux`, only after 2, because of `known-clap-failures/Gneiss.txt` (M5).
+4. Smoke.
+5. Clean-up.
