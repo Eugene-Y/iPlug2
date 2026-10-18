@@ -125,3 +125,77 @@ Next: mac build + validators, REAPER steps, VST3 validator ×10; tail proposal t
 `scripts/known-clap-failures/Gneiss.txt` is now empty: valid once the Gneiss branch is merged into `linux-experiment` (until then `package-smoke-in.sh` of the old Gneiss reports its 4 known failures as new).
 
 Next: independent review.
+
+### Review round 1 (independent reviewer)
+
+**Verdict: changes requested — minor only.** The code is approved: no blocker, no major. Findings M1–M3 are about the wording of commit messages and the Log, which is what the user's merge decision rests on. M4 needs a decision. Round 2 only needs to re-read the reworded texts, unless M4 leads to a code change.
+
+**Reviewed:** Gneiss `master..fix/t028-input-text-tail` (b600156, 3e0cb40, 2f84c42, 74552f1); `tmp/t028-linux` 2684dd5 (= linux-experiment 8a0f05b + fix branch up to 2f84c42; it lacks only the docs commit); IPlug2 `hvoya` (read-only): `IPlugCLAP.cpp` process status/`SetTailSize`/`activate`/`reset`, VST3 `getTailSamples`, AUv2 `TailTime`, AUv3 `tailTime`, VST2 `effGetTailSize`, `IParam::StringToValue`, clap-helpers `canUseTail`/`tailChanged`; hvoya `AudioBuffer::copyContentFrom`, `Oversampler::upsample/downsample`, `makeSegmentedDisplay/Parser`.
+
+**Re-run by me** (own build `build/t028r-after` from `Gneiss-t028-linux` 2684dd5 in Docker, Release; outputs in `build/t028r-*`, not committed):
+- Renders, `run-renders.sh` with `ref-morph.state`, base `build/t028-base` vs `t028r-after`: **54/54 render.sha256 and 54/54 state.sha256 identical**. Both files are also byte-identical to the executor's `linux-after/*.sha256`. Input changed: 5 568 000 (base) → **0**. Allocations in `process()`: 0 / 0. Non-finite: 0.
+- param-text, Linux: base `FAIL=82739 JUMP=4 nan-fails=53 typed-fails=25`, after `FAIL=16 JUMP=13 nan-fails=41 typed-fails=0`, as logged. On mac (`mac-after` Debug CLAP, binary built 12:40, after 2f84c42): the same after totals.
+- clap-validator, Linux after ×6: 38 pass / 0 fail / 0 warnings each time. The four target tests ran and passed. On mac after ×2: 38 / 0.
+- VST3 `validator -e`, Linux after ×3: 537 passed / 0 failed, exit 0. Without `-e` it runs 47 tests, so the Log's 537 is the `-e` count; the Log should say so.
+- REAPER screenshots I looked at: `reaper-clap/g01-knob.png` shows the UI with real values. `reaper-vst3/g04b-context-menu.png` shows no menu: that is T28-c, pre-existing. `gdb-crash.txt` is only the final SIGINT thread dump, not a crash.
+
+**Checked and OK:**
+- C3:
+  - `processChunk` takes `const AudioBuffer& input`. The const is enforced by the API: `getChan`, `*=` and `+=` are non-const.
+  - Every path from the host buffers was followed: `_dryBuf.fillFrom (input)`, `output.fillFrom (input)` at 1x, `upsample (input, _osBuffer)` at >1x. `_model.processBuffer` gets `work` = `output` or `_osBuffer`; `downsample` writes into `output`; mix, gain and the dry sum operate on `output` and `_dryBuf`. Nothing else in `ProcessBlock` touches `ins`.
+  - In-place hosts are safe. `_dryBuf` is copied before anything writes `output`. `copyContentFrom` skips the self-copy (`ins == outs`), and at >1x `upsample` reads `input` before `downsample` writes `output`.
+  - No new buffer; `getMinChans` handling is unchanged.
+- C5:
+  - Every display function in Gneiss (all of them are in `initializeParams`; grep over `*.cpp`/`*.hpp` finds none elsewhere) now goes through `setText`, `setPercentText` or `setRingBlendText`. Each one's display and parser are built from the same `SegmentedText` or names list.
+  - Lambda captures are by value. The `string_view`s point at literals or at the `static constexpr` `kDampingTimeOffLabel`, and the sat-type `span` points at the `inline constexpr` `kSatTypeNames`, so nothing dangles.
+  - The NUL-termination assumption holds. Every `data()` that reaches `strtod` is a suffix of the original `const char*`: only `trimLeft`/`substr`/`remove_prefix` are applied; `trimRight` is used only for comparisons.
+  - NaN → 0 happens before `Constrain`, which would let NaN through.
+  - "State and automation never go through text" is confirmed: Gneiss has no `StringToValue`, `atof` or `OnTextEntryCompletion` of its own, and `TextToValueFunc` is reached only from `IParam::StringToValue`. The renders and states above are bit-identical.
+- Tail, threads and lifecycle:
+  - Constructor: `IPlugCLAP::SetTailSize` → `canUseTail()` is false before `init` (`_hostTail` is null), so nothing is queued.
+  - `activate` → `OnReset` → `mTailUpdate = true` → `tailChanged()` from the next `process()`. That is the audio thread, which is what clap-helpers' `ensureAudioThread` requires.
+  - CLAP `reset()` (audio thread) → `OnReset` → the same path. Harmless.
+  - No allocation: `SetTailSize` only stores an int.
+  - VST3 `getTailSamples` = `GetTailSize()`; AUv2/AUv3 report `GetTailSize()/GetSampleRate()` = 15 s at any rate.
+  - CLAP without the host tail extension: `localTail` gives `CONTINUE` until 15 s of silent input, then `SLEEP`. That matches `tail-status-linux.txt` (first sleep at frame 768 000).
+- Code quality:
+  - `param_text.hpp` reads well and is small. The `gneiss::params` namespace matches the existing `gneiss::ui`.
+  - Comments carry WHY only.
+  - The removed gain-display comment about the morph epsilon (±1e-4) is covered: the segmented display now zeroes `|v| < 0.05`.
+  - No stale comments found around the changed code. The C3 and C5 commit messages are accurate, and each says what changes on mac/win.
+
+**Findings**
+
+- **M1 (minor) — the tail commit message `2f84c42` misdescribes CLAP hosts without the tail extension.**
+  - It says "hosts without it still decide by the output" and "hosts keep processing Gneiss for 15 s … instead of stopping at once".
+  - For those hosts it is the other way round. Before, they *did* decide by the output (`CONTINUE_IF_NOT_QUIET`): they kept processing as long as the output was audible, including an endless self-oscillation, and stopped a silent Gneiss at once. Now iPlug's local tail returns `CONTINUE` for exactly 15 s of silent input, then `SLEEP`: it keeps a silent Gneiss awake for 15 s and cuts a sustained self-oscillation at 15 s.
+  - The Log's (3) list states this correctly; the commit message (unpushed, so it can be reworded) and the headline "hosts no longer cut Gneiss's ring" should match it. Suggested wording: "CLAP hosts without the tail extension: was CONTINUE_IF_NOT_QUIET (the host watched the output), now CONTINUE for 15 s of silent input, then SLEEP."
+- **M2 (minor) — the mac/win behaviour list for the tail is incomplete (Log (3) and the commit message).**
+  - VST2 (the Windows project `Gneiss-vst2.vcxproj` exists): `effGetTailSize` now returns 2 instead of 1. That is iPlug's encoding (`IPlugVST2.cpp:767`, `min(2, tailSize)`): "has a tail" instead of "no tail"; it never reports 15 s.
+  - AUv3 (iOS project): `tailTime` is 15 s.
+  - Hosts that size offline bounces/freezes, or auto-suspend, by the reported tail may now run up to 15 s longer after the material ends. Logic's "Include Audio Tail" reads AU `TailTime`; Cubase/Nuendo suspend VST3 plug-ins by `getTailSamples`. This is worth one line for the user; the effect depends on the host and I did not verify it per host.
+  - AAX: no change; the wrapper has no tail.
+- **M3 (minor) — the C5 display-change list misses one case.** For damping release in [9.95, 10] ms, the old display printed "R 10.0 ms" (`v > 10` was the integer branch) and now prints "R 10 ms".
+  - This follows from the code: segment `{10, ms, 1}` hands values ≥ 9.95 to the next segment.
+  - The 8001-value dump has no sample in that 0.05 ms window, so `display-text-diff-linux.txt` cannot show it.
+  - Add it next to "H 10.0 ms → H 10 ms" in the Log and the `3e0cb40` message. The x.5-ms tie change (round-half-even) is in the Log but not in the commit message either.
+- **M4 (minor, user decision) — acceptance "every parameter's display text parses back" is not fully met.**
+  - Two Gneiss params, `pt tilt` and `preFlt band mode`, still fail the round trip in the sliver (−0.0005, 0): "-0.000" → "0.000", 16 FAIL. By the same mechanism the 8 UB params' slivers are narrower than the grid (T28-a).
+  - The cause is iPlug's default display, so it is reported as T28-a. It is a Gneiss parameter all the same, and clap-validator `param-conversions` can hit it by chance (rarely).
+  - Options for the user:
+    - fix T28-a in iPlug (one place, all plug-ins);
+    - or give these bipolar params a `param_text.hpp` display with the same zero snap — a few lines, no state change.
+  - Either is fine; it needs a decision.
+- **M5 (minor, for the coordinator) — merge order for `scripts/known-clap-failures/Gneiss.txt`.** It is emptied on `linux/T-028`. If `linux/T-028` merges into `hvoya-linux` before `fix/t028-input-text-tail` reaches `linux-experiment`, `package-smoke-in.sh` reports Gneiss's 4 old failures as new. The Log says so; the coordinator should merge the two together, or the Gneiss side first.
+- **N1 (nit)** — the Log says "OnReset only stores host-facing state, nothing of the audio thread". IPlugCLAP's `process()` does read `mTailSize`/`mTailUpdate`. With FL Studio's activate-during-process, that is a formal (benign, same-value) race on plain ints in iPlug's design, and ARCHITECTURE §7's "OnReset only raises `_audioResetPending`" is now one call less literal. A wording fix is enough. Calling `declareTail()` only when the rate changed would also drop the redundant `tailChanged()` on every activate; that is optional.
+- **N2 (nit)** — the 15 s tail is a lasting product decision, but it is documented only in the `Gneiss.hpp` comment and the commit. One line in ARCHITECTURE.md (§1 or §7) would follow the doc-maintenance rule.
+- **N3 (nit)** — `makeDisplay` formats `offValue` into a fresh `WDL_String` on every display call. It is UI/host thread only, so this is not a correctness issue; the off text could be formatted once at build time.
+- **N4 (nit)** — ring parser:
+  - "TANH > ASINH 30%" (a space after `>`) reads as TANH 0%, because `rest` is not `trimLeft`ed before the second name is skipped;
+  - the second name is not checked ("TANH>TASSYM 30%" reads as TANH→ASINH 30%). The comment says it is implied; that is acceptable.
+  - Pre-existing in old and new code alike: the sat-type display indexes `names[int (v) % n]` unguarded, so a host passing an out-of-range or NaN normalized value to `value_to_text` (iPlug does not clamp doubles there) reads out of bounds.
+- **N5 (nit, evidence)**:
+  - `clap-validator-linux-x20.txt` starts with two stray build lines, and "base sleep-test fail lines: 20 2" is cryptic. The raw per-run outputs were not kept.
+  - The three status lines in `tail-status-linux.txt` are unlabeled: after@48k, base, after@96k, as far as I can tell from the Log.
+  - The VST3 count is from `validator -e`.
+  - The `t028` Docker container is still running: remove it at handover (AGENTS §4.5).
