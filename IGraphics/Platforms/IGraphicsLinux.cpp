@@ -1970,7 +1970,6 @@ void IGraphicsLinux::WatchTopLevel()
     watchMask(w.mTopLevel, NoEventMask);
     watchMask(topLevel, PropertyChangeMask);
     w.mTopLevel = topLevel;
-    w.mFileDrop.SetTopLevel(topLevel);
   }
   UpdateTopLevelHidden();
 }

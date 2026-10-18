@@ -57,27 +57,37 @@ Sand editors are 170–200 px tall, multi-line tooltips would be clipped.
   open and refreshes its text if the control's tooltip changed.
 - The swap-interval code moved into `DisableSwapWait()` (used for both windows).
 
-**XDND (c35d5f415).** `IGraphicsLinuxDrop.h` (`LinuxFileDrop`), target side, version 5.
-- Finding (Docker, REAPER 7.82): GTK sources (Files/Nautilus) look for `XdndProxy`/`XdndAware` on the **top-level
-  client window** under the pointer only; REAPER's FX windows (and the main and FX-chain windows) carry
-  `XdndAware` = 5 themselves. So an `XdndAware` on our child alone is never seen by GTK sources; Qt sources
-  (deepest aware window) would reach it.
-- Design: `XdndAware` + `XdndProxy`=self on our window; **`XdndProxy` on the host's top-level** naming our window,
-  unless the host has a proxy of its own (then nothing is changed). Removed on close if it still names us (verified
-  with REAPER's FX-chain window, which outlives the editor: `evidence/t019/xdnd/proxy-lifetime.txt`).
-  Drags outside the editor are **relayed** to the top-level unchanged (XdndEnter re-sent on the way out, XdndLeave
-  on the way in), so the host's own drop targets keep working (REAPER answered relayed positions itself).
+**XDND (c35d5f415, redesigned after the VM run, see below).** `IGraphicsLinuxDrop.h` (`LinuxFileDrop`), target side,
+version 5: `XdndAware` on the editor's window, nothing on the host's.
+- How sources find a target: GTK and Qt sources address the **top-level client window** under the pointer. REAPER's
+  FX, FX-chain and main windows carry `XdndAware` = 5, and **REAPER forwards a drag to an `XdndAware` child window by
+  itself**, as its own source (protocol version 3; the data still comes from the original source's `XdndSelection`).
+  Verified in Docker (scripted GTK-like source, `XdndProxy` absent) and on the VM (GNOME Files, trace build).
+- First design (c35d5f415), dropped: `XdndProxy` on the host's top-level naming the editor, with drags outside the
+  editor relayed to the top-level. The VM run with Files (GTK 4.14) showed GTK 4 follows the proxy for the first
+  position only: it then sends `XdndLeave` to the proxy and a new `XdndEnter` and everything after it to the top-level
+  directly (`GDK_DEBUG=dnd` log + our trace: `evidence/t019/vm/relay-gneiss-*`, `editor-gneiss-trace`). Over REAPER's
+  FX header that left the drag unfinished (the drag icon stayed on screen; the baseline build finishes it), and a
+  host whose top-level is not `XdndAware` would get GTK 4's messages without understanding them. In REAPER the proxy
+  was never needed: the editor drops worked through REAPER's own forwarding. Proxy and relay are removed.
+- Hosts whose top-level is not `XdndAware` and that do not forward get no drops from GTK/Qt file managers (a Qt-style
+  source that targets the deepest aware window still reaches the editor). To be checked per host in T-013.
 - Drop: `text/uri-list` read asynchronously (SelectionNotify, INCR via PropertyNotify), XdndFinished sent before the
   plug-in sees the files (its handler may open a dialog or close the editor), then `IGraphics::OnDrop` for one file,
-  `OnDropMultiple` for several, at the drop position / total scale — as on mac/win. Only `file://` URIs of this
+  `OnDropMultiple` for several, at the drop position / total scale, as on mac/win. Only `file://` URIs of this
   machine (no host or `localhost`), `%XX` decoded, a decoded NUL rejects the path; a source that never sends the data
-  is given up after 2 s (XdndFinished not accepted).
-- Accepts anywhere over the editor when files are offered (mac's `draggingEntered` does the same).
+  is given up after 2 s (XdndFinished not accepted). Accepts anywhere over the editor when files are offered (mac's
+  `draggingEntered` does the same); IGraphics hands the files to the topmost control under the drop.
+- `-DIGRAPHICS_TRACE_LINUX_INPUT` also traces drag enter/drop/finish (`iPlug2 drop:` on stderr), for T-013.
+- Gneiss (not Linux-specific, for the user): `UserTabPanel::OnDrop` only runs where the panel itself is the topmost
+  control, i.e. in gaps between its child controls (e.g. view 360,75 in the default layout); a file dropped on a knob
+  goes to the knob and is ignored. Same on mac/win (same `IGraphics::OnDrop` path).
 
 **Harness.** `scripts/probe/xdnd-source.c` (scripted source: `top` = GTK's target search incl. proxy, `deep` = Qt's),
 xact verb `xdnd-expect`, steps `igraphicstest-drop.txt` (IGraphicsTest's DragNDrop test: one file, three files,
 leave, relay over REAPER's FX header then drop, Qt-like direct target), `sand-tooltip.txt` (scale-independent),
-`gneiss-drop.txt` + `gneiss-user-layout.hvoya`, tooltip check at the end of `sand.txt`; `input-thread-check.sh`
+`gneiss-drop.txt` + `gneiss-user-layout.hvoya`, `sand-drop-menu.txt`, `vm/probe/files-drop.sh` (a real mouse drag from
+GNOME Files, optional `GDK_DEBUG=dnd` log and drop trace), tooltip check at the end of `sand.txt`; `input-thread-check.sh`
 lists the tooltip functions and `IGraphics::OnDrop`/`OnDropMultiple`.
 
 **Results so far (Docker, Ubuntu 24.04 arm64, REAPER 7.82):**

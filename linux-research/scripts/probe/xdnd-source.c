@@ -2,7 +2,8 @@
 // GTK does (the top-level client window under the pointer: its XdndProxy, else its XdndAware) or like Qt does
 // (the deepest XdndAware window), sends positions, then drops or leaves. Prints who answered.
 // Build: gcc -O1 -o xdnd-source xdnd-source.c -lX11
-// Usage: xdnd-source top|deep drop|leave "x,y[;x,y...]" file...   (root coordinates; the last position is where it drops)
+// Usage: xdnd-source top|deep drop|leave "x,y[;x,y...]" file...   (root coordinates; the last position is where it drops;
+//        a position "R" sends XdndLeave and a new XdndEnter to the current target, as GTK 4 does at times)
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <poll.h>
@@ -126,8 +127,11 @@ int main(int argc, char** argv)
   XSetSelectionOwner(d, aSelection, src, CurrentTime);
   const int drop = strcmp(argv[2], "drop") == 0;
 
-  int xs[16], ys[16], n = 0;
-  for (char* tok = strtok(argv[3], ";"); tok && n < 16; tok = strtok(NULL, ";")) if (sscanf(tok, "%d,%d", &xs[n], &ys[n]) == 2) n++;
+  int xs[16], ys[16], reenter[16] = { 0 }, n = 0;
+  for (char* tok = strtok(argv[3], ";"); tok && n < 16; tok = strtok(NULL, ";")) {
+    if (strcmp(tok, "R") == 0 && n > 0) { reenter[n - 1] = 1; continue; }
+    if (sscanf(tok, "%d,%d", &xs[n], &ys[n]) == 2) n++;
+  }
   if (!n) return 2;
 
   Window to = None, addressed = None;
@@ -147,6 +151,11 @@ int main(int argc, char** argv)
       printf("pos %d,%d: status from 0x%lx accept=%ld action=%s\n", xs[i], ys[i], st.data.l[0], st.data.l[1] & 1, st.data.l[4] ? XGetAtomName(d, st.data.l[4]) : "none");
     else
       printf("pos %d,%d: no status\n", xs[i], ys[i]);
+    if (reenter[i]) {
+      send(to, addressed, aLeave, 0, 0, 0, 0);
+      send(to, addressed, aEnter, 5L << 24, (long) aUriList, 0, 0);
+      printf("re-entered 0x%lx\n", addressed);
+    }
   }
   if (to == None) { printf("RESULT: no target\n"); return 1; }
   if (!drop) { send(to, addressed, aLeave, 0, 0, 0, 0); printf("RESULT: left\n"); return 0; }

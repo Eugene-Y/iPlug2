@@ -1,44 +1,44 @@
 REAPER up: REAPER v7.82 - EVALUATION LICENSE
 add 0
-REAPER ALIVE pid=10614 (open)
-render[first-open] ok (stddev 0.111088)
+REAPER ALIVE pid=50323 (open)
+render[first-open] ok (stddev 0.153302)
 view origin 113 188
 [xact] origin 113,188
 [xact] click 100 735
 [xact] shot d00-dnd-test
-[xact]   xdnd: target 0x400218 (messages to 0x600002)
-[xact]   xdnd: pos 613,388: status from 0x400218 accept=1 action=XdndActionCopy
-[xact]   xdnd: pos 623,438: status from 0x400218 accept=1 action=XdndActionCopy
+[xact]   xdnd: target 0x400212 (messages to 0x400212)
+[xact]   xdnd: pos 613,388: status from 0x400212 accept=1 action=XdndActionCopy
+[xact]   xdnd: pos 623,438: status from 0x400212 accept=1 action=XdndActionCopy
 [xact]   xdnd: selection request for text/uri-list from 0x600002
-[xact]   xdnd: finished from 0x400218 accepted=1
+[xact]   xdnd: finished from 0x400212 accepted=1
 [xact]   xdnd: RESULT: accepted
 [xact] xdnd top drop 500,200;510,250 (matches RESULT:.accepted)
 [xact] shot d01-one-file
 [xact] changed d00-dnd-test -> d01-one-file in view rect 272,20 480x60 (474 px)
-[xact]   xdnd: target 0x400218 (messages to 0x600002)
-[xact]   xdnd: pos 613,438: status from 0x400218 accept=1 action=XdndActionCopy
+[xact]   xdnd: target 0x400212 (messages to 0x400212)
+[xact]   xdnd: pos 613,438: status from 0x400212 accept=1 action=XdndActionCopy
 [xact]   xdnd: selection request for text/uri-list from 0x600002
-[xact]   xdnd: finished from 0x400218 accepted=1
+[xact]   xdnd: finished from 0x400212 accepted=1
 [xact]   xdnd: RESULT: accepted
 [xact] xdnd top drop 500,250 (matches RESULT:.accepted)
 [xact] shot d02-three-files
 [xact] changed d01-one-file -> d02-three-files in view rect 272,20 480x80 (1082 px)
-[xact]   xdnd: target 0x400218 (messages to 0x600002)
-[xact]   xdnd: pos 613,438: status from 0x400218 accept=1 action=XdndActionCopy
-[xact]   xdnd: pos 633,448: status from 0x400218 accept=1 action=XdndActionCopy
+[xact]   xdnd: target 0x400212 (messages to 0x400212)
+[xact]   xdnd: pos 613,438: status from 0x400212 accept=1 action=XdndActionCopy
+[xact]   xdnd: pos 633,448: status from 0x400212 accept=1 action=XdndActionCopy
 [xact]   xdnd: RESULT: left
 [xact] xdnd top leave 500,250;520,260 (matches RESULT:.left)
 [xact] shot d03-left
 [xact] same d02-three-files -> d03-left in view rect 272,20 480x80
-[xact]   xdnd: target 0x400218 (messages to 0x600002)
-[xact]   xdnd: pos 513,174: status from 0x400218 accept=1 action=XdndActionCopy
+[xact]   xdnd: target 0x400212 (messages to 0x400212)
+[xact]   xdnd: pos 513,174: status from 0x400212 accept=1 action=XdndActionCopy
 [xact]   xdnd: RESULT: left
 [xact] xdnd top leave 400,-14 (matches pos.[0-9]+,[0-9]+:.status.from.0x[0-9a-f]+.accept=[01])
-[xact]   xdnd: target 0x400218 (messages to 0x600002)
-[xact]   xdnd: pos 513,174: status from 0x400218 accept=1 action=XdndActionCopy
-[xact]   xdnd: pos 613,438: status from 0x400218 accept=1 action=XdndActionCopy
+[xact]   xdnd: target 0x400212 (messages to 0x400212)
+[xact]   xdnd: pos 513,174: status from 0x400212 accept=1 action=XdndActionCopy
+[xact]   xdnd: pos 613,438: status from 0x400212 accept=1 action=XdndActionCopy
 [xact]   xdnd: selection request for text/uri-list from 0x600002
-[xact]   xdnd: finished from 0x400218 accepted=1
+[xact]   xdnd: finished from 0x400212 accepted=1
 [xact]   xdnd: RESULT: accepted
 [xact] xdnd top drop 400,-14;500,250 (matches RESULT:.accepted)
 [xact] shot d04-after-relay
@@ -51,19 +51,20 @@ view origin 113 188
 [xact] xdnd deep drop 500,250 (matches RESULT:.accepted)
 [xact] shot d05-deep
 [xact] changed d04-after-relay -> d05-deep in view rect 272,20 480x60 (603 px)
-[xact] ALIVE pid 10614
-REAPER ALIVE pid=10614 (steps)
-REAPER ALIVE pid=10614 (reopen 1)
-REAPER ALIVE pid=10614 (reopen 2)
-REAPER ALIVE pid=10614 (reopen 3)
-REAPER ALIVE pid=10614 (reopen 4)
-REAPER ALIVE pid=10614 (reopen 5)
-render[after-reopen] ok (stddev 0.0986582)
+[xact] ALIVE pid 50323
+REAPER ALIVE pid=50323 (steps)
+REAPER ALIVE pid=50323 (reopen 1)
+REAPER ALIVE pid=50323 (reopen 2)
+REAPER ALIVE pid=50323 (reopen 3)
+REAPER ALIVE pid=50323 (reopen 4)
+REAPER ALIVE pid=50323 (reopen 5)
+render[after-reopen] ok (stddev 0.110948)
 add2 0
-REAPER ALIVE pid=10614 (two instances)
-render[second-instance] ok (stddev 0.11832)
+REAPER ALIVE pid=50323 (two instances)
+render[second-instance] ok (stddev 0.137733)
 --- draw/timer hits by gdb thread id (1 = REAPER main thread):
      11 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=1
-   1008 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
-REAPER ALIVE pid=10614 (end)
+    544 HIT iplug::igraphics::IGraphicsLinux::OnDisplayTimer tid=1
+   1087 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
+REAPER ALIVE pid=50323 (end)
 RESULT: PASS

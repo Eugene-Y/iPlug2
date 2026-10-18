@@ -16,19 +16,27 @@
  */
 
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <functional>
 #include <vector>
 
 #include "heapbuf.h"
 
+#ifdef IGRAPHICS_TRACE_LINUX_INPUT
+  #define TRACE_DROP(...) fprintf(stderr, "iPlug2 drop: " __VA_ARGS__)
+#else
+  #define TRACE_DROP(...) do {} while (0)
+#endif
+
 BEGIN_IPLUG_NAMESPACE
 BEGIN_IGRAPHICS_NAMESPACE
 
-/** GTK and Qt sources look for XdndAware on the top-level window under the pointer, not on the child windows inside
- * it, so an embedded editor would never see a drop. The host's top-level gets XdndProxy pointing at the editor, unless
- * the host has a proxy of its own; drags outside the editor are relayed to that top-level as if no proxy were there,
- * so the host's own drop targets keep working (REAPER's windows are XdndAware). */
+/** GTK and Qt sources address the top-level window under the pointer, not the editor inside it. A host whose top-level
+ * is XdndAware forwards the drag to an XdndAware child itself, as its own source (REAPER does, protocol version 3).
+ * Nothing is set on the host's window: an XdndProxy there pointing at the editor is followed by GTK 4 sources for
+ * the first position only, after which they talk to the top-level directly, and a drag over the host's own part of
+ * the window then never finishes. Hosts that neither forward nor are XdndAware get no drops. */
 class LinuxFileDrop
 {
 public:
@@ -41,7 +49,6 @@ public:
     mDisplay = pDisplay;
     mWindow = window;
     mXdndAware = XInternAtom(pDisplay, "XdndAware", False);
-    mXdndProxy = XInternAtom(pDisplay, "XdndProxy", False);
     mXdndEnter = XInternAtom(pDisplay, "XdndEnter", False);
     mXdndPosition = XInternAtom(pDisplay, "XdndPosition", False);
     mXdndStatus = XInternAtom(pDisplay, "XdndStatus", False);
@@ -57,29 +64,10 @@ public:
 
     const long version = kVersion;
     XChangeProperty(pDisplay, window, mXdndAware, XA_ATOM, 32, PropModeReplace, reinterpret_cast<const unsigned char*>(&version), 1);
-    // A proxy names itself as its own proxy: that is how sources tell a live proxy from a stale property.
-    XChangeProperty(pDisplay, window, mXdndProxy, XA_WINDOW, 32, PropModeReplace, reinterpret_cast<const unsigned char*>(&window), 1);
   }
 
-  /** Proxies drags for the host's top-level window, which may change (a host docking the editor); 0 for none */
-  void SetTopLevel(Window topLevel)
-  {
-    if (topLevel == mTopLevel)
-      return;
-    ReleaseTopLevel();
-    if (!mDisplay || !topLevel || topLevel == mWindow)
-      return;
-    const Window proxy = ReadWindowProperty(topLevel, mXdndProxy);
-    if (proxy != None && proxy != mWindow)
-      return;
-    XChangeProperty(mDisplay, topLevel, mXdndProxy, XA_WINDOW, 32, PropModeReplace, reinterpret_cast<const unsigned char*>(&mWindow), 1);
-    mTopLevel = topLevel;
-  }
-
-  /** Before the window goes: a proxy property naming a dead window would break drops onto the host's window */
   void Release()
   {
-    ReleaseTopLevel();
     mDisplay = nullptr;
     mWindow = 0;
     mDrag = Drag();
@@ -99,7 +87,7 @@ public:
   {
     if (!mDisplay)
       return false;
-    if (event.type == ClientMessage && event.xclient.window != mWindow && event.xclient.window != mTopLevel)
+    if (event.type == ClientMessage && event.xclient.window != mWindow)
       return false;
     if (event.type == ClientMessage && event.xclient.format == 32)
     {
@@ -168,12 +156,9 @@ private:
   struct Drag
   {
     Window source = 0;
-    Window addressed = 0; // the window the source sends to: ours, or the proxied top-level; our replies name it
     long version = 0;
     bool offersFiles = false;
     bool overEditor = false;
-    bool hostHasIt = false; // relayed: the host saw an XdndEnter and no XdndLeave since
-    XClientMessageEvent enter {};
     int x = 0;
     int y = 0;
     bool reading = false;
@@ -184,13 +169,12 @@ private:
 
   void OnEnter(const XClientMessageEvent& message)
   {
+    TRACE_DROP("enter from 0x%lx, version %ld\n", message.data.l[0], (message.data.l[1] >> 24) & 0xff);
     if (mDrag.reading)
       FinishDrop(false);
     mDrag = Drag();
     mDrag.source = static_cast<Window>(message.data.l[0]);
     mDrag.version = (message.data.l[1] >> 24) & 0xff;
-    mDrag.addressed = message.window;
-    mDrag.enter = message;
     const bool moreThanThreeTypes = message.data.l[1] & 1;
     if (moreThanThreeTypes)
       mDrag.offersFiles = SourceListsType(mDrag.source, mUriList);
@@ -214,43 +198,20 @@ private:
     mDrag.overEditor = translated && x >= 0 && y >= 0 && x < width && y < height;
     mDrag.x = x;
     mDrag.y = y;
-
-    if (!mDrag.overEditor && Relayed())
-    {
-      if (!mDrag.hostHasIt)
-        Relay(mDrag.enter);
-      mDrag.hostHasIt = true;
-      Relay(message);
-      return;
-    }
-    if (mDrag.hostHasIt)
-    {
-      XClientMessageEvent leave = LeaveFor(message);
-      Relay(leave);
-      mDrag.hostHasIt = false;
-    }
     SendStatus(mDrag.overEditor && mDrag.offersFiles);
   }
 
   void OnLeave(const XClientMessageEvent& message)
   {
-    if (static_cast<Window>(message.data.l[0]) != mDrag.source)
-      return;
-    if (mDrag.hostHasIt)
-      Relay(message);
-    mDrag = Drag();
+    if (static_cast<Window>(message.data.l[0]) == mDrag.source)
+      mDrag = Drag();
   }
 
   void OnDrop(const XClientMessageEvent& message)
   {
+    TRACE_DROP("drop from 0x%lx at %d,%d, over editor %d, files %d\n", message.data.l[0], mDrag.x, mDrag.y, mDrag.overEditor, mDrag.offersFiles);
     if (static_cast<Window>(message.data.l[0]) != mDrag.source)
       return;
-    if (mDrag.hostHasIt)
-    {
-      Relay(message);
-      mDrag = Drag();
-      return;
-    }
     if (!mDrag.overEditor || !mDrag.offersFiles)
     {
       SendFinished(false);
@@ -289,25 +250,6 @@ private:
     mDrag = Drag();
   }
 
-  bool Relayed() const { return mTopLevel && mDrag.addressed == mTopLevel; }
-
-  void Relay(const XClientMessageEvent& message)
-  {
-    XEvent event {};
-    event.xclient = message;
-    event.xclient.window = mTopLevel;
-    XSendEvent(mDisplay, mTopLevel, False, NoEventMask, &event);
-    XFlush(mDisplay);
-  }
-
-  XClientMessageEvent LeaveFor(const XClientMessageEvent& position) const
-  {
-    XClientMessageEvent leave = position;
-    leave.message_type = mXdndLeave;
-    leave.data.l[1] = leave.data.l[2] = leave.data.l[3] = leave.data.l[4] = 0;
-    return leave;
-  }
-
   void SendStatus(bool accept)
   {
     XEvent event {};
@@ -316,8 +258,8 @@ private:
     event.xclient.window = mDrag.source;
     event.xclient.message_type = mXdndStatus;
     event.xclient.format = 32;
-    event.xclient.data.l[0] = static_cast<long>(mDrag.addressed);
-    // Bit 1: positions keep coming within the editor too (the empty rectangle), so the relay sees every one
+    event.xclient.data.l[0] = static_cast<long>(mWindow);
+    // Bit 1 with the empty rectangle: every position is sent, the editor's controls are not one rectangle
     event.xclient.data.l[1] = (accept ? 1 : 0) | 2;
     event.xclient.data.l[4] = accept ? static_cast<long>(mXdndActionCopy) : 0;
     XSendEvent(mDisplay, mDrag.source, False, NoEventMask, &event);
@@ -326,6 +268,7 @@ private:
 
   void SendFinished(bool accepted)
   {
+    TRACE_DROP("finished %d to 0x%lx\n", accepted, mDrag.source);
     if (!mDrag.source)
       return;
     XEvent event {};
@@ -334,34 +277,11 @@ private:
     event.xclient.window = mDrag.source;
     event.xclient.message_type = mXdndFinished;
     event.xclient.format = 32;
-    event.xclient.data.l[0] = static_cast<long>(mDrag.addressed);
+    event.xclient.data.l[0] = static_cast<long>(mWindow);
     event.xclient.data.l[1] = accepted ? 1 : 0;
     event.xclient.data.l[2] = accepted ? static_cast<long>(mXdndActionCopy) : 0;
     XSendEvent(mDisplay, mDrag.source, False, NoEventMask, &event);
     XFlush(mDisplay);
-  }
-
-  void ReleaseTopLevel()
-  {
-    if (mDisplay && mTopLevel && ReadWindowProperty(mTopLevel, mXdndProxy) == mWindow)
-      XDeleteProperty(mDisplay, mTopLevel, mXdndProxy);
-    mTopLevel = 0;
-  }
-
-  Window ReadWindowProperty(Window window, Atom property)
-  {
-    Atom type = None;
-    int format = 0;
-    unsigned long count = 0, remaining = 0;
-    unsigned char* pData = nullptr;
-    Window value = None;
-    if (XGetWindowProperty(mDisplay, window, property, 0, 1, False, XA_WINDOW, &type, &format, &count, &remaining, &pData) == Success && pData)
-    {
-      if (format == 32 && count == 1)
-        value = static_cast<Window>(reinterpret_cast<long*>(pData)[0]);
-      XFree(pData);
-    }
-    return value;
   }
 
   bool SourceListsType(Window source, Atom wanted)
@@ -455,11 +375,9 @@ private:
 
   Display* mDisplay = nullptr;
   Window mWindow = 0;
-  Window mTopLevel = 0; // carries our XdndProxy
   Drag mDrag;
 
   Atom mXdndAware = None;
-  Atom mXdndProxy = None;
   Atom mXdndEnter = None;
   Atom mXdndPosition = None;
   Atom mXdndStatus = None;

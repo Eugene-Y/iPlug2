@@ -3,7 +3,7 @@
 click 100 735
 wait 1
 shot d00-dnd-test
-# GTK-like source: it finds the host's top-level window, whose XdndProxy sends it to the editor
+# GTK-like source: it addresses REAPER's top-level, and REAPER forwards the drag to the editor (XdndAware) itself
 xdnd-expect RESULT:.accepted top drop 500,200;510,250 /tmp/dröp/öne.wav
 wait 1
 shot d01-one-file
@@ -17,7 +17,7 @@ xdnd-expect RESULT:.left top leave 500,250;520,260 /tmp/left.wav
 wait 1
 shot d03-left
 expect-same d02-three-files d03-left 272 20 480 80
-# Outside the editor (REAPER's FX header) the drag is relayed to REAPER, which answers itself; then into the editor
+# Outside the editor (REAPER's FX header) REAPER answers itself; then into the editor
 xdnd-expect pos.[0-9]+,[0-9]+:.status.from.0x[0-9a-f]+.accept=[01] top leave 400,-14 /tmp/relayed.wav
 xdnd-expect RESULT:.accepted top drop 400,-14;500,250 /tmp/after-relay.wav
 wait 1
