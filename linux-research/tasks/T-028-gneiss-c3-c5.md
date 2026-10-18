@@ -5,6 +5,7 @@
 - **Branches/worktrees:** Gneiss `fix/t028-input-text-tail` from `master`, in `/Volumes/Storage/code/hvoya/Gneiss-t028`. Not Linux work: no iPlug2 branch unless a shared change turns out to be needed (then it is a proposal for the user first). Task Log and evidence: iPlug2 `linux/T-028` from `hvoya-linux` in `/Volumes/Storage/code/IPlug2-T-028-log` (as T-026 did).
 - **Commits:** Gneiss `CLAUDE.md` forbids commits without the user's explicit command. Commit on the fix branch only if the user's assignment says so; otherwise leave the work uncommitted in the worktree and say so in the Log. Never touch `master` or the main checkout.
 - **Depends on:** nothing.
+- **Start:** read AGENTS.md (whole), then this file, then claim it with the lock (AGENTS §5).
 - **Conflicts:** `Gneiss.cpp` (`ProcessBlock`/`processChunk`, `initializeParams`), `Gneiss.hpp`. Takes Gneiss's part of T-023 (C3, C5); T-023 keeps whatever clap-validator still finds after this.
 
 ## Read first
@@ -36,7 +37,7 @@ The user types the value as Gneiss displays it, or the host converts text → va
 Gneiss declares no tail. clap-validator `process-sleep-process-status` failed in the T-026 merge smoke and passed in T-024's: find out why it is intermittent, then declare a tail that matches the filter (a resonant ladder rings; infinite while self-oscillating?) through iPlug's tail API, and check how iPlug's CLAP/VST3/AU wrappers turn it into the process status. A tail changes how hosts on mac/win treat Gneiss after the input stops (they keep processing it longer): write the behaviour change down for the user's decision before merging.
 
 ## Testing
-- **Audio:** renders bit-identical to `master` — 32- and 64-bit I/O, in-place and out-of-place, OS 1x/2x/4x/8x, block sizes 1/64/512/513/4096, mix/gain automation. 64-bit out-of-place: the host's input unchanged after `process` (T-024 had a render harness that counts changed input samples; reuse it).
+- **Audio:** renders bit-identical to `master` — 32- and 64-bit I/O, in-place and out-of-place, OS 1x/2x/4x/8x, block sizes 1/64/512/513/4096, mix/gain automation. 64-bit out-of-place: the host's input unchanged after `process`. Reuse T-024's offline CLAP host `evidence/t024/render-clap.cpp` (writes the output, counts changed input samples and non-finite samples, times `process()`) with its drivers `evidence/t024/run-checks.sh` (Linux, Docker) and `mac-checks.sh`, and `cpu-bench.sh` for CPU before/after; T-024's Log shows how they were run and compared (`render.sha256`).
 - **No allocation in `process()`**: the T-026 N1 malloc counter (`evidence/t026/run-allocs.sh`) reports 0 for every configuration.
 - **Validators:** clap-validator on Linux and mac — `process-audio-double-*`, `param-conversions`, `process-sleep-process-status` pass; remove those lines from `linux-research/scripts/known-clap-failures/Gneiss.txt`. VST3 validator ×10, no crash.
 - **Hosts:** REAPER `scripts/steps/gneiss.txt` CLAP + VST3 in Docker; on mac, text entry of a cutoff in REAPER's parameter window ("1.06 kHz" sets 1060 Hz).
