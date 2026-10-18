@@ -1,6 +1,6 @@
 # T-019 — Tooltips and files dropped onto the editor (XDND)
 
-- **Status:** in-progress
+- **Status:** review-done (independent review: round 1 accept with fixes, round 2 accept, 2026-10-18)
 - **Owner:** coordinator (2nd coordinator instance, 2026-10-18; lock `T-019`)
 - **Branch/worktree:** `linux/T-019` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-019`.
 - **Depends on:** nothing.
@@ -238,4 +238,12 @@ New findings (nits only, no fix required):
   Shape. It reads correct.
 
 **Final verdict: accept.**
+
+### Hand-over (author, 2026-10-18)
+- Commits `git log hvoya-linux..linux/T-019`: 28ae356c8 tooltips, c35d5f415 XDND (first design), e6dbc1fb0 steps,
+  98a6101f4 XDND redesign (no proxy), 0a96072ba VM evidence, 91eb15c82 review fixes, reviews f987ca7a1 / 1d5aa1a16.
+- Code: `IGraphics/Platforms/IGraphicsLinux.{h,cpp}`, new `IGraphicsLinuxDrop.h`; no shared file; NEEDED unchanged.
+- Open: per-host drop support (hosts that neither forward nor are XdndAware get no drops; REAPER's 3-type limit) →
+  T-013. Review nits N1 (Shape version not checked, 1.1 is from 2006) and N2 (fallback path not exercised) kept.
+- Evidence `evidence/t019/` (screenshots local only). VM lock released; containers `t019`/`t019r` to be removed at merge.
 
