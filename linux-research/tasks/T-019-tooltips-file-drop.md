@@ -90,10 +90,22 @@ leave, relay over REAPER's FX header then drop, Qt-like direct target), `sand-to
 GNOME Files, optional `GDK_DEBUG=dnd` log and drop trace), tooltip check at the end of `sand.txt`; `input-thread-check.sh`
 lists the tooltip functions and `IGraphics::OnDrop`/`OnDropMultiple`.
 
-**Results so far (Docker, Ubuntu 24.04 arm64, REAPER 7.82):**
-- Sand `sand.txt` CLAP + VST3 PASS with the tooltip check; `sand-tooltip.txt` CLAP at REAPER_UI_SCALE 1 and 2 PASS
-  (scale 2 crisp, screenshots looked at), the close/reopen ×5 loop then closes the editor with the tooltip shown.
-- `igraphicstest-drop.txt` CLAP + VST3 PASS; paths with UTF-8 decoded (screenshots looked at).
-- URI-list parser cases: `evidence/t019/xdnd/uri-list-parse.txt` (comment, `%20`, UTF-8, localhost, other host,
+**Results (final tree 98a6101f4; Docker Ubuntu 24.04 arm64 + the GNOME/X11 VM, REAPER 7.82):**
+- Docker: `igraphicstest-drop.txt` CLAP + VST3 PASS (one file, three files, leave, a drag over REAPER's FX header
+  that REAPER answers itself, Qt-like direct target; UTF-8 paths decoded, screenshots looked at); `gneiss-drop.txt`
+  CLAP + VST3 PASS (the USER tab loads the dropped layout); `sand-drop-menu.txt` PASS; `sand.txt` CLAP + VST3 PASS
+  with the tooltip check; `sand-tooltip.txt` CLAP at REAPER_UI_SCALE 1 and 2 PASS (scale 2 crisp, looked at), the
+  close/reopen ×5 loop closes the editor with the tooltip shown.
+- Regression on the tooltip + first XDND tree (the redesign only removed code from `IGraphicsLinuxDrop.h`): P3b
+  IPlugControls CLAP + VST3 PASS, Gneiss `gneiss.txt` CLAP PASS and VST3 only the known right-click step, churn ×100
+  IPlugControls CLAP stable (fds 6, sockets 1, threads 14 closed; RSS flat after 25), `evidence/t019/regress/`.
+- Main thread: tooltip functions and `IGraphics::OnDrop`/`OnDropMultiple` all tid=1 (`evidence/t019/threads-*`).
+- NEEDED unchanged (libX11, libm, libc, ld-linux): `evidence/t019/needed.txt`.
+- URI-list parser cases: `evidence/t019/xdnd/uri-list-parse.{cpp,txt}` (comment, `%20`, UTF-8, localhost, other host,
   http, `%00`, invalid `%zz`, last line without CRLF).
-- Main thread: tooltip functions and `OnDrop`/`OnDropMultiple` all tid=1 (`evidence/t019/threads-*`).
+- VM (GNOME Shell/Mutter X11, VM lock taken and released, `xdpyinfo` fine before and after): Sand tooltip steps PASS,
+  looked at (`vm/sand-tooltip-clap`); a real mouse drag from GNOME Files into Gneiss' USER tab loads the layout in CLAP
+  and VST3, and a drag onto REAPER's FX header finishes (Nautilus logs `XdndFinished` in all four:
+  `vm/final-{clap,vst3}-{editor,header}`, `vm/files-drop/`). The first design's failure and the baseline comparison:
+  `vm/proxy-design/`, `vm/relay-header-*`.
+
