@@ -11,13 +11,15 @@ Update it at every merge or user decision.
 | Repo / branch | Where | State |
 |---|---|---|
 | iPlug2 `hvoya` (product) | `/Volumes/Storage/code/IPlug2` (main checkout, Gneiss builds against it) | Commits since 3474f3d55/0b2d8dbef: T-024 merges a865ee9f7 (F3 Hilbert), 228f2efc2 (F4 TextToValueFunc), 083bc87c5 (F2 MIDI CC → host on the main thread: every plug-in with a mediator needs `_midiCCMediator.OnIdle()`), fa98170e8 (cherry-pick ef002e167, CLAP stepped-param text). Earlier, all with the user's OK: logger fix, `SetFont`, upstream merge 5d854712d, H1, C1, CLAUDE.md. T-006's CLAP rescan cherry-picked as f71ddd876 (user, 2026-10-17). T-021's fixes committed there by the 2nd instance at the user's decision: 59c33feec (hvoya `HostInfoModel` SIGFPE on x86, T21-2), 228f1ea8e (VST3 tempo/time signature only when valid, T21-3). T-026's T21-5 (beat number at every tempo/time signature) merged by the Sand chat at the user's decision: 4fbfc579d (2026-10-18). **HEAD 4fbfc579d, pushed 2026-10-18.** |
-| iPlug2 `hvoya-linux` (Linux integration) | `/Volumes/Storage/code/IPlug2-linux` | Pushed up to 045b3ca11 (2026-10-18, by the coordinator with the user's one-off permission); later commits unpushed. Contains hvoya up to 4fbfc579d, Linux P0–P5, and the merges of T-001…T-008, T-012, T-021, T-024, T-026 (merge log in `tasks/README.md`) |
+| iPlug2 `hvoya-linux` (Linux integration) | `/Volumes/Storage/code/IPlug2-linux` | Pushed up to 045b3ca11 (2026-10-18, by the coordinator with the user's one-off permission); later commits unpushed. Contains hvoya up to 4fbfc579d, Linux P0–P5, and the merges of T-001…T-008, T-012, T-019, T-021, T-024, T-026 (merge log in `tasks/README.md`); commits after 5a130407f unpushed |
 | Gneiss `master` | `/Volumes/Storage/code/hvoya/Gneiss` (user's working tree, uncommitted .RPP/xcscheme/main.rc_mac_dlg edits) | 4dc02eb (`_midiCCMediator.OnIdle()`, needs hvoya 083bc87c5; committed at the user's command 2026-10-17; pushed 2026-10-18) on 3cf2e2e |
 | Gneiss `linux-experiment` | `/Volumes/Storage/code/hvoya/Gneiss-linux` (on `origin` since 2026-10-18) | 52cb5d6 (CMakeLists.txt), 7e3a1c9 (initializer_list UB fix, behaviour-neutral), 3b9767e (`scripts/makedist-linux.sh`, T-021; the user kept it, R12), master merged up to 4dc02eb (8a0f05b, 2026-10-17) |
 | Sand `master` | `/Volumes/Storage/code/hvoya/Sand` (user's main checkout) | 0b71747 merge of T-026 `fix/t026-followups` (N1, N3, CLAUDE.md; user's command 2026-10-18) on 54be993 (T-024) on the user's 961be6c; pushed 2026-10-18 |
 | Sand `linux-experiment` | `/Volumes/Storage/code/hvoya/Sand-linux` (on `origin` since 2026-10-18) | T-012: 4dcd5cd CMake, 2456460 `std::isfinite`, 60c5b96 presets + workspace, e259e96 C++23, cec9c1d `.clangd` → `compile_flags.txt` (user's D1). Needs GCC 13 on 22.04 (`iplug2-linux:22.04-gcc13`); master merged up to 0b71747 (87ccdbf, 2026-10-18) |
 
 ## In flight
+- **T-028** (Gneiss C3/C5/tail) — runs in a separate chat (lock `T-028`); merge into Gneiss `master` only at the user's command, then sync `Gneiss-linux`.
+- **T-019 merged 2026-10-18** (tooltips + XDND). Drops in other hosts are T-013's item 8.
 - Nothing else is mid-merge. Latest release archives (T-021 flow on the merged tree, smoke PASS): `linux-research/build/m021-dist/` (ignored, local only).
 
 ## Waiting on the user

@@ -91,3 +91,9 @@ Gneiss на mac/win использует нативные меню — его н
 | T26-a | Низкая | `host_time_info.hpp` не включает `<cstdint>`; `HostInfoModel` не обновляется в позиции 0 (`_lastSamplePos` стартует с 0) и логирует «trigger not set», когда он задан (только Debug) | Не исправлялось |
 | T26-b | Низкая | iPlug core `IPlugProcessor::AttachBuffers` (`IPlugProcessor.cpp:485`, `CastCopy`): хост, приславший блок длиннее объявленного максимума при 32-bit I/O, переполняет scratch iPlug (ASan heap-buffer-overflow; Release: glibc «corrupted size»), до и после N1 одинаково. VST3/CLAP-хосты так делать не должны, AU отклоняет. Найдено ревьюером T-026 | Только отчёт |
 | T26-c | Низкая–средняя | Sand: AU `DoReset` / `kAudioUnitProperty_BypassEffect` → `OnReset` → `updateOversampling` сбрасывает модуль и меняет его частоту (длины линий grind), пока другой поток может быть в `ProcessBlock` (давняя гонка этого пути; N1 её не трогает и свои буферы там больше не трогает) | Только отчёт |
+
+## Из T-019 (Gneiss; не Linux-специфично)
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T19-1 | Низкая (UX) | Файл раскладки, брошенный на вкладку USER, доходит до `UserTabPanel::OnDrop` только в зазорах между её дочерними контролами: IGraphics отдаёт drop верхнему контролу под точкой, и ручка его игнорирует. Так же на mac/win (тот же `IGraphics::OnDrop`). Вариант: дочерним контролам USER-вкладки пробрасывать `OnDrop` в панель | Только отчёт |
+

@@ -26,6 +26,12 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
 5. Latency change (Gneiss OS factor) with the editor closed — host PDC follows.
 6. Two instances; close the editor while a menu or text entry is open; remove the plug-in while playing.
 7. Host-loop trace build (`-DIPLUG_TRACE_HOST_LOOP`): which backend the host gives us (CLAP timer/fd support, VST3 `IRunLoop` and from where), everything on the main thread.
+8. Files dropped from GNOME Files (and a Qt file manager if available) onto the editor (`scripts/vm/probe/files-drop.sh`
+   with Gneiss' USER tab, or `steps/igraphicstest-drop.txt` in Docker). The editor's window is XdndAware; whether a
+   drop reaches it depends on the host: REAPER forwards drags to XdndAware children itself (but only a source's first
+   three types, T-019 R6). Record per host whether it forwards, is XdndAware itself, or neither (then file managers
+   cannot drop onto plug-ins); a trace build (`-DIGRAPHICS_TRACE_LINUX_INPUT`) logs `iPlug2 drop:` lines. Also a
+   tooltip (Sand) in each host.
 
 ## Acceptance
 - [ ] Matrix table (host × product × format × case) in the Log with evidence paths (`evidence/t013/`).
