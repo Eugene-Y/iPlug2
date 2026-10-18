@@ -1,0 +1,5 @@
+REAPER 7.76 (mac, the user's config), Sand AU 1.1.16 (release in /Library/Audio/Plug-Ins/Components), 2026-10-18 10:59:58.
+Lua Main_openProject of a project with Sand's floating FX window -> FxChain::LoadState -> FxDsp::floatConfigWindow ->
+AU_Plugin::ShowConfig -> [Sand_View uiViewForAudioUnit:withSize:] -> IGraphicsMac::OpenWindow -> IGraphics::SetScreenScale ->
+IGraphicsNanoVG::DrawResize -> mnvgCreateFramebuffer -> MTLTextureDescriptor "width of zero / height of zero" -> SIGABRT.
+The branch AU (9c2dad2, same project flow, two Main_openProject) did not crash. Observed once; not re-run.
