@@ -1,6 +1,6 @@
 # T-028 — Gneiss: don't write the host's input (C3), texts parse back (C5), tail / sleep status
 
-- **Status:** in review (user, 2026-10-18: "надо фиксить")
+- **Status:** review-done (independent review approved in round 2, 2026-10-18); see the Hand-over at the end of the Log
 - **Owner:** T-028 chat (2026-10-18), lock `.linux-port-locks/T-028`
 - **Branches/worktrees:** Gneiss `fix/t028-input-text-tail` from `master`, in `/Volumes/Storage/code/hvoya/Gneiss-t028`. Not Linux work: no iPlug2 branch unless a shared change turns out to be needed (then it is a proposal for the user first). Task Log and evidence: iPlug2 `linux/T-028` from `hvoya-linux` in `/Volumes/Storage/code/IPlug2-T-028-log` (as T-026 did).
 - **Commits:** the user allows commits on `fix/t028-input-text-tail` (2026-10-18), which overrides Gneiss `CLAUDE.md`'s no-commit rule for this branch only. Never touch `master` or the main checkout; never push.
@@ -255,3 +255,32 @@ Gneiss branch now: `b600156` C3 · `36e1712` C5 · `75109bb` tail · `f3b6b77` d
 **Remaining nits (wording, optional):**
 - **R2-N1:** `75109bb`'s message and (4) say VST2 `effGetTailSize` reports "15 s instead of 0". iPlug's VST2 wrapper encodes any finite tail as 2 (`IPlugVST2.cpp:767`, `min(2, tailSize)`): 2 ("has a tail") instead of 1 ("no tail"). It never reports 15 s.
 - **R2-N2:** ARCHITECTURE §7's next bullet still says `OnReset` "only raises `_audioResetPending`". The tail bullet right above it says the tail is set from every `OnReset`. A short "(besides the host-facing tail)" would remove the contradiction.
+
+### 2026-10-18 (5) — round-2 nits, hand-over
+
+- **R2-N1:** the tail message is reworded again: VST2 `effGetTailSize` answers 2 ("has a tail") instead of 1 ("no tail"); iPlug never reports a length there.
+- **R2-N2:** the ARCHITECTURE §7 bullet now says `OnReset` only raises `_audioResetPending`, "besides re-declaring the host-facing tail".
+- Trees are unchanged except ARCHITECTURE.md; SHAs moved again: tail `75109bb` → **`5b31aa0`**, docs → `fac2232`, param_text fixes → `9d1b3ee`, ARCHITECTURE → `4ce2594`.
+
+#### Hand-over
+
+**Gneiss `fix/t028-input-text-tail`** (from master 4dc02eb, worktree `hvoya/Gneiss-t028`, not pushed):
+
+| Commit | What |
+|---|---|
+| `b600156` | C3: the chain runs in `output`; `input` is const |
+| `36e1712` | C5: `param_text.hpp`, every display text parses back |
+| `5b31aa0` | tail 15 s (the user's decision: fixed finite) |
+| `fac2232` | docs: param_text in the file map, serialization §3a; stale gain sentence |
+| `9d1b3ee` | param_text review fixes (off text formatted once, sat type clamp and "A > B") |
+| `4ce2594` | ARCHITECTURE §7: the tail |
+
+- **Evidence:** `evidence/t028/` — renders and states (`{linux,mac}-{base,after}/`), the param-text tables, clap-validator (Linux ×20, mac ×10), VST3 `-e` ×10, REAPER `reaper-{clap,vst3}/`, tail measurements, CPU.
+- **Waiting for the user:**
+  1. Merge the Gneiss branch into master (and `linux-experiment`).
+  2. **M4:** fix the "-0.000" text (T28-a) in iPlug, or in Gneiss for its 10 bipolar params.
+  3. T28-b (a "nan" text gives NaN): fix in iPlug or not.
+  4. On mac, with Gneiss installed: REAPER text entry "1.06 kHz" → 1060 Hz, and auval.
+- **Coordinator:** merge `linux/T-028`; merge `known-clap-failures/Gneiss.txt` only together with, or after, the Gneiss fix lands in `linux-experiment` (M5).
+- **Throwaway worktrees** (remove when done): `hvoya/Gneiss-t028-base`, `hvoya/Gneiss-t028-base-linux`, `hvoya/Gneiss-t028-linux` (branch `tmp/t028-linux`).
+- No Docker containers left.
