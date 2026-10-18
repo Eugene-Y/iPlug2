@@ -1,6 +1,6 @@
 # T-010 — Gneiss-side Linux needs (P9)
 
-- **Status:** in progress — decisions taken; independent review next
+- **Status:** review-done (round 1: accept); see Log (3)
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-010`
 - **Branches/worktrees:**
   - Gneiss: local `linux-experiment` in `/Volumes/Storage/code/hvoya/Gneiss-linux`. Never push; never touch `/Volumes/Storage/code/hvoya/Gneiss`.
@@ -27,10 +27,10 @@ Everything Gneiss needs on Linux beyond the build (T-003), the platform features
 Explicitly NOT here (user's decisions pending, all platforms): C2, C3, C4, X1, L1, C5 in `CROSS_PLATFORM_FINDINGS.md`. X1 is now T-025 (user decided 2026-10-17 to fix it); item 1 above may be folded into it.
 
 ## Acceptance
-- [ ] Latency reaches the host correctly with and without a host loop (CLAP + VST3, REAPER); evidence.
-- [ ] Audit table in the Log: item, mac/win behaviour, Linux before/after, file:line.
-- [ ] Gneiss diff on `linux-experiment` minimal and Linux-only (`#if defined(OS_LINUX)` or Linux-only files); mac/win untouched. `steps/gneiss.txt` CLAP + VST3 PASS (VST3 except the known right-click step).
-- [ ] Independent review (AGENTS §4); evidence in `evidence/t010/`; Log complete.
+- [x] Latency reaches the host correctly with and without a host loop (CLAP + VST3, REAPER); evidence. *With a host loop: P2 (notes/09, notes/10). Without one: CLAP yes (`evidence/t010/fallback-latency-clap`); VST3 no in REAPER — waived by the user's decision (Log 2026-10-18 (2)).*
+- [x] Audit table in the Log: item, mac/win behaviour, Linux before/after, file:line.
+- [x] Gneiss diff on `linux-experiment` minimal and Linux-only (`#if defined(OS_LINUX)` or Linux-only files); mac/win untouched. `steps/gneiss.txt` CLAP + VST3 PASS (VST3 except the known right-click step). *No Gneiss code change; only the MANUAL note. Paid CLAP + VST3 runs are the T-028 merge smoke on the same linux-experiment code (`evidence/merge-smoke/t028-gneiss-*`); the free CLAP run is new here.*
+- [x] Independent review (AGENTS §4); evidence in `evidence/t010/`; Log complete.
 
 ## Log
 (append: date — what was done — commits — next)
@@ -106,3 +106,12 @@ Read: AGENTS.md, this file, `git diff hvoya-linux...linux/T-010`, all of `eviden
 - **R1-6 nit — the manual sentence.** It is accurate and short. The window manager also takes plain Alt‑click, not only Alt‑drag: the click never reaches the knob. KDE calls the modifier "Meta", not "Super". Possible wording: "…use Alt‑drag to move windows, so Alt‑drag or Alt‑click on a knob goes to the window manager instead. Set its window‑move modifier to Super (Meta in KDE)." This is the author's call. The audit row for `hvoya/` could also mention the two `__APPLE__` toolchain shims (`format_compat.hpp:18`, `filesystem_compat.hpp:19`); they already take the std path on Linux.
 
 **Verdict: accept.** Nothing blocks. R1-1 and R1-2 are Log and acceptance bookkeeping that the owner should do before handover. R1-3 to R1-6 are optional.
+
+### 2026-10-18 (3) — review round 1 fixes
+
+- **R1-1:** acceptance boxes ticked with what each rests on (P2 for "with a host loop", the user's waiver for VST3 without one, T-028's paid Gneiss runs).
+- **R1-2:** T-025 now also names the formal races on the fallback path (`mLatencyUpdate`, `mLatency` read by `latencyGet` on the main thread), so the `SetLatency` fix makes them atomic too.
+- **R1-3:** the CLAP switch traces "timer-support forced off" before the backend choice.
+- **R1-5:** free-edition screenshots copied to `evidence/t010/free-edition-clap/` (PNGs are git-ignored in `evidence/`, as everywhere in this repo; they stay local).
+- **R1-6:** the manual sentence now covers Alt-click too and names KDE's "Meta".
+- **R1-4** (no `host-loop-test.sh` option for the CLAP switch) not done: the switch is a one-off diagnostic, and the Log explains the by-design "open" FAIL.
