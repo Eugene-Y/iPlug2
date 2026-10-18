@@ -1,0 +1,124 @@
+diff --git a/projects/Sand-aax.vcxproj b/projects/Sand-aax.vcxproj
+index 712f6c8..c48bcb9 100644
+--- a/projects/Sand-aax.vcxproj
++++ b/projects/Sand-aax.vcxproj
+@@ -126,7 +126,9 @@
+     <TargetExt>.aaxplugin</TargetExt>
+   </PropertyGroup>
+   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+-    <PreBuildEvent />
++    <PreBuildEvent>
++      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "AAX" "$(Platform)"</Command>
++    </PreBuildEvent>
+     <CustomBuildStep>
+       <Message>
+       </Message>
+@@ -137,6 +139,8 @@
+     <ClCompile>
+       <Optimization>Disabled</Optimization>
+       <AdditionalIncludeDirectories>$(AAX_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <LanguageStandard>stdcpp23</LanguageStandard>
++      <LanguageStandard_C>stdc17</LanguageStandard_C>
+       <PreprocessorDefinitions>$(AAX_DEFS);$(DEBUG_DEFS);$(EXTRA_DEBUG_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+       <MinimalRebuild>false</MinimalRebuild>
+       <ExceptionHandling>Async</ExceptionHandling>
+@@ -162,7 +166,9 @@
+     <PostBuildEvent />
+   </ItemDefinitionGroup>
+   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+-    <PreBuildEvent />
++    <PreBuildEvent>
++      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "AAX" "$(Platform)"</Command>
++    </PreBuildEvent>
+     <CustomBuildStep>
+       <Message>
+       </Message>
+@@ -174,6 +180,8 @@
+       <Optimization>MaxSpeed</Optimization>
+       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+       <AdditionalIncludeDirectories>$(AAX_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <LanguageStandard>stdcpp23</LanguageStandard>
++      <LanguageStandard_C>stdc17</LanguageStandard_C>
+       <PreprocessorDefinitions>$(AAX_DEFS);$(RELEASE_DEFS);$(EXTRA_RELEASE_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+       <MinimalRebuild>false</MinimalRebuild>
+       <ExceptionHandling>Async</ExceptionHandling>
+@@ -204,7 +212,9 @@
+     <PostBuildEvent />
+   </ItemDefinitionGroup>
+   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracer|Win32'">
+-    <PreBuildEvent />
++    <PreBuildEvent>
++      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "AAX" "$(Platform)"</Command>
++    </PreBuildEvent>
+     <CustomBuildStep>
+       <Message>
+       </Message>
+@@ -216,6 +226,8 @@
+       <Optimization>MaxSpeed</Optimization>
+       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+       <AdditionalIncludeDirectories>$(AAX_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <LanguageStandard>stdcpp23</LanguageStandard>
++      <LanguageStandard_C>stdc17</LanguageStandard_C>
+       <PreprocessorDefinitions>$(AAX_DEFS);$(TRACER_DEFS);$(EXTRA_TRACER_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+       <MinimalRebuild>false</MinimalRebuild>
+       <ExceptionHandling>Async</ExceptionHandling>
+@@ -246,7 +258,9 @@
+     <PostBuildEvent />
+   </ItemDefinitionGroup>
+   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+-    <PreBuildEvent />
++    <PreBuildEvent>
++      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "AAX" "$(Platform)"</Command>
++    </PreBuildEvent>
+     <CustomBuildStep>
+       <Message>
+       </Message>
+@@ -260,6 +274,8 @@
+     <ClCompile>
+       <Optimization>Disabled</Optimization>
+       <AdditionalIncludeDirectories>$(AAX_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <LanguageStandard>stdcpp23</LanguageStandard>
++      <LanguageStandard_C>stdc17</LanguageStandard_C>
+       <PreprocessorDefinitions>$(AAX_DEFS);$(DEBUG_DEFS);$(EXTRA_DEBUG_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+       <MinimalRebuild>false</MinimalRebuild>
+       <ExceptionHandling>Async</ExceptionHandling>
+@@ -286,7 +302,9 @@
+     <PostBuildEvent />
+   </ItemDefinitionGroup>
+   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+-    <PreBuildEvent />
++    <PreBuildEvent>
++      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "AAX" "$(Platform)"</Command>
++    </PreBuildEvent>
+     <CustomBuildStep>
+       <Message>
+       </Message>
+@@ -300,6 +318,8 @@
+     <ClCompile>
+       <Optimization>MaxSpeed</Optimization>
+       <AdditionalIncludeDirectories>$(AAX_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <LanguageStandard>stdcpp23</LanguageStandard>
++      <LanguageStandard_C>stdc17</LanguageStandard_C>
+       <PreprocessorDefinitions>$(AAX_DEFS);$(RELEASE_DEFS);$(EXTRA_RELEASE_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+       <MinimalRebuild>false</MinimalRebuild>
+       <ExceptionHandling>Async</ExceptionHandling>
+@@ -331,7 +351,9 @@
+     <PostBuildEvent />
+   </ItemDefinitionGroup>
+   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracer|x64'">
+-    <PreBuildEvent />
++    <PreBuildEvent>
++      <Command>CALL "$(SolutionDir)scripts\write_plug_build_info_to_file.bat" "$(SolutionDir)" "AAX" "$(Platform)"</Command>
++    </PreBuildEvent>
+     <CustomBuildStep>
+       <Message>
+       </Message>
+@@ -345,6 +367,8 @@
+     <ClCompile>
+       <Optimization>MaxSpeed</Optimization>
+       <AdditionalIncludeDirectories>$(AAX_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <LanguageStandard>stdcpp23</LanguageStandard>
++      <LanguageStandard_C>stdc17</LanguageStandard_C>
+       <PreprocessorDefinitions>$(AAX_DEFS);$(TRACER_DEFS);$(EXTRA_TRACER_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+       <MinimalRebuild>false</MinimalRebuild>
+       <ExceptionHandling>Async</ExceptionHandling>

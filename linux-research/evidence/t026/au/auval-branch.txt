@@ -1,0 +1,394 @@
+
+    AU Validation Tool
+    Version: 1.10.0 
+    Copyright 2003-2019, Apple Inc. All Rights Reserved.
+    Specify -h (-help) for command options
+
+--------------------------------------------------
+VALIDATING AUDIO UNIT: 'aumf' - 'Sand' - 'HvyA'
+--------------------------------------------------
+Manufacturer String: HvoyaAudio
+AudioUnit Name: Sand
+Component Version: 1.1.17 (0x10111)
+
+* * PASS
+--------------------------------------------------
+TESTING OPEN TIMES:
+COLD:
+Time to open AudioUnit:         300.831 ms
+WARM:
+Time to open AudioUnit:         1.472  ms
+This AudioUnit is a version 2 implementation.
+FIRST TIME:
+Time for initialization:        0.257 ms
+
+* * PASS
+--------------------------------------------------
+VERIFYING DEFAULT SCOPE FORMATS:
+Input Scope Bus Configuration:
+ Default Bus Count:1
+    Bus Name: Input
+    Default Format: AudioStreamBasicDescription:  2 ch,  48000 Hz, Float32, deinterleaved
+    Has Channel Layouts: 0x640001 0x650002 
+
+Output Scope Bus Configuration:
+ Default Bus Count:1
+    Bus Name: Output
+    Default Format: AudioStreamBasicDescription:  2 ch,  48000 Hz, Float32, deinterleaved
+    Has Channel Layouts: 0x640001 0x650002 
+
+* * PASS
+--------------------------------------------------
+VERIFYING REQUIRED PROPERTIES:
+
+* * PASS
+--------------------------------------------------
+VERIFYING RECOMMENDED PROPERTIES:
+  VERIFYING PROPERTY: Latency
+    PASS
+  VERIFYING PROPERTY: Tail Time
+    PASS
+  VERIFYING PROPERTY: Bypass Effect
+    PASS
+
+* * PASS
+--------------------------------------------------
+VERIFYING OPTIONAL PROPERTIES:
+
+* * PASS
+--------------------------------------------------
+VERIFYING SPECIAL PROPERTIES:
+
+VERIFYING CUSTOM UI
+Cocoa Views Available: 1
+  Sand_View
+    PASS
+
+DEFAULT PRESET: 0, Name: 
+
+HAS FACTORY PRESETS
+
+VERIFYING CLASS INFO
+WARNING: Preset name is not retained in retrieved class data
+    PASS
+
+TESTING HOST CALLBACKS
+    PASS
+
+* * PASS
+--------------------------------------------------
+PUBLISHED PARAMETER INFO:
+
+# # # 28 Global Scope Parameters:
+Parameter ID:0
+Name: compression amnt
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.300000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:1
+Name: comp stages
+Parameter Type: Indexed
+Values: Minimum = x1, Default = x1, Maximum = x0.1
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 3
+Value: 0,  String: x1
+Value: 1,  String: x2
+Value: 2,  String: x0.1
+  -parameter PASS
+
+Parameter ID:2
+Name: softness
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 1.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:3
+Name: order
+Parameter Type: Indexed
+Values: Minimum = -1.000000, Default = 1.000000, Maximum = 15.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:4
+Name: mix mode
+Parameter Type: Indexed
+Values: Minimum = joint, Default = joint, Maximum = sep
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 2
+Value: 0,  String: joint
+Value: 1,  String: sep
+  -parameter PASS
+
+Parameter ID:5
+Name: mix
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.500000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:6
+Name: dry
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.500000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:7
+Name: wet
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.500000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:8
+Name: wet polarity
+Parameter Type: Indexed
+Values: Minimum = auto, Default = auto, Maximum = -
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 3
+Value: 0,  String: auto
+Value: 1,  String: +
+Value: 2,  String: -
+  -parameter PASS
+
+Parameter ID:9
+Name: debrick
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 1.000000
+Flags: Display Cubed, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:10
+Name: flt hz
+Parameter Type: Generic
+Values: Minimum = 1.000000, Default = 10000.000000, Maximum = 22000.000000
+Flags: Display Cube Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:11
+Name: flt res
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.500000, Maximum = 1.000000
+Flags: Display Squared, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:12
+Name: flt pass type
+Parameter Type: Indexed
+Values: Minimum = LP, Default = LP, Maximum = HP
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 3
+Value: 0,  String: LP
+Value: 1,  String: BP
+Value: 2,  String: HP
+  -parameter PASS
+
+Parameter ID:13
+Name: flt position
+Parameter Type: Indexed
+Values: Minimum = post Δ, Default = post comp, Maximum = off
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 5
+Value: 0,  String: post Δ
+Value: 1,  String: post comp
+Value: 2,  String: post wet
+Value: 3,  String: post mix
+Value: 4,  String: off
+  -parameter PASS
+
+Parameter ID:14
+Name: flt mix
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 1.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:15
+Name: oversampling
+Parameter Type: Indexed
+Values: Minimum = os 1x, Default = os 1x, Maximum = os 8x
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 4
+Value: 0,  String: os 1x
+Value: 1,  String: os 2x
+Value: 2,  String: os 4x
+Value: 3,  String: os 8x
+  -parameter PASS
+
+Parameter ID:16
+Name: ms wet
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 1.000000, Maximum = 2.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:17
+Name: ms dry
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 1.000000, Maximum = 2.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:18
+Name: grind
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:19
+Name: grind cutoff
+Parameter Type: Generic
+Values: Minimum = 20.000000, Default = 4000.000000, Maximum = 22000.000000
+Flags: Display Cube Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:20
+Name: grind position
+Parameter Type: Indexed
+Values: Minimum = < c, Default = c >, Maximum = c >
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 2
+Value: 0,  String: < c
+Value: 1,  String: c >
+  -parameter PASS
+
+Parameter ID:21
+Name: dry HP
+Parameter Type: Indexed
+Values: Minimum = none, Default = none, Maximum = grind
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 3
+Value: 0,  String: none
+Value: 1,  String: cut
+Value: 2,  String: grind
+  -parameter PASS
+
+Parameter ID:22
+Name: am envelope
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 1.000000
+Flags: Display Cubed, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:23
+Name: am wave
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 1.000000
+Flags: Display Cubed, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:24
+Name: am release
+Parameter Type: Generic
+Values: Minimum = 0.100000, Default = 0.500000, Maximum = 3000.000000
+Flags: Display Cube Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:25
+Name: am env gate
+Parameter Type: Generic
+Values: Minimum = -140.000000, Default = -140.000000, Maximum = 0.000000
+Flags: Display Cubed, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:26
+Name: am wave gate
+Parameter Type: Generic
+Values: Minimum = -140.000000, Default = -140.000000, Maximum = 0.000000
+Flags: Display Cubed, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:27
+Name: am lp cutoff
+Parameter Type: Generic
+Values: Minimum = 1.000000, Default = 20000.000000, Maximum = 20000.000000
+Flags: Display Cube Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Testing that parameters retain value across reset and initialization
+  PASS
+
+* * PASS
+--------------------------------------------------
+FORMAT TESTS:
+
+Reported Channel Capabilities (explicit):
+      [1, 1]  [2, 2]  
+
+Input/Output Channel Handling:
+1-1   1-2   1-4   1-5   1-6   1-7   1-8   2-2   2-4   2-5   2-6   2-7   2-8   4-4   4-5   5-5   6-6   7-7   8-8
+X                                         X                                                                       
+
+# # AudioChannelLayouts (2), Input Scope:
+ChannelLayout is Writable: F
+The Unit publishes the following Channel Layouts:
+  0x640001, 0x650002, 
+
+Is Audio Channel Layout Available:
+Mono    Stereo  Binau.  AU_4    Ambi.   AU_5    AU_5_0  AU_6    AU_6_0  AU_7_0  AU_7_0F AU_8    AU_5_1  AU_6_1  AU_7_1  AU_7_1F 
+X       X                                                                                                                       
+
+# # AudioChannelLayouts (2), Output Scope:
+ChannelLayout is Writable: F
+The Unit publishes the following Channel Layouts:
+  0x640001, 0x650002, 
+
+Is Audio Channel Layout Available:
+Mono    Stereo  Binau.  AU_4    Ambi.   AU_5    AU_5_0  AU_6    AU_6_0  AU_7_0  AU_7_0F AU_8    AU_5_1  AU_6_1  AU_7_1  AU_7_1F 
+X       X                                                                                                                       
+
+* * PASS
+--------------------------------------------------
+RENDER TESTS:
+
+Input Format: AudioStreamBasicDescription:  2 ch,  48000 Hz, Float32, deinterleaved
+Output Format: AudioStreamBasicDescription:  2 ch,  48000 Hz, Float32, deinterleaved
+Render Test at 512 frames
+Slicing Render Test at 64 frames
+  PASS
+
+
+Render Test at 64 frames, sample rate: 22050 Hz
+Render Test at 137 frames, sample rate: 96000 Hz
+Render Test at 4096 frames, sample rate: 48000 Hz
+Render Test at 4096 frames, sample rate: 192000 Hz
+Render Test at 4096 frames, sample rate: 11025 Hz
+Render Test at 512 frames, sample rate: 44100 Hz
+  PASS
+
+1 Channel Test:
+Render Test at 512 frames
+  PASS
+
+Checking connection semantics:
+Connection format:
+AudioStreamBasicDescription:  2 ch,  44100 Hz, Float32, deinterleaved
+  PASS
+
+Bad Max Frames - Render should fail
+  PASS
+
+Checking parameter setting
+Using AudioUnitSetParameter
+Using AudioUnitScheduleParameter
+  PASS
+
+Test MIDI
+  PASS
+
+* * PASS
+--------------------------------------------------
+AU VALIDATION SUCCEEDED.
+--------------------------------------------------
