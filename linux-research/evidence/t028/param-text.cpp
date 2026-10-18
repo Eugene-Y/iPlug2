@@ -44,7 +44,7 @@ static const Typed kTyped[] = {
   {"damping thresh", "-40 dB", "-40.0 dB"}, {"damping thresh", "-40", "-40.0 dB"},
   {"sat type", "TANH", "TANH"}, {"sat type", "ASINH", "ASINH"}, {"sat type", "tassym", "TASSYM"},
   {"sat type", "ASINH>TASSYM 30%", "ASINH>TASSYM 30%"}, {"sat type", "TASSYM>TANH 70%", "TASSYM>TANH 70%"},
-  {"sat type", "1.3", "ASINH>TASSYM 30%"}, {"sat type", "TANH>ASINH 100%", "ASINH"},
+  {"sat type", "1.3", "ASINH>TASSYM 30%"}, {"sat type", "TANH>ASINH 100%", "ASINH"}, {"sat type", "TANH > ASINH 30%", "TANH>ASINH 30%"},
   {"main hz midi glide ms", "250 ms", "250 ms"}, {"main hz midi glide ms", "250", "250 ms"},
   {"main hz midi glide ms", "1.50 s", "1.50 s"}, {"main hz midi glide ms", "1.5s", "1.50 s"},
 };

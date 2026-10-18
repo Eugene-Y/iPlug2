@@ -199,3 +199,33 @@ Next: independent review.
   - The three status lines in `tail-status-linux.txt` are unlabeled: after@48k, base, after@96k, as far as I can tell from the Log.
   - The VST3 count is from `validator -e`.
   - The `t028` Docker container is still running: remove it at handover (AGENTS §4.5).
+
+### 2026-10-18 (4) — executor's fixes after review round 1
+
+**Commit messages rewritten** (the branch is unpushed; trees identical, checked with `git diff` before moving the ref): the old SHAs in the sections above map as `3e0cb40` → **`36e1712`** (C5), `2f84c42` → **`75109bb`** (tail), `74552f1` → **`f3b6b77`** (docs). `b600156` (C3) is unchanged.
+- **M1** — the tail message now says what happens per host kind: with the tail extension, the host may stop calling 15 s after silence instead of at once. Without it, Gneiss used to return `CONTINUE_IF_NOT_QUIET`: a silent Gneiss slept at once and a self-oscillation ran on. Now it returns `CONTINUE` for 15 s of silent input, then `SLEEP`: a silent Gneiss stays awake 15 s, and a self-oscillation is cut at 15 s.
+- **M2** — added to the tail message and to the list below: VST2 `effGetTailSize`; AUv3 `tailTime`; hosts that size a bounce or freeze by the tail (e.g. a bounce that includes the tail) may run up to 15 s longer. Not checked per host.
+- **M3** — added to the C5 message: "R 10.0 ms" → "R 10 ms" for 9.95–10 ms, and ties at exactly .5 ms (hold/release/glide) now round to even.
+
+**Corrections to this Log:**
+- **N1** — the (3) section says OnReset "only stores host-facing state, nothing of the audio thread". That is not quite right: iPlug's CLAP `process()` reads the tail fields that `SetTailSize` writes. This is the same benign race iPlug's design always has (an `int` and a `bool`). Gneiss's own audio-thread state is still untouched.
+- **M2, completing the tail list in (3):** VST2 `effGetTailSize` and AUv3 `tailTime` also report the 15 s now.
+- **VST3 validator:** every "VST3 validator ×10" line above was run with `-e` (537 tests); a plain run has 47.
+
+**New commits on the Gneiss branch:**
+- `6f829ad` — `param_text`:
+  - **N3:** the off text is formatted once, when the display is built.
+  - **N4:** the sat-type display clamps a value a host passes out of range (or NaN) to [0, 3] before indexing the names; the parser reads "TANH > ASINH 30%" (spaces around `>`).
+  - Display only. The 8001-value text dump is byte-identical to before this commit. The new typed case passes.
+  - clap-validator 38/0 ×3. Renders 54/54 + states 54/54 still bit-identical to base (Linux, rebuilt).
+- `725dfa7` — **N2:** `ARCHITECTURE.md` §7 records the 15 s tail, why it is that long, and that VST3/AU take it only statically.
+
+**N5:** `clap-validator-linux-x20.txt` and `tail-status-linux.txt` were rewritten with labels. The `t028` container is removed.
+
+**M4 (user's decision, not done):** the "-0.000" round trip (T28-a) remains for the bipolar params on iPlug's default display: `pt tilt` and `preFlt band mode`, and by the same mechanism the 8 UB params, which the sampled grid did not hit. Options:
+- (a) fix it once in iPlug's `IParam::GetDisplay` (shared, all plug-ins);
+- (b) give these 10 Gneiss params a `param_text.hpp` display with the same text as now (`%.3f` / `%.4f`) and zero snapping. A few lines, no state or audio change.
+
+**M5 (coordinator):** merge `known-clap-failures/Gneiss.txt` (now empty) only together with, or after, the Gneiss fix in `linux-experiment`.
+
+Gneiss branch now: `b600156` C3 · `36e1712` C5 · `75109bb` tail · `f3b6b77` docs · `6f829ad` param_text review fixes · `725dfa7` ARCHITECTURE tail.

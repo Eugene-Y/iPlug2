@@ -153,8 +153,9 @@ pt tilt                      id=78  double  tests=20007 FAIL=9 JUMP=0 NAN-PARSES
     FAIL sat type               'TASSYM>TANH 70%' -> 0 -> 'TANH'   expected 'TASSYM>TANH 70%'
     ok   sat type               '1.3' -> 0.4333333333 -> 'ASINH>TASSYM 30%'
     FAIL sat type               'TANH>ASINH 100%' -> 0 -> 'TANH'   expected 'ASINH'
+    FAIL sat type               'TANH > ASINH 30%' -> 0 -> 'TANH'   expected 'TANH>ASINH 30%'
     ok   main hz midi glide ms  '250 ms' -> 0.3535533906 -> '250 ms'
     ok   main hz midi glide ms  '250' -> 0.3535533906 -> '250 ms'
     FAIL main hz midi glide ms  '1.50 s' -> 0.02738612788 -> '2 ms'   expected '1.50 s'
     FAIL main hz midi glide ms  '1.5s' -> 0.02738612788 -> '2 ms'   expected '1.50 s'
-TOTAL params=79 tests=956144 FAIL=82739 JUMP=4 nan-fails=53 typed-fails=25
+TOTAL params=79 tests=956144 FAIL=82739 JUMP=4 nan-fails=53 typed-fails=26

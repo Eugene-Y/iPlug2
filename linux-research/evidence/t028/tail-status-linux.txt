@@ -1,4 +1,7 @@
-TOTAL allocs: 0  alloc-blocks-after-first: 0  input-changed: 0  non-finite: 0
+# render-t028 with load=ref-morph.state frames=960000 silence=48000 (1 s of noise, then silence; host without the CLAP tail extension)
+# after (15 s tail), 48 kHz: CONTINUE for 15 s of silent input, first SLEEP at frame 768000 = 1 s + 15 s
   status error/continue/continue-if-not-quiet/tail/sleep=0/1500/0/0/375 first-sleep-frame=768000 last-nonzero-out-frame=959999 state-bytes=-1
+# base (no tail), 48 kHz: CONTINUE_IF_NOT_QUIET throughout
   status error/continue/continue-if-not-quiet/tail/sleep=0/0/1875/0/0 first-sleep-frame=-1 last-nonzero-out-frame=959999 state-bytes=-1
+# after, sr=96000: 960000 frames = 10 s, inside the 15 s tail, so no SLEEP (the tail follows the rate)
   status error/continue/continue-if-not-quiet/tail/sleep=0/1875/0/0/0 first-sleep-frame=-1 last-nonzero-out-frame=959999 state-bytes=-1
