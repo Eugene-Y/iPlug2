@@ -1,0 +1,11 @@
+# Gneiss: a USER-tab layout file dropped onto the USER tab loads it (UserTabPanel::OnDrop). Origin = editor view, 1x.
+# IGraphics gives a drop to the topmost control under it: the panel gets it only in a gap between its own child
+# controls (360,75 is between "B hz" and "band mode" in the default layout); a knob there would take it.
+click 110 64
+wait 1
+shot u00-user-tab
+xdnd-expect RESULT:.accepted top drop 360,75 scripts/steps/gneiss-user-layout.hvoya
+wait 1
+shot u01-dropped
+expect-change u00-user-tab u01-dropped 150 0 790 200
+alive __PROC__

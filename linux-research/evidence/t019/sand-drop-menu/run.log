@@ -1,0 +1,34 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=37088 (open)
+render[first-open] ok (stddev 0.177166)
+view origin 113 188
+[xact] origin 113,188
+[xact] rclick 256 94
+[xact] shot m00-menu-open
+[xact]   xdnd: target 0x400212 (messages to 0x600002)
+[xact]   xdnd: pos 713,308: status from 0x400212 accept=1 action=XdndActionCopy
+[xact]   xdnd: selection request for text/uri-list from 0x600002
+[xact]   xdnd: finished from 0x400212 accepted=1
+[xact]   xdnd: RESULT: accepted
+[xact] xdnd top drop 600,120 (matches RESULT:.accepted)
+[xact] shot m01-after-drop
+[xact] click 700 160
+[xact] shot m02-menu-dismissed
+[xact] changed m01-after-drop -> m02-menu-dismissed in view rect 0,0 740x170 (8649 px)
+[xact] ALIVE pid 37088
+REAPER ALIVE pid=37088 (steps)
+REAPER ALIVE pid=37088 (reopen 1)
+REAPER ALIVE pid=37088 (reopen 2)
+REAPER ALIVE pid=37088 (reopen 3)
+REAPER ALIVE pid=37088 (reopen 4)
+REAPER ALIVE pid=37088 (reopen 5)
+render[after-reopen] ok (stddev 0.177166)
+add2 0
+REAPER ALIVE pid=37088 (two instances)
+render[second-instance] ok (stddev 0.177166)
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+     13 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=1
+    268 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
+REAPER ALIVE pid=37088 (end)
+RESULT: PASS

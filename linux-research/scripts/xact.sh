@@ -112,11 +112,13 @@ while read -r cmd a b c d rest; do
     windows) xdotool search --onlyvisible --name '.' getwindowname %@ 2>/dev/null | sort -u | sed 's/^/[xact]   win: /';;
     xdnd-expect)
       # xdnd-expect <regex> top|deep drop|leave x,y[;x,y...] file...: a scripted XDND drag (probe/xdnd-source.c) through
-      # view positions; the regex is matched against its output (e.g. "RESULT: accepted").
+      # view positions; the regex is matched against its output (e.g. "RESULT: accepted"). Relative files are under
+      # linux-research/.
       [ -x /tmp/xdnd-source ] || gcc -O1 -o /tmp/xdnd-source "$HERE/probe/xdnd-source.c" -lX11 || { xfail "xdnd-expect: cannot build xdnd-source"; continue; }
       pts=""; IFS=';' read -ra P <<<"$d"
       for p in "${P[@]}"; do pts+="$((OX+$(sc "${p%,*}"))),$((OY+$(sc "${p#*,}")));"; done
-      v=$(/tmp/xdnd-source "$b" "$c" "${pts%;}" $rest 2>&1)
+      files=(); for f in $rest; do [[ "$f" = /* ]] || f="$(cd "$HERE/.." && pwd)/$f"; files+=("$f"); done
+      v=$(/tmp/xdnd-source "$b" "$c" "${pts%;}" "${files[@]}" 2>&1)
       sed 's/^/[xact]   xdnd: /' <<<"$v"
       if grep -Eq -- "$a" <<<"$v"; then log "xdnd $b $c $d (matches $a)"; else xfail "xdnd-expect: expected /$a/ from xdnd $b $c $d $rest"; fi;;
     *) log "unknown step: $cmd";;
