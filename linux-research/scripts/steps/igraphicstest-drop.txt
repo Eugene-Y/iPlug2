@@ -1,0 +1,31 @@
+# IGraphicsTest: files dropped onto the editor (XDND, scripts/probe/xdnd-source.c). Origin = editor view, 1024x768 at 1x.
+# DragNDrop is the last of the 28 test buttons in the left column; its drop area is 272..752 x 20..500.
+click 100 735
+wait 1
+shot d00-dnd-test
+# GTK-like source: it finds the host's top-level window, whose XdndProxy sends it to the editor
+xdnd-expect RESULT:.accepted top drop 500,200;510,250 /tmp/dröp/öne.wav
+wait 1
+shot d01-one-file
+expect-change d00-dnd-test d01-one-file 272 20 480 60
+xdnd-expect RESULT:.accepted top drop 500,250 /tmp/a.wav /tmp/b.wav /tmp/c.wav
+wait 1
+shot d02-three-files
+expect-change d01-one-file d02-three-files 272 20 480 80
+# Leaving without a drop changes nothing
+xdnd-expect RESULT:.left top leave 500,250;520,260 /tmp/left.wav
+wait 1
+shot d03-left
+expect-same d02-three-files d03-left 272 20 480 80
+# Outside the editor (REAPER's FX header) the drag is relayed to REAPER, which answers itself; then into the editor
+xdnd-expect pos.[0-9]+,[0-9]+:.status.from.0x[0-9a-f]+.accept=[01] top leave 400,-14 /tmp/relayed.wav
+xdnd-expect RESULT:.accepted top drop 400,-14;500,250 /tmp/after-relay.wav
+wait 1
+shot d04-after-relay
+expect-change d03-left d04-after-relay 272 20 480 60
+# Qt-like source: the deepest XdndAware window is the editor's own
+xdnd-expect RESULT:.accepted deep drop 500,250 /tmp/deep.wav
+wait 1
+shot d05-deep
+expect-change d04-after-relay d05-deep 272 20 480 60
+alive __PROC__

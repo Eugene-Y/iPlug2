@@ -43,6 +43,7 @@
 #include "IGraphicsLinuxGLX.h"
 #include "IGraphicsLinuxKeys.h"
 #include "IGraphicsLinuxClipboard.h"
+#include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxCursors.h"
 #include "IGraphicsLinuxFontconfig.h"
 
@@ -372,6 +373,7 @@ struct IGraphicsLinux::Impl
   unsigned char mKeptKeys[32] = {};
 
   LinuxClipboard mClipboard;
+  LinuxFileDrop mFileDrop;
   bool mPasteKeyPending = false; // Ctrl+V of an edit, replayed once the clipboard's text is here
   IKeyPress mPasteKey { "v", 'V' };
 
@@ -501,6 +503,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mWindowAlive = w.mWindow != 0;
   w.mXEmbed = XInternAtom(pDisplay, "_XEMBED", False);
   w.mClipboard.Init(pDisplay, w.mWindow);
+  w.mFileDrop.Init(pDisplay, w.mWindow);
   w.mCursors.Init(pDisplay);
   // Per connection: key repeat then sends presses only, not release + press pairs.
   XkbSetDetectableAutoRepeat(pDisplay, True, nullptr);
@@ -635,6 +638,7 @@ void IGraphicsLinux::DestroyWindowResources()
     if (w.mInputMethod)
       XCloseIM(w.mInputMethod);
     w.mClipboard.Release();
+    w.mFileDrop.Release();
     w.mCursors.Free();
     if (w.mTooltipWindow)
       XDestroyWindow(w.mDisplay, w.mTooltipWindow);
@@ -719,6 +723,7 @@ void IGraphicsLinux::OnDisplayTimer()
 {
   if (!ProcessXEvents())
     return;
+  mImpl->mFileDrop.Idle();
   if (mImpl->mHostSizeUnconfirmed && !TellHostTheOpenedSize())
     return;
   // A host that maps its own window after the open (Carla) gets it managed, and WM_STATE set, only later; no event
@@ -809,6 +814,14 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
 {
   Impl& w = *mImpl;
   if (w.mClipboard.HandleEvent(event))
+    return;
+  if (w.mFileDrop.HandleEvent(event, w.mWindowW, w.mWindowH, [this](const std::vector<const char*>& paths, int x, int y) {
+        const float scale = GetTotalScale();
+        if (paths.size() == 1)
+          OnDrop(paths[0], x / scale, y / scale);
+        else
+          OnDropMultiple(paths, x / scale, y / scale);
+      }))
     return;
   if (w.mTooltipWindow && event.xany.window == w.mTooltipWindow)
   {
@@ -1957,6 +1970,7 @@ void IGraphicsLinux::WatchTopLevel()
     watchMask(w.mTopLevel, NoEventMask);
     watchMask(topLevel, PropertyChangeMask);
     w.mTopLevel = topLevel;
+    w.mFileDrop.SetTopLevel(topLevel);
   }
   UpdateTopLevelHidden();
 }
