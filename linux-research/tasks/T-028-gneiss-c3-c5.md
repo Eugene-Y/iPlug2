@@ -1,6 +1,6 @@
 # T-028 — Gneiss: don't write the host's input (C3), texts parse back (C5), tail / sleep status
 
-- **Status:** in-progress (user, 2026-10-18: "надо фиксить")
+- **Status:** in review (user, 2026-10-18: "надо фиксить")
 - **Owner:** T-028 chat (2026-10-18), lock `.linux-port-locks/T-028`
 - **Branches/worktrees:** Gneiss `fix/t028-input-text-tail` from `master`, in `/Volumes/Storage/code/hvoya/Gneiss-t028`. Not Linux work: no iPlug2 branch unless a shared change turns out to be needed (then it is a proposal for the user first). Task Log and evidence: iPlug2 `linux/T-028` from `hvoya-linux` in `/Volumes/Storage/code/IPlug2-T-028-log` (as T-026 did).
 - **Commits:** the user allows commits on `fix/t028-input-text-tail` (2026-10-18), which overrides Gneiss `CLAUDE.md`'s no-commit rule for this branch only. Never touch `master` or the main checkout; never push.
@@ -85,3 +85,43 @@ Lock `.linux-port-locks/T-028` taken. Worktrees:
 - iPlug passes the tail on only statically for VST3 (`getTailSamples`) and AU (`TailTime`); only CLAP has a change notification (`SetTailSize` → `tail->changed`). So a tail that follows the damping params would be live in CLAP only.
 
 Next: mac build + validators, REAPER steps, VST3 validator ×10; tail proposal to the user (not implemented yet).
+
+### 2026-10-18 (3) — tail (user's decision), docs, mac + Linux results on the final branch
+
+**User decision (chat, 2026-10-18), asked before implementing:** a *fixed finite* tail (options offered: infinite (recommended) / dynamic from damping / fixed finite, e.g. 15 s / none).
+
+**Commits on Gneiss `fix/t028-input-text-tail`** (on top of `b600156` C3, `3e0cb40` C5):
+- `2f84c42` **tail 15 s** — `Gneiss::kTailSeconds = 15`, `declareTail()` = `SetTailSize (lround (15 · GetSampleRate()))` from the constructor and every `OnReset` (samples, so it follows the host rate; OnReset only stores host-facing state, nothing of the audio thread). Why 15 s: with damping on, the gate drains every filter state 60 dB down within ~7 releases, the longest finite release being just under 2 s; every ring measured was under 1 s (`tail-*.txt`: 65–667 ms on 12 fresh instances, ≤ 167 ms at full resonance with R 2 s / gain +24 / OS 8x / low cutoffs). A self-oscillation with damping off ("R inf") never ends: hosts now stop it 15 s after the input goes silent.
+- `74552f1` docs — `ARCHITECTURE.md` file map gets `param_text.hpp`; `docs/serialization.md` §3a: custom display texts go through `param_text.hpp`; stale §2 sentence fixed (Gain scales the wet before the sum, not the sum).
+
+**What the tail changes on mac/win** (for the user's merge decision):
+- CLAP, host with the `tail` extension (Bitwig, REAPER): `CLAP_PROCESS_TAIL` with 15 s instead of 0 — the host may stop calling Gneiss 15 s after silence instead of at once.
+- CLAP, host without it: iPlug's local tail — `CONTINUE` until 15 s of silent input, then `SLEEP` (was `CONTINUE_IF_NOT_QUIET`, where the host watched the output). Measured: first `SLEEP` at frame 768 000 = 1 s of audio + 15 s of silence at 48 kHz; none within 10 s at 96 kHz (`tail-status-linux.txt`).
+- VST3 `getTailSamples` 15 s · rate (was 0): hosts that suspend silent plug-ins (Cubase/Nuendo option) keep Gneiss running 15 s.
+- AU `TailTime` 15 s (was 0). auval not run (needs an install into `~/Library`, the user's OK).
+- Audio and state unchanged (renders below).
+
+**Final results** (branch = `2f84c42`; Linux `tmp/t028-linux` 2684dd5 = branch + `linux-experiment`; mac = Debug xcodebuild of the branch / of master, all paths in the scratchpad, nothing in `~/Library`):
+
+| Check | base (master / linux-experiment) | branch |
+|---|---|---|
+| Renders, 54 configs, raw + saved state (`{linux,mac}-{base,after}/`) | — | **bit-identical** to base, Linux 54/54 + 54/54, mac 54/54 + 54/54 |
+| Host input samples changed (out-of-place, 64-bit) | 5 568 000 | **0** (Linux and mac) |
+| Allocations in `process()` (Linux hook) | 0 | **0** |
+| Param text table (`param-text-{linux,mac}-*.txt`) | 82 739 FAIL, 25/46 typed wrong | **16 FAIL** (T28-a, iPlug), 13 JUMP (sat ring top), **0/46 typed wrong**; Linux = mac |
+| clap-validator Linux ×20 (`clap-validator-linux-x20.txt`) | sleep-process-status failed 20/20 (+ double ×2, param-conversions) | **38 pass / 0 fail ×20** (one run: 1 warning, not reproduced in 15 more; the only warning clap-validator emits is the denormal-slowdown timing one) |
+| clap-validator mac ×10 (`mac-validators/`) | 35 / 3 ×10 (param-conversions, double in/out-of-place; sleep passed on mac — why it differs from Linux was not investigated) | **38 / 0 ×10** |
+| VST3 validator ×10 (Linux Release, mac Debug) | — | 537 passed, 0 failed, ×10 each |
+| REAPER `steps/gneiss.txt` (Docker) | VST3: `g04b-context-menu` FAIL (also in every merge-smoke since pre-T-007) | CLAP **PASS**; VST3 same single FAIL as base (T28-c); screenshots looked at |
+| mac build CLAP/VST3/AUv2/APP of the branch | — | all exit 0 |
+| CPU, Linux Release, best of 7, 10 s audio (`cpu-linux.txt`) | 0.185 / 0.186 / 0.780 / 1.531 s | 0.185 / 0.185 / 0.772 / 1.533 s (OS 1x f64, 1x f32, 4x f64, 8x f32) |
+
+**Not done here (need the user):**
+- REAPER on mac: type "1.06 kHz" into the cutoff in REAPER's parameter window → 1060 Hz. The same CLAP `text_to_value` call is what `param-text` runs on the mac build, but a real REAPER needs Gneiss installed into `~/Library`.
+- auval (same reason).
+
+**Cross-platform findings, report only** (also in `CROSS_PLATFORM_FINDINGS.md`): T28-a (iPlug default display "-0.000" doesn't read back), T28-b ("nan" text → NaN param value through `atof`/`strtod`), T28-c (REAPER VST3 context-menu step, harness, pre-existing).
+
+`scripts/known-clap-failures/Gneiss.txt` is now empty: valid once the Gneiss branch is merged into `linux-experiment` (until then `package-smoke-in.sh` of the old Gneiss reports its 4 known failures as new).
+
+Next: independent review.
