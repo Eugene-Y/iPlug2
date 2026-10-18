@@ -184,12 +184,14 @@ namespace hvoya {
                     i.num = num;
                     i.den = den;
 
-                    float m = _pPlug->GetPPQPos() * 60. / tempo * (den / 8.) * (4. / num) + 1;
-                    float b = size_t (num * (m - 1)) % den + 1;
-                    uint64_t f = 100 * (b - uint64_t (b));
+                    // PPQ counts quarter notes at any tempo; a beat is one 1/den note.
+                    const double beats = _pPlug->GetPPQPos() * den / 4.;
+                    double beatInBar = beats - num * floor (beats / num);
+                    if (beatInBar >= num) // a PPQ a hair below 0 rounds up to a whole bar
+                        beatInBar = 0;
 
-                    i.beat = floor (b);
-                    i.fraction = f;
+                    i.beat = floor (beatInBar) + 1;
+                    i.fraction = 100 * (beatInBar - floor (beatInBar));
                 } else {
                     i.beat = 1;
                 }
