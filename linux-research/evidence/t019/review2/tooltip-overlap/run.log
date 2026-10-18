@@ -1,0 +1,33 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=67 (open)
+render[first-open] ok (stddev 0.177166)
+view origin 113 188
+[xact] origin 113,188
+[xact] move 256 -40
+[xact] shot o00-no-tooltip
+[xact] move 256 94
+[xact] shot o01-tooltip
+[xact] move 262 128
+[xact] shot o02-pointer-on-tooltip
+[xact] shot o03-later
+[xact] move 262 129
+[xact] shot o04-moved-1px
+[xact] shot o05-later
+[xact] ALIVE pid 67
+REAPER ALIVE pid=67 (steps)
+REAPER ALIVE pid=67 (reopen 1)
+REAPER ALIVE pid=67 (reopen 2)
+REAPER ALIVE pid=67 (reopen 3)
+REAPER ALIVE pid=67 (reopen 4)
+REAPER ALIVE pid=67 (reopen 5)
+render[after-reopen] ok (stddev 0.177166)
+add2 0
+REAPER ALIVE pid=67 (two instances)
+render[second-instance] ok (stddev 0.177166)
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+     13 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=1
+    268 HIT iplug::igraphics::IGraphicsLinux::OnDisplayTimer tid=1
+    268 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
+REAPER ALIVE pid=67 (end)
+RESULT: PASS

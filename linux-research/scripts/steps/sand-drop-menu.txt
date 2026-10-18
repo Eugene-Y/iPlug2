@@ -1,0 +1,13 @@
+# A drop while a stand-in menu is open (CLAP: IGraphics' popup): accepted at the protocol level, nothing breaks; the
+# control under the menu gets it (Sand's knobs ignore files). A click on an empty spot then dismisses the menu.
+[CLAP] rclick 256 94
+wait 1.5
+shot m00-menu-open
+xdnd-expect RESULT:.accepted top drop 600,120 /tmp/while-menu.wav
+wait 1
+shot m01-after-drop
+click 700 160
+wait 1
+shot m02-menu-dismissed
+expect-change m01-after-drop m02-menu-dismissed 0 0 740 170
+alive __PROC__

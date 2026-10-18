@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Which threads run the P3b editor paths (keys, focus, clipboard, cursors, stand-in menus and text entry) while a
-# steps script drives the editor. Runs INSIDE the GUI container. gdb slows REAPER down, so step checks may fail
-# here; only the thread ids count (gdb thread 1 = REAPER's main thread).
+# Which threads run the editor's input paths (keys, focus, clipboard, cursors, stand-in menus and text entry, tooltips,
+# dropped files) while a steps script drives the editor. Runs INSIDE the GUI container. gdb slows REAPER down, so step
+# checks may fail here; only the thread ids count (gdb thread 1 = REAPER's main thread).
 # Usage: input-thread-check.sh <plugin> <FX name e.g. "CLAP: IPlugControls"> <steps> <outdir>
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -17,7 +17,9 @@ L=iplug::igraphics::IGraphicsLinux
 "$HERE/gdb-count.sh" "$P" 150 "$L::HandleKey" "$L::TakeKeyboardFocus" "$L::CheckKeyboardFocus" "$L::ReleaseKeyboardFocus" \
   "$L::FitMenusOnScreen" "$L::FinishFadingMenu" "$L::UpdateTopLevelHidden" \
   "$L::SetTextInClipboard" "$L::GetTextFromClipboard" "$L::CreatePlatformTextEntry" "$L::CreatePlatformPopupMenu" \
-  "$L::SetMouseCursor" "$L::HideMouseCursor" "$L::MoveMouseCursor" "$L::ProcessXEvents()" > "$OUT/input-threads.txt" 2>&1 &
+  "$L::SetMouseCursor" "$L::HideMouseCursor" "$L::MoveMouseCursor" "$L::ProcessXEvents()" \
+  "$L::TrackTooltip" "$L::ShowTooltip" "$L::HideTooltip" "$L::DrawTooltip" "$L::UpdateTooltips" \
+  "iplug::igraphics::IGraphics::OnDrop" "iplug::igraphics::IGraphics::OnDropMultiple" > "$OUT/input-threads.txt" 2>&1 &
 G=$!
 sleep 8
 (echo "origin $OX $OY"; sed "s/__PROC__/$P/" "$STEPS") | OUT="$OUT" "$HERE/xact.sh" > "$OUT/xact.log" 2>&1

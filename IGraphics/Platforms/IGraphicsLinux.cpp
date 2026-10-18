@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <dlfcn.h>
 #include <utility>
 
 #include "IGraphicsLinux.h"
@@ -43,6 +44,7 @@
 #include "IGraphicsLinuxGLX.h"
 #include "IGraphicsLinuxKeys.h"
 #include "IGraphicsLinuxClipboard.h"
+#include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxCursors.h"
 #include "IGraphicsLinuxFontconfig.h"
 
@@ -81,6 +83,15 @@ constexpr int kClipboardTimeoutMs = 200;
 constexpr auto kClickFocusEpisode = std::chrono::milliseconds(1500);
 // Asking again while they still move it only loses again: the focus must have stayed put this long first.
 constexpr auto kFocusQuiet = std::chrono::milliseconds(150);
+// Tooltip look and timing follow the Windows tooltip iPlug uses there (its TOOLTIPWND_MAXWIDTH, the 4 px hover
+// rectangle); sizes are logical pixels.
+constexpr auto kTooltipDelay = std::chrono::milliseconds(500);
+constexpr int kTooltipRestSlop = 4;
+constexpr float kTooltipMaxWidth = 250.f;
+constexpr float kTooltipFontSize = 13.f;
+constexpr float kTooltipPadX = 6.f;
+constexpr float kTooltipPadY = 4.f;
+constexpr float kTooltipBelowPointer = 20.f;
 
 bool HasGLXExtension(const char* extensions, const char* name)
 {
@@ -187,6 +198,67 @@ void GetWorkArea(Display* pDisplay, int& x, int& y, int& w, int& h)
   }
 }
 
+/** Swaps of the current drawable return at once: pacing comes from the host timer, and a blocking swap would stall
+ * the host's main thread once per editor. */
+void DisableSwapWait(const GLXFunctions* pGLX, Display* pDisplay, GLXDrawable drawable)
+{
+  const char* glxExtensions = pGLX->QueryExtensionsString(pDisplay, DefaultScreen(pDisplay));
+  if (HasGLXExtension(glxExtensions, "GLX_EXT_swap_control"))
+  {
+    if (auto swapInterval = reinterpret_cast<PFNGLXSWAPINTERVALEXTPROC>(GLXFunctions::GetProc("glXSwapIntervalEXT")))
+      swapInterval(pDisplay, drawable, 0);
+  }
+  else if (HasGLXExtension(glxExtensions, "GLX_MESA_swap_control"))
+  {
+    if (auto swapInterval = reinterpret_cast<PFNGLXSWAPINTERVALMESAPROC>(GLXFunctions::GetProc("glXSwapIntervalMESA")))
+      swapInterval(0);
+  }
+}
+
+/** Lets the pointer pass through the window, as through native tooltips: an empty input shape (X Shape extension
+ * 1.1; libXext is dlopen'ed and never unloaded, the host may use it too).
+ * @return false without libXext or the extension */
+bool MakeInputTransparent(Display* pDisplay, Window window)
+{
+  using QueryExtensionFunc = Bool (*)(Display*, int*, int*);
+  using CombineRectanglesFunc = void (*)(Display*, Window, int, int, int, XRectangle*, int, int, int);
+  static QueryExtensionFunc sQueryExtension = nullptr;
+  static CombineRectanglesFunc sCombineRectangles = nullptr;
+  static bool sTried = false;
+  if (!sTried)
+  {
+    sTried = true;
+    if (void* pLib = dlopen("libXext.so.6", RTLD_NOW | RTLD_LOCAL))
+    {
+      sQueryExtension = reinterpret_cast<QueryExtensionFunc>(dlsym(pLib, "XShapeQueryExtension"));
+      sCombineRectangles = reinterpret_cast<CombineRectanglesFunc>(dlsym(pLib, "XShapeCombineRectangles"));
+    }
+  }
+  int eventBase = 0, errorBase = 0;
+  if (!sQueryExtension || !sCombineRectangles || !sQueryExtension(pDisplay, &eventBase, &errorBase))
+    return false;
+  // ShapeInput, ShapeSet and Unsorted from <X11/extensions/shape.h>, which a build need not have
+  constexpr int kShapeInput = 2;
+  constexpr int kShapeSet = 0;
+  constexpr int kUnsorted = 0;
+  sCombineRectangles(pDisplay, window, kShapeInput, 0, 0, nullptr, 0, kShapeSet, kUnsorted);
+  return true;
+}
+
+unsigned long PixelFor(const Visual* pVisual, unsigned char r, unsigned char g, unsigned char b)
+{
+  auto component = [](unsigned long mask, unsigned char value) -> unsigned long {
+    if (!mask)
+      return 0;
+    unsigned shift = 0;
+    while (!((mask >> shift) & 1ul))
+      shift++;
+    const double maxValue = static_cast<double>(mask >> shift);
+    return (static_cast<unsigned long>(std::lround(value / 255.0 * maxValue)) << shift) & mask;
+  };
+  return component(pVisual->red_mask, r) | component(pVisual->green_mask, g) | component(pVisual->blue_mask, b);
+}
+
 IMouseMod MouseModFromState(unsigned int state)
 {
   return IMouseMod((state & Button1Mask) != 0, (state & Button3Mask) != 0,
@@ -258,6 +330,8 @@ struct IGraphicsLinux::Impl
   Display* mDisplay = nullptr;
   Window mWindow = 0;
   Window mParent = 0; // 0: top-level, because the host gave no usable parent
+  Visual* mVisual = nullptr; // the GL visual, also the tooltip window's: it is drawn with the editor's context
+  int mDepth = 0;
   Colormap mColormap = 0;
   GLXContext mGLContext = nullptr;
   bool mViewInitialized = false;
@@ -330,6 +404,7 @@ struct IGraphicsLinux::Impl
   unsigned char mKeptKeys[32] = {};
 
   LinuxClipboard mClipboard;
+  LinuxFileDrop mFileDrop;
   bool mPasteKeyPending = false; // Ctrl+V of an edit, replayed once the clipboard's text is here
   IKeyPress mPasteKey { "v", 'V' };
 
@@ -340,6 +415,21 @@ struct IGraphicsLinux::Impl
   IPopupMenuControl* mScreenFittedPopup = nullptr;
 
   std::unique_ptr<LinuxDialogs> mDialogs;
+
+  // X has no tooltips of its own: an override-redirect window of ours, which may extend past the editor like the
+  // native ones on mac and Windows.
+  Window mTooltipWindow = 0;
+  bool mTooltipTakesPointer = false; // no input shape: moving on hides it, or the pointer would land on it
+  bool mTooltipSwapWaitOff = false;
+  bool mTooltipShown = false;
+  int mTooltipIdx = -1; // the control under the pointer whose tooltip is due or shown
+  bool mTooltipDue = false;
+  std::chrono::steady_clock::time_point mTooltipDueAt;
+  int mTooltipRestX = 0; // where the pointer rests, in root coordinates
+  int mTooltipRestY = 0;
+  int mTooltipW = 0; // physical pixels
+  int mTooltipH = 0;
+  WDL_String mTooltipText;
 
   Time mLastClickTime = 0;
   unsigned mLastClickButton = 0;
@@ -427,6 +517,8 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   if (!pVisual)
     return fail("no GLX visual with RGB8, stencil 8 and double buffering");
 
+  w.mVisual = pVisual->visual;
+  w.mDepth = pVisual->depth;
   w.mColormap = XCreateColormap(pDisplay, root, pVisual->visual, AllocNone);
   XSetWindowAttributes attributes {};
   attributes.colormap = w.mColormap;
@@ -444,6 +536,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mWindowAlive = w.mWindow != 0;
   w.mXEmbed = XInternAtom(pDisplay, "_XEMBED", False);
   w.mClipboard.Init(pDisplay, w.mWindow);
+  w.mFileDrop.Init(pDisplay, w.mWindow);
   w.mCursors.Init(pDisplay);
   // Per connection: key repeat then sends presses only, not release + press pairs.
   XkbSetDetectableAutoRepeat(pDisplay, True, nullptr);
@@ -495,18 +588,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     return fail("the GL context cannot be made current, or GL functions are missing");
   }
 
-  // Pacing comes from the host timer; a blocking swap would stall the host's main thread once per editor.
-  const char* glxExtensions = w.mGLX->QueryExtensionsString(pDisplay, screen);
-  if (HasGLXExtension(glxExtensions, "GLX_EXT_swap_control"))
-  {
-    if (auto swapInterval = reinterpret_cast<PFNGLXSWAPINTERVALEXTPROC>(GLXFunctions::GetProc("glXSwapIntervalEXT")))
-      swapInterval(pDisplay, w.mWindow, 0);
-  }
-  else if (HasGLXExtension(glxExtensions, "GLX_MESA_swap_control"))
-  {
-    if (auto swapInterval = reinterpret_cast<PFNGLXSWAPINTERVALMESAPROC>(GLXFunctions::GetProc("glXSwapIntervalMESA")))
-      swapInterval(0);
-  }
+  DisableSwapWait(w.mGLX, pDisplay, w.mWindow);
 
   OnViewInitialized(w.mGLContext);
   w.mViewInitialized = true;
@@ -589,7 +671,10 @@ void IGraphicsLinux::DestroyWindowResources()
     if (w.mInputMethod)
       XCloseIM(w.mInputMethod);
     w.mClipboard.Release();
+    w.mFileDrop.Release();
     w.mCursors.Free();
+    if (w.mTooltipWindow)
+      XDestroyWindow(w.mDisplay, w.mTooltipWindow);
     if (w.mWindow && w.mWindowAlive)
       XDestroyWindow(w.mDisplay, w.mWindow);
     if (w.mColormap)
@@ -671,6 +756,7 @@ void IGraphicsLinux::OnDisplayTimer()
 {
   if (!ProcessXEvents())
     return;
+  mImpl->mFileDrop.Idle();
   if (mImpl->mHostSizeUnconfirmed && !TellHostTheOpenedSize())
     return;
   // A host that maps its own window after the open (Carla) gets it managed, and WM_STATE set, only later; no event
@@ -680,8 +766,11 @@ void IGraphicsLinux::OnDisplayTimer()
     WatchTopLevel();
   // Animations (a menu collapsing, the text cursor) end in IsDirty, outside any X event.
   DrawDirtyControls();
-  if (mImpl->mOpen && *mImpl->mOpen)
+  const std::shared_ptr<bool> open = mImpl->mOpen;
+  if (open && *open)
     UpdateEditingState();
+  if (open && *open)
+    ShowDueTooltip();
 }
 
 bool IGraphicsLinux::ProcessXEvents()
@@ -759,6 +848,20 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
   Impl& w = *mImpl;
   if (w.mClipboard.HandleEvent(event))
     return;
+  if (w.mFileDrop.HandleEvent(event, w.mWindowW, w.mWindowH, [this](const std::vector<const char*>& paths, int x, int y) {
+        const float scale = GetTotalScale();
+        if (paths.size() == 1)
+          OnDrop(paths[0], x / scale, y / scale);
+        else
+          OnDropMultiple(paths, x / scale, y / scale);
+      }))
+    return;
+  if (w.mTooltipWindow && event.xany.window == w.mTooltipWindow)
+  {
+    if (event.type == Expose && event.xexpose.count == 0)
+      DrawTooltip();
+    return;
+  }
 
   switch (event.type)
   {
@@ -810,6 +913,9 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
       HandleButton(event);
       break;
     case KeyPress:
+      HideTooltip();
+      HandleKey(event);
+      break;
     case KeyRelease:
       HandleKey(event);
       break;
@@ -825,6 +931,8 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
       HandleMotion(event);
       break;
     case LeaveNotify:
+      HideTooltip();
+      w.mTooltipIdx = -1;
       if (!(event.xcrossing.state & (Button1Mask | Button3Mask)))
         OnMouseOut();
       break;
@@ -858,6 +966,8 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
 
   if (event.type == ButtonPress)
   {
+    // As on Windows: gone until the pointer rests on another control
+    HideTooltip();
     if (button.button == kWheelUp || button.button == kWheelDown)
     {
       OnMouseWheel(x, y, info.ms, button.button == kWheelUp ? 1.f : -1.f);
@@ -919,7 +1029,10 @@ void IGraphicsLinux::HandleMotion(const XEvent& event)
 
   if (!info.ms.L && !info.ms.R)
   {
+    const std::shared_ptr<bool> open = w.mOpen;
     OnMouseOver(info.x, info.y, info.ms);
+    if (*open)
+      TrackTooltip(latest.xmotion.x_root, latest.xmotion.y_root);
     return;
   }
 
@@ -1670,6 +1783,173 @@ PlatformFontPtr IGraphicsLinux::LoadPlatformFont(const char* fontID, void* pData
   return MakeFont(pData, dataSize);
 }
 
+#pragma mark - Tooltips
+
+void IGraphicsLinux::TrackTooltip(int rootX, int rootY)
+{
+  Impl& w = *mImpl;
+  const int over = TooltipsEnabled() ? GetMouseOver() : -1;
+  const bool otherControl = over != w.mTooltipIdx;
+  if (otherControl)
+  {
+    HideTooltip();
+    w.mTooltipIdx = over;
+    w.mTooltipDue = over >= 0;
+  }
+  const bool moved = std::abs(rootX - w.mTooltipRestX) > kTooltipRestSlop || std::abs(rootY - w.mTooltipRestY) > kTooltipRestSlop;
+  if (moved && w.mTooltipShown && w.mTooltipTakesPointer)
+    HideTooltip();
+  if (otherControl || (w.mTooltipDue && moved))
+  {
+    w.mTooltipRestX = rootX;
+    w.mTooltipRestY = rootY;
+    w.mTooltipDueAt = std::chrono::steady_clock::now() + kTooltipDelay;
+  }
+}
+
+void IGraphicsLinux::ShowDueTooltip()
+{
+  Impl& w = *mImpl;
+  if (!w.mTooltipDue || std::chrono::steady_clock::now() < w.mTooltipDueAt)
+    return;
+  w.mTooltipDue = false;
+  if (w.mButtonState || IsMenuOpen() || IsEditing() || !w.mMapped || w.mTopLevelHidden)
+    return;
+  ShowTooltip();
+}
+
+// Also refreshes a shown tooltip: IPopupMenuControl calls UpdateTooltips() as a menu opens and once it has gone,
+// a plug-in after changing tooltips at run time.
+void IGraphicsLinux::UpdateTooltips()
+{
+  Impl& w = *mImpl;
+  if (!w.mTooltipShown)
+    return;
+  IControl* pControl = GetControl(w.mTooltipIdx);
+  const char* text = pControl ? pControl->GetTooltip() : nullptr;
+  if (IsMenuOpen() || !CStringHasContents(text))
+    HideTooltip();
+  else if (strcmp(text, w.mTooltipText.Get()) != 0)
+    ShowTooltip();
+}
+
+void IGraphicsLinux::ShowTooltip()
+{
+  Impl& w = *mImpl;
+  IControl* pControl = GetControl(w.mTooltipIdx);
+  const char* text = pControl ? pControl->GetTooltip() : nullptr;
+  auto* pVG = static_cast<NVGcontext*>(GetDrawContext());
+  const IText font = StandInMenuText();
+  if (!TooltipsEnabled() || !CStringHasContents(text) || pControl->IsHidden() || !w.mWindowAlive || !pVG || nvgFindFont(pVG, font.mFont) == -1)
+  {
+    HideTooltip();
+    return;
+  }
+  w.mTooltipText.Set(text);
+
+  // The tooltip is the desktop's, not the editor's: it follows the screen scale, not the plug-in's draw scale.
+  const float scale = GetScreenScale();
+  float textBounds[4] = {};
+  nvgSave(pVG);
+  nvgFontFace(pVG, font.mFont);
+  nvgFontSize(pVG, kTooltipFontSize);
+  nvgTextAlign(pVG, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+  nvgTextBoxBounds(pVG, 0.f, 0.f, kTooltipMaxWidth, text, nullptr, textBounds);
+  nvgRestore(pVG);
+  w.mTooltipW = static_cast<int>(std::ceil((textBounds[2] - textBounds[0] + 2.f * kTooltipPadX) * scale));
+  w.mTooltipH = static_cast<int>(std::ceil((textBounds[3] - textBounds[1] + 2.f * kTooltipPadY) * scale));
+
+  ScopedXErrorTrap trap(w.mDisplay);
+  int areaX, areaY, areaW, areaH;
+  GetWorkArea(w.mDisplay, areaX, areaY, areaW, areaH);
+  int x = w.mTooltipRestX;
+  int y = w.mTooltipRestY + static_cast<int>(std::lround(kTooltipBelowPointer * scale));
+  if (y + w.mTooltipH > areaY + areaH)
+    y = w.mTooltipRestY - w.mTooltipH - static_cast<int>(std::lround(kTooltipPadY * scale));
+  x = std::max(areaX, std::min(x, areaX + areaW - w.mTooltipW));
+  y = std::max(areaY, std::min(y, areaY + areaH - w.mTooltipH));
+
+  if (!w.mTooltipWindow)
+  {
+    const Window root = RootWindow(w.mDisplay, DefaultScreen(w.mDisplay));
+    XSetWindowAttributes attributes {};
+    attributes.override_redirect = True;
+    attributes.save_under = True;
+    attributes.colormap = w.mColormap;
+    attributes.border_pixel = 0;
+    attributes.background_pixel = PixelFor(w.mVisual, 250, 250, 250);
+    attributes.event_mask = ExposureMask;
+    w.mTooltipWindow = XCreateWindow(w.mDisplay, root, x, y, w.mTooltipW, w.mTooltipH, 0, w.mDepth, InputOutput, w.mVisual,
+                                     CWOverrideRedirect | CWSaveUnder | CWColormap | CWBorderPixel | CWBackPixel | CWEventMask,
+                                     &attributes);
+    const Atom windowType = XInternAtom(w.mDisplay, "_NET_WM_WINDOW_TYPE", False);
+    const Atom tooltipType = XInternAtom(w.mDisplay, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
+    XChangeProperty(w.mDisplay, w.mTooltipWindow, windowType, XA_ATOM, 32, PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(&tooltipType), 1);
+    w.mTooltipTakesPointer = !MakeInputTransparent(w.mDisplay, w.mTooltipWindow);
+    w.mTooltipSwapWaitOff = false;
+  }
+  else
+    XMoveResizeWindow(w.mDisplay, w.mTooltipWindow, x, y, w.mTooltipW, w.mTooltipH);
+
+  // A shown one only changed its text: no Expose comes when the window does not grow.
+  const bool wasShown = w.mTooltipShown;
+  w.mTooltipShown = true;
+  XMapRaised(w.mDisplay, w.mTooltipWindow);
+  if (wasShown)
+    DrawTooltip();
+  XFlush(w.mDisplay);
+}
+
+void IGraphicsLinux::HideTooltip()
+{
+  Impl& w = *mImpl;
+  w.mTooltipDue = false;
+  if (!w.mTooltipShown)
+    return;
+  w.mTooltipShown = false;
+  ScopedXErrorTrap trap(w.mDisplay);
+  XUnmapWindow(w.mDisplay, w.mTooltipWindow);
+  XFlush(w.mDisplay);
+}
+
+void IGraphicsLinux::DrawTooltip()
+{
+  Impl& w = *mImpl;
+  auto* pVG = static_cast<NVGcontext*>(GetDrawContext());
+  if (!w.mTooltipShown || !pVG)
+    return;
+
+  ScopedXErrorTrap trap(w.mDisplay);
+  ActivateGLContext();
+  if (w.mGLX->GetCurrentContext() == w.mGLContext && w.mGLX->MakeCurrent(w.mDisplay, w.mTooltipWindow, w.mGLContext))
+  {
+    if (!std::exchange(w.mTooltipSwapWaitOff, true))
+      DisableSwapWait(w.mGLX, w.mDisplay, w.mTooltipWindow);
+    const float scale = GetScreenScale();
+    const float width = w.mTooltipW / scale;
+    const float height = w.mTooltipH / scale;
+    glViewport(0, 0, w.mTooltipW, w.mTooltipH);
+    glClearColor(250.f / 255.f, 250.f / 255.f, 250.f / 255.f, 1.f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    nvgBeginFrame(pVG, width, height, scale);
+    nvgBeginPath(pVG);
+    nvgRect(pVG, 0.5f, 0.5f, width - 1.f, height - 1.f);
+    nvgStrokeWidth(pVG, 1.f);
+    nvgStrokeColor(pVG, nvgRGB(118, 118, 118));
+    nvgStroke(pVG);
+    nvgFontFace(pVG, StandInMenuText().mFont);
+    nvgFontSize(pVG, kTooltipFontSize);
+    nvgTextAlign(pVG, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+    nvgFillColor(pVG, nvgRGB(30, 30, 30));
+    nvgTextBox(pVG, kTooltipPadX, kTooltipPadY, kTooltipMaxWidth, w.mTooltipText.Get(), nullptr);
+    nvgEndFrame(pVG);
+    w.mGLX->SwapBuffers(w.mDisplay, w.mTooltipWindow);
+    w.mGLX->MakeCurrent(w.mDisplay, w.mWindow, w.mGLContext);
+  }
+  DeactivateGLContext();
+}
+
 #pragma mark - Dialogs
 
 // The window manager's WM_STATE (Iconic) or the EWMH _NET_WM_STATE_HIDDEN on the host's top-level: minimized, or its
@@ -1702,6 +1982,8 @@ void IGraphicsLinux::UpdateTopLevelHidden()
   }
   if (w.mTopLevelHidden && !hidden)
     SetAllControlsDirty();
+  if (hidden)
+    HideTooltip();
   w.mTopLevelHidden = hidden;
 }
 

@@ -62,4 +62,17 @@ click 14 155
 wait 1
 shot s07-about-closed
 expect-change s06-about s07-about-closed 0 0 740 170
+# Tooltip: resting on the comp knob shows its text below the pointer (an X window of its own); leaving the editor
+# hides it. The checked rect is right of the knob, inside the tooltip.
+move 256 -40
+wait 1
+shot s08-no-tooltip
+move 256 94
+wait 1.5
+shot s09-tooltip
+expect-change s08-no-tooltip s09-tooltip 310 120 90 30
+move 256 -40
+wait 0.5
+shot s10-tooltip-gone
+expect-same s08-no-tooltip s10-tooltip-gone 310 120 90 30
 alive __PROC__

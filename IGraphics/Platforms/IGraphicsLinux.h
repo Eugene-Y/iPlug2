@@ -49,8 +49,7 @@ public:
   void GetMouseLocation(float& x, float& y) const override;
 
   void ForceEndUserEdit() override;
-  // No tooltips on Linux yet: X has no native ones, and an IGraphics-drawn one is left for later.
-  void UpdateTooltips() override {}
+  void UpdateTooltips() override;
 
   EMsgBoxResult ShowMessageBox(const char* str, const char* title, EMsgBoxType type, IMsgBoxCompletionHandlerFunc completionHandler) override;
   void PromptForFile(WDL_String& fileName, WDL_String& path, EFileAction action, const char* ext, IFileDialogCompletionHandlerFunc completionHandler) override;
@@ -107,6 +106,12 @@ private:
   void FitMenusOnScreen();
   void FinishFadingMenu();
   void DrawDirtyControls();
+  /** Arms the tooltip of the control under the pointer: it shows once the pointer has rested on it for a while */
+  void TrackTooltip(int rootX, int rootY);
+  void ShowDueTooltip();
+  void ShowTooltip();
+  void HideTooltip();
+  void DrawTooltip();
   /** @return false when the host closed the editor meanwhile */
   bool TellHostTheOpenedSize();
   bool IsHostResizeEnabled();

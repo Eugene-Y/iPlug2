@@ -12,10 +12,10 @@ without the user's say.
 | Platform child views (`AttachPlatformView` / `RemovePlatformView` / `HidePlatformView`), which `IWebViewControl` needs | mac | missing | T-017 |
 | **Skia** backend | mac, win | NanoVG only | T-018 |
 | NanoVG **GL3** | win (GL2/GL3) | legacy GLX context, GL2 only | T-020 |
-| Files dropped **onto** the editor (`OnDrop`, `OnDropMultiple`) | mac, win | no XDND | T-019 |
+| Files dropped **onto** the editor (`OnDrop`, `OnDropMultiple`) | mac, win | ✅ T-019: XdndAware on the editor; hosts forward (REAPER does) | T-019, hosts in T-013 |
 | Drag files **out** (`InitiateExternalFileDragDrop`) | mac, win | missing | T-020 |
 | `SetFilePathInClipboard` | mac, win | missing | T-020 |
-| Tooltips (`UpdateTooltips`) | native on mac, win | no-op | T-019 |
+| Tooltips (`UpdateTooltips`) | native on mac, win | ✅ T-019: own override-redirect window | T-019 |
 | UI appearance (dark/light, `GetUIAppearance`) | mac | missing; Linux source: xdg-desktop-portal `org.freedesktop.appearance color-scheme` | T-020 |
 | Multi-touch (`PlatformSupportsMultiTouch`) | win | missing; X11 source: XInput2 touch | T-020 |
 | Standalone APP: devices, settings, MIDI, no-device start | mac, win | partial | T-004 |
