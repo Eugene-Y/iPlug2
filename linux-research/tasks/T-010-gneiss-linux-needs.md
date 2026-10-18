@@ -1,6 +1,6 @@
 # T-010 — Gneiss-side Linux needs (P9)
 
-- **Status:** in progress — item 1 waits for the user's decision (Log 2026-10-18)
+- **Status:** in progress — decisions taken; independent review next
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-010`
 - **Branches/worktrees:**
   - Gneiss: local `linux-experiment` in `/Volumes/Storage/code/hvoya/Gneiss-linux`. Never push; never touch `/Volumes/Storage/code/hvoya/Gneiss`.
@@ -80,3 +80,8 @@ No Linux gap needing a Gneiss change was found.
 **Finding T10-1 (Linux-only, Gneiss UX):** Alt + drag/click on the cutoff knobs (snap to note) moves the plug-in window instead on desktops whose window manager uses Alt as the move modifier (Xfce, MATE, Cinnamon, Plasma 5 by default). Options: document it (users can change the WM modifier), or a second modifier on Linux only. A decision for the user.
 
 Commits: `IPLUG_TEST_CLAP_NO_TIMER_SUPPORT` and this Log. Next: the user's decision on item 1 and T10-1, then the independent review.
+
+### 2026-10-18 (2) — the user's decisions
+
+- **Item 1, VST3 latency from the fallback thread:** no change ("ничего не меняем"). T-013 traces which loop Bitwig and Renoise give; revisit only if one of them falls back.
+- **T10-1, Alt on the cutoff knobs:** a short note in the manual, no code change. Gneiss `linux-experiment` `MANUAL.md` (the paragraph on Alt‑drag / Alt‑wheel / Alt‑click snapping): on Linux, desktops whose window manager moves windows with Alt‑drag (Xfce, MATE, Cinnamon, KDE Plasma 5) need the move modifier switched to Super. Left uncommitted for the author (Gneiss `CLAUDE.md`: no commit without an explicit command).
