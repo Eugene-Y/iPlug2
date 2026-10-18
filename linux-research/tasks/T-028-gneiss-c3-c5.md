@@ -229,3 +229,29 @@ Next: independent review.
 **M5 (coordinator):** merge `known-clap-failures/Gneiss.txt` (now empty) only together with, or after, the Gneiss fix in `linux-experiment`.
 
 Gneiss branch now: `b600156` C3 · `36e1712` C5 · `75109bb` tail · `f3b6b77` docs · `6f829ad` param_text review fixes · `725dfa7` ARCHITECTURE tail.
+
+### Review round 2 (independent reviewer)
+
+**Verdict: approved.** M1–M3 and N1–N5 are resolved. Two nits remain (below); both are wording, and neither blocks the merge. M4 is left to the user and M5 to the coordinator, as stated in (4).
+
+**Checked:**
+- **Rewritten commits.** `git diff` shows identical trees: `3e0cb40`/`36e1712`, `2f84c42`/`75109bb`, `74552f1`/`f3b6b77`.
+- **M1:** the `75109bb` message now describes each host kind correctly. CLAP without the tail extension: `CONTINUE_IF_NOT_QUIET` → `CONTINUE` for 15 s of silent input, then `SLEEP`. A silent Gneiss stays awake 15 s; a self-oscillation is cut at 15 s.
+- **M2:** VST2, AUv3 and bounce/freeze are now listed, marked "not checked per host".
+- **M3:** the `36e1712` message now has "R 10.0 ms → R 10 ms" (9.95–10 ms) and the .5-ms ties rounding to even.
+- **N1:** the Log is corrected in (4).
+- **N5:** `clap-validator-linux-x20.txt` and `tail-status-linux.txt` are labeled and readable now, and the `t028` container is gone.
+- **`6f829ad` code:**
+  - The off text is formatted once and captured as a `std::string`. It is compared only when `offText` is set, as before.
+  - The sat-type display maps NaN → 0 and clamps to [0, n] before `int`/indexing. `n` gives `i = n`, `names[n % n]`, the same as before for in-range values.
+  - The parser `trimLeft`s after `>`; the result is still a suffix of the input, so it stays NUL-terminated for `strtod`.
+  - Includes `<algorithm>` and `<string>` added. The new comment is a WHY.
+- **`725dfa7`:** the ARCHITECTURE §7 tail bullet is accurate and short.
+- **Re-run on `build/t028-after`.** Built 13:01 from `tmp/t028-linux` afd1d8f; its `param_text.hpp` equals `725dfa7`'s, and its other differences are `linux-experiment`'s own. Outputs are in `build/t028r-val/`, not committed.
+  - param-text: `FAIL=16 JUMP=13 nan-fails=41 typed-fails=0`. The fail/jump lines are identical to round 1, and the new typed case `'TANH > ASINH 30%' → 'TANH>ASINH 30%'` passes.
+  - Renders vs base: **54/54 render + 54/54 state identical**. Input changed 0, allocations 0, non-finite 0.
+  - clap-validator ×3: 38 pass / 0 fail / 0 warnings.
+
+**Remaining nits (wording, optional):**
+- **R2-N1:** `75109bb`'s message and (4) say VST2 `effGetTailSize` reports "15 s instead of 0". iPlug's VST2 wrapper encodes any finite tail as 2 (`IPlugVST2.cpp:767`, `min(2, tailSize)`): 2 ("has a tail") instead of 1 ("no tail"). It never reports 15 s.
+- **R2-N2:** ARCHITECTURE §7's next bullet still says `OnReset` "only raises `_audioResetPending`". The tail bullet right above it says the tail is set from every `OnReset`. A short "(besides the host-facing tail)" would remove the contradiction.
