@@ -85,3 +85,68 @@ Worktree `IPlug2-T-025` (`linux/T-025` from hvoya-linux d5198e178; SDK folders s
 Not done here: AAX (no SDK); Gneiss/Sand mac builds against `hvoya` (that happens when the fix is ported to `hvoya` after the user's approval); a mac host OS change while bypassed (needs the user).
 
 Next: independent review, then the user's approval of the shared-code change.
+
+### Review round 1 (independent reviewer)
+
+2026-10-19. Reviewed 5876054e9 (fix) and eaafcfdeb (evidence), fresh context. **Verdict: accept.** No blocker or major findings. The minors below are for the author/coordinator to take or leave before the change goes to `hvoya`.
+
+**Re-run by me (Docker, `build/t025r-*`, overlay recreated from `hvoya-linux`):**
+
+| 5 runs × 3 s | before | after |
+|---|---|---|
+| ASan | 5/5 fail, all `SEGV NChanDelay.h:51` ← `PassThroughBuffers` | 0/5 |
+| TSan (`setarch -R`) | 5/5 fail, 9 warnings each, 6–13 bad blocks | 0/5, no warnings, 0 bad blocks over 100k–245k changes per run |
+
+- My own scratch test (`build/t025r-scratch/silence-count.cpp`) counts silent, input and mixed blocks for several setter patterns, then checks that the delay is exact again after the race. TSan was clean in all 4 patterns. Every pattern gave `bad=0` and `exact-after=ok`.
+- macOS: IPlugEffect `macOS-VST3` Debug via `mac-xcodebuild.sh` (paths in the scratchpad) built with exit 0 and no warnings from `IPlugProcessor.cpp`. The tree stayed clean, and I removed `plug_build_info.hpp` afterwards.
+- Evidence matches the Log. Base/fix stress summaries are as stated. The REAPER `latency.txt` files show `pdc` 0↔256 for CLAP and VST3, with RESULT PASS. Gneiss VST3 validator ×10 gives `537 passed, 0 failed` each. clap-validator gives 38/0. Gneiss REAPER CLAP PASS; Gneiss REAPER VST3 failed only `g04b-context-menu`; no crash in the gdb files. I opened `g02-os-cycle.png`.
+
+**Design check (no defect found):**
+- The flag is a correct acquire/release spinlock. The setter does `exchange(acquire)` … `store(release)`. The audio thread does one `compare_exchange_strong(acquire)` and on failure reads nothing and writes only its outputs. Both paths release the flag on every exit; nothing between take and release throws or calls out.
+- **SetLatency on the audio thread:** no deadlock. The audio thread holds the flag only inside `PassThroughBuffers`, never across calls. It can at most spin briefly behind a non-audio setter, and it allocates, as before.
+- **Re-entrancy:** none possible. Nothing inside the critical section calls the host. The VST3/AU/AAX/VST2/CLAP notifications happen outside `IPlugProcessor::SetLatency`'s flag.
+- **Two non-audio setters at once:** the flag serialises them (see n1 for the value they leave behind).
+- **`InitLatencyDelay`:** called only from constructors (`IPlugVST3ProcessorBase` ctor, `IPlugAU` ctor, `IPlugAAX` ctor), before any process call. The unique_ptr is never re-seated, so the unsynchronised `if (!mLatencyDelay)` reads are fine. CLAP, VST2, APP and WAM never create it.
+- **Silence branch:** it zeroes `MaxNChannels(kOutput)` = `mChannelData[kOutput].GetSize()` pointers. That is the same pointer set and frame count that the plain-copy `IPlugProcessor::ProcessBlock` already zeroes or writes, so it adds no new out-of-bounds risk. In the `PLUG_SAMPLE_SRC` path (e.g. AU float) the zeros are cast-copied out as usual.
+- **`mDTSamples == 0`:** it can no longer reach `NChanDelayLine::ProcessBlock`, which would compute `% 0`. The fix guards on `GetDelayTime()`.
+- **Bit-identical when nothing races:** the delay length equals `mLatency` in steady state, because `SetLatency` sets both and `InitLatencyDelay` uses `GetLatency()`. So latency 0 → plain copy and latency >0 → the same delay, in VST3, AU and AAX bypass. With no delay line (no inputs) → copy, as before.
+- **Host-facing latency:** the VST3, AU, AAX, VST2 and CLAP `SetLatency` overrides are untouched and still call `IPlugProcessor::SetLatency`. The `getLatencySamples`, AU `kAudioUnitProperty_Latency`, AUv3 `latency` and CLAP `latencyGet` getters read `GetLatency()` (a relaxed load of an int is enough). The VST3/CLAP "changed" comparisons still see the previous value.
+- **`std::atomic<int> mLatency`:**
+  - `mLatency(config.latency)` direct-initialises; that is fine on clang, GCC and MSVC.
+  - `IPlugProcessor` was already non-copyable (unique_ptr member) and non-movable (user-declared dtor), so the atomics change nothing there.
+  - Nothing takes `&mLatency`; there are no Windows-specific uses.
+  - The CLAP `exchange(false)` is equivalent to the old test-and-clear.
+- **AGENTS §2:**
+  - The shared change is minimal.
+  - The two new comments are WHY-comments.
+  - No product names in code or comments.
+  - C++17; style consistent.
+  - `<atomic>` is already used in core (`IPlugQueue.h`, `IPlugParameter.h`, `IPlugWasmDSP.cpp`). `<thread>` (`std::this_thread::yield`) is new to `IPlugProcessor.cpp` but standard on every target.
+
+**Findings:**
+
+- **m1 — minor: a bypassed block can now go silent where it used to be a plain copy.** If `SetLatency` holds the flag when the audio thread arrives, the audio thread outputs silence, even when the latency is and stays 0. A plug-in that calls `SetLatency(sameValue)` repeatedly while bypassed (e.g. from `OnIdle` or `OnReset`) used to get an untouched copy at latency 0. Now it gets occasional dropouts.
+  - Measured with an audio thread on a 2 ms period and `SetLatency(0)` every 200 µs: 3 silent blocks in 3,556 blocks / 24,133 calls (before: 0).
+  - With the audio thread looping flat out: 473 silent blocks per 1,882 calls (this overstates real hosts).
+  - Latency >0 already glitched on every `SetLatency` before the fix, because the resize clears the line, so that case does not change.
+  - Cheap remedies, author's choice:
+    - (a) in `ResizeLatencyDelay`, skip `SetDelayTime` when `GetDelayTime() == samples` (under the flag). This shrinks the window and also stops same-value calls clearing the line.
+    - (b) and/or `if (mLatency.exchange(samples) == samples) return;` at the top of `IPlugProcessor::SetLatency`.
+    - (c) and/or on contention, plain-copy instead of silence when `GetLatency() == 0`. `mLatency` is stored before the flag is taken, so it is the target value.
+  - Not a blocker: it is far better than the crash, and it only affects bypass.
+- **m2 — minor (evidence quality): the committed stress test's `bad-blocks=0` is a weak criterion for the fix build.**
+  - With the hot-loop setter, 99% of fix-build blocks are silent (my count: 9.07M of 9.13M), and a silent block always passes.
+  - The real proof is the ASan/TSan result plus the single-threaded exact-delay check, and that proof holds.
+  - With a 1 ms paced setter, 99% of blocks carry the delayed input and stay correct (`random 3 1000`: 2.75M input blocks, 1.9k mixed, 0 bad).
+  - Suggest adding the silent/input counts and a paced-setter mode to `latency-race-stress.cpp`, or saying this in the Log.
+- **m3 — minor (bookkeeping): step 5's T-021 R2-1 note is not updated, and the R2-1 link to X1 is still a hypothesis.**
+  - The x86_64 release validator crash did not reproduce at base (0/40), so the fix cannot be shown to cure it.
+  - `CROSS_PLATFORM_FINDINGS.md` X1 still quotes "~1 из 5". It should say that the x86 rate was not reproduced here and that X1 is proven by the ASan stack and the stress test.
+- **m4 — minor (evidence gap): no in-host latency change while the plug-in is bypassed.** Step 4 asks for REAPER oversampling changes while bypassed. The IPlugEffect PDC run and the Gneiss runs change latency while not bypassed. The stress test covers the race itself.
+  - Also not compiled: AAX (no SDK), Windows, iOS and web. That is low risk (standard atomics and `this_thread` only), but the user should know before the `hvoya` merge.
+- **n1 — nit: two concurrent setters can leave `mLatency` and the delay length different.** A stores 100, B stores 200, B resizes, A resizes → reported 200, delayed 100, until the next call. There is no crash, and it is unlikely in practice. Storing `mLatency` inside the flag's critical section (when a delay line exists) would make them consistent.
+- **n2 — nit: stale comment `IPlugProcessor.cpp:539` "(if mLatency)".** The delay line's length decides now. Suggest "run the bypass delay on the PLUG_SAMPLE_DST buffers".
+- **n3 — nit: the `SetLatency` doc could add that it may wait up to one audio block.** It does not deadlock, but callers on a UI thread may care.
+- **n4 — nit: stray "Terminated" line.** `evidence/t025/stress-summary.txt` starts with a "Terminated" line left from killing the hung base run.
+
+Containers: none left (`dock.sh` runs `--rm`). Scratch: `linux-research/build/t025r-{base,base-src,fix,scratch}` (git-ignored), mac build in the session scratchpad.
