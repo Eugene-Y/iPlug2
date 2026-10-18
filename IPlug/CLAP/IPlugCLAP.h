@@ -17,6 +17,7 @@
  * @copydoc IPlugCLAP
  */
 
+#include <atomic>
 #include "IPlugAPIBase.h"
 #include "IPlugProcessor.h"
 #include "plugin.hh"
@@ -211,7 +212,7 @@ private:
   int mTailCount = 0;
   bool mHostHasTail = false;
   bool mTailUpdate = false;
-  bool mLatencyUpdate = false;
+  std::atomic<bool> mLatencyUpdate { false };
   
   void* mWindow = nullptr;
   bool mGUIOpen = false;

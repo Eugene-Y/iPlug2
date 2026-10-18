@@ -169,11 +169,8 @@ bool IPlugCLAP::activate(double sampleRate, uint32_t minFrameCount, uint32_t max
   OnParamReset(kReset);
   OnReset();
 
-  if (mLatencyUpdate)
-  {
-    mLatencyUpdate = false;
+  if (mLatencyUpdate.exchange(false))
     GetClapHost().latencyChanged();
-  }
 
   mHostHasTail = GetClapHost().canUseTail();
   mTailCount = 0;

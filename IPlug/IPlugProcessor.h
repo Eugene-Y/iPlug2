@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstring>
 #include <cstdint>
 #include <ctime>
@@ -112,7 +113,7 @@ public:
   int GetBlockSize() const { return mBlockSize; }
 
   /** @return Plugin latency (in samples) */
-  int GetLatency() const { return mLatency; }
+  int GetLatency() const { return mLatency.load(std::memory_order_relaxed); }
 
   /** @return The tail size in samples (useful for reverberation plug-ins, that may need to decay after the transport stops or an audio item ends) */
   int GetTailSize() const { return mTailSize; }
@@ -242,6 +243,7 @@ public:
 
   /** Call this if the latency of your plug-in changes after initialization (perhaps from OnReset() )
    * This may not be supported by the host. The method is virtual because it's overridden in API classes.
+   * Safe while the audio thread processes; may allocate, so don't call it from the audio thread.
    @param latency Latency in samples */
   virtual void SetLatency(int latency);
 
@@ -268,6 +270,7 @@ protected:
 #pragma mark - Methods called by the API class - you do not call these methods in your plug-in class
   void SetChannelConnections(ERoute direction, int idx, int n, bool connected);
   void InitLatencyDelay();
+  void ResizeLatencyDelay(int samples);
   
   //The following methods are duplicated, in order to deal with either single or double precision processing,
   //depending on the value of arguments passed in
@@ -296,7 +299,7 @@ private:
   /** \c true if the plug-in supports MIDI Polyphonic Expression */
   bool mDoesMPE;
   /** Plug-in latency (in samples) */
-  int mLatency;
+  std::atomic<int> mLatency;
   /** Current sample rate (in Hz) */
   double mSampleRate = DEFAULT_SAMPLE_RATE;
   /** Current block size (in samples) */
@@ -315,6 +318,8 @@ private:
   WDL_PtrList<IChannelData<>> mChannelData[2];
   /** A multi-channel delay line used to delay the bypassed signal when a plug-in with latency is bypassed. */
   std::unique_ptr<NChanDelayLine<sample>> mLatencyDelay = nullptr;
+  /** Held by the audio thread while it runs mLatencyDelay, and by SetLatency() while it resizes it */
+  std::atomic<bool> mLatencyDelayBusy { false };
 protected: // protected because it needs to be access by the API classes, and don't want a setter/getter
   /** Contains detailed information about the transport state */
   ITimeInfo mTimeInfo;
