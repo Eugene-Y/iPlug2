@@ -68,6 +68,9 @@ public:
 
   void Release()
   {
+    // A source whose data is being read waits for XdndFinished, else until its own timeout
+    if (mDrag.reading)
+      SendFinished(false);
     mDisplay = nullptr;
     mWindow = 0;
     mDrag = Drag();

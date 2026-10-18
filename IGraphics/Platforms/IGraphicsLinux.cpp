@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <dlfcn.h>
 #include <utility>
 
 #include "IGraphicsLinux.h"
@@ -214,6 +215,36 @@ void DisableSwapWait(const GLXFunctions* pGLX, Display* pDisplay, GLXDrawable dr
   }
 }
 
+/** Lets the pointer pass through the window, as through native tooltips: an empty input shape (X Shape extension
+ * 1.1; libXext is dlopen'ed and never unloaded, the host may use it too).
+ * @return false without libXext or the extension */
+bool MakeInputTransparent(Display* pDisplay, Window window)
+{
+  using QueryExtensionFunc = Bool (*)(Display*, int*, int*);
+  using CombineRectanglesFunc = void (*)(Display*, Window, int, int, int, XRectangle*, int, int, int);
+  static QueryExtensionFunc sQueryExtension = nullptr;
+  static CombineRectanglesFunc sCombineRectangles = nullptr;
+  static bool sTried = false;
+  if (!sTried)
+  {
+    sTried = true;
+    if (void* pLib = dlopen("libXext.so.6", RTLD_NOW | RTLD_LOCAL))
+    {
+      sQueryExtension = reinterpret_cast<QueryExtensionFunc>(dlsym(pLib, "XShapeQueryExtension"));
+      sCombineRectangles = reinterpret_cast<CombineRectanglesFunc>(dlsym(pLib, "XShapeCombineRectangles"));
+    }
+  }
+  int eventBase = 0, errorBase = 0;
+  if (!sQueryExtension || !sCombineRectangles || !sQueryExtension(pDisplay, &eventBase, &errorBase))
+    return false;
+  // ShapeInput, ShapeSet and Unsorted from <X11/extensions/shape.h>, which a build need not have
+  constexpr int kShapeInput = 2;
+  constexpr int kShapeSet = 0;
+  constexpr int kUnsorted = 0;
+  sCombineRectangles(pDisplay, window, kShapeInput, 0, 0, nullptr, 0, kShapeSet, kUnsorted);
+  return true;
+}
+
 unsigned long PixelFor(const Visual* pVisual, unsigned char r, unsigned char g, unsigned char b)
 {
   auto component = [](unsigned long mask, unsigned char value) -> unsigned long {
@@ -388,6 +419,8 @@ struct IGraphicsLinux::Impl
   // X has no tooltips of its own: an override-redirect window of ours, which may extend past the editor like the
   // native ones on mac and Windows.
   Window mTooltipWindow = 0;
+  bool mTooltipTakesPointer = false; // no input shape: moving on hides it, or the pointer would land on it
+  bool mTooltipSwapWaitOff = false;
   bool mTooltipShown = false;
   int mTooltipIdx = -1; // the control under the pointer whose tooltip is due or shown
   bool mTooltipDue = false;
@@ -1764,6 +1797,8 @@ void IGraphicsLinux::TrackTooltip(int rootX, int rootY)
     w.mTooltipDue = over >= 0;
   }
   const bool moved = std::abs(rootX - w.mTooltipRestX) > kTooltipRestSlop || std::abs(rootY - w.mTooltipRestY) > kTooltipRestSlop;
+  if (moved && w.mTooltipShown && w.mTooltipTakesPointer)
+    HideTooltip();
   if (otherControl || (w.mTooltipDue && moved))
   {
     w.mTooltipRestX = rootX;
@@ -1827,7 +1862,6 @@ void IGraphicsLinux::ShowTooltip()
   ScopedXErrorTrap trap(w.mDisplay);
   int areaX, areaY, areaW, areaH;
   GetWorkArea(w.mDisplay, areaX, areaY, areaW, areaH);
-  // Below the pointer, or above it where the screen ends
   int x = w.mTooltipRestX;
   int y = w.mTooltipRestY + static_cast<int>(std::lround(kTooltipBelowPointer * scale));
   if (y + w.mTooltipH > areaY + areaH)
@@ -1852,6 +1886,8 @@ void IGraphicsLinux::ShowTooltip()
     const Atom tooltipType = XInternAtom(w.mDisplay, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
     XChangeProperty(w.mDisplay, w.mTooltipWindow, windowType, XA_ATOM, 32, PropModeReplace,
                     reinterpret_cast<const unsigned char*>(&tooltipType), 1);
+    w.mTooltipTakesPointer = !MakeInputTransparent(w.mDisplay, w.mTooltipWindow);
+    w.mTooltipSwapWaitOff = false;
   }
   else
     XMoveResizeWindow(w.mDisplay, w.mTooltipWindow, x, y, w.mTooltipW, w.mTooltipH);
@@ -1877,7 +1913,6 @@ void IGraphicsLinux::HideTooltip()
   XFlush(w.mDisplay);
 }
 
-// With the editor's GL context, made current on the tooltip's window for the one frame.
 void IGraphicsLinux::DrawTooltip()
 {
   Impl& w = *mImpl;
@@ -1889,7 +1924,8 @@ void IGraphicsLinux::DrawTooltip()
   ActivateGLContext();
   if (w.mGLX->GetCurrentContext() == w.mGLContext && w.mGLX->MakeCurrent(w.mDisplay, w.mTooltipWindow, w.mGLContext))
   {
-    DisableSwapWait(w.mGLX, w.mDisplay, w.mTooltipWindow);
+    if (!std::exchange(w.mTooltipSwapWaitOff, true))
+      DisableSwapWait(w.mGLX, w.mDisplay, w.mTooltipWindow);
     const float scale = GetScreenScale();
     const float width = w.mTooltipW / scale;
     const float height = w.mTooltipH / scale;

@@ -47,9 +47,10 @@ Mac/win code and behaviour unchanged; only Linux files (AGENTS §2).
 own GLX context current on it for one frame and drawing with the editor's NanoVG context and the stand-in menu's
 sans-serif face (`StandInMenuText`). Cost: ~150 lines, no new library, no new thread. (b) was rejected: Gneiss and
 Sand editors are 170–200 px tall, multi-line tooltips would be clipped.
-- Timing as Windows: shows after the pointer rests 500 ms within 4 px on a control with a tooltip; once shown it
+- Timing like Windows' initial delay: shows after the pointer rests 500 ms within 4 px on a control with a tooltip; once shown it
   stays while the pointer is on that control; hidden on any button or key press, LeaveNotify, menu open, text entry,
-  a minimized host window, editor close. Re-armed only on another control (as `TME_HOVER` on Windows).
+  a minimized host window, editor close. Re-armed only on another control (as `TME_HOVER` on Windows). No auto-hide
+  after a few seconds (Windows has one, mac does not).
 - Place: below the pointer (+20 logical px), above it where the work area ends; clamped to `_NET_WORKAREA`.
 - Size: max width 250 logical px (Windows' `TOOLTIPWND_MAXWIDTH`), font 13 px, at the **screen** scale (not the
   plug-in's draw scale, like native tooltips).
@@ -194,4 +195,17 @@ Re-run by me in Docker (container `t019r`, builds `build/t019r*`, evidence `evid
 
 **Verdict: accept with fixes.** Fix R1 (major) and R2. R3–R7 are optional. Everything else matches the Log, and the
 key tests pass on re-run.
+
+### Review round 1 fixes (author, 2026-10-18)
+- **R1 fixed:** the tooltip window gets an empty input shape (X Shape 1.1, `XShapeCombineRectangles(ShapeInput)`;
+  libXext dlopen'ed like libXcursor, NEEDED unchanged), so the pointer passes through it as on mac. Without libXext
+  or the extension the tooltip hides as soon as the pointer moves on (`mTooltipTakesPointer`). The reviewer's case
+  is now in `sand-tooltip.txt` (move down the same knob onto the tooltip: it stays): CLAP at scale 1 and 2 PASS.
+- **R2 fixed:** `LinuxFileDrop::Release()` sends XdndFinished (not accepted) when the editor closes during a read.
+- **R3:** Log reworded (no auto-hide; Windows has one, mac does not). Kept as is: mac-like.
+- **R4 kept:** the copy cursor for a link drag over the editor: the URI list is only read on the drop; mac accepts
+  by pasteboard type alike. Noted.
+- **R5 fixed:** the two comments removed; `DisableSwapWait` once per tooltip window.
+- **R6:** for T-013 (REAPER forwards only the first three types of a source; GNOME Files lists text/uri-list third).
+- **R7:** `notes/22` is updated by the coordinator at the merge.
 

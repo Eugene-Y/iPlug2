@@ -1,5 +1,6 @@
-# Sand tooltip at any scale (XACT_SCALE with REAPER_UI_SCALE): shows below the pointer after a rest, hides on leaving
-# the editor, shows again. It is still shown at the end, so the test's close/reopen loop closes the editor under it.
+# Sand tooltip at any scale (XACT_SCALE with REAPER_UI_SCALE): shows below the pointer after a rest, stays when the
+# pointer moves onto it, hides on leaving the editor, shows again. It is still shown at the end, so the test's
+# close/reopen loop closes the editor under it.
 move 256 -40
 wait 1
 shot t00-no-tooltip
@@ -7,6 +8,11 @@ move 256 94
 wait 1.5
 shot t01-tooltip
 expect-change t00-no-tooltip t01-tooltip 310 120 90 30
+# Down the same knob onto the tooltip: the pointer passes through it (input shape), so it stays
+move 262 128
+wait 1
+shot t01b-pointer-on-tooltip
+expect-same t01-tooltip t01b-pointer-on-tooltip 310 120 90 30
 move 256 -40
 wait 0.5
 shot t02-gone
