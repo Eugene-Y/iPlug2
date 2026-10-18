@@ -47,6 +47,9 @@ static const Typed kTyped[] = {
   {"sat type", "1.3", "ASINH>TASSYM 30%"}, {"sat type", "TANH>ASINH 100%", "ASINH"}, {"sat type", "TANH > ASINH 30%", "TANH>ASINH 30%"},
   {"main hz midi glide ms", "250 ms", "250 ms"}, {"main hz midi glide ms", "250", "250 ms"},
   {"main hz midi glide ms", "1.50 s", "1.50 s"}, {"main hz midi glide ms", "1.5s", "1.50 s"},
+  {"pt tilt", "-0.0004", "0.000"}, {"preFlt band mode", "-0.0003", "0.000"}, {"main UB u", "-0.00004", "0.0000"},
+  {"preFlt B UB bp", "-0.00001", "0.0000"}, {"pt tilt", "-0.25", "-0.250"}, {"main UB y4", "nan", "0.0000"},
+  {"main res", "nan", "0.0000"}, {"main flt detune", "nan", "0"}, {"main hz", "nan", "1.0 Hz"},
 };
 
 int main(int argc, char** argv)

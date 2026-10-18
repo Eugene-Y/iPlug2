@@ -158,4 +158,13 @@ pt tilt                      id=78  double  tests=20007 FAIL=9 JUMP=0 NAN-PARSES
     ok   main hz midi glide ms  '250' -> 0.3535533906 -> '250 ms'
     FAIL main hz midi glide ms  '1.50 s' -> 0.02738612788 -> '2 ms'   expected '1.50 s'
     FAIL main hz midi glide ms  '1.5s' -> 0.02738612788 -> '2 ms'   expected '1.50 s'
-TOTAL params=79 tests=956144 FAIL=82739 JUMP=4 nan-fails=53 typed-fails=26
+    FAIL pt tilt                '-0.0004' -> 0.4998 -> '-0.000'   expected '0.000'
+    FAIL preFlt band mode       '-0.0003' -> 0.49985 -> '-0.000'   expected '0.000'
+    FAIL main UB u              '-0.00004' -> 0.4999994444 -> '-0.0000'   expected '0.0000'
+    FAIL preFlt B UB bp         '-0.00001' -> 0.49999875 -> '-0.0000'   expected '0.0000'
+    ok   pt tilt                '-0.25' -> 0.375 -> '-0.250'
+    FAIL main UB y4             'nan' -> nan -> 'nan'   expected '0.0000'
+    FAIL main res               'nan' -> nan -> 'nan'   expected '0.0000'
+    ok   main flt detune        'nan' -> nan -> '0'
+    FAIL main hz                'nan' -> nan -> 'nan kHz'   expected '1.0 Hz'
+TOTAL params=79 tests=956144 FAIL=82739 JUMP=4 nan-fails=53 typed-fails=33

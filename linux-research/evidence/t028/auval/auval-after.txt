@@ -1,0 +1,950 @@
+
+    AU Validation Tool
+    Version: 1.10.0 
+    Copyright 2003-2019, Apple Inc. All Rights Reserved.
+    Specify -h (-help) for command options
+
+--------------------------------------------------
+VALIDATING AUDIO UNIT: 'aumf' - 'Gnss' - 'HvyA'
+--------------------------------------------------
+Manufacturer String: HvoyaAudio
+AudioUnit Name: Gneiss
+Component Version: 1.3.1 (0x10301)
+
+* * PASS
+--------------------------------------------------
+TESTING OPEN TIMES:
+COLD:
+Time to open AudioUnit:         5.383 ms
+WARM:
+Time to open AudioUnit:         1.324  ms
+This AudioUnit is a version 2 implementation.
+FIRST TIME:
+Time for initialization:        0.019 ms
+
+* * PASS
+--------------------------------------------------
+VERIFYING DEFAULT SCOPE FORMATS:
+Input Scope Bus Configuration:
+ Default Bus Count:1
+    Bus Name: Input
+    Default Format: AudioStreamBasicDescription:  2 ch,  48000 Hz, Float32, deinterleaved
+    Has Channel Layouts: 0x640001 0x650002 
+
+Output Scope Bus Configuration:
+ Default Bus Count:1
+    Bus Name: Output
+    Default Format: AudioStreamBasicDescription:  2 ch,  48000 Hz, Float32, deinterleaved
+    Has Channel Layouts: 0x640001 0x650002 
+
+* * PASS
+--------------------------------------------------
+VERIFYING REQUIRED PROPERTIES:
+
+* * PASS
+--------------------------------------------------
+VERIFYING RECOMMENDED PROPERTIES:
+  VERIFYING PROPERTY: Latency
+    PASS
+  VERIFYING PROPERTY: Tail Time
+    PASS
+  VERIFYING PROPERTY: Bypass Effect
+    PASS
+
+* * PASS
+--------------------------------------------------
+VERIFYING OPTIONAL PROPERTIES:
+
+* * PASS
+--------------------------------------------------
+VERIFYING SPECIAL PROPERTIES:
+
+VERIFYING CUSTOM UI
+Cocoa Views Available: 1
+  Gneiss_View
+    PASS
+
+DEFAULT PRESET: 0, Name: CLEAN MOOG
+
+HAS FACTORY PRESETS
+    ID:   0    Name: CLEAN MOOG
+    ID:   1    Name: SLAG
+    ID:   2    Name: ARK
+    ID:   3    Name: SERENDIPITY
+    ID:   4    Name: CLAWS
+    ID:   5    Name: STEEL
+    ID:   6    Name: HANDPAN
+    ID:   7    Name: LEMON
+    ID:   8    Name: SUNSET
+    ID:   9    Name: TRANSISTOR TEARS
+    ID:  10    Name: TRIPOLAR
+    ID:  11    Name: RUBBER
+    ID:  12    Name: LOOSE
+    ID:  13    Name: MORDA
+    ID:  14    Name: DRIFT
+    ID:  15    Name: ASHEN
+    ID:  16    Name: FAT BEES
+    ID:  17    Name: RUST
+    ID:  18    Name: SODA
+    ID:  19    Name: GUILLOTINE
+    ID:  20    Name: ACID SPIT
+    ID:  21    Name: ROSIN
+    ID:  22    Name: SPRING
+    ID:  23    Name: FUR
+    ID:  24    Name: CHUBAKA
+    ID:  25    Name: BOX
+    ID:  26    Name: PATINA ANTHROPICA
+    ID:  27    Name: ELECTROLYTE os4x
+    ID:  28    Name: IMP
+    ID:  29    Name: INTERFERENCE
+    ID:  30    Name: BELL
+    ID:  31    Name: MEMBRANE
+    ID:  32    Name: EDGE
+    ID:  33    Name: TIN
+    ID:  34    Name: CRUNCHY
+    ID:  35    Name: TRY ME
+    ID:  36    Name: CAT
+    ID:  37    Name: PAPER
+    ID:  38    Name: CHEW
+    ID:  39    Name: SNOW
+    ID:  40    Name: BARREL
+    ID:  41    Name: LAUNCH
+    ID:  42    Name: CARDBOARD os1x
+    ID:  43    Name: DESERT BEACON os1x
+    ID:  44    Name: LIPS
+    ID:  45    Name: TAPE
+    ID:  46    Name: BEADS
+    ID:  47    Name: VYNIL
+    ID:  48    Name: CRAYON
+    ID:  49    Name: ZIPPER
+    ID:  50    Name: ANTCORE
+    ID:  51    Name: BIRDS
+    ID:  52    Name: COINS
+    ID:  53    Name: SINGAPORE os4x
+    ID:  54    Name: ERROR
+    ID:  55    Name: TRANSMISSION os4x
+    ID:  56    Name: PIPETTE os4x
+    ID:  57    Name: SLUDGE
+    ID:  58    Name: MATCHES
+    ID:  59    Name: SEA GLASS os1x
+    ID:  60    Name: CRUST
+    ID:  61    Name: WARM
+    ID:  62    Name: STICKY TAPE
+    ID:  63    Name: RAINY
+    ID:  64    Name: ANGER MANAGEMENT
+    ID:  65    Name: TABLA
+    ID:  66    Name: PILLOW
+    ID:  67    Name: TOYS
+    ID:  68    Name: BROKEN TV
+    ID:  69    Name: FOIL
+    ID:  70    Name: CELLOPHANE
+    ID:  71    Name: SONGLINE
+    ID:  72    Name: FLEX
+
+VERIFYING CLASS INFO
+WARNING: Preset name is not retained in retrieved class data
+    PASS
+
+TESTING HOST CALLBACKS
+    PASS
+
+* * PASS
+--------------------------------------------------
+PUBLISHED PARAMETER INFO:
+
+# # # 79 Global Scope Parameters:
+Parameter ID:0
+Name: preFlt A hz
+Parameter Type: Generic
+Values: Minimum = 1.000000, Default = 20000.000000, Maximum = 20000.000000
+Flags: Display Cube Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:1
+Name: pre flt A detune
+Parameter Type: Indexed
+Values: Minimum = -100.000000, Default = 0.000000, Maximum = 100.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:2
+Name: preFlt A res
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.500000, Maximum = 1.000000
+Flags: Display Cubed, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:3
+Name: preFlt A pass type
+Parameter Type: Indexed
+Values: Minimum = LP, Default = LP, Maximum = P
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 5
+Value: 0,  String: LP
+Value: 1,  String: HP
+Value: 2,  String: BP
+Value: 3,  String: BR
+Value: 4,  String: P
+  -parameter PASS
+
+Parameter ID:4
+Name: preFlt B hz
+Parameter Type: Generic
+Values: Minimum = 1.000000, Default = 1.000000, Maximum = 20000.000000
+Flags: Display Cube Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:5
+Name: pre flt B detune
+Parameter Type: Indexed
+Values: Minimum = -100.000000, Default = 0.000000, Maximum = 100.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:6
+Name: preFlt B res
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.500000, Maximum = 1.000000
+Flags: Display Cubed, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:7
+Name: preFlt B pass type
+Parameter Type: Indexed
+Values: Minimum = LP, Default = HP, Maximum = P
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 5
+Value: 0,  String: LP
+Value: 1,  String: HP
+Value: 2,  String: BP
+Value: 3,  String: BR
+Value: 4,  String: P
+  -parameter PASS
+
+Parameter ID:8
+Name: preFlt proc order
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 1.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:9
+Name: preFlt band mode
+Parameter Type: Generic
+Values: Minimum = -1.000000, Default = 0.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:10
+Name: neg band mix
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 4.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:11
+Name: main hz
+Parameter Type: Generic
+Values: Minimum = 1.000000, Default = 20000.000000, Maximum = 20000.000000
+Flags: Display Square Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:12
+Name: main flt detune
+Parameter Type: Indexed
+Values: Minimum = -100.000000, Default = 0.000000, Maximum = 100.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:13
+Name: main res
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.500000, Maximum = 1.000000
+Flags: Display Squared, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:14
+Name: drive
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:15
+Name: sat type
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 2.000000, Maximum = 3.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:16
+Name: main pass type
+Parameter Type: Indexed
+Values: Minimum = LP, Default = LP, Maximum = P
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 6
+Value: 0,  String: LP
+Value: 1,  String: HP
+Value: 2,  String: AP
+Value: 3,  String: BP
+Value: 4,  String: BR
+Value: 5,  String: P
+  -parameter PASS
+
+Parameter ID:17
+Name: reserved c
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 1.000000
+Flags: High Resolution, Not Real Time, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:18
+Name: reserved a
+Parameter Type: Indexed
+Values: Minimum = 0, Default = 0, Maximum = 1
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 2
+Value: 0,  String: 0
+Value: 1,  String: 1
+  -parameter PASS
+
+Parameter ID:19
+Name: reserved b
+Parameter Type: Indexed
+Values: Minimum = 0, Default = 0, Maximum = 2
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 3
+Value: 0,  String: 0
+Value: 1,  String: 1
+Value: 2,  String: 2
+  -parameter PASS
+
+Parameter ID:20
+Name: break
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 1.000000
+Flags: Display Squared, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:21
+Name: break char
+Parameter Type: Generic
+Values: Minimum = 1.000000, Default = 1.000000, Maximum = 11.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:22
+Name: break var
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.500000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:23
+Name: break double
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:24
+Name: break fb inversion
+Parameter Type: Indexed
+Values: Minimum = fb -, Default = fb -, Maximum = fb +
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 2
+Value: 0,  String: fb -
+Value: 1,  String: fb +
+  -parameter PASS
+
+Parameter ID:25
+Name: damping release
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 100.000000, Maximum = 2000.000000
+Flags: Display Square Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:26
+Name: damping thresh
+Parameter Type: Generic
+Values: Minimum = -100.000000, Default = -80.000000, Maximum = 0.000000
+Flags: Display Squared, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:27
+Name: damping hold
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 2.000000, Maximum = 10.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:28
+Name: oversampling
+Parameter Type: Indexed
+Values: Minimum = os 1x, Default = os 1x, Maximum = os 8x
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 4
+Value: 0,  String: os 1x
+Value: 1,  String: os 2x
+Value: 2,  String: os 4x
+Value: 3,  String: os 8x
+  -parameter PASS
+
+Parameter ID:29
+Name: mix
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 1.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:30
+Name: gain
+Parameter Type: Generic
+Values: Minimum = -24.000000, Default = 0.000000, Maximum = 24.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:31
+Name: gain on dry
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 1.000000
+Flags: High Resolution, Not Real Time, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:32
+Name: main hz midi note mode
+Parameter Type: Boolean
+Values: Minimum = off, Default = off, Maximum = on
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:33
+Name: main hz midi note ch
+Parameter Type: Indexed
+Values: Minimum = all, Default = all, Maximum = 16
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 17
+Value: 0,  String: all
+Value: 1,  String: 1
+Value: 2,  String: 2
+Value: 3,  String: 3
+Value: 4,  String: 4
+Value: 5,  String: 5
+Value: 6,  String: 6
+Value: 7,  String: 7
+Value: 8,  String: 8
+Value: 9,  String: 9
+Value: 10,  String: 10
+Value: 11,  String: 11
+Value: 12,  String: 12
+Value: 13,  String: 13
+Value: 14,  String: 14
+Value: 15,  String: 15
+Value: 16,  String: 16
+  -parameter PASS
+
+Parameter ID:34
+Name: main hz note oct shift
+Parameter Type: Indexed
+Values: Minimum = -8.000000, Default = 0.000000, Maximum = 8.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:35
+Name: main hz note semi shift
+Parameter Type: Indexed
+Values: Minimum = -12.000000, Default = 0.000000, Maximum = 12.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:36
+Name: main hz note cent shift
+Parameter Type: Indexed
+Values: Minimum = -100.000000, Default = 0.000000, Maximum = 100.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:37
+Name: main hz midi glide ms
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 2000.000000
+Flags: Display Square Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:38
+Name: main glide mode
+Parameter Type: Indexed
+Values: Minimum = legato, Default = legato, Maximum = always
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 2
+Value: 0,  String: legato
+Value: 1,  String: always
+  -parameter PASS
+
+Parameter ID:39
+Name: main CC ch
+Parameter Type: Indexed
+Values: Minimum = all, Default = all, Maximum = 16
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 17
+Value: 0,  String: all
+Value: 1,  String: 1
+Value: 2,  String: 2
+Value: 3,  String: 3
+Value: 4,  String: 4
+Value: 5,  String: 5
+Value: 6,  String: 6
+Value: 7,  String: 7
+Value: 8,  String: 8
+Value: 9,  String: 9
+Value: 10,  String: 10
+Value: 11,  String: 11
+Value: 12,  String: 12
+Value: 13,  String: 13
+Value: 14,  String: 14
+Value: 15,  String: 15
+Value: 16,  String: 16
+  -parameter PASS
+
+Parameter ID:40
+Name: pre A hz midi note mode
+Parameter Type: Boolean
+Values: Minimum = off, Default = off, Maximum = on
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:41
+Name: pre A hz midi note ch
+Parameter Type: Indexed
+Values: Minimum = all, Default = all, Maximum = 16
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 17
+Value: 0,  String: all
+Value: 1,  String: 1
+Value: 2,  String: 2
+Value: 3,  String: 3
+Value: 4,  String: 4
+Value: 5,  String: 5
+Value: 6,  String: 6
+Value: 7,  String: 7
+Value: 8,  String: 8
+Value: 9,  String: 9
+Value: 10,  String: 10
+Value: 11,  String: 11
+Value: 12,  String: 12
+Value: 13,  String: 13
+Value: 14,  String: 14
+Value: 15,  String: 15
+Value: 16,  String: 16
+  -parameter PASS
+
+Parameter ID:42
+Name: pre A hz note oct shift
+Parameter Type: Indexed
+Values: Minimum = -8.000000, Default = 0.000000, Maximum = 8.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:43
+Name: pre A hz note semi shift
+Parameter Type: Indexed
+Values: Minimum = -12.000000, Default = 0.000000, Maximum = 12.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:44
+Name: pre A hz note cent shift
+Parameter Type: Indexed
+Values: Minimum = -100.000000, Default = 0.000000, Maximum = 100.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:45
+Name: pre A hz midi glide ms
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 2000.000000
+Flags: Display Square Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:46
+Name: pre A glide mode
+Parameter Type: Indexed
+Values: Minimum = legato, Default = legato, Maximum = always
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 2
+Value: 0,  String: legato
+Value: 1,  String: always
+  -parameter PASS
+
+Parameter ID:47
+Name: pre A CC ch
+Parameter Type: Indexed
+Values: Minimum = all, Default = all, Maximum = 16
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 17
+Value: 0,  String: all
+Value: 1,  String: 1
+Value: 2,  String: 2
+Value: 3,  String: 3
+Value: 4,  String: 4
+Value: 5,  String: 5
+Value: 6,  String: 6
+Value: 7,  String: 7
+Value: 8,  String: 8
+Value: 9,  String: 9
+Value: 10,  String: 10
+Value: 11,  String: 11
+Value: 12,  String: 12
+Value: 13,  String: 13
+Value: 14,  String: 14
+Value: 15,  String: 15
+Value: 16,  String: 16
+  -parameter PASS
+
+Parameter ID:48
+Name: pre B hz midi note mode
+Parameter Type: Boolean
+Values: Minimum = off, Default = off, Maximum = on
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:49
+Name: pre B hz midi note ch
+Parameter Type: Indexed
+Values: Minimum = all, Default = all, Maximum = 16
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 17
+Value: 0,  String: all
+Value: 1,  String: 1
+Value: 2,  String: 2
+Value: 3,  String: 3
+Value: 4,  String: 4
+Value: 5,  String: 5
+Value: 6,  String: 6
+Value: 7,  String: 7
+Value: 8,  String: 8
+Value: 9,  String: 9
+Value: 10,  String: 10
+Value: 11,  String: 11
+Value: 12,  String: 12
+Value: 13,  String: 13
+Value: 14,  String: 14
+Value: 15,  String: 15
+Value: 16,  String: 16
+  -parameter PASS
+
+Parameter ID:50
+Name: pre B hz note oct shift
+Parameter Type: Indexed
+Values: Minimum = -8.000000, Default = 0.000000, Maximum = 8.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:51
+Name: pre B hz note semi shift
+Parameter Type: Indexed
+Values: Minimum = -12.000000, Default = 0.000000, Maximum = 12.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:52
+Name: pre B hz note cent shift
+Parameter Type: Indexed
+Values: Minimum = -100.000000, Default = 0.000000, Maximum = 100.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:53
+Name: pre B hz midi glide ms
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.000000, Maximum = 2000.000000
+Flags: Display Square Root, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:54
+Name: pre B glide mode
+Parameter Type: Indexed
+Values: Minimum = legato, Default = legato, Maximum = always
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 2
+Value: 0,  String: legato
+Value: 1,  String: always
+  -parameter PASS
+
+Parameter ID:55
+Name: pre B CC ch
+Parameter Type: Indexed
+Values: Minimum = all, Default = all, Maximum = 16
+Flags: Values Have Strings, High Resolution, Not Real Time, Readable, Writable 
+Parameter has Value Strings
+Num Strings = 17
+Value: 0,  String: all
+Value: 1,  String: 1
+Value: 2,  String: 2
+Value: 3,  String: 3
+Value: 4,  String: 4
+Value: 5,  String: 5
+Value: 6,  String: 6
+Value: 7,  String: 7
+Value: 8,  String: 8
+Value: 9,  String: 9
+Value: 10,  String: 10
+Value: 11,  String: 11
+Value: 12,  String: 12
+Value: 13,  String: 13
+Value: 14,  String: 14
+Value: 15,  String: 15
+Value: 16,  String: 16
+  -parameter PASS
+
+Parameter ID:56
+Name: morph active
+Parameter Type: Boolean
+Values: Minimum = off, Default = on, Maximum = on
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:57
+Name: morph X
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.500000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:58
+Name: morph Y
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 0.455446, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:59
+Name: main UB u
+Parameter Type: Generic
+Values: Minimum = -36.000000, Default = 0.000000, Maximum = 36.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:60
+Name: main UB y1
+Parameter Type: Generic
+Values: Minimum = -36.000000, Default = 0.000000, Maximum = 36.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:61
+Name: main UB y2
+Parameter Type: Generic
+Values: Minimum = -36.000000, Default = 0.000000, Maximum = 36.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:62
+Name: main UB y3
+Parameter Type: Generic
+Values: Minimum = -36.000000, Default = 0.000000, Maximum = 36.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:63
+Name: main UB y4
+Parameter Type: Generic
+Values: Minimum = -36.000000, Default = 1.000000, Maximum = 36.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:64
+Name: main UB fb
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 1.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:65
+Name: main UB on
+Parameter Type: Boolean
+Values: Minimum = off, Default = off, Maximum = on
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:66
+Name: preFlt A UB lp
+Parameter Type: Generic
+Values: Minimum = -4.000000, Default = 1.000000, Maximum = 4.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:67
+Name: preFlt A UB hp
+Parameter Type: Generic
+Values: Minimum = -4.000000, Default = 0.000000, Maximum = 4.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:68
+Name: preFlt A UB bp
+Parameter Type: Generic
+Values: Minimum = -4.000000, Default = 0.000000, Maximum = 4.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:69
+Name: preFlt A UB on
+Parameter Type: Boolean
+Values: Minimum = off, Default = off, Maximum = on
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:70
+Name: preFlt B UB lp
+Parameter Type: Generic
+Values: Minimum = -4.000000, Default = 0.000000, Maximum = 4.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:71
+Name: preFlt B UB hp
+Parameter Type: Generic
+Values: Minimum = -4.000000, Default = 1.000000, Maximum = 4.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:72
+Name: preFlt B UB bp
+Parameter Type: Generic
+Values: Minimum = -4.000000, Default = 0.000000, Maximum = 4.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:73
+Name: preFlt B UB on
+Parameter Type: Boolean
+Values: Minimum = off, Default = off, Maximum = on
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:74
+Name: main hz note anchored
+Parameter Type: Boolean
+Values: Minimum = off, Default = off, Maximum = on
+Flags: Values Have Strings, High Resolution, Not Real Time, Element Meta, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:75
+Name: pre A hz note anchored
+Parameter Type: Boolean
+Values: Minimum = off, Default = off, Maximum = on
+Flags: Values Have Strings, High Resolution, Not Real Time, Element Meta, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:76
+Name: pre B hz note anchored
+Parameter Type: Boolean
+Values: Minimum = off, Default = off, Maximum = on
+Flags: Values Have Strings, High Resolution, Not Real Time, Element Meta, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:77
+Name: pt depth
+Parameter Type: Generic
+Values: Minimum = 0.000000, Default = 1.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:78
+Name: pt tilt
+Parameter Type: Generic
+Values: Minimum = -1.000000, Default = 0.000000, Maximum = 1.000000
+Flags: High Resolution, Readable, Writable 
+  -parameter PASS
+
+Testing that parameters retain value across reset and initialization
+  PASS
+
+* * PASS
+--------------------------------------------------
+FORMAT TESTS:
+
+Reported Channel Capabilities (explicit):
+      [1, 1]  [2, 2]  
+
+Input/Output Channel Handling:
+1-1   1-2   1-4   1-5   1-6   1-7   1-8   2-2   2-4   2-5   2-6   2-7   2-8   4-4   4-5   5-5   6-6   7-7   8-8
+X                                         X                                                                       
+
+# # AudioChannelLayouts (2), Input Scope:
+ChannelLayout is Writable: F
+The Unit publishes the following Channel Layouts:
+  0x640001, 0x650002, 
+
+Is Audio Channel Layout Available:
+Mono    Stereo  Binau.  AU_4    Ambi.   AU_5    AU_5_0  AU_6    AU_6_0  AU_7_0  AU_7_0F AU_8    AU_5_1  AU_6_1  AU_7_1  AU_7_1F 
+X       X                                                                                                                       
+
+# # AudioChannelLayouts (2), Output Scope:
+ChannelLayout is Writable: F
+The Unit publishes the following Channel Layouts:
+  0x640001, 0x650002, 
+
+Is Audio Channel Layout Available:
+Mono    Stereo  Binau.  AU_4    Ambi.   AU_5    AU_5_0  AU_6    AU_6_0  AU_7_0  AU_7_0F AU_8    AU_5_1  AU_6_1  AU_7_1  AU_7_1F 
+X       X                                                                                                                       
+
+* * PASS
+--------------------------------------------------
+RENDER TESTS:
+
+Input Format: AudioStreamBasicDescription:  2 ch,  48000 Hz, Float32, deinterleaved
+Output Format: AudioStreamBasicDescription:  2 ch,  48000 Hz, Float32, deinterleaved
+Render Test at 512 frames
+Slicing Render Test at 64 frames
+  PASS
+
+
+Render Test at 64 frames, sample rate: 22050 Hz
+Render Test at 137 frames, sample rate: 96000 Hz
+Render Test at 4096 frames, sample rate: 48000 Hz
+Render Test at 4096 frames, sample rate: 192000 Hz
+Render Test at 4096 frames, sample rate: 11025 Hz
+Render Test at 512 frames, sample rate: 44100 Hz
+  PASS
+
+1 Channel Test:
+Render Test at 512 frames
+  PASS
+
+Checking connection semantics:
+Connection format:
+AudioStreamBasicDescription:  2 ch,  44100 Hz, Float32, deinterleaved
+  PASS
+
+Bad Max Frames - Render should fail
+  PASS
+
+Checking parameter setting
+Using AudioUnitSetParameter
+Using AudioUnitScheduleParameter
+  PASS
+
+Test MIDI
+  PASS
+
+* * PASS
+--------------------------------------------------
+AU VALIDATION SUCCEEDED.
+--------------------------------------------------

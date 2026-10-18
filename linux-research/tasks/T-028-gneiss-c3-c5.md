@@ -284,3 +284,49 @@ Gneiss branch now: `b600156` C3 · `36e1712` C5 · `75109bb` tail · `f3b6b77` d
 - **Coordinator:** merge `linux/T-028`; merge `known-clap-failures/Gneiss.txt` only together with, or after, the Gneiss fix lands in `linux-experiment` (M5).
 - **Throwaway worktrees** (remove when done): `hvoya/Gneiss-t028-base`, `hvoya/Gneiss-t028-base-linux`, `hvoya/Gneiss-t028-linux` (branch `tmp/t028-linux`).
 - No Docker containers left.
+
+### 2026-10-18 (6) — user decisions after hand-over: "-0.000" and "nan" fixed in Gneiss; mac install approved
+
+**User (chat, 2026-10-18):**
+- Fix "-0.000" in Gneiss (M4 / T28-a, Gneiss side).
+- A "nan" text should give 0.
+- The mac check with an install into `~/Library` is approved.
+- Merges: write the coordinator the right order (below).
+
+**Commit `0f912c3`** on `fix/t028-input-text-tail`:
+- `param_text.hpp` gets two helpers:
+  - `setNumberText`: iPlug's own text at the param's `GetDisplayPrecision()`, but a value that rounds to zero shows "0.000". It is used for the **13** bipolar params on iPlug's default display (not 10, as the hand-over said): `pt tilt`, `preFlt band mode`, `main UB u/y1..y4`, `preFlt A/B UB lp/hp/bp`.
+  - `setNumberParser`: atof's reading, but "nan" gives 0.
+- The last loop in `initializeParams` installs `setNumberParser` on every param whose `StringToValue ("nan")` is still NaN. It runs last because every `Init*` drops the parser (`IPlugParameter.cpp`: `mTextToValueFunction = nullptr`). Enums/bools never reach atof, so the loop skips them. Gneiss has no `SetDisplayText`/`kFlagNegateDisplay`, so atof's reading was the whole default path for these params.
+- Added typed cases to `param-text.cpp`: "-0.0004" → "0.000", "nan" → finite, on several params.
+
+**Results** (branch at `0f912c3`; Linux = `tmp/t028-linux` merged again, Release; mac = Debug xcodebuild):
+
+| | Linux | mac |
+|---|---|---|
+| param-text after | **FAIL 0**, JUMP 13 (sat ring top), **nan-fails 0**, typed 0/55 | same |
+| param-text base | 82 739 FAIL, nan-fails 53, typed 33/55 wrong | same |
+| display texts vs the previous branch state (8001 values/param) | only `'-0.000' → '0.000'` (ids 9, 78) | — |
+| renders + states, 54 configs | bit-identical to base | bit-identical to base |
+| clap-validator | 38/0 ×5 | 38/0 ×5 |
+| VST3 validator `-e` | — | 537/0 ×5 |
+
+- **auval** (Release AU of the branch installed into `~/Library`, `auval -v aumf Gnss HvyA`, `evidence/t028/auval/auval-after.txt`): **AU VALIDATION SUCCEEDED**, Tail Time PASS. One warning, "Preset name is not retained in retrieved class data": a class-data/preset matter, untouched here, not compared with master.
+- **`~/Library` now holds the branch's Release CLAP, VST3 and AUv2** (built into the scratchpad, copied with `ditto`).
+  - The user's own builds of 2026-10-16 (CLAP, VST3; there was no AU) were moved, not deleted, to `linux-research/build/t028-library-backup-gneiss-2026-10-16/` (git-ignored).
+  - Restore: move the bundles back to `~/Library/Audio/Plug-Ins/{CLAP,VST3}/IPlug2Dev/Gneiss-macOS/`, and remove the AU `~/Library/Audio/Plug-Ins/Components/IPlug2Dev/Gneiss-macOS/Gneiss.component` (it did not exist before).
+- **REAPER text entry on mac** can't be scripted: REAPER has no ReaScript call that sets a param from text. It is left for the user with the installed build.
+
+**Merge order (for the coordinator; each merge on the user's command, `--no-ff`, nothing pushed):**
+1. Gneiss: `fix/t028-input-text-tail` → `master`.
+   - It builds against iPlug2 `hvoya` as it is: it needs `SetTextToValueFunc` and `makeSegmentedParser`, both already in `hvoya` (228f2efc2). The mac build of the branch used the main checkout.
+2. Gneiss: `master` → `linux-experiment`.
+   - No conflict expected: `Gneiss.cpp` auto-merged in `tmp/t028-linux`, and `param_text.hpp` is new.
+   - Rebuild on Linux.
+   - Do not merge `tmp/t028-linux`: it is a throwaway with merges of pre-rewrite SHAs.
+3. iPlug2: `linux/T-028` → `hvoya-linux`, only after step 2, because it empties `scripts/known-clap-failures/Gneiss.txt` (M5).
+4. Smoke: Gneiss Linux package smoke with clap-validator. Expect no failures at all; REAPER VST3 `g04b-context-menu` fails as before (T28-c).
+5. Clean-up: the worktrees `hvoya/Gneiss-t028-base`, `-t028-base-linux` and `-t028-linux`, and the branch `tmp/t028-linux`. `hvoya/Gneiss-t028` goes once step 1 is done.
+   - Optional: the stash entries "T-028: before restoring regenerated main.rc_mac_dlg (1–3)".
+
+CROSS_PLATFORM_FINDINGS: T28-a and T28-b are now fixed in Gneiss; in iPlug they remain report-only.
