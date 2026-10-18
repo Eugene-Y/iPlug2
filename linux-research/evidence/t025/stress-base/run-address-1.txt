@@ -1,0 +1,16 @@
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==12==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000000 (pc 0xaaaaaaaaee64 bp 0xfffffffff470 sp 0xfffffffff470 T0)
+==12==The signal is caused by a READ memory access.
+==12==Hint: address points to the zero page.
+    #0 0xaaaaaaaaee64 in iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) build/t025-base-src/NChanDelay.h:51
+    #1 0xaaaaaaaaee64 in iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:500
+    #2 0xaaaaaaaa4134 in StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:33
+    #3 0xaaaaaaaa4134 in main evidence/t025/latency-race-stress.cpp:100
+    #4 0xfffff73884c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #5 0xfffff7388594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+    #6 0xaaaaaaaa2cec in _start (/Volumes/Storage/code/IPlug2-T-025/linux-research/build/t025-s2-base/stress-address+0x2cec) (BuildId: 62c5bd319421881bf68ecb77e6e7553ab16d22a2)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV build/t025-base-src/NChanDelay.h:51 in iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int)
+==12==ABORTING

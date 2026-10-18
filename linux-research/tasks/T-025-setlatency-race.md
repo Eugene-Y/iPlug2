@@ -1,7 +1,7 @@
 # T-025 — X1: `SetLatency` races the audio thread (crash; all platforms)
 
-- **Status:** ready — **important** (user, 2026-10-17: "must be fixed")
-- **Owner:** —
+- **Status:** in progress — **important** (user, 2026-10-17: "must be fixed")
+- **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-025`
 - **Branches/worktrees:** iPlug2 `linux/T-025` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-025`. Gneiss local `linux-experiment` only if the plug-in side must change. The fix is cross-platform: it goes to the user before merging and, once approved, to `hvoya` as well (as T21-2 did).
 - **Depends on:** nothing.
 - **Conflicts:** `IPlug/IPlugProcessor.*`, `IPlug/Extras/NChanDelay.h`; T-010 item 1 (latency without a host loop) touches the same path — coordinate, or fold T-010 item 1 into this task.
@@ -38,3 +38,50 @@ Who calls `SetLatency` off the audio thread:
 
 ## Log
 (append: date — what was done — commits — next)
+
+### 2026-10-19 — fix, before/after evidence
+
+Worktree `IPlug2-T-025` (`linux/T-025` from hvoya-linux d5198e178; SDK folders symlinked from `IPlug2-linux`, git-ignored).
+
+**Reproduction (step 1).**
+- The validator methods don't reproduce it at a usable rate any more:
+  - ASan Gneiss VST3 (aarch64, Debug, libasan preloaded): one `validator -e` run takes 14.5 min and passes 537/537 (`evidence/t025/vst3-validator-asan-base-one-run.txt`).
+  - Release x86_64 archive (T-028 merge smoke build) `validator -e` ×40 under emulation: 0 crashes (`vst3-validator-x86-release-base/`; T-021's reviewer had 5/40).
+  - The race window is a bypassed block that meets a `SetLatency`, and the validator rarely lines them up.
+  - Mistake of mine, corrected: my first ASan validator ×20 counts were void. ASan in a non-ASan host needs libasan preloaded, and every run had stopped at load. `scripts/t025-validator-loop.sh` now preloads it and counts a run without the validator's "Result:" line as failed.
+- **Deterministic stress test** instead (`evidence/t025/latency-race-stress.cpp`, `build-stress.sh`, `run-stress.sh`). It uses the real `IPlugProcessor`: one thread calls `SetLatency(random 0..4096)` in a loop, the other runs the bypass path (`AttachBuffers` + `PassThroughBuffers`) on 256-frame blocks of a constant input.
+  - A block passes if every sample is the input or 0 (silence).
+  - It also checks, single-threaded first, that the bypass output is the input delayed by exactly the latency (0, 100, 700, 1, across changes).
+  - Built with ASan and with TSan (TSan run under `setarch -R`: TSan on aarch64 Docker refuses ASLR mappings). The "before" build is `git show hvoya-linux:` of the three changed files.
+
+| 10 runs × 3 s | before (hvoya-linux) | after |
+|---|---|---|
+| ASan | **10/10 fail**: SEGV `NChanDelay.h:51` ← `PassThroughBuffers` (T-003's stack) | 0/10 |
+| TSan | **10/10 fail**: 9 data races per run (`SetLatency`/`SetDelayTime`/`Resize` vs `ProcessBlock`), heap-use-after-free, 8–11 broken blocks; run 10 hung (killed after 23 min) | 0/10, no warnings, 0 broken blocks over 94k–188k latency changes per run |
+| exact delay, single thread | ok | ok |
+
+`evidence/t025/stress-summary.txt`, `stress-{base,fix}/`.
+
+**Fix (5876054e9), iPlug2 shared code:**
+- `IPlugProcessor`: `mLatencyDelayBusy` (atomic flag) guards `mLatencyDelay`.
+  - `SetLatency` → `ResizeLatencyDelay` waits (yield) until the audio thread is out of the delay line, which takes one block at most, then resizes it.
+  - `PassThroughBuffers` takes the flag with one compare-exchange and never waits. If the flag is taken, the block is silence (the resize clears the line anyway).
+  - The delay line's own length decides between delay and copy, so a latency read mid-change can no longer index an empty buffer.
+- `mLatency` and CLAP `mLatencyUpdate` are `std::atomic` (T-010 R1-2: hosts read the latency on their own threads).
+- `NChanDelayLine::GetDelayTime()`.
+- No allocation, lock or wait on the audio thread. The cost per bypassed block is one uncontended compare-exchange.
+- Host-facing latency reporting is unchanged in every format (VST3 `restartComponent`, AU property, CLAP `latency.changed`, AAX): the wrappers' `SetLatency` overrides still call `IPlugProcessor::SetLatency`.
+- `SetLatency`'s doc says it may allocate, so not from the audio thread, as before.
+
+**Checks on the fix:**
+- REAPER, IPlugEffect `IPLUG_TEST_LATENCY_FROM_IDLE`, editor closed: `pdc` follows 0↔256 in CLAP and VST3, every hit on the main thread, churn stable. `host-loop-test.sh` PASS ×2 (`evidence/t025/reaper-latency-{clap,vst3}/`).
+- Gneiss Release (linux-experiment f799cb3 + this tree):
+  - VST3 validator ×10: 537/0 each, no crash (`vst3-validator-gneiss-fix/`);
+  - clap-validator 38/0 (`clap-validator-gneiss-fix.txt`);
+  - `gneiss.txt` CLAP PASS, VST3 only `g04b-context-menu` (T28-c) (`reaper-gneiss-{clap,vst3}/`).
+- Gneiss Debug+ASan VST3 built with the fix (`build/t025-gneiss-asan-fix`). The ASan validator is not repeated: 14.5 min per run and no usable rate, see above.
+- macOS: IPlugEffect CLAP, VST3 and AUv2 Debug from this tree, `xcodebuild` with every path in the scratchpad: all built. Xcode's `plug_build_info.hpp` was removed afterwards (ignored file; it shadows the CMake one).
+
+Not done here: AAX (no SDK); Gneiss/Sand mac builds against `hvoya` (that happens when the fix is ported to `hvoya` after the user's approval); a mac host OS change while bypassed (needs the user).
+
+Next: independent review, then the user's approval of the shared-code change.
