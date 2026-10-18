@@ -243,7 +243,8 @@ public:
 
   /** Call this if the latency of your plug-in changes after initialization (perhaps from OnReset() )
    * This may not be supported by the host. The method is virtual because it's overridden in API classes.
-   * Safe while the audio thread processes; may allocate, so don't call it from the audio thread.
+   * Safe while the audio thread processes. It may allocate, and waits for the audio thread to finish a bypassed
+   * block, so don't call it from the audio thread.
    @param latency Latency in samples */
   virtual void SetLatency(int latency);
 
@@ -270,7 +271,7 @@ protected:
 #pragma mark - Methods called by the API class - you do not call these methods in your plug-in class
   void SetChannelConnections(ERoute direction, int idx, int n, bool connected);
   void InitLatencyDelay();
-  void ResizeLatencyDelay(int samples);
+  void ResizeLatencyDelay();
   
   //The following methods are duplicated, in order to deal with either single or double precision processing,
   //depending on the value of arguments passed in

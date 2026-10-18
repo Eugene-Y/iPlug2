@@ -1,6 +1,6 @@
 # T-025 — X1: `SetLatency` races the audio thread (crash; all platforms)
 
-- **Status:** in progress — **important** (user, 2026-10-17: "must be fixed")
+- **Status:** review-done (round 1: accept), waiting for the user's approval of the shared-code change — **important** (user, 2026-10-17: "must be fixed")
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-025`
 - **Branches/worktrees:** iPlug2 `linux/T-025` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-025`. Gneiss local `linux-experiment` only if the plug-in side must change. The fix is cross-platform: it goes to the user before merging and, once approved, to `hvoya` as well (as T21-2 did).
 - **Depends on:** nothing.
@@ -150,3 +150,18 @@ Next: independent review, then the user's approval of the shared-code change.
 - **n4 — nit: stray "Terminated" line.** `evidence/t025/stress-summary.txt` starts with a "Terminated" line left from killing the hung base run.
 
 Containers: none left (`dock.sh` runs `--rm`). Scratch: `linux-research/build/t025r-{base,base-src,fix,scratch}` (git-ignored), mac build in the session scratchpad.
+
+### 2026-10-19 (2) — review round 1 fixes
+- **m1 + n1:** `SetLatency` with an unchanged latency no longer touches the delay line (`mLatency.exchange`), so a plug-in that keeps re-sending the same value while bypassed gets no silent blocks. The resize reads the latency under the flag, so concurrent setters leave the line at the value set last. Side effect: an unchanged `SetLatency` no longer clears the bypass delay line (it used to, incidentally).
+- **m2:** the stress test counts silent blocks and takes a setter pause (`latency-race-stress [seconds] [maxLatency] [setterPauseUs]`; `run-stress.sh … [setterPauseUs]`). Re-run (`evidence/t025/stress2-*`, 5 runs × 3 s each):
+
+| | ASan | TSan | blocks / silent / latency changes (one run) |
+|---|---|---|---|
+| fix, flat-out setter | 0/5 | 0/5 | 275 878 / 262 607 / 246 084 |
+| fix, 500 µs pause | 0/5 | 0/5 | 279 024 / 37 390 / 3 768 |
+| before, 500 µs pause | **5/5** | **5/5** | 3 551 / 402 / 83, 13 bad blocks |
+
+  With the pause, silent blocks per change are the same before (~5) and after (~9): they are mostly the delay line refilling after a resize, which clears it (random latency up to 4096 = up to 16 empty blocks). The silence from contention alone was measured by the reviewer: 3 blocks in ~24k calls, and now 0 for unchanged values.
+- **m3:** X1 row and proposal in `CROSS_PLATFORM_FINDINGS.md` updated; T-021 Log has a note on R2-1 (the x86_64 validator crash did not reproduce at base, so its link to X1 is a hypothesis).
+- **m4:** left open: no host bypasses through the plug-in while its latency changes in our harness; AAX/Windows/iOS/web not compiled here. That goes to the user with the approval request; the `hvoya` port gets the mac product builds.
+- **n2, n3, n4:** stale "(if mLatency)" comment, `SetLatency` doc ("waits for the audio thread to finish a bypassed block"), stray line in `stress-summary.txt`.

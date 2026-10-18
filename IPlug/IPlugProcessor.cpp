@@ -273,11 +273,12 @@ void IPlugProcessor::SetChannelLabel(ERoute direction, int idx, const char* form
 
 void IPlugProcessor::SetLatency(int samples)
 {
-  mLatency = samples;
-  ResizeLatencyDelay(samples);
+  // An unchanged latency leaves the delay line alone: a resize silences the bypassed block it meets.
+  if (mLatency.exchange(samples) != samples)
+    ResizeLatencyDelay();
 }
 
-void IPlugProcessor::ResizeLatencyDelay(int samples)
+void IPlugProcessor::ResizeLatencyDelay()
 {
   if (!mLatencyDelay)
     return;
@@ -285,7 +286,8 @@ void IPlugProcessor::ResizeLatencyDelay(int samples)
   // The audio thread holds the flag for one block at most, and never waits for it.
   while (mLatencyDelayBusy.exchange(true, std::memory_order_acquire))
     std::this_thread::yield();
-  mLatencyDelay->SetDelayTime(samples);
+  // Read under the flag, so concurrent callers leave the line at the latency set last.
+  mLatencyDelay->SetDelayTime(GetLatency());
   mLatencyDelayBusy.store(false, std::memory_order_release);
 }
 
@@ -460,7 +462,7 @@ void IPlugProcessor::InitLatencyDelay()
   if (MaxNChannels(ERoute::kInput))
   {
     mLatencyDelay = std::unique_ptr<NChanDelayLine<PLUG_SAMPLE_DST>>(new NChanDelayLine<PLUG_SAMPLE_DST>(MaxNChannels(ERoute::kInput), MaxNChannels(ERoute::kOutput)));
-    ResizeLatencyDelay(GetLatency());
+    ResizeLatencyDelay();
   }
 }
 
@@ -536,7 +538,7 @@ void IPlugProcessor::PassThroughBuffers(PLUG_SAMPLE_DST type, int nFrames)
 
 void IPlugProcessor::PassThroughBuffers(PLUG_SAMPLE_SRC type, int nFrames)
 {
-  // for PLUG_SAMPLE_SRC bit buffers, first run the delay (if mLatency) on the PLUG_SAMPLE_DST IPlug buffers
+  // for PLUG_SAMPLE_SRC bit buffers, first run the delay (if any) on the PLUG_SAMPLE_DST IPlug buffers
   PassThroughBuffers(PLUG_SAMPLE_DST(0.), nFrames);
 
   int i, n = MaxNChannels(ERoute::kOutput);

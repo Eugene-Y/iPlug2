@@ -1,7 +1,8 @@
 // T-025: SetLatency on one thread while another runs the bypass path (PassThroughBuffers), as a host does when
 // a plug-in changes its latency off the audio thread while bypassed. Build with -fsanitize=address or =thread.
-// Usage: latency-race-stress [seconds=5] [maxLatency=4096]
-// Exit 0 and "passthrough-ok" when every bypassed block is either the delayed input or silence.
+// Usage: latency-race-stress [seconds=5] [maxLatency=4096] [setterPauseUs=0]
+// Exit 0 and "passthrough-ok" when every bypassed block is either the delayed input or silence. The silent
+// count shows how often a block met a resize: with no pause the setter resizes flat out, so most are silent.
 
 #include <atomic>
 #include <chrono>
@@ -38,6 +39,7 @@ int main(int argc, char** argv)
 {
   const double seconds = argc > 1 ? atof(argv[1]) : 5.0;
   const int maxLatency = argc > 2 ? atoi(argv[2]) : 4096;
+  const int setterPauseUs = argc > 3 ? atoi(argv[3]) : 0;
 
   Config config(0, 0, "2-2", "Stress", "Stress", "T-025", 0x10000, 'Strs', 'T025', 0,
                 false, false, false, false, 0, false, 0, 0, false, 0, 0, 0, 0, "", "");
@@ -82,7 +84,7 @@ int main(int argc, char** argv)
 
   std::atomic<bool> stop { false };
   std::atomic<long> changes { 0 };
-  long blocks = 0, badBlocks = 0;
+  long blocks = 0, badBlocks = 0, silentBlocks = 0;
 
   std::thread setter([&] {
     std::mt19937 rng(25);
@@ -91,6 +93,8 @@ int main(int argc, char** argv)
     {
       processor.SetLatency(latency(rng));
       changes.fetch_add(1);
+      if (setterPauseUs)
+        std::this_thread::sleep_for(std::chrono::microseconds(setterPauseUs));
     }
   });
 
@@ -99,6 +103,10 @@ int main(int argc, char** argv)
   {
     processor.Bypass(ins, outs, kFrames);
     ++blocks;
+    bool silent = true;
+    for (int s = 0; s < kFrames && silent; ++s)
+      silent = outL[s] == 0.0 && outR[s] == 0.0;
+    silentBlocks += silent;
     for (int s = 0; s < kFrames; ++s)
       if (!(outL[s] == 0.0 || outL[s] == 1.0) || !(outR[s] == 0.0 || outR[s] == 1.0))
       {
@@ -109,7 +117,7 @@ int main(int argc, char** argv)
 
   stop = true;
   setter.join();
-  printf("blocks=%ld latency-changes=%ld bad-blocks=%ld\n", blocks, changes.load(), badBlocks);
+  printf("blocks=%ld silent-blocks=%ld latency-changes=%ld bad-blocks=%ld\n", blocks, silentBlocks, changes.load(), badBlocks);
   if (badBlocks)
     return 1;
   printf("passthrough-ok\n");
