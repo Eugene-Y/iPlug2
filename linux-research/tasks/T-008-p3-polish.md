@@ -95,3 +95,13 @@ no failed check (`review-fix2/`).
   unchanged since.
 - Cross-platform findings: see the table above (L2 with attached popup controls; nested menu from a completion;
   sticky `mMaxBounds`).
+
+### 2026-10-18 — VM re-check of the final build (coordinator): closed
+hvoya-linux f88be6b11 (T-008's final focus code unchanged since caaf4c268), IPlugControls Release built in Docker 24.04,
+deployed to the GNOME/X11 VM; `xdpyinfo` answered before, between and after every batch (no virgl hang).
+- `vm/probe/focus-edit.sh` CLAP ×10: **10/10** edits kept the focus until Escape; VST3 ×10: **10/10**.
+- APP `steps/iplugcontrols-app-p3b.txt` ×3: every check passed in all three runs (knob drag, text entry commit,
+  `same a03→a04` after Escape, paste, OS popup, OS text entry, clipboard '55', about box + Escape; cursors and pointer
+  lock). Screenshots checked by eye.
+- Evidence `evidence/t008/vm-recheck/` (screenshots are local only). The open VM item of the hand-over is done.
+

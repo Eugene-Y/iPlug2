@@ -16,7 +16,7 @@ The coordinator keeps this table current. A worker updates only its own task fil
 | [T-005](T-005-ide-research.md) | P11a: IDE research + presets/IDE configs for examples | **merged** 17675831f (m2: kept as is, documented) | 2nd instance | — | T-011 later |
 | [T-006](T-006-clap-state-repro.md) | clap-validator `state-reproducibility` failures (Linux and mac) | **merged** (see merge log; T6-1 approved by the user) | 2nd instance | — | — |
 | [T-007](T-007-hidpi.md) | P5: HiDPI (CLAP set_scale, VST3 content scale, Xft.dpi) | **merged** 4d413d040 | coordinator | — | T-008 (IGraphicsLinux*): not in parallel |
-| [T-008](T-008-p3-polish.md) | P3 polish from the VM run (notes/14), listed below the table | **merged** fac9cc84d (VM re-check of the final focus build still open, see STATUS) | coordinator | — | — |
+| [T-008](T-008-p3-polish.md) | P3 polish from the VM run (notes/14), listed below the table | **merged** fac9cc84d; VM re-check of the final build done 2026-10-18 (focus 10/10 CLAP + VST3, APP ×3 clean) | coordinator | — | — |
 | [T-009](T-009-visual-parity.md) | P6: visual parity of Gneiss and Sand vs mac/win | **ready** (after T-019) | — | — | — |
 | [T-010](T-010-gneiss-linux-needs.md) | P9: Gneiss-side Linux needs (latency without a host loop, platform audit; menus and `openFolder` already done) | **ready** | — | — | Gneiss repo |
 | [T-011](T-011-duplicate-templates.md) | P11b: painless duplication (out-of-tree paths in `duplicate.py`) + Gneiss IDE setup | **ready** (user OK'd fixing the shared `duplicate.py`) | — | T-005 | `Examples/duplicate.py`, `gitignore_template`; Gneiss repo |
@@ -45,7 +45,7 @@ files dropped onto the editor (Gneiss USER tab), deferred `SetLatency`. Order:
 
 | # | Task | Who | Why this slot |
 |---|---|---|---|
-| 1 | VM re-check of T-008's final focus build | coordinator | short; closes T-008 |
+| 1 | ~~VM re-check of T-008's final focus build~~ done 2026-10-18 | coordinator | — |
 | 2 | ~~T-012 Sand build~~ merged | 2nd instance | — |
 | 3 | T-019 tooltips + XDND drop | coordinator | IGraphicsLinux; used by both plug-ins |
 | 4 | T-010 Gneiss-side Linux needs | coordinator | Gneiss `linux-experiment` |
