@@ -1,6 +1,6 @@
 # T-028 — Gneiss: don't write the host's input (C3), texts parse back (C5), tail / sleep status
 
-- **Status:** review-done (independent review approved in round 2, 2026-10-18); see the Hand-over at the end of the Log
+- **Status:** merged 2026-10-18 (Gneiss master c6f4442, linux-experiment f799cb3; hvoya-linux 9f9afa0e9); see the merge log
 - **Owner:** T-028 chat (2026-10-18), lock `.linux-port-locks/T-028`
 - **Branches/worktrees:** Gneiss `fix/t028-input-text-tail` from `master`, in `/Volumes/Storage/code/hvoya/Gneiss-t028`. Not Linux work: no iPlug2 branch unless a shared change turns out to be needed (then it is a proposal for the user first). Task Log and evidence: iPlug2 `linux/T-028` from `hvoya-linux` in `/Volumes/Storage/code/IPlug2-T-028-log` (as T-026 did).
 - **Commits:** the user allows commits on `fix/t028-input-text-tail` (2026-10-18), which overrides Gneiss `CLAUDE.md`'s no-commit rule for this branch only. Never touch `master` or the main checkout; never push.
