@@ -109,3 +109,89 @@ lists the tooltip functions and `IGraphics::OnDrop`/`OnDropMultiple`.
   `vm/final-{clap,vst3}-{editor,header}`, `vm/files-drop/`). The first design's failure and the baseline comparison:
   `vm/proxy-design/`, `vm/relay-header-*`.
 
+### Review round 1 (independent reviewer, 2026-10-18)
+Fresh context, read-only on code. Range `hvoya-linux..linux/T-019` (28ae356c8 … 0a96072ba). Shared-code rule holds:
+outside `linux-research/` only `IGraphics/Platforms/IGraphicsLinux.{h,cpp}` and the new `IGraphicsLinuxDrop.h` change,
+so mac/win/iOS/web are untouched. No product names in framework code. Style fine (2-space, `mCamelCase`, `pCamelCase`).
+Main thread only by construction (everything comes from the X drain / display timer). NEEDED unchanged.
+
+Findings:
+- **R1 — major — `IGraphicsLinux.cpp:1840-1850` (tooltip window), `:900` (LeaveNotify).** The tooltip window takes
+  pointer input. It sits 20 logical px below the pointer, and stays shown while the pointer is on the same control.
+  So moving the pointer down on any control taller than about 20 px enters the tooltip. The editor then gets a
+  LeaveNotify, which hides the tooltip, resets `mTooltipIdx` and calls `OnMouseOut()`. The control's hover drops, then
+  comes back on the next motion. While the pointer rests, the tooltip stays hidden: it is re-armed only on the next
+  motion, and then reappears 20 px lower. A click that lands on the tooltip before the next drain hides it is lost.
+  On mac, native tooltips ignore mouse events, so the pointer passes through them; Windows not checked.
+  Reproduced in Docker on Sand CLAP: `evidence/t019/review/tooltip-overlap/` (steps
+  `review/tooltip-overlap.txt`). `o01` shows the tooltip; `o02` (pointer 34 px lower, same knob) has none; `o03`
+  still none 1.5 s later; `o05` shows it again after a 1 px move.
+  *Fix:* make the window input-transparent with an empty input shape: `XShapeCombineRectangles(…, ShapeInput, …, 0
+  rects, ShapeSet, …)` via `dlopen("libXext.so.6")`, or `XFixesSetWindowShapeRegion` via libXfixes. Either keeps
+  NEEDED unchanged. If neither library is available, place the tooltip below the control's rect instead of below the
+  pointer, or treat a LeaveNotify whose root position lies inside the tooltip as "still inside": hide the tooltip,
+  but skip `OnMouseOut` and the index reset. Add the overlap steps to `sand-tooltip.txt`.
+- **R2 — minor — `IGraphicsLinuxDrop.h:69-74` (`Release`).** When the editor closes while a drop's data is still being
+  read (between `XConvertSelection` and SelectionNotify/INCR end), the source never gets `XdndFinished`. GTK then
+  waits for its own timeout, with the drag icon stuck until then. *Fix:* in `Release()`, call
+  `if (mDisplay && mDrag.source) SendFinished(false);` before clearing (the display is still open there).
+- **R3 — nit — Log, "Timing as Windows … once shown it stays while the pointer is on that control".** On Windows,
+  iPlug's tooltip control keeps the default `TTDT_AUTOPOP`, so it hides by itself after about 5 s (10 × the
+  double-click time). Linux never auto-hides. Either add an auto-pop or reword the Log ("stays until the pointer
+  leaves the control, like mac").
+- **R4 — nit — `IGraphicsLinuxDrop.h:170-201`.** A browser link drag offers `text/uri-list` with `http://` URIs. It is
+  accepted over the whole editor (copy cursor) and then refused at the drop. mac/win accept file drags only.
+  Acceptable for now. Optionally request the data on the first `XdndPosition` (XDND lets the target convert before
+  the drop) and accept only when a local path parses.
+- **R5 — nit — comments.** `IGraphicsLinux.cpp:1830` ("Below the pointer, or above it where the screen ends")
+  restates the next lines. `:1880` ("With the editor's GL context, made current on the tooltip's window…") repeats
+  what the `mVisual` member comment already says ("say it once"). `DrawTooltip` calls `DisableSwapWait` on every draw
+  (`:1892`), which queries the GLX extension string each time; once per window is enough.
+- **R6 — info for T-013 (no code defect).** With a source that lists more than three types and puts `text/uri-list`
+  after the third (`XdndTypeList`, bit 0 of `XdndEnter`), the drop is refused through REAPER's forwarding: `top`
+  answers accept=0 on the second position. The same source addressed to the editor directly (`deep`) is accepted, so
+  `SourceListsType` works. REAPER evidently forwards only the first three types; GNOME Files lists `text/uri-list`
+  third, so it is not affected. Record it among the host notes.
+- **R7 — nit — `linux-research/notes/22-feature-parity.md:15,18`** still say "no XDND" / "no-op" for T-019's rows;
+  update them at merge.
+
+Checked and found correct (no finding):
+- Tooltip lifetime: the window is destroyed in `DestroyWindowResources`, and `w = Impl()` resets all tooltip state.
+- GL context switching: the context is made current on the tooltip, then back on `mWindow`, and
+  `DeactivateGLContext` restores the host's context. `IGraphicsNanoVG::BeginFrame` resets the viewport.
+- Placement and clamping, and the screen scale vs the draw scale.
+- XDND message filtering by window and source, the `XdndStatus` flags (bit 1 with an empty rectangle), the drop
+  time stamp, and the `XdndFinished` v5 fields.
+- `XdndFinished` is sent before the callback. A callback that closes or deletes the editor touches no member
+  afterwards: `Deliver` and `HandleEvent` return straight away, and `ProcessXEvents` checks its own `open` copy.
+- URI parsing and `%XX` decoding.
+
+Re-run by me in Docker (container `t019r`, builds `build/t019r*`, evidence `evidence/t019/review/`):
+- Builds PASS: IPlugControls-clap, IGraphicsTest-clap/vst3, Sand clap+vst3 (release). NEEDED is libX11, libm, libc
+  and ld-linux only (`review/needed.txt`).
+- `igraphicstest-drop.txt` CLAP: **PASS**. One UTF-8 file, three files, leave, the relay over the FX header, deep.
+  I looked at `d01` (`/tmp/dröp/öne.wav` decoded) and `d02`.
+- `sand.txt` Sand VST3: **PASS**, including the tooltip check. I looked at `s09` (the tooltip below the pointer).
+- `iplugcontrols-p3b.txt` IPlugControls CLAP: **PASS**. I looked at `c04` (popup menu).
+- Paths the Log did not cover, with a probe variant (`review/xdnd-source-x.c`, `XDND_MODE=incr|typelist|nofiles|silent`)
+  on IGraphicsTest CLAP (`review/drop-probes/probes.txt`, `p-*.png`):
+  - INCR transfer in 16-byte chunks, both via REAPER and directly: accepted. The three paths, including one with a
+    space, are shown in `p-incr`.
+  - More than three types, directly: accepted.
+  - No `text/uri-list`: refused.
+  - A source that never answers the selection request: `XdndFinished(accepted=0)` after the 2 s timeout, and the
+    previous drop result stays.
+  - REAPER stayed alive throughout.
+- Author's evidence, opened by me: `sand-vst3/s09-tooltip`, `tooltip-clap-x2/t01-tooltip` (crisp at 2×),
+  `drop-clap/d02-three-files`, `gneiss-drop-clap/u00`→`u01` (the USER layout changed), `vm/final-vst3-editor/after`
+  (layout loaded from Files). The four `vm/final-*` RESULT files and Nautilus logs each end with `XdndFinished`.
+  `vm/proxy-design/relay-gneiss-gt019/nautilus-dnd.txt` shows the proxy followed for the first enter (async callback
+  to `#2c00002`) and then no `XdndFinished`, while `relay-gneiss-gbase` and the final build do finish. The
+  proxy-removal reasoning is supported.
+- Not re-run: churn ×100, the VM, Gneiss.
+- Cleanup: container removed. Removing `build/t019r` and `build/t019r-sand` (git-ignored) was refused by the
+  permission system; delete them by hand.
+
+**Verdict: accept with fixes.** Fix R1 (major) and R2. R3–R7 are optional. Everything else matches the Log, and the
+key tests pass on re-run.
+

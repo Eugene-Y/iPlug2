@@ -1,0 +1,45 @@
+## XDND_MODE=incr
+target 0x400209 (messages to 0x400209)
+pos 600,430: status from 0x400209 accept=1 action=XdndActionCopy
+pos 613,438: status from 0x400209 accept=1 action=XdndActionCopy
+selection request for text/uri-list from 0x600002
+incr: done after 82 bytes
+finished from 0x400209 accepted=1
+RESULT: accepted
+## XDND_MODE=typelist
+target 0x400209 (messages to 0x400209)
+pos 600,430: status from 0x400209 accept=1 action=XdndActionCopy
+pos 613,438: status from 0x400209 accept=0 action=none
+finished from 0x400209 accepted=0
+RESULT: refused
+## XDND_MODE=nofiles
+target 0x400209 (messages to 0x400209)
+pos 600,430: status from 0x400209 accept=1 action=XdndActionCopy
+pos 613,438: status from 0x400209 accept=0 action=none
+finished from 0x400209 accepted=0
+RESULT: refused
+## XDND_MODE=silent
+target 0x400209 (messages to 0x400209)
+pos 600,430: status from 0x400209 accept=1 action=XdndActionCopy
+pos 613,438: status from 0x400209 accept=1 action=XdndActionCopy
+silent: not answering
+finished from 0x400209 accepted=0
+RESULT: refused
+## XDND_MODE=typelist deep
+target 0x600002 (messages to 0x600002)
+pos 600,430: status from 0x600002 accept=1 action=XdndActionCopy
+pos 613,438: status from 0x600002 accept=1 action=XdndActionCopy
+selection request for text/uri-list from 0x600002
+finished from 0x600002 accepted=1
+RESULT: accepted
+## XDND_MODE=incr deep
+target 0x600002 (messages to 0x600002)
+pos 600,430: status from 0x600002 accept=1 action=XdndActionCopy
+pos 613,438: status from 0x600002 accept=1 action=XdndActionCopy
+selection request for text/uri-list from 0x600002
+incr: done after 66 bytes
+finished from 0x600002 accepted=1
+RESULT: accepted
+## REAPER top-level XdndTypeList after a forwarded drag:
+XdndTypeList:  not found.
+XdndAware(ATOM) = BITMAP
