@@ -46,9 +46,17 @@ Before `git worktree remove --force`, check **`git -C <wt> status --porcelain --
 - REAPER GUI steps: `GUI=<container> scripts/run-gui-test.sh <plugin> <outdir> scripts/steps/<file>.txt <container>`.
 - Long jobs: run in the background and wait for the completion notice; don't poll with sleeps. No `timeout` on macOS: `perl -e 'alarm N; exec @ARGV' cmd`.
 
-## Where the old coordinator stopped (2026-10-17)
+## Where the coordinator stopped (2026-10-18, second coordinator)
 See `STATUS.md` "In flight" and "Waiting on the user" for the authoritative list. In short:
-- Nothing is mid-merge. Worktrees: only `IPlug2` (hvoya) and `IPlug2-linux` (hvoya-linux) in iPlug2; `Gneiss-linux`, `Sand-linux` in the products; `DMT-t024`, `Melter-t024`, `Crust_new-t024` hold an uncommitted one-line change for the user (keep them).
-- Coordinator's own next work: the short VM re-check of T-008's focus build (needs the VM up), then **T-019** (tooltips + file drop), T-010, T-009, T-013 — see the board's "Priority".
-- Free for other chats: **T-026** (Sand follow-ups, for the Sand chat), **T-025** (X1 `SetLatency` race, the user marked it important; shared-code fix needs the user's decision), T-011, T-016, T-023 (after T-024 ✓ and T-010).
-- Unpushed (the user pushes): see `STATUS.md`.
+- Done this session: T-026 merged (Sand master 0b71747, hvoya 4fbfc579d, hvoya-linux 04cafbd05) and everything pushed
+  once with the user's permission; T-008's VM re-check passed; **T-019 merged** (6cc15646a). New task files: T-027 (no
+  plug-in names in iPlug2 docs, AGENTS §2 rule), T-028 (Gneiss C3/C5/tail — running in a separate chat, lock T-028,
+  worktree `IPlug2-T-028-log`).
+- Nothing is mid-merge. Worktrees: `IPlug2` (hvoya), `IPlug2-linux` (hvoya-linux), `IPlug2-T-028-log` (T-028's);
+  products: `Gneiss-linux`, `Sand-linux`; `DMT-t024`, `Melter-t024`, `Crust_new-t024` hold an uncommitted one-line
+  change for the user (keep them). Sand keeps two unmerged throwaway branches `tmp/t026-diag`, `tmp/t026-linux`
+  (deleting needs `-D`; ask the user).
+- Coordinator's own next work: **T-010**, then T-009, T-013 (now with item 8: drops per host) — see the board.
+- Free for other chats: **T-025** (X1 `SetLatency` race, important; shared-code fix needs the user's decision), T-027,
+  T-011, T-016, T-023 (Gneiss part moved to T-028).
+- Unpushed (the user pushes; Claude only with a fresh permission): hvoya-linux after 5a130407f.
