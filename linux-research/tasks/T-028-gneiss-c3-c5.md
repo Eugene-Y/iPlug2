@@ -1,9 +1,9 @@
 # T-028 — Gneiss: don't write the host's input (C3), texts parse back (C5), tail / sleep status
 
-- **Status:** ready (user, 2026-10-18: "надо фиксить")
+- **Status:** ready (user, 2026-10-18: "надо фиксить"); to be run in a separate chat
 - **Owner:** —
 - **Branches/worktrees:** Gneiss `fix/t028-input-text-tail` from `master`, in `/Volumes/Storage/code/hvoya/Gneiss-t028`. Not Linux work: no iPlug2 branch unless a shared change turns out to be needed (then it is a proposal for the user first). Task Log and evidence: iPlug2 `linux/T-028` from `hvoya-linux` in `/Volumes/Storage/code/IPlug2-T-028-log` (as T-026 did).
-- **Commits:** Gneiss `CLAUDE.md` forbids commits without the user's explicit command. Commit on the fix branch only if the user's assignment says so; otherwise leave the work uncommitted in the worktree and say so in the Log. Never touch `master` or the main checkout.
+- **Commits:** the user allows commits on `fix/t028-input-text-tail` (2026-10-18), which overrides Gneiss `CLAUDE.md`'s no-commit rule for this branch only. Never touch `master` or the main checkout; never push.
 - **Depends on:** nothing.
 - **Start:** read AGENTS.md (whole), then this file, then claim it with the lock (AGENTS §5).
 - **Conflicts:** `Gneiss.cpp` (`ProcessBlock`/`processChunk`, `initializeParams`), `Gneiss.hpp`. Takes Gneiss's part of T-023 (C3, C5); T-023 keeps whatever clap-validator still finds after this.
