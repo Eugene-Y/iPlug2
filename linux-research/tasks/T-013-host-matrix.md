@@ -25,7 +25,7 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
 4. Save/reload the project with the editor open and closed; presets (CLAP/VST3 state).
 5. Latency change (Gneiss OS factor) with the editor closed — host PDC follows.
 6. Two instances; close the editor while a menu or text entry is open; remove the plug-in while playing.
-7. Host-loop trace build (`-DIPLUG_TRACE_HOST_LOOP`): which backend the host gives us (CLAP timer/fd support, VST3 `IRunLoop` and from where), everything on the main thread.
+7. Host-loop trace build (`-DIPLUG_TRACE_HOST_LOOP`): which backend the host gives us (CLAP timer/fd support, VST3 `IRunLoop` and from where), everything on the main thread. **Decides T-010's open point:** if a host (Bitwig, Renoise) gives VST3 `IRunLoop` only through the plug frame, item 5 for VST3 runs on the fallback thread, and REAPER-style hosts drop that latency change (T-010 Log). Report it to the user; the user chose no framework change until such a host shows up.
 8. Files dropped from GNOME Files (and a Qt file manager if available) onto the editor (`scripts/vm/probe/files-drop.sh`
    with Gneiss' USER tab, or `steps/igraphicstest-drop.txt` in Docker). The editor's window is XdndAware; whether a
    drop reaches it depends on the host: REAPER forwards drags to XdndAware children itself (but only a source's first
