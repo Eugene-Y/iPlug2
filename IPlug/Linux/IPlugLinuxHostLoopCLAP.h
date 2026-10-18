@@ -33,6 +33,10 @@ public:
   {
     auto* pTimers = static_cast<const clap_host_timer_support*>(pHost->get_extension(pHost, CLAP_EXT_TIMER_SUPPORT));
     auto* pFds = static_cast<const clap_host_posix_fd_support*>(pHost->get_extension(pHost, CLAP_EXT_POSIX_FD_SUPPORT));
+#ifdef IPLUG_TEST_CLAP_NO_TIMER_SUPPORT // exercises the fallback in hosts that have timer-support
+    HostLoopTrace("%s: CLAP timer-support forced off (IPLUG_TEST_CLAP_NO_TIMER_SUPPORT)", loop.GetOwnerName());
+    pTimers = nullptr;
+#endif
     const bool hasTimers = pTimers && pTimers->register_timer && pTimers->unregister_timer;
     const bool hasFds = pFds && pFds->register_fd && pFds->unregister_fd;
 

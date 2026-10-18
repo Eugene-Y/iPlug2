@@ -12,6 +12,7 @@
 Who calls `SetLatency` off the audio thread:
 - Gneiss: `Gneiss::OnIdle` (`Gneiss.cpp:~1288`) on an oversampling change. On Linux, when the host gives no run loop, `OnIdle` runs on iPlug's fallback timer thread, concurrently with `process`. A host that hands out its IRunLoop only through the editor window does the same while the editor is closed. On mac/win `OnIdle` is a UI-thread timer, but the race with the audio thread is the same.
 - Sand: `Sand::updateOversampling` from `OnReset`.
+- Smaller, formal races on the same path (T-010 review R1-2): on the fallback thread CLAP's `SetLatency` writes `mLatency` and the plain `bool` `mLatencyUpdate`, which the main thread reads in `latencyGet` and `activate`. Make them atomic in the same fix.
 
 ## Evidence
 - T-003: ASan in the VST3 validator, `evidence/t003/validators/vst3-asan-latency-race.txt`: SEGV on address 0 in `NChanDelayLine<double>::ProcessBlock` ← `PassThroughBuffers` ← `IPlugVST3ProcessorBase::Process` ← `Steinberg::Vst::ProcessTest::run`.
