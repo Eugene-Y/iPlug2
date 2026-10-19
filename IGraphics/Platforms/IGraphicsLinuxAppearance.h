@@ -15,6 +15,7 @@
  * followed over a private session-bus connection. Main thread only; nothing here blocks.
  */
 
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -44,6 +45,7 @@ public:
     mDBus->connection_set_exit_on_disconnect(mConnection, 0);
     // libdbus' dbus_bus_register() would block the host's main thread on this Hello.
     mHelloSerial = Send(mDBus->message_new_method_call(kBus, kBusPath, kBus, "Hello"));
+    mAskedAt = std::chrono::steady_clock::now();
   }
 
   void Stop()
@@ -59,8 +61,12 @@ public:
 
   bool IsDark() const { return mDark; }
 
-  /** Until the first answer: the editor polls at every tick, so it does not draw light for long on a dark desktop */
-  bool IsWaitingForFirstAnswer() const { return mConnection && (mHelloSerial || mReadSerial); }
+  /** While a Read is unanswered, for 2 s at most (a portal that took its name but hangs): the editor then polls at
+   * every tick, so it does not draw light for long on a dark desktop */
+  bool IsWaitingForAnswer() const
+  {
+    return mConnection && (mHelloSerial || mReadSerial) && std::chrono::steady_clock::now() - mAskedAt < std::chrono::seconds(2);
+  }
 
   /** Handles whatever the bus has sent. @return true when the scheme changed */
   bool Poll()
@@ -185,6 +191,7 @@ private:
       AppendString(&args, kNamespace);
       AppendString(&args, kKey);
       mReadSerial = Send(pRead);
+      mAskedAt = std::chrono::steady_clock::now();
     }
   }
 
@@ -226,6 +233,7 @@ private:
   linux_dbus::Connection* mConnection = nullptr;
   uint32_t mHelloSerial = 0;
   uint32_t mReadSerial = 0;
+  std::chrono::steady_clock::time_point mAskedAt;
   bool mDark = false;
 };
 

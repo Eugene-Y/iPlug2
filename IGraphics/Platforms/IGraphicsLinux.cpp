@@ -69,6 +69,10 @@ namespace
 constexpr long kWindowEventMask = ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask
                                 | PointerMotionMask | LeaveWindowMask | KeyPressMask | KeyReleaseMask
                                 | FocusChangeMask | PropertyChangeMask | VisibilityChangeMask;
+// Every pointer event selection (X.h); the drag's grab must keep whichever of them the window selects.
+constexpr long kPointerEventMasks = ButtonPressMask | ButtonReleaseMask | EnterWindowMask | LeaveWindowMask | PointerMotionMask
+                                  | PointerMotionHintMask | Button1MotionMask | Button2MotionMask | Button3MotionMask
+                                  | Button4MotionMask | Button5MotionMask | ButtonMotionMask | KeymapStateMask;
 constexpr Time kDoubleClickMs = 400;
 constexpr float kDoubleClickSlop = 4.f;
 constexpr unsigned kWheelUp = Button4;
@@ -582,7 +586,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mWindowAlive = w.mWindow != 0;
   w.mXEmbed = XInternAtom(pDisplay, "_XEMBED", False);
   w.mClipboard.Init(pDisplay, w.mWindow);
-  w.mDragSource.Init(pDisplay, w.mWindow, &w.mCursors, kWindowEventMask & (ButtonPressMask | ButtonReleaseMask | PointerMotionMask | LeaveWindowMask));
+  w.mDragSource.Init(pDisplay, w.mWindow, &w.mCursors, kWindowEventMask & kPointerEventMasks);
   w.mFileDrop.Init(pDisplay, w.mWindow);
   w.mAppearance.Start();
   w.mCursors.Init(pDisplay);
@@ -817,7 +821,7 @@ void IGraphicsLinux::OnDisplayTimer()
   mImpl->mDragSource.Idle();
   constexpr auto kAppearancePoll = std::chrono::milliseconds(250);
   const auto now = std::chrono::steady_clock::now();
-  if (mImpl->mAppearance.IsWaitingForFirstAnswer() || now - mImpl->mAppearancePolledAt > kAppearancePoll)
+  if (mImpl->mAppearance.IsWaitingForAnswer() || now - mImpl->mAppearancePolledAt > kAppearancePoll)
   {
     mImpl->mAppearancePolledAt = now;
     if (mImpl->mAppearance.Poll())

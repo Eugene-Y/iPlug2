@@ -12,7 +12,7 @@
 
 /** @file
  * @brief Dragging a file out of the editor: the XDND source side (protocol version 5), offering text/uri-list.
- * Include after <X11/Xlib.h> and IGraphicsLinuxClipboard.h. Main thread only; nothing blocks. The drag runs on the
+ * Include after <X11/Xlib.h>, IGraphicsLinuxClipboard.h and IGraphicsLinuxCursors.h. Main thread only; nothing blocks. The drag runs on the
  * mouse button's implicit grab: the press that started it keeps sending motion and the release to this window.
  */
 
@@ -199,12 +199,16 @@ private:
   void SetCursor(ECursor type)
   {
     const Cursor cursor = mCursors ? mCursors->Get(type) : None;
+    if (cursor == mCursor)
+      return;
+    mCursor = cursor;
     XChangeActivePointerGrab(mDisplay, static_cast<unsigned int>(mPointerEventMask), cursor, CurrentTime);
   }
 
   void EndDragging()
   {
     XChangeActivePointerGrab(mDisplay, static_cast<unsigned int>(mPointerEventMask), None, CurrentTime);
+    mCursor = None;
     if (mKeyboardGrabbed)
       XUngrabKeyboard(mDisplay, CurrentTime);
     mKeyboardGrabbed = false;
@@ -341,6 +345,7 @@ private:
   bool mKeyboardGrabbed = false;
   unsigned int mButton = 0;
   LinuxCursors* mCursors = nullptr;
+  Cursor mCursor = None;
   long mPointerEventMask = 0;
   int mRootX = 0, mRootY = 0;
   Time mTime = CurrentTime;

@@ -1,6 +1,6 @@
 # T-020 — Remaining platform gaps (GL3, drag out, file-path clipboard, appearance, multi-touch)
 
-- **Status:** review next — items 1–4 done (VM checks pending); item 5 split into T-030
+- **Status:** merged (review: approved round 2); VM checks moved to T-013; item 5 split into T-030
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-020`
 - **Branch/worktree:** `linux/T-020` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-020`.
 - **Depends on:** T-019 (XDND groundwork, same files).
@@ -205,3 +205,10 @@ Fresh context. I reviewed the fix commit b90f06a38 against round 1, plus the who
 **Scope.** b90f06a38 touches only `IGraphicsLinux*` and `linux-research/`. No mac/win files, no product names. Comments are WHY-only and accurate, apart from r2-n2 and r2-n4.
 
 **Verdict: approved.** The round-1 findings are fixed, and the fixes hold up under the extra cases above. r2-n1 to r2-n7 are optional; r2-n2 and r2-n4 are one-line comment and name fixes worth doing when the file is next touched. Before `review-done`, the VM checks (m5) are still open: paste and drop into GNOME Files, a real GNOME portal, GL3 on virgl, and looking at the feedback cursor on a real desktop.
+
+### 2026-10-19 (4) — round-2 nits, hand-over
+- r2-n1/n2: `IsWaitingForAnswer()` (renamed): per-tick polling only while a Hello/Read is unanswered **and for 2 s at most**, then back to every 250 ms (a portal that takes its name and hangs no longer costs ~27 polls/s).
+- r2-n4: the drag-source header comment names `IGraphicsLinuxCursors.h`. r2-n5: the grab keeps every pointer event the window selects (`kPointerEventMasks`). r2-n7: the cursor is re-sent only when it changes.
+- Not done: r2-n3 (a button held while another client owns the pointer grab), r2-n6 (message wording when libGL lacks GLX 1.3), `IPlugLinuxDBus.cpp`'s `isalnum` (another file).
+- Re-run after the nits: drag-out CLAP (REAPER item, probe drop, Escape, wheel) and appearance CLAP (dark, light, dark) as before.
+- **VM checks moved to T-013:** paste and drop into GNOME Files, the real GNOME portal (dark/light switch in Settings), GL3 on virgl, the drag feedback cursor on a real desktop.
