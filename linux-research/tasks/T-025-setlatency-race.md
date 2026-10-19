@@ -1,6 +1,6 @@
 # T-025 — X1: `SetLatency` races the audio thread (crash; all platforms)
 
-- **Status:** review-done (round 1: accept), waiting for the user's approval of the shared-code change — **important** (user, 2026-10-17: "must be fixed")
+- **Status:** merged 2026-10-19 (hvoya-linux 1e0e4be70; ported to `hvoya` 8ca9f3324), approved by the user — **important** (user, 2026-10-17: "must be fixed")
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-025`
 - **Branches/worktrees:** iPlug2 `linux/T-025` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-025`. Gneiss local `linux-experiment` only if the plug-in side must change. The fix is cross-platform: it goes to the user before merging and, once approved, to `hvoya` as well (as T21-2 did).
 - **Depends on:** nothing.

@@ -18,7 +18,7 @@ Update it at every merge or user decision.
 | Sand `linux-experiment` | `/Volumes/Storage/code/hvoya/Sand-linux` (on `origin` since 2026-10-18) | T-012: 4dcd5cd CMake, 2456460 `std::isfinite`, 60c5b96 presets + workspace, e259e96 C++23, cec9c1d `.clangd` → `compile_flags.txt` (user's D1). Needs GCC 13 on 22.04 (`iplug2-linux:22.04-gcc13`); master merged up to 0b71747 (87ccdbf, 2026-10-18) |
 
 ## In flight
-- **T-028 merged 2026-10-18** (Gneiss master c6f4442, linux-experiment f799cb3, hvoya-linux 9f9afa0e9). **T-010 merged 2026-10-18** (11ca71243): no Gneiss code change; VST3 latency from the fallback thread left as is (user), T-013 item 7 checks Bitwig/Renoise.
+- **T-028 merged 2026-10-18** (Gneiss master c6f4442, linux-experiment f799cb3, hvoya-linux 9f9afa0e9). **T-025 merged 2026-10-19** (1e0e4be70; `hvoya` 8ca9f3324, unpushed). **T-010 merged 2026-10-18** (11ca71243): no Gneiss code change; VST3 latency from the fallback thread left as is (user), T-013 item 7 checks Bitwig/Renoise.
 - **T-019 merged 2026-10-18** (tooltips + XDND). Drops in other hosts are T-013's item 8.
 - Nothing else is mid-merge. Latest release archives (T-021 flow on the merged tree, smoke PASS): `linux-research/build/m021-dist/` (ignored, local only).
 
@@ -28,7 +28,7 @@ Update it at every merge or user decision.
 2. **After T-024 (F2):** add `_midiCCMediator.OnIdle();` to `OnIdle` in DMT, Melter, Crust_new (uncommitted one-line changes are ready in `hvoya/DMT-t024`, `Melter-t024`, `Crust_new-t024`; DMT and Melter don't build with current hvoya anyway; Crust_new has the user's own uncommitted edits) and in Scape (not git). Without it their knobs stop following CC (audio still follows).
 3. **Windows**: build Sand after F7 (`PolyphaseIIR2Designer.cpp` added to the vcxproj) and T-026 N3 (`Sand-aax.vcxproj`: sources cc81d9d, C++23 + prebuild c073716). None of it was built on Windows.
 4. **Manual host checks from T-026** (checklists in its Log): FL Studio crash N4 (F1 class, fixed in T-024; confirm in FL), F2 in Bitwig/Live (AU in REAPER and auval already PASS). The release 1.1.16 crashed REAPER on mac once while opening its editor during project load (SIGABRT, Metal zero-size texture); the T-026 build did not — not investigated.
-5. **Cross-platform findings still open** (`CROSS_PLATFORM_FINDINGS.md`): C4 (preset strip → VST3/CLAP host keeps old values), T28-a/b (iPlug "-0.000" and "nan" texts; fixed in Gneiss only), L1 (stale editor size on mac VST3/CLAP), T8-1..3 (IPopupMenuControl), T26-a/b/c (HostInfoModel nits, `AttachBuffers` oversize block, Sand AU reset race), X3 (IPlugEffect APP on mac), T5-1 (fixed in T-011 when it runs). X1 → **T-025** (the user: must be fixed). C2, C3, C5 and T21-5 are fixed. T10-1 (Linux Alt-drag) → MANUAL note.
+5. **Cross-platform findings still open** (`CROSS_PLATFORM_FINDINGS.md`): C4 (preset strip → VST3/CLAP host keeps old values), T28-a/b (iPlug "-0.000" and "nan" texts; fixed in Gneiss only), L1 (stale editor size on mac VST3/CLAP), T8-1..3 (IPopupMenuControl), T26-a/b/c (HostInfoModel nits, `AttachBuffers` oversize block, Sand AU reset race), X3 (IPlugEffect APP on mac), T5-1 (fixed in T-011 when it runs). X1 fixed (T-025). C2, C3, C5 and T21-5 are fixed. T10-1 (Linux Alt-drag) → MANUAL note.
 6. Gneiss morph bugs (2026-10-16): fixed by the user (hvoya 0b2d8dbef, Gneiss 3cf2e2e), synced.
 
 ## Decisions already made by the user (don't re-ask)
