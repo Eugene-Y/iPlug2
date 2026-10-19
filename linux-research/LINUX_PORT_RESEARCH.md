@@ -150,7 +150,7 @@ upstream не превратится в ад.
 1. Проверить `state-reproducibility` clap-validator на маковском CLAP Gneiss (баг №6).
 2. Для финальной проверки нужна x86_64-машина с Linux-десктопом (Docker/VM на маке — arm64, без
    реального GPU). ARM-VM в UTM с REAPER — для визуальных тестов во время разработки
-   (см. `LINUX_VM_SETUP.md`).
+   (см. `../LINUX_VM_SETUP.md`).
 
 ## 6. Харнесс
 

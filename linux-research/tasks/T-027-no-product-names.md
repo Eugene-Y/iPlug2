@@ -61,3 +61,12 @@ Checked: `git log/diff hvoya-linux...linux/T-027`; the script on `linux/T-027` (
 **Correctly left alone:** "HvoyaAudio" (`PLUG_MFR`/`BUNDLE_MFR`, plists, `.RPP`) has been on `hvoya` since f9e793f2f "init WIP" (2025-05-26). It is unchanged by the port (`git diff hvoya...linux/T-027 -- Examples/IPlugEffect/config.h` is empty) and is a manufacturer, not a plug-in. AGENTS also forbids touching `config.h`. The same goes for the `hvoya` paths in `common-*.xcconfig`/`common-win.props` and the `hvoya::` utility use in `Examples/IPlugEffect`, which is library, not product.
 
 **Verdict: changes requested.** Fix 1 and settle 2 with the user. 3–5 are cheap and worth doing in this round. 6–7 are for the user.
+
+### 2026-10-19 (2) — review round 1 fixes
+- **M1:** `check-product-names.sh` branches on `git grep`'s exit status: 0 clean, 1 hits, **2 when git grep failed** (bad rev or repo: nothing was checked). Checked: clean on this branch (0), `no-such-rev` → 2, hvoya-linux → 1. `COORDINATOR.md`: "must exit 0", and run it again on `HEAD` after the merge commit.
+- **M2:** the authorship note now credits the sources the history shows: 11 commits by Benjamin Reed (upstream PR #1336) and Stillwell Audio's path utilities (025764cd5, 5e23641b8). Wording: "Linux support in this fork is not upstream iPlug2's: it builds on Benjamin Reed's upstream pull request #1336 and Stillwell Audio's Linux work, and was completed in this fork. Report Linux problems to this fork, not upstream." `CLAUDE.md` says the same in one line. This keeps the user's intent (no confusion with upstream's maintainers) and is accurate; **the user may want to word it differently.**
+- **m3:** distinctive names (`gneiss|melter`) are searched inside identifiers too; ordinary words (`sand|dmt|crust|scape`) as whole words. No new hits.
+- **m4:** `HVOYA_IS_PAID` example in `Documentation/linux-development.md` → `--variant lite:-DMY_PLUGIN_LITE=1`.
+- **m5:** clangd: "rely on its relaxed `constexpr` rules (P2448)".
+- Nits: the script header no longer cites a section number; no `pipefail`; `LINUX_VM_SETUP.md` linked as `../LINUX_VM_SETUP.md` from the moved file.
+- **For the user:** (m6) "a full morph rig" in `IPlug/CLAP/IPlugCLAP.cpp:426` predates the port (on `hvoya`): reword there or keep? (m7) other products in `code/hvoya/` — Bromo, Delta: add them to the names list? ("delta" is also an ordinary word: would be whole-word.)
