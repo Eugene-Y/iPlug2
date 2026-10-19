@@ -64,7 +64,7 @@ Every failure in this task's table is gone:
 **Changes on `linux/T-023`:**
 - `ea94dc457` `scripts/known-clap-failures/Sand.txt` emptied (it still listed F3–F5); Gneiss's was emptied by T-028.
 - `abfe168fc` **proposal, shared code (mac/win CLAP), waits for the user:**
-  - `IPlugCLAP::InformHostOfPresetChange`: new override asking the host to rescan values (`params.rescan(CLAP_PARAM_RESCAN_VALUES)` on the main thread), like `stateLoad` does since f71ddd876. Before it, a preset restored by iPlug itself (`RestorePreset`) changed every parameter while CLAP hosts kept showing and automating the old values. Gneiss and Sand restore through their own preset managers, not this path (C4), so this matters for plug-ins that use iPlug's presets.
+  - **[Superseded by (2) below: the account of what this covers was wrong; `RestorePreset` is not covered, Gneiss user presets are.]** `IPlugCLAP::InformHostOfPresetChange`: new override asking the host to rescan values (`params.rescan(CLAP_PARAM_RESCAN_VALUES)` on the main thread), like `stateLoad` does since f71ddd876. Before it, a preset restored by iPlug itself (`RestorePreset`) changed every parameter while CLAP hosts kept showing and automating the old values. Gneiss and Sand restore through their own preset managers, not this path (C4), so this matters for plug-ins that use iPlug's presets.
   - `FlushParamsIfNeeded`: `paramsRequestFlush` only when `canUseParams()`; clap-helpers asserts on that call in Debug with a host without `clap.params`.
   - Not exercised at runtime: no plug-in here restores iPlug presets from its UI. Compiled on Linux and mac.
 
@@ -127,7 +127,7 @@ Reviewed `hvoya-linux...linux/T-023` (abfe168fc, ea94dc457, 60188aeba), the evid
 - **m7:** REAPER on this branch (Release, CLAP): `gneiss.txt`, `sand.txt`, `state-roundtrip.txt` for both: all PASS (`evidence/t023/reaper-*`); clap-validator Gneiss and Sand 38/0/0 (`linux-after-r1-*`). mac: IPlugEffect CLAP from this tree 38/0/0 (`mac-after-r1-IPlugEffect-Debug.txt`).
 - **m3:** mac "after" logs for Gneiss and Sand are not possible before the proposal is ported to `hvoya` (their Xcode projects build against the main checkout); they go into the port's check if the user approves.
 - **m5:** Sand's `process-audio-denormals` warning: owner Sand. Cause known from T-024: Sand sets no flush-to-zero. Timing-based; not in any of the 6 later Sand runs (Linux Debug/Release before and after, round-1 Release, mac Debug). No action here.
-- **m6:** `state-invalid-random` warning (examples): cause is iPlug's default `UnserializeParams`, which accepts any bytes of the right length; Gneiss and Sand have their own state formats and pass. Not fixed here (examples only show it).
+- **m6:** `state-invalid-random` warning (examples): cause is iPlug's default `UnserializeParams`, which accepts any chunk of at least n×8 bytes (owner: iPlug2 upstream; won't fix here); Gneiss and Sand have their own state formats and pass. Not fixed here (examples only show it).
 - **n1:** the 6 skipped tests are iPlug-wide (extensions iPlug's CLAP wrapper doesn't implement), not the plug-ins' choice.
 - **n4:** Gneiss `process-sleep-process-status`: cause as T-028 found it, a 0 tail plus a random starter preset (cross-platform), fixed by T-028's 15 s tail.
 - **n5:** temporary worktrees `hvoya/Gneiss-t023mac`, `hvoya/Sand-t023mac` removed.
@@ -172,3 +172,10 @@ Reviewed `hvoya-linux...linux/T-023` with the focus on 601c97e65 (the deferred r
 - No product names in `IPlug/CLAP/`. Style matches §2 (`mPresetRescanPending`, 2-space indent, C++17 atomics). Every commit has the trailer.
 
 **Verdict: approved.** The code (abfe168fc + 601c97e65) is correct against clap-helpers and the CLAP spec, and safe from every thread. Recommend it to the user as proposals T23-1/T23-2. r2-m1 and r2-m2 are write-up fixes for the hand-over and the `hvoya` port; they do not block. No round 3 needed.
+
+### 2026-10-19 (3) — after review round 2 (approved)
+- r2-m1: the first Log bullet is marked superseded. **When porting to `hvoya`, squash abfe168fc + 601c97e65 into one commit** whose message states the corrected impact (FXP/FXB loads, not `RestorePreset`; the flush bug crashes Release too).
+- r2-m2: a separate question for the user, all formats: should `RestorePreset` (factory presets, host program changes) also call `InformHostOfPresetChange`? Today no format informs the host there. Not proposed here.
+- n3: wording fixed. n1 (the destroy check in `onMainThread` can never be true) kept: harmless and symmetric with the other deferred calls.
+- Merge note: `CROSS_PLATFORM_FINDINGS.md` conflicts with hvoya-linux at the S-1 row; keep hvoya-linux's S-1 row and append the T-023 section.
+- **For the user:** T23-1 + T23-2 (yes/no, one decision); the `RestorePreset` question. Until then the branch waits; `known-clap-failures/Sand.txt` and the evidence go in with it.
