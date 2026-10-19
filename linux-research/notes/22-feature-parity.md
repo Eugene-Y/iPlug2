@@ -4,22 +4,78 @@ The user: the framework must be fully capable on Linux; Linux must not be poorer
 PLAN §1's "out of scope for v1: Skia, WebView". Every gap below gets a task; none is dropped as "won't do"
 without the user's say.
 
-## Gaps found (first pass, by diffing platform overrides and stubs; to be completed by T-016)
+## Parity table (T-016 audit, 2026-10-19, hvoya-linux 238580eaa)
 
-| Gap | mac/win have | Linux now | Task |
+Method: every `override` in `IGraphicsMac.h`/`IGraphicsWin.h` diffed against `IGraphicsLinux.h`; every `#if OS_MAC/OS_WIN` outside `IGraphics/Platforms`; formats, `IPlug/Extras`, the APP host; **every example and test project built** (57 targets, all PASS, `evidence/t016/build-results.txt`) **and opened in REAPER** as CLAP (`evidence/t016/run-all.txt`, per-project logs and screenshots). ✅ = works on Linux (task that did it), ❌ = gap (task), n/a = no Linux equivalent needed.
+
+### IGraphics platform layer
+| Feature | mac | win | Linux | Task |
+|---|---|---|---|---|
+| Editor window, embed, resize, scale (HiDPI) | ✓ | ✓ | ✅ X11 child, host scale, `Xft.dpi` | P3, T-007 |
+| Mouse, keyboard, cursors, text entry, popup menus | native | native | ✅ IGraphics stand-ins for menus and text entry (no GTK in the plug-in) | P3, T-008 |
+| Clipboard text / file path | ✓ / ✓ | ✓ / ✓ | ✅ / ✅ | P3 / T-020 |
+| Files dropped onto the editor / dragged out | ✓ / ✓ | ✓ / ✓ | ✅ XDND target / ✅ XDND source | T-019 / T-020 |
+| Tooltips | ✓ | ✓ | ✅ own override-redirect window | T-019 |
+| File and folder dialogs, message boxes | ✓ | ✓ | ✅ portal / zenity / kdialog | T-002 |
+| `OpenURL`, `RevealPathInExplorerOrFinder` | ✓ | ✓ | ✅ xdg-open | P3 |
+| Dark/light appearance (`GetUIAppearance`) | ✓ | — | ✅ xdg-desktop-portal | T-020 |
+| Platform child views (`AttachPlatformView`…) | ✓ | — | ❌ | T-017 |
+| Multi-touch (`PlatformSupportsMultiTouch`) | — | ✓ | ❌ | T-030 |
+| `MeasureText` override | pass-through | — | not needed (same base implementation) | — |
+| Bundle ID / App Group ID, `Get/SetWinModuleHandle` | ✓ | ✓ | n/a (mac/win concepts) | — |
+| Resources | bundle | `.rc` in DLL (`kWinBinary`) | ✅ per-module `<Name>.resources/` | P1, T-021 |
+| AAX modifier mapping, Pro Tools keys | ✓ | ✓ | n/a (no AAX on Linux) | — |
+
+### Drawing
+| Feature | mac | win | Linux | Task |
+|---|---|---|---|---|
+| NanoVG GL2 | ✓ | ✓ | ✅ (default) | P3 |
+| NanoVG GL3 | ✓ | ✓ | ✅ 3.2 core context | T-020 |
+| NanoVG Metal | ✓ | — | n/a | — |
+| Skia (GL / CPU) | ✓ | ✓ | ❌ | T-018 |
+| Fonts: resources, memory, system by name | ✓ | ✓ | ✅ (fontconfig for system fonts) | P3 |
+| SVG, bitmaps @2x, layers/FBOs, shadows | ✓ | ✓ | ✅ (IGraphicsTest renders in REAPER) | P3, this audit |
+
+### Formats and IPlug
+| Feature | mac | win | Linux | Task |
+|---|---|---|---|---|
+| CLAP, VST3, standalone APP | ✓ | ✓ | ✅ all 19 example projects build | P0–P8 |
+| VST2 (deprecated) | ✓ | ✓ | not built (no SDK here; deprecated) | — |
+| REAPER-API plug-in (`IPlugReaperPlugin`) | ✓ | ✓ | ✅ API reaches REAPER (red STOPPED fill); ❌ the example's CMake ships no fonts on Linux, so its text is missing | T-031 |
+| REAPER extension (`IPlugReaperExtension`, `…WebUI`) | ✓ | ✓ | ❌ link fails: SWELL symbols (`GetMenuItemCount`, `SWELL_CreateDialog`, …) need REAPER's SWELL through `swell-modstub-generic` | T-031 |
+| LV2 | — | — | planned (Linux extra) | T-014 |
+| AU, AUv3, AAX, WAM | ✓ | (AAX) | n/a | — |
+| `IPlug/Extras`: OSC | ✓ | ✓ | ✅ POSIX path (IPlugOSCEditor runs) | — |
+| `IPlug/Extras`: WebView editor / `IWebViewControl` | ✓ | ✓ | ❌ stub (IPlugWebUI, IPlugP5js, IPlugSvelteUI open no editor) | T-017 |
+| `IPlug/Extras`: Cocoa, SwiftUI | ✓ | — | n/a (Apple UI kits) | — |
+| `IPlug/Extras`: DSP (Synth, HIIR, Oversampler, SVF, …) | ✓ | ✓ | ✅ portable | — |
+
+### Standalone APP host
+| Feature | mac | win | Linux | Task |
+|---|---|---|---|---|
+| Audio (RtAudio) | CoreAudio | ASIO/WASAPI | ✅ ALSA, JACK, PulseAudio; starts without a device | T-004 |
+| MIDI (RtMidi) | CoreMIDI | WinMM | ✅ ALSA sequencer; ❌ JACK MIDI with the JACK driver | T-004 / T-022 |
+| Settings dialog, menus, shortcuts | ✓ | ✓ | ✅ SWELL | T-004 |
+| Debug menu incl. "Save Screenshot" | ✓ | ✓ | ✅ (`IPlugAPP_dialog.cpp` Linux branch) | T-004 |
+
+### Example and test projects (REAPER, CLAP; `evidence/t016/run-*-clap*`)
+| Project | Build (APP/CLAP/VST3) | Editor in REAPER | Note |
 |---|---|---|---|
-| **WebView**: `IWebViewEditorDelegate` (whole UI in a web view) and `IWebViewControl` (web view inside IGraphics) | WKWebView / WebView2 | stub `IPlugWebView_linux.cpp` | T-017 |
-| Platform child views (`AttachPlatformView` / `RemovePlatformView` / `HidePlatformView`), which `IWebViewControl` needs | mac | missing | T-017 |
-| **Skia** backend | mac, win | NanoVG only | T-018 |
-| NanoVG **GL3** | win (GL2/GL3) | legacy GLX context, GL2 only | T-020 |
-| Files dropped **onto** the editor (`OnDrop`, `OnDropMultiple`) | mac, win | ✅ T-019: XdndAware on the editor; hosts forward (REAPER does) | T-019, hosts in T-013 |
-| Drag files **out** (`InitiateExternalFileDragDrop`) | mac, win | missing | T-020 |
-| `SetFilePathInClipboard` | mac, win | missing | T-020 |
-| Tooltips (`UpdateTooltips`) | native on mac, win | ✅ T-019: own override-redirect window | T-019 |
-| UI appearance (dark/light, `GetUIAppearance`) | mac | missing; Linux source: xdg-desktop-portal `org.freedesktop.appearance color-scheme` | T-020 |
-| Multi-touch (`PlatformSupportsMultiTouch`) | win | missing; X11 source: XInput2 touch | T-020 |
-| Standalone APP: devices, settings, MIDI, no-device start | mac, win | partial | T-004 |
-| REAPER extension / REAPER-API plugins on Linux | mac, win | not checked | T-016 |
+| IGraphicsTest, IPlugControls, IPlugDrumSynth, IPlugEffect, IPlugInstrument, IPlugOSCEditor, IPlugResponsiveUI, IPlugVisualizer, MetaParamTest | ✓ | ✓ PASS (render, reopen ×5, second instance) | |
+| IGraphicsStressTest, IPlugChunks, IPlugMidiEffect, IPlugSideChain, IPlugSurroundEffect | ✓ | ✓ renders | the harness's "Draw hits while the mouse moves" fails: static UIs without hover effects redraw nothing (IGraphics draws only dirty controls) — not a defect |
+| IPlugConvoEngine | ✓ | no editor | by design: `NO_IGRAPHICS`, `PLUG_HAS_UI 0` |
+| IPlugWebUI, IPlugP5js, IPlugSvelteUI | ✓ | no editor | WebView stub | 
+| IPlugReaperPlugin | ✓ | red fill, no text | missing Linux resources (fonts) | 
+| IPlugReaperExtension, IPlugReaperExtensionWebUI | ✗ link | — | SWELL modstub missing |
+| IPlugCocoaUI, IPlugSwiftUI | not configured | — | Apple only |
+
+Tests `Tests/Linux*` (host loop, dialogs, input, paths, scale) are the port's own unit tests (P2–T-007).
+
+### Tooling
+`Examples/duplicate.py` out-of-tree paths and Linux IDE files: T-011. Packaging (`Scripts/linux/package.sh`, clean-distro smoke): ✅ T-021. Docs: `Documentation/linux-development.md` ✅; repo README last (T-015).
+
+### New task from this audit
+- **T-031 — REAPER extensions and the REAPER-plug-in example on Linux:** link REAPER extensions against REAPER's SWELL via `WDL/swell/swell-modstub-generic.cpp` (`SWELL_dllMain`, `SWELL_API_DEFINE`) in `Scripts/cmake/ReaperExt.cmake`'s Linux branch; give `Examples/IPlugReaperPlugin/CMakeLists.txt` the Linux resource folder like the other examples. Test: both REAPER extension examples load in REAPER on Linux (menu entry, dialog, WebUI = T-017), IPlugReaperPlugin shows its text. Estimate: 0.5–1 day.
 
 Not gaps: AU/AUv3/AAX (no Linux hosts), native OS menus and text entry (IGraphics stand-ins, a deliberate choice:
 no GTK in the plug-in process), native Wayland embedding (mac/win have no equivalent; Linux hosts embed X11 and

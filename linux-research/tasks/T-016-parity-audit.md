@@ -1,7 +1,7 @@
 # T-016 — Feature-parity audit: Linux vs mac/win
 
-- **Status:** ready (read-only research; can run any time)
-- **Owner:** —
+- **Status:** review next
+- **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-016`
 - **Branch/worktree:** `linux/T-016` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-016` (docs only).
 - **Depends on:** nothing.
 - **Conflicts:** none (writes `notes/22-feature-parity.md`, new task files proposed to the coordinator).
@@ -32,3 +32,11 @@ Grep/read on `hvoya-linux`; for anything ambiguous, build the example in Docker 
 
 ## Log
 (append: date — what was done — commits — next)
+
+### 2026-10-19 — audit done
+- `notes/22-feature-parity.md` rewritten: tables for the IGraphics platform layer, drawing, formats/IPlug/Extras, the APP host, every example/test project, tooling; ✅/❌/n/a with the task that did it or owns the gap.
+- Overrides diff (`IGraphicsMac.h`/`IGraphicsWin.h` vs `IGraphicsLinux.h`): only `AttachPlatformView`/`RemovePlatformView`/`HidePlatformView` (T-017) and `PlatformSupportsMultiTouch` (T-030) are real gaps; `MeasureText` on mac is a pass-through; bundle IDs and module handles are mac/win concepts.
+- `#if OS_MAC/OS_WIN` outside the platform files: AAX/Pro Tools modifiers, Windows `.rc` resources, the mac FBO stash, `IGraphics_select.h` backend choice — none is a Linux gap.
+- **All example and test projects built:** 57 targets (19 projects × APP/CLAP/VST3), all PASS (`evidence/t016/build-results.txt`, `targets.txt`). **Opened each CLAP in REAPER** (`evidence/t016/run-all.txt`, `run-<Name>-clap*`): 9 PASS outright; 5 render but fail the harness's "redraw while the mouse moves" check (static UIs); WebView examples open no editor (T-017); ConvoEngine has no UI by design; IPlugReaperPlugin lacks Linux resources.
+- **New gap → T-031** (`tasks/T-031-reaper-extension-linux.md`): REAPER extensions don't link on Linux (SWELL modstub), and the REAPER-plug-in example ships no fonts on Linux.
+- Next: independent review (spot-check ≥10 rows).
