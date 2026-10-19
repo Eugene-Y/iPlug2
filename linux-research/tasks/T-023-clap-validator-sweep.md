@@ -126,7 +126,7 @@ Reviewed `hvoya-linux...linux/T-023` (abfe168fc, ea94dc457, 60188aeba), the evid
 - **n2:** code comment rewritten (it named the wrong callers and repeated `stateLoad`'s reason).
 - **m7:** REAPER on this branch (Release, CLAP): `gneiss.txt`, `sand.txt`, `state-roundtrip.txt` for both: all PASS (`evidence/t023/reaper-*`); clap-validator Gneiss and Sand 38/0/0 (`linux-after-r1-*`). mac: IPlugEffect CLAP from this tree 38/0/0 (`mac-after-r1-IPlugEffect-Debug.txt`).
 - **m3:** mac "after" logs for Gneiss and Sand are not possible before the proposal is ported to `hvoya` (their Xcode projects build against the main checkout); they go into the port's check if the user approves.
-- **m5:** Sand's `process-audio-denormals` warning: owner Sand. Cause known from T-024: Sand sets no flush-to-zero. Timing-based; not in any of the 7 later Sand runs. No action here.
+- **m5:** Sand's `process-audio-denormals` warning: owner Sand. Cause known from T-024: Sand sets no flush-to-zero. Timing-based; not in any of the 6 later Sand runs (Linux Debug/Release before and after, round-1 Release, mac Debug). No action here.
 - **m6:** `state-invalid-random` warning (examples): cause is iPlug's default `UnserializeParams`, which accepts any bytes of the right length; Gneiss and Sand have their own state formats and pass. Not fixed here (examples only show it).
 - **n1:** the 6 skipped tests are iPlug-wide (extensions iPlug's CLAP wrapper doesn't implement), not the plug-ins' choice.
 - **n4:** Gneiss `process-sleep-process-status`: cause as T-028 found it, a 0 tail plus a random starter preset (cross-platform), fixed by T-028's 15 s tail.
