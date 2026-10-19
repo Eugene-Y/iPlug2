@@ -18,11 +18,13 @@ Update it at every merge or user decision.
 | Sand `linux-experiment` | `/Volumes/Storage/code/hvoya/Sand-linux` (on `origin` since 2026-10-18) | T-012: 4dcd5cd CMake, 2456460 `std::isfinite`, 60c5b96 presets + workspace, e259e96 C++23, cec9c1d `.clangd` → `compile_flags.txt` (user's D1). Needs GCC 13 on 22.04 (`iplug2-linux:22.04-gcc13`); master merged up to 0b71747 (87ccdbf, 2026-10-18) |
 
 ## In flight
-- **T-028 merged 2026-10-18** (Gneiss master c6f4442, linux-experiment f799cb3, hvoya-linux 9f9afa0e9). **T-025 merged 2026-10-19** (1e0e4be70; `hvoya` 8ca9f3324, unpushed). **T-010 merged 2026-10-18** (11ca71243): no Gneiss code change; VST3 latency from the fallback thread left as is (user), T-013 item 7 checks Bitwig/Renoise.
+- **T-028 merged 2026-10-18** (Gneiss master c6f4442, linux-experiment f799cb3, hvoya-linux 9f9afa0e9). **T-025 merged 2026-10-19** (1e0e4be70; `hvoya` 8ca9f3324). In review / waiting: T-023, T-029 (proposals for the user), T-027 (review); T-013 and T-009's VM part wait for the VM (virgl hang 2026-10-19 ~10:20, needs Force Stop + Start in UTM). **T-010 merged 2026-10-18** (11ca71243): no Gneiss code change; VST3 latency from the fallback thread left as is (user), T-013 item 7 checks Bitwig/Renoise.
 - **T-019 merged 2026-10-18** (tooltips + XDND). Drops in other hosts are T-013's item 8.
 - Nothing else is mid-merge. Latest release archives (T-021 flow on the merged tree, smoke PASS): `linux-research/build/m021-dist/` (ignored, local only).
 
 ## Waiting on the user
+- **VM restart** (UTM Force Stop + Start): the virgl GPU hung during T-013 (4th time).
+- **Decisions:** T-023 (T23-1 + T23-2; `RestorePreset` question), T-029 (S-1 text entry, (a) and/or (b); typing check on mac).
 0. **Gneiss:** say "commit" for the MANUAL note in `linux-experiment` (T10-1); on mac, type "1.06 kHz" into REAPER's parameter window for Gneiss (the T-028 Release build is installed in `~/Library`).
 1. **Pushes**: everything was pushed on 2026-10-18 with the user's one-off permission (iPlug2 `hvoya` 4fbfc579d and `hvoya-linux` 045b3ca11 to `gene`, Sand and Gneiss `master` + `linux-experiment` to `origin`). The default stays: the user pushes; Claude pushes only with a fresh permission in the current request. `gene` is https without credentials: push to `git@github.com:Eugene-Y/iPlug2.git` (Gneiss: `git@github.com:Eugene-Y/Gneiss.git`) with explicit refspecs, then fetch into `refs/remotes/...`.
 2. **After T-024 (F2):** add `_midiCCMediator.OnIdle();` to `OnIdle` in DMT, Melter, Crust_new (uncommitted one-line changes are ready in `hvoya/DMT-t024`, `Melter-t024`, `Crust_new-t024`; DMT and Melter don't build with current hvoya anyway; Crust_new has the user's own uncommitted edits) and in Scape (not git). Without it their knobs stop following CC (audio still follows).

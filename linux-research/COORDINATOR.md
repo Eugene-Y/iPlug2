@@ -46,21 +46,13 @@ Before `git worktree remove --force`, check **`git -C <wt> status --porcelain --
 - REAPER GUI steps: `GUI=<container> scripts/run-gui-test.sh <plugin> <outdir> scripts/steps/<file>.txt <container>`.
 - Long jobs: run in the background and wait for the completion notice; don't poll with sleeps. No `timeout` on macOS: `perl -e 'alarm N; exec @ARGV' cmd`.
 
-## Where the coordinator stopped (2026-10-19, second coordinator)
-See `STATUS.md` "In flight" and "Waiting on the user" for the authoritative list. In short:
-- Done since 2026-10-18: **T-028** merged (Gneiss master c6f4442, linux-experiment f799cb3 + MANUAL 2cab58b), **T-010**
-  merged (11ca71243), **T-025** merged (1e0e4be70) and ported to `hvoya` (8ca9f3324; mac Gneiss/Sand VST3/AUv2/CLAP
-  built). Spent worktrees and branches removed (user's OK). Pushed by the user up to 2026-10-19 morning except `hvoya`
-  8ca9f3324 and hvoya-linux after 1e0e4be70.
-- Worktrees: `IPlug2` (hvoya), `IPlug2-linux` (hvoya-linux); products `Gneiss-linux`, `Sand-linux`; `DMT-t024`,
-  `Melter-t024`, `Crust_new-t024` (keep: uncommitted one-liners for the user).
-- **User's decisions 2026-10-19:** T-013 may install Carla, Ardour, Renoise on the VM. T-027: research docs stay in
-  `linux-research/` (move `LINUX_PORT_RESEARCH.md` there); the `CLAUDE.md` port section goes when the port is finished,
-  leaving a note that this fork's authors did the port, not iPlug2's maintainers.
-- **T-009 references are in** `evidence/t009/mac-refs/` (Retina 2x; Gneiss CLAP incl. `clean moogRPP.RPP` with the
-  CLEAN MOOG preset, Sand VST3 views). Gneiss has no text entry yet (user); leave it out of the comparison.
-- **S-1** (findings): Sand CLAP text entry on mac takes no keys in REAPER, VST3 works. Waiting for the user's two checks
-  (REAPER "Send all keyboard input to plug-in"; an old release).
-- Coordinator's queue (no user needed): **T-023** (Gneiss and Sand are 0 failures on Linux; left: mac runs, iPlug CLAP
-  items, empty Sand's stale `known-clap-failures/Sand.txt`), then **T-013** (VM hosts), then **T-009**.
-- Shared-code (mac/win) fixes always go to the user before merging; Gneiss commits only on the user's command.
+## Where the coordinator stopped (2026-10-19 afternoon, second coordinator)
+See `STATUS.md` for the authoritative list. In short:
+- Merged today: **T-025** (+ `hvoya` 8ca9f3324). Earlier: T-028, T-010 (2026-10-18/19).
+- **Waiting for the user's decision** (all reviewed, worktrees kept, locks released):
+  - **T-023** `linux/T-023`: proposals T23-1 (CLAP rescan after an FXP/FXB load, deferred to on_main_thread) + T23-2 (flush only with `clap.params`; Release crash otherwise); plus the question whether `RestorePreset` should inform hosts (all formats). Gneiss/Sand: 0 clap-validator failures everywhere.
+  - **T-029** `linux/T-029`: S-1 text entry (mac field takes edits; params with a parser take any character, 32-char field). Port to `hvoya` as two commits (a) mac formatter, (b) parser params. Needs a typing check in a mac host.
+- **Waiting for the VM** (virgl hang during T-013; the user must Force Stop + Start the VM in UTM): T-013 (Ardour wizard → editors, then Renoise, drops, tooltips), T-009's VM part. Locks T-013 and T-009 held by the coordinator.
+- **T-027** in review (`linux/T-027`); merge when approved (no shared code).
+- Worktrees: `IPlug2-T-009`, `-T-013`, `-T-023`, `-T-027`, `-T-029`; products `Gneiss-linux`, `Sand-linux`.
+- Shared-code (mac/win) changes go to the user before merging; Gneiss commits only on the user's command.
