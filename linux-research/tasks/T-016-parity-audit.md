@@ -106,3 +106,9 @@ Grep/read on `hvoya-linux`; for anything ambiguous, build the example in Docker 
 **T-031 assessment:** the problem is well-founded: the link cause is correct and the modstub mechanism is the right one. As written it is not actionable to "done": add M1 (a)–(d) and n4, and re-estimate.
 
 **Verdict: changes requested.** No blocker. Fix M1–M3 (table rows, T-031 scope and estimate), address m1–m7, then round 2.
+
+### 2026-10-19 (2) — review round 1 fixes
+- **M1:** T-031 now lists what stops the extension's editor after the link (`OpenWindow` needs an `IPlugAPIBase`, SWELL HWND → XID, scale, UI resize, exports); estimate 2–3 days.
+- **M2:** new row "dialogs called synchronously" (❌) and **T-032** (options for the user; recommendation: make iPlug2's own synchronous callers asynchronous now, consider a nested wait later). Verified: `IGraphicsLinux.cpp:2194`–`2205` returns without a completion handler; `IVPresetManagerControls.h:243` calls it synchronously.
+- **M3:** Linux file:line for the platform rows; new rows: `IPlugPaths`, logging, platform views, ImGui (not in the tree), `IShaderControl` (Skia, T-018), CI and the repo's skills (**T-033**), `buildall` scripts (not needed: CMake builds all examples).
+- m1: the drawing row cites the reviewer's sweep of all 28 IGraphicsTest pages. m2: the REAPER-plug-in row says only host detection is shown. m3: the static-UI row names `EnableMouseOver`. m4/m6/m7: StressTest seen on its first page only, OSC send/receive not exercised, only CLAP opened (VST3/APP built) — stated in the note. m5: screenshots stay git-ignored and local; the note says where.
