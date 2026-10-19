@@ -55,5 +55,6 @@ See `STATUS.md` for the authoritative list. In short:
   - **T-029** `linux/T-029`: S-1 text entry, (a) mac formatter and/or (b) params with a parser; a typing check on mac.
   - T-027 leftovers: reword the pre-port "morph rig" comment in `IPlugCLAP.cpp` on `hvoya`? Add Bromo/Delta to `check-product-names.sh`?
 - **Waiting for the VM** (virgl hang during T-013; Force Stop + Start in UTM): **T-013** (Ardour wizard → editors; Renoise; drops; tooltips; item 9 = T-020's VM checks), **T-009**'s VM part. Locks T-013 and T-009 held by the coordinator.
-- Free next (no user, no VM): T-016 audit, T-011, then the big T-017 WebView / T-018 Skia; T-030 multi-touch needs a touch device; T-022 low.
+- **T-016 merged** (8a0d19093): `notes/22` is the parity table. New: T-031 (REAPER extensions, 2–3 d), T-032 (sync dialogs — user decision), T-033 (CI/skills; workflow change needs the user's OK). Also for the user: IME (IBus/Fcitx) row in notes/22 — deviation or task?
+- Free next (no user, no VM): T-031, T-011, then the big T-017 WebView / T-018 Skia; T-030 needs a touch device; T-022 low.
 - Worktrees: `IPlug2-T-009`, `-T-013`, `-T-023`, `-T-029`; products `Gneiss-linux`, `Sand-linux`.
