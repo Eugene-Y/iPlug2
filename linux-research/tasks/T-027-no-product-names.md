@@ -70,3 +70,26 @@ Checked: `git log/diff hvoya-linux...linux/T-027`; the script on `linux/T-027` (
 - **m5:** clangd: "rely on its relaxed `constexpr` rules (P2448)".
 - Nits: the script header no longer cites a section number; no `pipefail`; `LINUX_VM_SETUP.md` linked as `../LINUX_VM_SETUP.md` from the moved file.
 - **For the user:** (m6) "a full morph rig" in `IPlug/CLAP/IPlugCLAP.cpp:426` predates the port (on `hvoya`): reword there or keep? (m7) other products in `code/hvoya/` — Bromo, Delta: add them to the names list? ("delta" is also an ordinary word: would be whole-word.)
+
+### Review round 2 (independent reviewer)
+
+Checked at 45d8df693: `git log`/`diff hvoya-linux...linux/T-027`; the script run on several revs and repos and in a scratch repo; my own greps over the tree at `HEAD`; the history behind the authorship note; the clangd claim compiled locally.
+
+**Round-1 findings: all addressed as the Log says.**
+- **M1:** exit codes are right. `HEAD` and `linux/T-027` give 0 ("clean"). `hvoya-linux` gives 1 with the 16 known hits (CLAUDE.md:71, LINUX_PORT_RESEARCH.md ×14, linux-development.md:52). `no-such-rev`, `/nonexistent` and `/tmp` (not a repo) give 2: git's `fatal:` stays on stderr, plus "nothing was checked". An empty rev falls back to `HEAD`, and the script also works from another cwd. The logic is sound: a status above 1 from either grep wins over hits. Both greps use `-I -i -n` with the same scope. `:!hvoya` excludes only the top-level dir, so `Examples/hvoya/` is still searched (scratch repo). Scratch-repo results: `GneissUI`, `kGneiss`, `gneiss_plugin`, `MelterX`, `Gneiss-linux`, `Sand.clap`, `DMT`, `Scape.` hit; `sandbox`, `sandbox_sand`, `landscape`, `crusty` don't; a NUL-containing file is skipped. As intended, `-w` applies only to the ordinary words. COORDINATOR step 3 says "must exit 0", and the second run on `HEAD` after the merge commit covers conflict resolutions.
+- **M2:** accurate, not misleading. `git log --format=%an hvoya..hvoya-linux`: 11 Benjamin Reed, 297 Eugene Yakshin. 025764cd5 is Reed's partial cherry-pick of PR #1336. 5e23641b8 takes Stillwell's `IPlugLinuxPathUtils.h` and the Linux `IPlugPaths` branch (stillwellaudio 910303d27). The research also credits Stillwell's VST3 run-loop and editor lifecycle as the model. "Builds on … and was completed in this fork" matches this. It also keeps the user's point: not upstream, report here.
+- **m3/m4/m5:** done. P2448 is the right paper: P2448R2, "Relaxing some constexpr restrictions" (C++23), lets a `constexpr` function or constructor take non-literal parameter types. Clang lists it as implemented in 19. Local check (clang 23): a `constexpr` constructor taking `std::function` errors under `-std=c++20` ("1st parameter type … is not a literal type") and compiles under `-std=c++23`. This matches T-012 D2. `-DMY_PLUGIN_LITE=1` is neutral.
+- **Nits 8–11:** done. The moved file's `../LINUX_VM_SETUP.md` resolves to the repo-root file. Its `notes/…` links resolve inside `linux-research/`, and the `AGENTS.md`/`PLAN.md` paths are right. No other reference to the old path remains.
+
+**Shipped text:** clean. The script passes, and my own greps over `HEAD` outside `linux-research`, `Dependencies`, `WDL` and `hvoya` found nothing. I searched `gneiss|melter|bromo|hemisphere` without `-w`; `sand|dmt|crust|scape` as whole words; `Delta` in Documentation/README/CLAUDE.md/Scripts/Linux platform code/Examples (only minified `p5.min.js`); and `morph`, `user tab`, `ribs`, `yantra`, `HVOYA_`, `paid`. The only remaining indirect mention is the pre-port `IPlugCLAP.cpp:426` "a full morph rig" (m6, on `hvoya` at :415), which waits on the user. `HvoyaAudio`, `HVOYA_PATH` and the hvoya logo in `Examples/IPlugEffect` are the fork's manufacturer and utility library, not plug-ins.
+
+**New, all nits (optional):**
+1. `CLAUDE.md:72` is now 169 columns in a paragraph hard-wrapped at ~118. Rewrap it.
+2. The script prints a line twice when it matches both greps (e.g. `Sand.clap Gneiss-linux`). Cosmetic; `sort -u` on the output would fix it.
+3. `COORDINATOR.md:59` records the user's decision as "this fork's authors did the port, not iPlug2's maintainers". Whoever later removes the `CLAUDE.md` section may copy that wording, which is the one corrected in M2. Add "(worded as in `Documentation/linux-development.md`)".
+4. Optional: in linux-development.md, "upstream pull request #1336" could say "unmerged" (it is still open), so nobody reads it as already upstream.
+5. Accepted trade-off, so the coordinator knows: an ordinary-word name inside an identifier (`SandLinux`, `kScapeMix`) is not caught. Review by eye covers it.
+
+**Still for the user:** m6 (the morph-rig comment, reword on `hvoya`) and m7 (Bromo/Delta in the names list).
+
+**Verdict: approved.** The nits can be fixed in passing or at merge time; none blocks.
