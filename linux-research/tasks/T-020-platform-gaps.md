@@ -53,3 +53,79 @@ Worktree `IPlug2-T-020` (`linux/T-020` from hvoya-linux, fast-forwarded to b9c86
 - Not yet: dropping into GNOME Files and other hosts (VM).
 
 **Item 5, multi-touch:** split into **T-030** (`tasks/T-030-multitouch.md`): there is no touch device to test with here (Xvfb, the VM), and it is a Windows-only feature in IGraphics today (mac has none). Plan and test method in the task file.
+
+### Review round 1 (independent reviewer)
+Fresh context; range `hvoya-linux..linux/T-020` (5f6739350 … 7bedb32e8). Docker only (no VM).
+
+**Re-run by the reviewer.** I made fresh builds of HEAD rather than reusing `build/t020-*`, which predate the commits by a few minutes: `build/t020r-{drag,app,gl3}` (IPlugControls CLAP and VST3, with `-DIPLUG_TEST_DRAGOUT`, `-DIPLUG_TEST_APPEARANCE` and `IGRAPHICS_RENDERER=GL3`). The worktree's VST3 SDK is a set of symlinks into `IPlug2-linux`, so the build needs `DOCK_MOUNTS=/Volumes/Storage/code/IPlug2-linux:ro`. Container `t020r`. My extra scripts are in `build/t020r-scripts/`, which git ignores.
+- NEEDED for all 6 binaries: `libX11.so.6 libm.so.6 libc.so.6 ld-linux-aarch64.so.1`. Unchanged.
+- `dragout/run.sh`, CLAP: identical to the committed `clap.log`. REAPER creates the item from `/tmp/drag me.wav` (I checked the screenshot myself). On the probe: Enter v5, Positions, Drop, then `file:///tmp/drag%20me.wav`, then Finished. Escape: Leave, no Drop, the FX window stays open.
+- `appearance/run.sh`, CLAP and VST3: `dark, light, dark`, all `main=1`. Identical to the committed logs.
+- GL3 build: renders correctly in REAPER (I looked at the screenshot). The editor window's visual is 0x21, depth-24 TrueColor, the same as GL2 under Xvfb.
+- Extra drag cases (`extra.sh`, CLAP):
+  - **Self-drop** onto our own editor: REAPER's XdndAware top-level forwards it to us. No hang, no crash, and the next drag starts at once.
+  - **Editor closed mid-drag** over the probe: the probe gets Leave, the keyboard grab is released, REAPER is alive.
+  - **Release over nothing**, and **Escape over nothing**: the grab is released.
+  - The grab was checked from another client with `XGrabKeyboard`. It reports AlreadyGrabbed during a drag and GrabSuccess after each of these endings.
+
+**Major**
+- **M1 — A wheel step during a drag drops the file too early.** `LinuxDragSource::HandleEvent` treats any `ButtonRelease` as the drop (`IGraphicsLinuxDragSource.h:101`). The wheel arrives as button 4/5 press+release on the implicit grab, so the drag ends there. Reproduced with `wheel.sh`: button 1 held over the probe, one `xdotool click 5`, and the probe logs Drop, DATA and Finished *before* the button is released. A second button behaves the same way. Scrolling while dragging is a common gesture in DAWs. Fix: remember the button that started the drag, from the press's state when `Start` runs. End the drag only when that button is released, and swallow every other button.
+
+**Minor**
+- **m1 — Appearance `Send` blocks on `connection_flush`.** `IGraphicsLinuxAppearance.h:119`: `dbus_connection_flush` loops with a blocking iteration and no timeout. It waits until the outgoing queue is written, and in `Start` that includes the SASL handshake. A wedged session bus would therefore hang the host's UI thread at editor open, and the file header's "nothing here blocks" is not true. The dialogs call `connection_read_write(conn, 0)` after each send instead. Do the same: `Poll`'s `read_write(0)` finishes the write.
+- **m2 — The first appearance value arrives late.** Polling runs every 250 ms, and Hello → Read → reply takes 2–3 polls. The editor therefore always opens light and switches about 0.5 s later. The committed log's first `dark` line is that switch, not an initial value. On mac the value is right at open. A UI that themes itself from `GetUIAppearance()` in its layout function flashes light. Options: watch the connection's fd through the host loop, as the dialogs do (`connection_get_unix_fd`), or poll every tick until the Read reply has arrived.
+- **m2b — A portal that starts after the editor is missed until its next change.** Tested with `late-portal.sh`: the fake portal starts dark 3 s after the open. The editor stays light, and only the later change back to dark gets through. This matters only for portals that are not D-Bus-activatable; a real `xdg-desktop-portal` is activated by the Read. Optional fix: Read again on `NameOwnerChanged` for `org.freedesktop.portal.Desktop`. Low priority.
+- **m3 — No drag feedback cursor.** The source never sets an accept or refuse cursor; GTK and Qt sources do, and mac and Windows show the OS feedback. The pointer keeps the editor's cursor for the whole drag.
+- **m4 — `Start` does not check that a mouse button is held.** If `InitiateExternalFileDragDrop` is called outside a press (from a key handler or a timer), the drag sits in `Dragging` with the keyboard grabbed desktop-wide. The editor swallows clicks and keys until a click in the editor or Escape. Return false when the last event's state has no button down (or check with `XQueryPointer`).
+- **m5 — Evidence gaps.** Three things are not shown yet:
+  - the VM items: paste into Files, drop into Files, a real GNOME portal, GL3 on virgl;
+  - a tooltip under GL3 (it shares the context and uses the FBConfig's visual, so it is expected to work, but nothing exercised it);
+  - drops into hosts other than REAPER.
+
+**Nits**
+- **n1.** `Release()` in the `Dropped` state sends XdndLeave after XdndDrop. The spec has no Leave after a Drop. This only happens when the editor closes within 3 s of a drop.
+- **n2.** `FindTarget` never looks at the root window, so an XdndProxy on the root (old desktop file managers) is not followed. A target that is XdndAware with version < 3 is skipped and the search goes on into its children, where it should stop.
+- **n3.** Every MotionNotify costs about 3 X round trips per tree level (`XTranslateCoordinates` plus 2–3 `XGetWindowProperty`), with no motion compression. That is fine locally and slow on remote X. Coalescing pending motion would fix it.
+- **n4.** `LinuxClipboard::AppendFileUri` uses the locale-dependent `isalnum`. Under an 8-bit non-UTF-8 locale set by the host, bytes ≥ 0x80 can pass unencoded. Use an explicit ASCII test. The D-Bus address helper has the same pattern.
+- **n5.** The `IGraphicsLinuxDragSource.h` header says "include after Xlib and the clipboard". It also needs `<X11/Xatom.h>` (`XA_ATOM`, `XA_WINDOW`), which today arrives only through the include order.
+- **n6.** The GL3 FBConfig attributes do not pin `GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR`. A driver that lists depth-32 ARGB configs first could give the editor an alpha visual. The risk is low and the GL2 path has the same property.
+- **n7.** GL2 builds now also need `glXChooseFBConfig` and `glXGetVisualFromFBConfig` to load libGL. These are GLX 1.3 and universal, but they could be required only under `IGRAPHICS_GL3`.
+- **n8.** `GetUIAppearance()` returns Light while the editor is closed (Impl reset), whereas mac answers at any time. Fine, but worth a line wherever it gets documented.
+
+**Checked and fine**
+- **XDND message layout:**
+  - Enter: version in bits 24–31, three types inline.
+  - Position: (x<<16)|y, then the time, then the action.
+  - Drop: the time.
+- **XDND protocol flow:**
+  - The version is negotiated as min(target, 5).
+  - An XdndProxy must point to itself; messages go to the proxy with `window` set to the target.
+  - One Position per Status.
+  - A Status from an old target is ignored, because `l[0]` must match.
+  - A target that never sends Status: Positions stop, and the release sends Leave instead of Drop.
+  - After a Drop, the 3 s timeout applies.
+- **Keyboard grab:** released on every path: drop, Escape, release over nothing, and editor close (both `Release()` and the connection close). When the grab fails, Escape goes to the host; REAPER then closes the FX window, which ends the drag cleanly, as tested.
+- **Mouse capture:** ends through `ReleaseMouseCapture` as soon as the drag stops being `Dragging`. Grab-mode focus events are already ignored (`HandleFocusOut`).
+- **Source and target in one window:** dispatch order is drag source first, and it takes only Status and Finished; then clipboard, then file drop. XdndSelection requests go to the source and SelectionNotify to the target.
+- **Clipboard file targets:**
+  - text/uri-list with CRLF;
+  - gnome-copied-files as `copy\n<uri>` with no trailing newline;
+  - TARGETS lists the file targets only in file mode;
+  - `SetText` clears file mode.
+- **Portal:**
+  - Read's `v(v(u))` and the signal's `ssv` are unwrapped through any number of variants.
+  - Error replies are ignored and leave the value unchanged.
+  - The AddMatch rule has no sender, so a later portal's signals still arrive.
+  - When the connection drops it is closed, with no reconnect.
+- **GL3:** an FBConfig context with a core 3.2 profile, the error trapped by OpenWindow's trap, and a clear failure message (evidence `gl3-no-core-*`).
+- **Threading:** everything runs from `ProcessXEvents` or `OnDisplayTimer` on the host main thread, and the appearance callback reported `main=1`. The one blocking call is m1.
+- **Scope:** only `IGraphicsLinux*` files changed, plus IPlugControls test hooks guarded by `OS_LINUX` and the doc. No mac/win files touched, and no product names. Comments are WHY-only and accurate, apart from the "nothing here blocks" claim in m1.
+
+**Verdict: changes requested.**
+- Fix M1. Fixing m1 and m4 at the same time is recommended; both are small.
+- m2/m2b and m3 can be done now or recorded as follow-ups. The nits are optional.
+- Items 1–4 are otherwise correct and the Docker evidence holds up. The VM checks (m5) are still needed before `review-done`.
+
+Containers:
+- I removed `t020r`.
+- The container `t020`, up for about 3 hours when the review started, is the worker's; I left it running.
