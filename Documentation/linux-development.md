@@ -4,7 +4,7 @@ Linux builds produce CLAP, VST3 and a standalone APP, with an IGraphics UI on X1
 covers a native setup on Ubuntu 24.04 (x86_64 or arm64) with VS Code as the IDE. `Examples/IPlugEffect` and
 `Examples/IPlugControls` are ready to open, and new projects duplicated from them inherit the setup.
 
-Linux support in this fork is not upstream iPlug2's: it builds on Benjamin Reed's upstream pull request #1336 and
+Linux support in this fork is not upstream iPlug2's: it builds on Benjamin Reed's unmerged upstream pull request #1336 and
 Stillwell Audio's Linux work, and was completed in this fork. Report Linux problems to this fork, not upstream.
 
 The renderer is NanoVG GL2 (`IGRAPHICS_RENDERER=GL2`, as on Windows), the only one tested on Linux. The editor

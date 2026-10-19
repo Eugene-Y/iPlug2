@@ -21,7 +21,7 @@ if [ $rc1 -gt 1 ] || [ $rc2 -gt 1 ]; then
 fi
 if [ $rc1 -eq 0 ] || [ $rc2 -eq 0 ]; then
   echo "Plug-in names in iPlug2's shipped text ($REV):"
-  printf '%s\n' "$out1" "$out2" | sed '/^$/d'
+  printf '%s\n' "$out1" "$out2" | sed '/^$/d' | sort -u
   exit 1
 fi
 echo "check-product-names: clean ($REV)"

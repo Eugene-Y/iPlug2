@@ -57,7 +57,7 @@ See `STATUS.md` "In flight" and "Waiting on the user" for the authoritative list
   `Melter-t024`, `Crust_new-t024` (keep: uncommitted one-liners for the user).
 - **User's decisions 2026-10-19:** T-013 may install Carla, Ardour, Renoise on the VM. T-027: research docs stay in
   `linux-research/` (move `LINUX_PORT_RESEARCH.md` there); the `CLAUDE.md` port section goes when the port is finished,
-  leaving a note that this fork's authors did the port, not iPlug2's maintainers.
+  leaving the authorship note (wording as in `Documentation/linux-development.md`: built on PR #1336 and Stillwell's work, completed in this fork, not upstream).
 - **T-009 references are in** `evidence/t009/mac-refs/` (Retina 2x; Gneiss CLAP incl. `clean moogRPP.RPP` with the
   CLEAN MOOG preset, Sand VST3 views). Gneiss has no text entry yet (user); leave it out of the comparison.
 - **S-1** (findings): Sand CLAP text entry on mac takes no keys in REAPER, VST3 works. Waiting for the user's two checks
