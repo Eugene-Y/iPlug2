@@ -3,7 +3,7 @@
 Цель: собрать Gneiss (и другие hvoya-плагины) под Linux как CLAP + VST3 (+ standalone) с полноценным
 IGraphics-UI, работающим в реальных DAW. Ветка порта — **от `hvoya`**.
 
-Рабочие материалы: [`linux-research/`](linux-research/)
+Рабочие материалы: [`linux-research/`](./) (этот файл лежит там же)
 - `notes/01-existing-efforts.md` — кто и что уже делал (форки, PR, ветки)
 - `notes/02-how-others-do-it.md` — как Linux-UI решают JUCE / DPF / VSTGUI / pugl / Visage / baseview
 - `notes/03-build-test-results.md` — реальная сборка и прогон кандидатов в Docker
@@ -150,7 +150,7 @@ upstream не превратится в ад.
 1. Проверить `state-reproducibility` clap-validator на маковском CLAP Gneiss (баг №6).
 2. Для финальной проверки нужна x86_64-машина с Linux-десктопом (Docker/VM на маке — arm64, без
    реального GPU). ARM-VM в UTM с REAPER — для визуальных тестов во время разработки
-   (см. `LINUX_VM_SETUP.md`).
+   (см. `../LINUX_VM_SETUP.md`).
 
 ## 6. Харнесс
 

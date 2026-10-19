@@ -68,7 +68,8 @@ Cross-platform C++ audio plugin framework with two main components:
 
 You are on (or near) branch `hvoya-linux`. **For any Linux-port work, read `linux-research/AGENTS.md` first.**
 It has the shared instructions (rules, Docker/VM tools, locks, workflow), and `linux-research/tasks/` holds
-self-contained task files. The main checkout `/Volumes/Storage/code/IPlug2` stays on `hvoya` (Gneiss builds
-against it) — never modify it from Linux work.
+self-contained task files. The main checkout `/Volumes/Storage/code/IPlug2` stays on `hvoya` (the fork's plug-ins
+build against it) — never modify it from Linux work. The Linux port is this fork's work (built on the unmerged
+upstream PR #1336 and Stillwell Audio's fork), not upstream iPlug2's.
 **Taking over as coordinator** (the user says so, or asks you to merge tasks / run the board): after `AGENTS.md`,
 read `linux-research/STATUS.md` and `linux-research/COORDINATOR.md`.
