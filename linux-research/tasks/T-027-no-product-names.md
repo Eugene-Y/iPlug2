@@ -13,8 +13,8 @@ Out of scope: commit messages (history is pushed), the `linux-research/` work ar
 
 ## Known hits (2026-10-18, `git grep -i -w -E 'gneiss|sand|melter|dmt|crust|scape'` outside `linux-research/`, `Dependencies/`, `WDL/`)
 - `Documentation/linux-development.md:52` — "hvoya's `constexpr` lookup tables (Sand)".
-- `LINUX_PORT_RESEARCH.md` — 14 lines. Decide with the user whether this human summary stays in the repo at all (it is a research report in Russian, not a framework doc); if it stays, scrub it.
-- `CLAUDE.md:71` (Linux-port section, "Gneiss builds against it") — the port section is working instructions for agents; ask the user whether it stays in the shipped `CLAUDE.md`.
+- `LINUX_PORT_RESEARCH.md` — 14 lines. **User (2026-10-19): keep the research docs, inside `linux-research/`** — move this file there (it then falls under the work area, not the shipped docs).
+- `CLAUDE.md:71` (Linux-port section, "Gneiss builds against it") — **user (2026-10-19): remove the section when the port work is finished**, not now; but keep a short note that the Linux port was done by this fork's authors, not by iPlug2's maintainers, so nobody mistakes it for upstream work. Until then, take the product name out of it.
 - Code under `IPlug/`, `IGraphics/`, `Scripts/`, `Examples/`: none found.
 
 ## Steps
