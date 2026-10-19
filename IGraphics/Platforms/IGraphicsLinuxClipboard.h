@@ -38,6 +38,8 @@ public:
     mUTF8String = XInternAtom(pDisplay, "UTF8_STRING", False);
     mTargets = XInternAtom(pDisplay, "TARGETS", False);
     mText = XInternAtom(pDisplay, "TEXT", False);
+    mUriList = XInternAtom(pDisplay, "text/uri-list", False);
+    mGnomeCopiedFiles = XInternAtom(pDisplay, "x-special/gnome-copied-files", False);
     mIncr = XInternAtom(pDisplay, "INCR", False);
     mProperty = XInternAtom(pDisplay, "IPLUG_CLIPBOARD", False);
     if (OpenEditors().Find(this) < 0)
@@ -65,11 +67,40 @@ public:
     if (!mDisplay || !str)
       return false;
     SharedText().Set(str);
+    SharedFileUri().Set("");
     SharedOrphaned() = false;
     XSetSelectionOwner(mDisplay, mClipboard, mWindow, time);
     const bool owned = XGetSelectionOwner(mDisplay, mClipboard) == mWindow;
     SharedOwner() = owned ? mWindow : 0;
     return owned;
+  }
+
+  /** Offers an absolute path as a file to paste in file managers (text/uri-list, GNOME's copied-files list) and as
+   * plain text, like the file on the mac/win clipboard */
+  bool SetFilePath(const char* path, Time time)
+  {
+    if (!path || path[0] != '/')
+      return false;
+    WDL_String uri;
+    AppendFileUri(uri, path);
+    if (!SetText(path, time))
+      return false;
+    SharedFileUri().Set(uri.Get());
+    return true;
+  }
+
+  /** file:// URI of an absolute path: every byte outside RFC 3986's unreserved set and '/' percent-encoded */
+  static void AppendFileUri(WDL_String& uri, const char* path)
+  {
+    uri.Append("file://");
+    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(path); *p; ++p)
+    {
+      const bool unreserved = (*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9');
+      if (unreserved || strchr("-._~/", *p))
+        uri.Append(reinterpret_cast<const char*>(p), 1);
+      else
+        uri.AppendFormatted(4, "%%%02X", *p);
+    }
   }
 
   /** Reads the clipboard as UTF-8, waiting at most timeoutMs for the owner. The host's main thread is blocked
@@ -225,6 +256,8 @@ private:
   }
 
   static WDL_String& SharedText() { static WDL_String sText; return sText; }
+  /** The file URI when the clipboard holds a file (SetFilePath), empty for plain text */
+  static WDL_String& SharedFileUri() { static WDL_String sUri; return sUri; }
   static Window& SharedOwner() { static Window sOwner = 0; return sOwner; }
   static bool& SharedOrphaned() { static bool sOrphaned = false; return sOrphaned; }
   static WDL_PtrList<LinuxClipboard>& OpenEditors() { static WDL_PtrList<LinuxClipboard> sEditors; return sEditors; }
@@ -326,9 +359,20 @@ private:
     {
       if (request.target == mTargets)
       {
-        const Atom targets[] = { mTargets, mUTF8String, mText, XA_STRING };
+        const Atom targets[] = { mTargets, mUTF8String, mText, XA_STRING, mUriList, mGnomeCopiedFiles };
+        const int nTargets = static_cast<int>(sizeof(targets) / sizeof(targets[0])) - (SharedFileUri().GetLength() ? 0 : 2);
         XChangeProperty(mDisplay, request.requestor, property, XA_ATOM, 32, PropModeReplace,
-                        reinterpret_cast<const unsigned char*>(targets), static_cast<int>(sizeof(targets) / sizeof(targets[0])));
+                        reinterpret_cast<const unsigned char*>(targets), nTargets);
+        served = true;
+      }
+      else if ((request.target == mUriList || request.target == mGnomeCopiedFiles) && SharedFileUri().GetLength())
+      {
+        WDL_String list(request.target == mGnomeCopiedFiles ? "copy\n" : "");
+        list.Append(SharedFileUri().Get());
+        if (request.target == mUriList)
+          list.Append("\r\n");
+        XChangeProperty(mDisplay, request.requestor, property, request.target, 8, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(list.Get()), list.GetLength());
         served = true;
       }
       else if ((request.target == mUTF8String || request.target == mText
@@ -380,6 +424,8 @@ private:
   Atom mUTF8String = None;
   Atom mTargets = None;
   Atom mText = None;
+  Atom mUriList = None;
+  Atom mGnomeCopiedFiles = None;
   Atom mIncr = None;
   Atom mProperty = None;
 

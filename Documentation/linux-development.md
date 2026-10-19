@@ -7,8 +7,9 @@ covers a native setup on Ubuntu 24.04 (x86_64 or arm64) with VS Code as the IDE.
 Linux support in this fork is not upstream iPlug2's: it builds on Benjamin Reed's unmerged upstream pull request #1336 and
 Stillwell Audio's Linux work, and was completed in this fork. Report Linux problems to this fork, not upstream.
 
-The renderer is NanoVG GL2 (`IGRAPHICS_RENDERER=GL2`, as on Windows), the only one tested on Linux. The editor
-creates a legacy GLX context, which old or virtual drivers may cap below 3.2, so `GL3` is not guaranteed to open.
+The renderer is NanoVG GL2 by default (`IGRAPHICS_RENDERER=GL2`, as on Windows), which runs on any GL 2.1 driver.
+`IGRAPHICS_RENDERER=GL3` asks for an OpenGL 3.2 core context; where the driver has none (old or virtual GPUs), the
+editor does not open and the plug-in prints `no OpenGL 3.2 core context` on stderr.
 
 ## 1. Install
 
