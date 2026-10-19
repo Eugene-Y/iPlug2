@@ -59,6 +59,9 @@ public:
 
   bool IsDark() const { return mDark; }
 
+  /** Until the first answer: the editor polls at every tick, so it does not draw light for long on a dark desktop */
+  bool IsWaitingForFirstAnswer() const { return mConnection && (mHelloSerial || mReadSerial); }
+
   /** Handles whatever the bus has sent. @return true when the scheme changed */
   bool Poll()
   {
@@ -92,6 +95,11 @@ public:
       {
         ReadScheme(pMessage, true);
       }
+      else if (type == dbus::kMessageSignal && !strcmp(Str(mDBus->message_get_member(pMessage)), "NameOwnerChanged")
+               && PortalStarted(pMessage))
+      {
+        SendRead(); // a portal that was not running at the first Read
+      }
       mDBus->message_unref(pMessage);
     }
     return mDark != wasDark;
@@ -116,7 +124,7 @@ private:
       return 0;
     mDBus->connection_send(mConnection, pMessage, &serial);
     mDBus->message_unref(pMessage);
-    mDBus->connection_flush(mConnection);
+    mDBus->connection_read_write(mConnection, 0);
     return serial;
   }
 
@@ -125,19 +133,50 @@ private:
     mDBus->message_iter_append_basic(pIter, linux_dbus::kTypeString, &value);
   }
 
-  void SubscribeAndRead()
+  void AddMatch(const char* rule)
   {
     namespace dbus = linux_dbus;
     if (dbus::Message* pMatch = mDBus->message_new_method_call(kBus, kBusPath, kBus, "AddMatch"))
     {
-      char rule[256];
-      snprintf(rule, sizeof(rule), "type='signal',interface='%s',member='SettingChanged',arg0='%s'", kSettings, kNamespace);
       dbus::MessageIter args;
       mDBus->message_iter_init_append(pMatch, &args);
       AppendString(&args, rule);
       mDBus->message_set_no_reply(pMatch, 1);
       Send(pMatch);
     }
+  }
+
+  void SubscribeAndRead()
+  {
+    char rule[256];
+    snprintf(rule, sizeof(rule), "type='signal',interface='%s',member='SettingChanged',arg0='%s'", kSettings, kNamespace);
+    AddMatch(rule);
+    snprintf(rule, sizeof(rule), "type='signal',sender='%s',member='NameOwnerChanged',arg0='%s'", kBus, kPortal);
+    AddMatch(rule);
+    SendRead();
+  }
+
+  /** NameOwnerChanged (s name, s old owner, s new owner): the portal got an owner */
+  bool PortalStarted(linux_dbus::Message* pMessage)
+  {
+    namespace dbus = linux_dbus;
+    dbus::MessageIter it;
+    const char* strings[3] = { nullptr, nullptr, nullptr };
+    if (!mDBus->message_iter_init(pMessage, &it))
+      return false;
+    for (const char*& str : strings)
+    {
+      if (mDBus->message_iter_get_arg_type(&it) != dbus::kTypeString)
+        return false;
+      mDBus->message_iter_get_basic(&it, &str);
+      mDBus->message_iter_next(&it);
+    }
+    return !strcmp(Str(strings[0]), kPortal) && Str(strings[2])[0];
+  }
+
+  void SendRead()
+  {
+    namespace dbus = linux_dbus;
     // Read rather than the newer ReadOne: every portal version has it; it wraps the value in one more variant.
     if (dbus::Message* pRead = mDBus->message_new_method_call(kPortal, kPortalPath, kSettings, "Read"))
     {

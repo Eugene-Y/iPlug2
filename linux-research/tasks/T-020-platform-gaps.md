@@ -129,3 +129,15 @@ Fresh context; range `hvoya-linux..linux/T-020` (5f6739350 … 7bedb32e8). Docke
 Containers:
 - I removed `t020r`.
 - The container `t020`, up for about 3 hours when the review started, is the worker's; I left it running.
+
+### 2026-10-19 (3) — review round 1 fixes
+- **M1:** only the release of the button that started the drag drops; wheel steps (buttons 4–7, press/release pairs) no longer do. New case in `dragout/run.sh`: a wheel click over the probe with button 1 held → 0 drops before the release, 1 after (CLAP and VST3).
+- **m4:** `Start` refuses without a mouse button held (`XQueryPointer`), so the keyboard is never grabbed outside a press; it records the button for M1.
+- **m3:** drag feedback cursor: the pointer grab's cursor (`XChangeActivePointerGrab`) is the "not allowed" cursor until the target accepts, then the hand; reset when the button goes up or the drag is cancelled. Not yet looked at on a real desktop (VM).
+- **m1:** the appearance connection never blocks: sends are followed by `connection_read_write(0)` (no `connection_flush`).
+- **m2:** until the first answer, the editor polls the bus at every display tick (then every 250 ms), so a dark desktop shows dark at once, not after ~0.5 s.
+- **m2b:** a portal that starts after the editor: the editor also follows `NameOwnerChanged` for `org.freedesktop.portal.Desktop` and reads again. New `LATE_PORTAL=1` case in `appearance/run.sh` (portal started 4 s after the editor): `dark` arrives (CLAP, VST3).
+- **n1:** `Release()` after a drop no longer sends Leave. **n4:** the URI encoder tests ASCII ranges, not `isalnum` (locale). **n5:** `<X11/Xatom.h>` included. **n6:** GL3 configs ask for TrueColor. **n7:** `glXChooseFBConfig`/`glXGetVisualFromFBConfig` are optional when libGL loads: only GL3 builds use them (and fail the open cleanly without them).
+- Not changed: n2 (XdndProxy on the root window), n3 (no motion compression: a few round trips per motion event, only while dragging), n8 (`GetUIAppearance` is Light while the editor is closed: the tracker lives with the editor).
+- Re-runs on the fixed code: drag-out CLAP + VST3 (`dragout/{clap,vst3}.log`: REAPER media item, probe drop, Escape, wheel), appearance CLAP + VST3 incl. late portal, `iplugcontrols.txt` GL3 CLAP and GL2 CLAP + VST3 PASS (`regress-r1-*`); NEEDED unchanged.
+- **m5 (VM checks)** stay open until the VM is back: paste and drop into GNOME Files, the real GNOME portal, GL3 on virgl.

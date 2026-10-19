@@ -84,8 +84,6 @@ private:
       ok = ok && pFunc;
     };
     load(ChooseVisual, "glXChooseVisual");
-    load(ChooseFBConfig, "glXChooseFBConfig");
-    load(GetVisualFromFBConfig, "glXGetVisualFromFBConfig");
     load(CreateContext, "glXCreateContext");
     load(DestroyContext, "glXDestroyContext");
     load(MakeCurrent, "glXMakeCurrent");
@@ -95,6 +93,10 @@ private:
     load(GetCurrentDisplay, "glXGetCurrentDisplay");
     load(QueryExtensionsString, "glXQueryExtensionsString");
     load(GetProcAddressARB, "glXGetProcAddressARB");
+
+    // GLX 1.3, for GL3 builds only: a GL2 build must not depend on them.
+    ChooseFBConfig = reinterpret_cast<decltype(ChooseFBConfig)>(dlsym(mLib, "glXChooseFBConfig"));
+    GetVisualFromFBConfig = reinterpret_cast<decltype(GetVisualFromFBConfig)>(dlsym(mLib, "glXGetVisualFromFBConfig"));
 
     if (!ok)
     {

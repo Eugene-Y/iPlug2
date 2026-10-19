@@ -34,6 +34,16 @@ drag 500 240 0
 sleep 1
 "$R/rpr.sh" "out('items after', reaper.CountMediaItems(0)); if reaper.CountMediaItems(0) > 0 then local it=reaper.GetMediaItem(0,0); local tk=reaper.GetActiveTake(it); local src=reaper.GetMediaItemTake_Source(tk); out('source', reaper.GetMediaSourceFileName(src, '')) end" | tee -a "$OUT/reaper-items.txt"
 import -window root "$OUT/after-reaper-drop.png"
+# a wheel step with the button still down must not drop (buttons 4/5 are press/release pairs)
+/tmp/xdnd-target 1250 80 300 250 14 > "$OUT/target-wheel.txt" 2>&1 & sleep 1
+eval "$(xdotool search --onlyvisible --name '^xdnd-target$' getwindowgeometry --shell | tail -5)"
+xdotool mousemove $SX $SY mousedown 1; sleep 0.3
+for i in 1 2 3 4 5 6 7 8; do xdotool mousemove $(( SX + (X + WIDTH / 2 - SX) * i / 8 )) $(( SY + (Y + HEIGHT / 2 - SY) * i / 8 )); sleep 0.15; done
+sleep 0.5; xdotool click 4; sleep 1
+echo "before release: $(grep -c '^Drop' "$OUT/target-wheel.txt") drops"
+xdotool mouseup 1; sleep 1.5
+echo "after release: $(grep -c '^Drop' "$OUT/target-wheel.txt") drops, $(grep -c '^DATA' "$OUT/target-wheel.txt") data"
+pkill -f /tmp/xdnd-target; sleep 0.5
 for case in drop escape; do
   /tmp/xdnd-target 1250 80 300 250 12 > "$OUT/target-$case.txt" 2>&1 & sleep 1
   # the window manager places it where it likes: aim at where it is

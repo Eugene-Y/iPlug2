@@ -45,10 +45,10 @@
 #include "IGraphicsLinuxGLX.h"
 #include "IGraphicsLinuxKeys.h"
 #include "IGraphicsLinuxClipboard.h"
+#include "IGraphicsLinuxCursors.h"
 #include "IGraphicsLinuxDragSource.h"
 #include "IGraphicsLinuxAppearance.h"
 #include "IGraphicsLinuxDrop.h"
-#include "IGraphicsLinuxCursors.h"
 #include "IGraphicsLinuxFontconfig.h"
 
 using namespace iplug;
@@ -538,12 +538,14 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   // A core profile can only be requested for an FBConfig (glXCreateContextAttribsARB), not for a visual.
   const int configAttributes[] = {
     GLX_X_RENDERABLE, True, GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT, GLX_RENDER_TYPE, GLX_RGBA_BIT, GLX_DOUBLEBUFFER, True,
+    GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
     GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
     GLX_STENCIL_SIZE, 8,
     None
   };
   int nConfigs = 0;
-  GLXFBConfig* pConfigs = w.mGLX->ChooseFBConfig(pDisplay, screen, configAttributes, &nConfigs);
+  GLXFBConfig* pConfigs = w.mGLX->ChooseFBConfig && w.mGLX->GetVisualFromFBConfig
+                        ? w.mGLX->ChooseFBConfig(pDisplay, screen, configAttributes, &nConfigs) : nullptr;
   if (!pConfigs || nConfigs < 1)
     return fail("no GLX FBConfig with RGB8, stencil 8 and double buffering");
   const GLXFBConfig fbConfig = pConfigs[0];
@@ -580,7 +582,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mWindowAlive = w.mWindow != 0;
   w.mXEmbed = XInternAtom(pDisplay, "_XEMBED", False);
   w.mClipboard.Init(pDisplay, w.mWindow);
-  w.mDragSource.Init(pDisplay, w.mWindow);
+  w.mDragSource.Init(pDisplay, w.mWindow, &w.mCursors, kWindowEventMask & (ButtonPressMask | ButtonReleaseMask | PointerMotionMask | LeaveWindowMask));
   w.mFileDrop.Init(pDisplay, w.mWindow);
   w.mAppearance.Start();
   w.mCursors.Init(pDisplay);
@@ -815,7 +817,7 @@ void IGraphicsLinux::OnDisplayTimer()
   mImpl->mDragSource.Idle();
   constexpr auto kAppearancePoll = std::chrono::milliseconds(250);
   const auto now = std::chrono::steady_clock::now();
-  if (now - mImpl->mAppearancePolledAt > kAppearancePoll)
+  if (mImpl->mAppearance.IsWaitingForFirstAnswer() || now - mImpl->mAppearancePolledAt > kAppearancePoll)
   {
     mImpl->mAppearancePolledAt = now;
     if (mImpl->mAppearance.Poll())

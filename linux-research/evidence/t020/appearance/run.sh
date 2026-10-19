@@ -7,9 +7,14 @@ mkdir -p "$OUT"
 gcc "$HERE/fake-portal.c" $(pkg-config --cflags --libs dbus-1) -o /tmp/fake-portal || exit 2
 pkill -f /tmp/fake-portal; export DBUS_SESSION_BUS_ADDRESS=$(cat /tmp/dbus.addr)
 "$R/reaper-up.sh" "$P"
-# dark when the editor opens, light 5 s later, dark again 4 s after that
-/tmp/fake-portal 1 5 2 4 1 > "$OUT/portal.txt" 2>&1 &
-sleep 0.5
+if [ "${LATE_PORTAL:-0}" = 1 ]; then
+  # the portal starts only after the editor is open: its first value must still arrive (NameOwnerChanged)
+  ( sleep 4; /tmp/fake-portal 1 > "$OUT/portal.txt" 2>&1 ) &
+else
+  # dark when the editor opens, light 5 s later, dark again 4 s after that
+  /tmp/fake-portal 1 5 2 4 1 > "$OUT/portal.txt" 2>&1 &
+  sleep 0.5
+fi
 "$R/rpr.sh" "reaper.InsertTrackAtIndex(0,true); local t=reaper.GetTrack(0,0); out('add', reaper.TrackFX_AddByName(t,\"$FX\",false,-1)); reaper.TrackFX_Show(t,0,3)"
 sleep 12
 grep -a 'IPLUG_TEST_APPEARANCE' /tmp/reaper.log | tee "$OUT/appearance.txt"

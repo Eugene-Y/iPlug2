@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <chrono>
 
+#include <X11/Xatom.h>
 #include <X11/keysym.h>
 
 #include "wdlstring.h"
@@ -29,10 +30,13 @@ BEGIN_IGRAPHICS_NAMESPACE
 class LinuxDragSource
 {
 public:
-  void Init(Display* pDisplay, Window window)
+  /** @param pointerEventMask the pointer events the window selects: a cursor change re-states the grab's mask */
+  void Init(Display* pDisplay, Window window, LinuxCursors* pCursors, long pointerEventMask)
   {
     mDisplay = pDisplay;
     mWindow = window;
+    mCursors = pCursors;
+    mPointerEventMask = pointerEventMask;
     mXdndAware = XInternAtom(pDisplay, "XdndAware", False);
     mXdndProxy = XInternAtom(pDisplay, "XdndProxy", False);
     mXdndSelection = XInternAtom(pDisplay, "XdndSelection", False);
@@ -50,8 +54,9 @@ public:
   /** Before the window goes: tell a target we were over that the drag is over */
   void Release()
   {
-    if (mDisplay && mState != EState::Idle)
+    if (mDisplay && mState == EState::Dragging)
       Cancel();
+    mState = EState::Idle;
     mDisplay = nullptr;
   }
 
@@ -59,10 +64,18 @@ public:
   /** The button is still down: pointer and keys belong to the drag */
   bool IsDragging() const { return mState == EState::Dragging; }
 
-  /** @return false for a relative path or without the XdndSelection */
+  /** @return false for a relative path, without a mouse button held (the drag lives on its implicit grab) or
+   * without the XdndSelection */
   bool Start(const char* path, Time time)
   {
     if (!mDisplay || !path || path[0] != '/' || mState != EState::Idle)
+      return false;
+    Window root = 0, child = 0;
+    int rootX = 0, rootY = 0, x = 0, y = 0;
+    unsigned int mask = 0;
+    XQueryPointer(mDisplay, mWindow, &root, &child, &rootX, &rootY, &x, &y, &mask);
+    mButton = (mask & Button1Mask) ? Button1 : (mask & Button2Mask) ? Button2 : (mask & Button3Mask) ? Button3 : 0;
+    if (!mButton)
       return false;
     mUri.Set("");
     LinuxClipboard::AppendFileUri(mUri, path);
@@ -75,6 +88,7 @@ public:
     mAccepted = mWaitingForStatus = mPositionPending = false;
     // Like toolkit drag sources: Escape must reach the drag, not the host window that has the focus.
     mKeyboardGrabbed = XGrabKeyboard(mDisplay, mWindow, False, GrabModeAsync, GrabModeAsync, time) == GrabSuccess;
+    SetCursor(ECursor::INO);
     return true;
   }
 
@@ -99,7 +113,9 @@ public:
       case KeyRelease:
         return true;
       case ButtonRelease:
-        Drop(event.xbutton.time);
+        // Wheel steps arrive as press/release pairs of buttons 4-7 while the drag button is still down.
+        if (event.xbutton.button == mButton)
+          Drop(event.xbutton.time);
         return true;
       case KeyPress:
         if (XLookupKeysym(const_cast<XKeyEvent*>(&event.xkey), 0) == XK_Escape)
@@ -130,6 +146,8 @@ private:
     {
       mAccepted = message.data.l[1] & 1;
       mWaitingForStatus = false;
+      if (mState == EState::Dragging)
+        SetCursor(mAccepted ? ECursor::HAND : ECursor::INO);
       if (mPositionPending && mState == EState::Dragging)
         SendPosition();
       return true;
@@ -158,6 +176,7 @@ private:
       mTarget = target;
       mTargetProxy = proxy;
       mAccepted = mWaitingForStatus = false;
+      SetCursor(ECursor::INO);
       if (mTarget)
         Send(mXdndEnter, std::min(version, kVersion) << 24, static_cast<long>(mUriList), None, None);
     }
@@ -176,8 +195,16 @@ private:
     mWaitingForStatus = true;
   }
 
+  /** The drag's feedback: whether the window under the pointer takes the file */
+  void SetCursor(ECursor type)
+  {
+    const Cursor cursor = mCursors ? mCursors->Get(type) : None;
+    XChangeActivePointerGrab(mDisplay, static_cast<unsigned int>(mPointerEventMask), cursor, CurrentTime);
+  }
+
   void EndDragging()
   {
+    XChangeActivePointerGrab(mDisplay, static_cast<unsigned int>(mPointerEventMask), None, CurrentTime);
     if (mKeyboardGrabbed)
       XUngrabKeyboard(mDisplay, CurrentTime);
     mKeyboardGrabbed = false;
@@ -312,6 +339,9 @@ private:
   bool mWaitingForStatus = false;
   bool mPositionPending = false;
   bool mKeyboardGrabbed = false;
+  unsigned int mButton = 0;
+  LinuxCursors* mCursors = nullptr;
+  long mPointerEventMask = 0;
   int mRootX = 0, mRootY = 0;
   Time mTime = CurrentTime;
   std::chrono::steady_clock::time_point mDroppedAt;

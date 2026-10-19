@@ -18,7 +18,6 @@
 #include <poll.h>
 #include <algorithm>
 #include <chrono>
-#include <cctype>
 #include <cstring>
 
 #include "wdlstring.h"
@@ -96,7 +95,8 @@ public:
     uri.Append("file://");
     for (const unsigned char* p = reinterpret_cast<const unsigned char*>(path); *p; ++p)
     {
-      if (isalnum(*p) || strchr("-._~/", *p))
+      const bool unreserved = (*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9');
+      if (unreserved || strchr("-._~/", *p))
         uri.Append(reinterpret_cast<const char*>(p), 1);
       else
         uri.AppendFormatted(4, "%%%02X", *p);
