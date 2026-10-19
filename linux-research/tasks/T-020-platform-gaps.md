@@ -141,3 +141,67 @@ Containers:
 - Not changed: n2 (XdndProxy on the root window), n3 (no motion compression: a few round trips per motion event, only while dragging), n8 (`GetUIAppearance` is Light while the editor is closed: the tracker lives with the editor).
 - Re-runs on the fixed code: drag-out CLAP + VST3 (`dragout/{clap,vst3}.log`: REAPER media item, probe drop, Escape, wheel), appearance CLAP + VST3 incl. late portal, `iplugcontrols.txt` GL3 CLAP and GL2 CLAP + VST3 PASS (`regress-r1-*`); NEEDED unchanged.
 - **m5 (VM checks)** stay open until the VM is back: paste and drop into GNOME Files, the real GNOME portal, GL3 on virgl.
+
+### Review round 2 (independent reviewer)
+Fresh context. I reviewed the fix commit b90f06a38 against round 1, plus the whole `IGraphicsLinuxDragSource.h` and `IGraphicsLinuxAppearance.h` as they are now. Docker only (no VM). Container `t020r2`, now removed. The worker's `t020` was left alone. My builds and scripts are in `build/t020r2-*` (git-ignored): `build/t020r2-scripts/{cursor.sh,cursor-probe.c,grabcheck.c,hung-portal.sh}`.
+
+**Re-run by the reviewer**
+- **Drag-out**, fresh build `build/t020r2-drag` (CLAP, `-DIPLUG_TEST_DRAGOUT`), `dragout/run.sh`:
+  - the output is byte-identical to the committed `clap.log`;
+  - the REAPER media item from `/tmp/drag me.wav` is visible in the screenshot (I checked it myself);
+  - wheel case: 0 drops before the release, 1 after;
+  - probe: Drop, DATA, Finished;
+  - Escape: Leave, no Drop, and the FX window stays open.
+- **Appearance**, fresh build `build/t020r2-app` (CLAP, `-DIPLUG_TEST_APPEARANCE`):
+  - the normal run gives `dark, light, dark`, all `main=1`;
+  - `LATE_PORTAL=1` gives `dark`, from a single Read.
+- **NEEDED** for both builds: `libX11 libm libc ld-linux`. Unchanged.
+- **New cases** in `cursor.sh` (CLAP). An XFixes probe logs the displayed cursor, and a second client's `XGrabPointer` checks whether the pointer is still grabbed.
+  - **Feedback cursor.** At the start and over the root the cursor is `not-allowed`; over the accepting probe it is `pointer`. Over REAPER's windows on the way it switches as they accept or refuse.
+  - **Escape with the button still held.** The cursor goes back to the editor's `default` at once. The pointer grab is still held (`AlreadyGrabbed`), and after the release it is gone (`GrabSuccess`). No Drop; the probe gets Leave.
+  - **A drag started by the right button.** `xdotool click 1` and then a wheel step over the probe: 0 drops. Releasing button 3: 1 drop with DATA. After it the cursor is the window's own again and the grab is released.
+  - **A following left drag** starts and drops normally. REAPER is alive at the end.
+- **Portal that owns its name but never answers Read** (`hung-portal.sh`, a python `request_name` with no main loop). I counted libdbus's zero-timeout `poll()` calls on the bus fd with strace over 5 s:
+
+  | Portal | Polls in 5 s | Rate |
+  |---|---|---|
+  | none (ServiceUnknown error) | 19 | about 4/s, the 250 ms rate |
+  | answering | 19 | about 4/s |
+  | hung | 135 | about 27/s, every display tick under REAPER |
+
+**Round-1 findings: all addressed as the Log says.**
+- **M1.** Fixed. Only the release of `mButton` drops; any other button's press and release are swallowed. Verified: a wheel step during a left drag, and a left click plus a wheel step during a right drag.
+- **m4.** Fixed for the reported case: `Start` refuses without a held button 1, 2 or 3. One residue remains, see nit r2-n3.
+- **m3.** Done. `XChangeActivePointerGrab` sets the cursor on Start, on each target change and on each Status. `EndDragging` resets it to None on every exit path: drop, Escape, release with no target, and `Release()` when the editor closes.
+  - After the drag button goes up the grab is already gone, so that reset does nothing, which is harmless.
+  - With no active grab of ours, the call does nothing and raises no error. The only effect is that there is no feedback cursor.
+- **Grab event mask.** The mask `kWindowEventMask & (ButtonPress|ButtonRelease|PointerMotion|LeaveWindow)` is exactly the set of pointer events the window selects. An implicit grab's mask is that same set, and `owner_events` is unchanged. So rewriting the mask loses nothing. After Escape the remaining motion and the release reach IGraphics as before. With no captured control they are no-ops, so a control cannot restart the drag.
+- **m1.** Fixed. No `connection_flush`. Messages that are still queued, including those waiting for SASL, are written by the next `Poll`'s `read_write(0)`. While a Hello or Read is outstanding that is every tick, and otherwise every 250 ms for as long as the editor is open. Nothing can stay unsent longer than that, and nothing blocks.
+- **m2.** Fixed: polling runs every tick until the answer arrives.
+- **m2b.** Fixed:
+  - the match rule is right (`sender='org.freedesktop.DBus'`, `arg0=` the portal name);
+  - an owner change to an empty name (the portal exits) is ignored;
+  - a portal restart reads again.
+- **Nits n1, n4, n5, n6, n7.** Fixed as described.
+  - n7: GL2 no longer needs GLX 1.3 symbols, and GL3 checks both pointers before using them.
+  - n4: the clipboard encoder is fixed, but `IPlug/Linux/IPlugLinuxDBus.cpp:112` still uses `isalnum`. That file is outside this branch's diff (round 1 mentioned it); leave it for later.
+
+**New findings.** None is blocking.
+- **r2-n1. When the portal never answers, polling stays at every tick for as long as it hangs.** Measured above: about 27 non-blocking `poll()` calls per second instead of about 4.
+  - Nothing ends it on the bus side: dbus-daemon has no method-reply timeout by default, and this `session.conf` sets only `service_start_timeout` = 120 s, which applies to an activation that hangs.
+  - The cost is one zero-timeout syscall per tick, which is negligible. I consider it acceptable.
+  - If wanted, cap the per-tick phase at about 2 s after Start or after a re-Read, then fall back to 250 ms. The reply still arrives, only later.
+- **r2-n2. `IsWaitingForFirstAnswer()` is misnamed.** Its doc says "Until the first answer", but it is also true after a `NameOwnerChanged` re-read, because it tests any outstanding Hello or Read. `IsWaitingForAnswer` would match.
+  - Related: with a D-Bus-activated portal, which is the normal case, the activation's own `NameOwnerChanged` arrives before the first Read's reply. That triggers a second Read, and the first reply is then dropped (its serial no longer matches). The result is correct, one round trip later; no change needed.
+- **r2-n3. Residue of m4: a button can be held while the pointer grab belongs to someone else.** Example: `Start` is called from a timer while the user holds a button pressed elsewhere.
+  - `XQueryPointer` reports the button, so the drag starts and the keyboard is grabbed. But no motion and no release reach us, so it waits until Escape or a click in the editor. The click's press is swallowed, and its release ends the drag.
+  - Taking the drag button from the editor's own press state (`mButtonState`, set in `HandleButton`) instead of the server's current state would close this. It would also pick the right button when several are held, and save a round trip.
+  - Very unlikely in practice.
+- **r2-n4. The `IGraphicsLinuxDragSource.h` header comment is stale.** It still says "Include after `<X11/Xlib.h>` and IGraphicsLinuxClipboard.h". The class now also needs `IGraphicsLinuxCursors.h` (`LinuxCursors`, `ECursor`); the fix moved that include in the .cpp but not the comment.
+- **r2-n5. The grab mask lists four bits by name** (`IGraphicsLinux.cpp:585`). It is correct today. But if `kWindowEventMask` later gains `EnterWindowMask` or a `Button*MotionMask`, the drag would silently remove those from the grab after its first cursor change. Masking with all core pointer-event bits would keep the "the window's pointer events" meaning.
+- **r2-n6. A misleading message when GLX 1.3 is missing.** A GL3 build whose libGL lacks `glXChooseFBConfig` or `glXGetVisualFromFBConfig` fails with "no GLX FBConfig with RGB8, stencil 8 and double buffering". The open still fails cleanly, as intended. This is cosmetic.
+- **r2-n7. `SetCursor` sends `XChangeActivePointerGrab` on every Status,** that is once per Position, even when the accept state has not changed. It is one extra async request per motion, only while dragging, in the same spirit as n3. It could be sent only on a change.
+
+**Scope.** b90f06a38 touches only `IGraphicsLinux*` and `linux-research/`. No mac/win files, no product names. Comments are WHY-only and accurate, apart from r2-n2 and r2-n4.
+
+**Verdict: approved.** The round-1 findings are fixed, and the fixes hold up under the extra cases above. r2-n1 to r2-n7 are optional; r2-n2 and r2-n4 are one-line comment and name fixes worth doing when the file is next touched. Before `review-done`, the VM checks (m5) are still open: paste and drop into GNOME Files, a real GNOME portal, GL3 on virgl, and looking at the feedback cursor on a real desktop.
