@@ -1697,6 +1697,15 @@ bool IGraphicsLinux::SetTextInClipboard(const char* str)
   return w.mClipboard.SetText(str, w.mLastEventTime);
 }
 
+bool IGraphicsLinux::SetFilePathInClipboard(const char* path)
+{
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive)
+    return false;
+  ScopedXErrorTrap trap(w.mDisplay);
+  return w.mClipboard.SetFilePath(path, w.mLastEventTime);
+}
+
 bool IGraphicsLinux::GetTextFromClipboard(WDL_String& str)
 {
   Impl& w = *mImpl;
