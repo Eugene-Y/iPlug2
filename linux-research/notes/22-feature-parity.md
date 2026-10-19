@@ -19,11 +19,12 @@ Method: every `override` in `IGraphicsMac.h`/`IGraphicsWin.h` diffed against `IG
 | Files dropped onto the editor / dragged out | ✓ / ✓ | ✓ / ✓ | ✅ XDND target (`IGraphicsLinuxDrop.h`) / ✅ XDND source (`IGraphics/Platforms/IGraphicsLinux.cpp:1732`, `IGraphicsLinuxDragSource.h`) | T-019 / T-020 |
 | Tooltips | ✓ | ✓ | ✅ own override-redirect window (`IGraphics/Platforms/IGraphicsLinux.cpp:1924`) | T-019 |
 | File and folder dialogs, message boxes (asynchronous, with a completion handler) | ✓ | ✓ | ✅ portal / zenity / kdialog (`IGraphics/Platforms/IGraphicsLinux.cpp:2194`, `:2225`, `:2178`) | T-002 |
-| The same dialogs **called synchronously** (no completion handler: mac/win block and return the result) | ✓ | ✓ | ❌ return at once with nothing (`IGraphics/Platforms/IGraphicsLinux.cpp:2194`–`2205`; message boxes return `kNoResult`); e.g. the stock `IVDiskPresetManagerControl` load button does nothing (`IGraphics/Controls/IVPresetManagerControls.h:243`) | T-032 (user decision) |
-| `OpenURL`, `RevealPathInExplorerOrFinder` | ✓ | ✓ | ✅ xdg-open (`IGraphics/Platforms/IGraphicsLinux.cpp:2270`) | P3 |
+| File prompts and message boxes **called synchronously** (no completion handler: mac/win block and return the result; colour: mac returns at once too) | ✓ | ✓ | ❌ return at once with nothing (`IGraphics/Platforms/IGraphicsLinux.cpp:2194`–`2205`; message boxes return `kNoResult`); e.g. the stock `IVDiskPresetManagerControl` load button does nothing (`IGraphics/Controls/IVPresetManagerControls.h:245`) | T-032 (user decision) |
+| `OpenURL`, `RevealPathInExplorerOrFinder` | ✓ | ✓ | ✅ xdg-open (`IGraphics/Platforms/IGraphicsLinux.cpp:2270` `OpenURL`, `:2275` reveal) | P3 |
 | Dark/light appearance (`GetUIAppearance`) | ✓ | — | ✅ xdg-desktop-portal (`IGraphics/Platforms/IGraphicsLinux.cpp:1742`, `IGraphicsLinuxAppearance.h`) | T-020 |
 | Platform child views (`AttachPlatformView`…) | ✓ | — | ❌ | T-017 |
 | Multi-touch (`PlatformSupportsMultiTouch`) | — | ✓ | ❌ | T-030 |
+| Typing through a system input method (IBus/Fcitx: CJK, emoji picker) | ✓ | ✓ | ❌ the text entry handles compose and dead keys (Xlib's built-in IM) but not IBus/Fcitx: `XMODIFIERS` is the host's, deliberately untouched (`IGraphics/Platforms/IGraphicsLinux.cpp` input-context setup) | user decision (deviation or task) |
 | `MeasureText` override | pass-through | — | not needed (same base implementation) | — |
 | Bundle ID / App Group ID, `Get/SetWinModuleHandle` | ✓ | ✓ | n/a (mac/win concepts) | — |
 | Resources | bundle | `.rc` in DLL (`kWinBinary`) | ✅ per-module `<Name>.resources/` | P1, T-021 |
@@ -38,6 +39,7 @@ Method: every `override` in `IGraphicsMac.h`/`IGraphicsWin.h` diffed against `IG
 | Skia (GL / CPU) | ✓ | ✓ | ❌ | T-018 |
 | Fonts: resources, memory, system by name | ✓ | ✓ | ✅ (`IGraphics/Platforms/IGraphicsLinux.cpp:1864` `LoadPlatformFont`, fontconfig in `IGraphicsLinuxFontconfig.h`) | P3 |
 | SVG, bitmaps @2x, layers/FBOs, shadows, masks, NanoVG GL shader | ✓ | ✓ | ✅ all 28 IGraphicsTest pages render in REAPER (the review's sweep); pages marked UNSUPPORTED are the same on mac/win (multi-stop gradients in NanoVG, Metal MPS, iOS gestures) | P3, this audit |
+| Portable controls (IVKeyboardControl, IDirBrowseControlBase, IFlexBox, vector/bitmap/SVG controls) | ✓ | ✓ | ✅ shared code; IPlugControls / IGraphicsTest pages render | — |
 | `IShaderControl` | Skia | Skia | ❌ with Skia | T-018 |
 
 ### Formats and IPlug
@@ -49,7 +51,7 @@ Method: every `override` in `IGraphicsMac.h`/`IGraphicsWin.h` diffed against `IG
 | REAPER extension (`IPlugReaperExtension`, `…WebUI`) | ✓ | ✓ | ❌ link fails (SWELL modstub missing in `Scripts/cmake/ReaperExt.cmake`'s Linux branch); after that the editor would still not open: `OpenWindow` needs an `IPlugAPIBase` delegate (`IGraphics/Platforms/IGraphicsLinux.cpp:491`), the SWELL HWND is passed as an X window (`IPlug/ReaperExt/ReaperExtBase.cpp:434`), no HiDPI, UI resize mac-only | T-031 |
 | LV2 | — | — | planned (Linux extra) | T-014 |
 | AU, AUv3, AAX, WAM | ✓ | (AAX) | n/a | — |
-| `IPlug/Extras`: OSC | ✓ | ✓ | ✅ POSIX branch (`IPlug/Extras/OSC/IPlugOSC_internal.cpp:5`); IPlugOSCEditor opens; OSC send/receive itself not exercised | — |
+| `IPlug/Extras`: OSC | ✓ | ✓ | ✅ POSIX branch (`IPlug/Extras/OSC/IPlugOSC_internal.cpp:7-8`); IPlugOSCEditor opens; OSC send/receive itself not exercised | — |
 | `IPlug/Extras`: WebView editor / `IWebViewControl` | ✓ | ✓ | ❌ stub (IPlugWebUI, IPlugP5js, IPlugSvelteUI open no editor) | T-017 |
 | `IPlug/Extras`: Cocoa, SwiftUI | ✓ | — | n/a (Apple UI kits) | — |
 | `IPlug/Extras`: DSP (Synth, HIIR, Oversampler, SVF, …) | ✓ | ✓ | ✅ portable | — |
@@ -58,6 +60,7 @@ Method: every `override` in `IGraphicsMac.h`/`IGraphicsWin.h` diffed against `IG
 | Feature | mac | win | Linux | Task |
 |---|---|---|---|---|
 | `IPlugPaths` (home, app support, INI, presets, resources) | ✓ | ✓ | ✅ XDG (`IPlug/Linux/IPlugLinuxPaths.cpp:120`, `:126`, `:157`) | P1, T-021 |
+| `IPlugUtilities`, asserts (`assert`, `DBGMSG`), crash handling | ✓ | ✓ | ✅ same code; no crash reporter on any platform (Linux packages ship debug symbols, T-021) | — |
 | Logging / `DBGMSG` / `Trace` (`IPlug/IPlugLogger.h`) | ✓ | ✓ | ✅ stderr, same code | — |
 | Platform views (`IPlug/Extras/PlatformView`) | ✓ | — | ❌ | T-017 |
 | ImGui (`IGRAPHICS_IMGUI`) | — | — | not in this tree | — |

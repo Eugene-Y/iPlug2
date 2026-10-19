@@ -1,6 +1,6 @@
 # T-016 — Feature-parity audit: Linux vs mac/win
 
-- **Status:** review next
+- **Status:** merged (review approved round 2)
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-016`
 - **Branch/worktree:** `linux/T-016` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-016` (docs only).
 - **Depends on:** nothing.
@@ -146,3 +146,8 @@ Grep/read on `hvoya-linux`; for anything ambiguous, build the example in Docker 
 - Checked and fine: `OpenURL`'s confirm/error messages are ignored on Linux, as on mac (`IGraphicsMac.mm:708`), so that is not a gap. The remaining `#if OS_MAC/OS_WIN` in shared code (vDSP in `ISender`, Pro Tools fine-control, win UTF-16, `kWinBinary`) has no Linux gap. Packaging covers the APP icon (`package.sh --icon`).
 
 **Verdict: approved, subject to text fixes; no round 3 needed.** Before merge, fix R1–R3 in T-032 and the "synchronous" row, add the IME row, and commit the two sweep sheets (m5). The rest are nits.
+
+### 2026-10-19 (3) — round-2 text fixes, hand-over
+- T-032 rewritten (R1–R3): colour prompts are non-modal on mac (Linux matches; only Windows blocks); a blocking wait cannot be "as mac/win" for a plug-in (their modal loops pump the whole process; ours would freeze the host's windows) — APP-only or opt-in; option 2 changes mac (file panel becomes a sheet) and also fixes iOS, where the stock control already asserts; recommendation unchanged (2 now, 1 only APP/opt-in).
+- File:line corrections (`:2275` reveal, `IVPresetManagerControls.h:245`, `IPlugOSC_internal.cpp:7-8`); new rows: system input methods (IBus/Fcitx: ❌, for the user to decide), `IPlugUtilities`/asserts/crash handling, portable controls.
+- m5: screenshots and the reviewer's IGraphicsTest sweep sheets (`sheetA.png`, `sheetB.png`) are copied into `IPlug2-linux/linux-research/evidence/t016/` (git-ignored PNGs, local; they outlive this worktree).
