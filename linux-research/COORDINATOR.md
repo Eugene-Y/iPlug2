@@ -54,6 +54,6 @@ See `STATUS.md` for the authoritative list. In short:
   - **T-023** `linux/T-023`: proposals T23-1 (CLAP rescan after an FXP/FXB load, deferred to on_main_thread) + T23-2 (flush only with `clap.params`; Release crash otherwise); plus the question whether `RestorePreset` should inform hosts (all formats). Gneiss/Sand: 0 clap-validator failures everywhere.
   - **T-029** `linux/T-029`: S-1 text entry (mac field takes edits; params with a parser take any character, 32-char field). Port to `hvoya` as two commits (a) mac formatter, (b) parser params. Needs a typing check in a mac host.
 - **Waiting for the VM** (virgl hang during T-013; the user must Force Stop + Start the VM in UTM): T-013 (Ardour wizard → editors, then Renoise, drops, tooltips), T-009's VM part. Locks T-013 and T-009 held by the coordinator.
-- **T-027** in review (`linux/T-027`); merge when approved (no shared code).
-- Worktrees: `IPlug2-T-009`, `-T-013`, `-T-023`, `-T-027`, `-T-029`; products `Gneiss-linux`, `Sand-linux`.
+- **T-027 merged** (b9c864d91). **T-020** in review (`linux/T-020`, lock held): GL3, clipboard file, appearance, drag-out; VM checks after the restart. T-030 (multi-touch) split out.
+- Worktrees: `IPlug2-T-009`, `-T-013`, `-T-020`, `-T-023`, `-T-029`; products `Gneiss-linux`, `Sand-linux`.
 - Shared-code (mac/win) changes go to the user before merging; Gneiss commits only on the user's command.
