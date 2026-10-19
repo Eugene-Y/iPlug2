@@ -4,6 +4,9 @@ Linux builds produce CLAP, VST3 and a standalone APP, with an IGraphics UI on X1
 covers a native setup on Ubuntu 24.04 (x86_64 or arm64) with VS Code as the IDE. `Examples/IPlugEffect` and
 `Examples/IPlugControls` are ready to open, and new projects duplicated from them inherit the setup.
 
+Linux support in this fork was written by the fork's authors, not by iPlug2's maintainers: report Linux problems
+to this fork, not upstream.
+
 The renderer is NanoVG GL2 (`IGRAPHICS_RENDERER=GL2`, as on Windows), the only one tested on Linux. The editor
 creates a legacy GLX context, which old or virtual drivers may cap below 3.2, so `GL3` is not guaranteed to open.
 
@@ -49,7 +52,7 @@ On first open, pick a configure preset: **Linux Debug** (or Linux Release). VS C
 that checkout, and configuring runs on its own from then on. clangd gets its compile database from
 `build-linux/compile_commands.json`, which CMake Tools refreshes after each configure.
 
-Projects built as C++23 that use hvoya's `constexpr` lookup tables (Sand) need clangd 19 or newer; Ubuntu 24.04's
+Projects built as C++23 with `constexpr` lookup tables need clangd 19 or newer; Ubuntu 24.04's
 default is 18. Install `clangd-19` and set `"clangd.path": "clangd-19"` in your own VS Code user settings.
 
 `<Name>.code-workspace` and `.vscode/c_cpp_properties.json` in the same folder belong to the macOS/Windows setup;

@@ -14,7 +14,7 @@ Several Claude instances work on this port in parallel; none of them shares memo
 - **Plan and history:**
   - `linux-research/PLAN.md` — §1–2 are **binding decisions**; then the Progress table and phases P0–P12.
   - Research and phase notes: `linux-research/notes/NN-*.md`.
-  - Human summary: `LINUX_PORT_RESEARCH.md`.
+  - Human summary: `linux-research/LINUX_PORT_RESEARCH.md`.
 - **Done (reviewed):**
   - P0–P1: build, exports, paths;
   - P2: host-loop timers — everything on the host main thread;

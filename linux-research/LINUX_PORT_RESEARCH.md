@@ -3,7 +3,7 @@
 Цель: собрать Gneiss (и другие hvoya-плагины) под Linux как CLAP + VST3 (+ standalone) с полноценным
 IGraphics-UI, работающим в реальных DAW. Ветка порта — **от `hvoya`**.
 
-Рабочие материалы: [`linux-research/`](linux-research/)
+Рабочие материалы: [`linux-research/`](./) (этот файл лежит там же)
 - `notes/01-existing-efforts.md` — кто и что уже делал (форки, PR, ветки)
 - `notes/02-how-others-do-it.md` — как Linux-UI решают JUCE / DPF / VSTGUI / pugl / Visage / baseview
 - `notes/03-build-test-results.md` — реальная сборка и прогон кандидатов в Docker
