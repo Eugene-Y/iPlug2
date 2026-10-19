@@ -1,6 +1,6 @@
 # T-020 — Remaining platform gaps (GL3, drag out, file-path clipboard, appearance, multi-touch)
 
-- **Status:** in progress — items 1, 3, 4 done; 2 (drag out) next; 5 (multi-touch) open
+- **Status:** review next — items 1–4 done (VM checks pending); item 5 split into T-030
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-020`
 - **Branch/worktree:** `linux/T-020` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-020`.
 - **Depends on:** T-019 (XDND groundwork, same files).
@@ -38,3 +38,18 @@ Worktree `IPlug2-T-020` (`linux/T-020` from hvoya-linux, fast-forwarded to b9c86
 - Test with a fake portal (`evidence/t020/appearance/fake-portal.c`, libdbus; Read → dark, then `SettingChanged` → light → dark) and IPlugControls `-DIPLUG_TEST_APPEARANCE` (new test-only hook): `dark, light, dark`, all on the main thread, CLAP and VST3 (`appearance/{clap,vst3}/`).
 - Without a portal (Docker's plain session bus): no callback, no error; `iplugcontrols.txt` CLAP + VST3 PASS on this build (`regress-controls-*`).
 - NEEDED unchanged (libX11, libm, libc, ld-linux) for the GL2 and GL3 builds. A real GNOME portal: VM, not yet.
+
+### 2026-10-19 (2) — item 2 (drag out); item 5 split
+**Item 2, `InitiateExternalFileDragDrop`** (0775a601a): new `IGraphicsLinuxDragSource.h`, an XDND v5 source offering `text/uri-list`, non-blocking like the mac drag session (Windows' `DoDragDrop` is modal):
+- `Start` takes `XdndSelection` and grabs the keyboard (Escape would otherwise go to the host window with the focus: REAPER closes its FX window on Escape — seen in the first run).
+- The press that started the drag keeps an implicit pointer grab, so motion and the release keep coming to the editor: while the button is down they go to the drag, not to IGraphics; when it goes up (drop or cancel) the editor's mouse capture ends (`ReleaseMouseCapture`, as Windows does).
+- Target: the outermost XdndAware window under the pointer (following a valid `XdndProxy`); Enter (min(target version, 5)), one Position per Status, Leave on target change; Drop only if the target accepted, else Leave; after a drop the target's requests are served until `XdndFinished` or 3 s.
+- `LinuxClipboard::AppendFileUri` is now public and shared with the clipboard's file mode.
+- Harness (`evidence/t020/dragout/`): IPlugControls `-DIPLUG_TEST_DRAGOUT` (an orange square at 700,690 starts a drag of `$IPLUG_TEST_DRAG_FILE`), `xdnd-target.c` (a minimal v5 target that accepts uri-lists and logs), `run.sh` (xdotool drags). CLAP and VST3 (`{clap,vst3}.log`):
+  - onto REAPER's arrange view (FX window moved aside): REAPER creates a media item from `/tmp/drag me.wav`;
+  - onto the probe: Enter v5 `text/uri-list` → Positions → Drop → `file:///tmp/drag%20me.wav` → Finished;
+  - Escape over the probe: Leave, no Drop, and the FX window stays open.
+  - `iplugcontrols.txt` CLAP + VST3 PASS with the drag build (`regress-drag-controls-*`).
+- Not yet: dropping into GNOME Files and other hosts (VM).
+
+**Item 5, multi-touch:** split into **T-030** (`tasks/T-030-multitouch.md`): there is no touch device to test with here (Xvfb, the VM), and it is a Windows-only feature in IGraphics today (mac has none). Plan and test method in the task file.
