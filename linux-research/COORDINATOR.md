@@ -46,17 +46,21 @@ Before `git worktree remove --force`, check **`git -C <wt> status --porcelain --
 - REAPER GUI steps: `GUI=<container> scripts/run-gui-test.sh <plugin> <outdir> scripts/steps/<file>.txt <container>`.
 - Long jobs: run in the background and wait for the completion notice; don't poll with sleeps. No `timeout` on macOS: `perl -e 'alarm N; exec @ARGV' cmd`.
 
-## Where the coordinator stopped (2026-10-18, second coordinator)
+## Where the coordinator stopped (2026-10-19, second coordinator)
 See `STATUS.md` "In flight" and "Waiting on the user" for the authoritative list. In short:
-- Done this session: T-026 merged (Sand master 0b71747, hvoya 4fbfc579d, hvoya-linux 04cafbd05) and everything pushed
-  once with the user's permission; T-008's VM re-check passed; **T-019 merged** (6cc15646a). New task files: T-027 (no
-  plug-in names in iPlug2 docs, AGENTS §2 rule), T-028 (Gneiss C3/C5/tail — running in a separate chat, lock T-028,
-  worktree `IPlug2-T-028-log`).
-- Nothing is mid-merge. Worktrees: `IPlug2` (hvoya), `IPlug2-linux` (hvoya-linux), `IPlug2-T-028-log` (T-028's);
-  products: `Gneiss-linux`, `Sand-linux`; `DMT-t024`, `Melter-t024`, `Crust_new-t024` hold an uncommitted one-line
-  change for the user (keep them). Sand keeps two unmerged throwaway branches `tmp/t026-diag`, `tmp/t026-linux`
-  (deleting needs `-D`; ask the user).
-- Coordinator's own next work: **T-010**, then T-009, T-013 (now with item 8: drops per host) — see the board.
-- Free for other chats: **T-025** (X1 `SetLatency` race, important; shared-code fix needs the user's decision), T-027,
-  T-011, T-016, T-023 (Gneiss part moved to T-028).
-- Unpushed (the user pushes; Claude only with a fresh permission): hvoya-linux after 5a130407f.
+- Done since 2026-10-18: **T-028** merged (Gneiss master c6f4442, linux-experiment f799cb3 + MANUAL 2cab58b), **T-010**
+  merged (11ca71243), **T-025** merged (1e0e4be70) and ported to `hvoya` (8ca9f3324; mac Gneiss/Sand VST3/AUv2/CLAP
+  built). Spent worktrees and branches removed (user's OK). Pushed by the user up to 2026-10-19 morning except `hvoya`
+  8ca9f3324 and hvoya-linux after 1e0e4be70.
+- Worktrees: `IPlug2` (hvoya), `IPlug2-linux` (hvoya-linux); products `Gneiss-linux`, `Sand-linux`; `DMT-t024`,
+  `Melter-t024`, `Crust_new-t024` (keep: uncommitted one-liners for the user).
+- **User's decisions 2026-10-19:** T-013 may install Carla, Ardour, Renoise on the VM. T-027: research docs stay in
+  `linux-research/` (move `LINUX_PORT_RESEARCH.md` there); the `CLAUDE.md` port section goes when the port is finished,
+  leaving a note that this fork's authors did the port, not iPlug2's maintainers.
+- **T-009 references are in** `evidence/t009/mac-refs/` (Retina 2x; Gneiss CLAP incl. `clean moogRPP.RPP` with the
+  CLEAN MOOG preset, Sand VST3 views). Gneiss has no text entry yet (user); leave it out of the comparison.
+- **S-1** (findings): Sand CLAP text entry on mac takes no keys in REAPER, VST3 works. Waiting for the user's two checks
+  (REAPER "Send all keyboard input to plug-in"; an old release).
+- Coordinator's queue (no user needed): **T-023** (Gneiss and Sand are 0 failures on Linux; left: mac runs, iPlug CLAP
+  items, empty Sand's stale `known-clap-failures/Sand.txt`), then **T-013** (VM hosts), then **T-009**.
+- Shared-code (mac/win) fixes always go to the user before merging; Gneiss commits only on the user's command.
