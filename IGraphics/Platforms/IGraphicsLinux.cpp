@@ -23,6 +23,7 @@
 #include "IPlugAPIBase.h"
 #include "IPopupMenuControl.h"
 #include "ITextEntryControl.h"
+#include "Linux/IPlugLinuxDBus.h" // before Xlib, whose Bool macro would rename linux_dbus::Bool
 #include "Linux/IPlugLinuxHostLoop.h"
 #include "Linux/IPlugLinuxOpen.h"
 
@@ -44,6 +45,7 @@
 #include "IGraphicsLinuxGLX.h"
 #include "IGraphicsLinuxKeys.h"
 #include "IGraphicsLinuxClipboard.h"
+#include "IGraphicsLinuxAppearance.h"
 #include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxCursors.h"
 #include "IGraphicsLinuxFontconfig.h"
@@ -426,6 +428,8 @@ struct IGraphicsLinux::Impl
 
   LinuxClipboard mClipboard;
   LinuxFileDrop mFileDrop;
+  LinuxAppearance mAppearance;
+  std::chrono::steady_clock::time_point mAppearancePolledAt;
   bool mPasteKeyPending = false; // Ctrl+V of an edit, replayed once the clipboard's text is here
   IKeyPress mPasteKey { "v", 'V' };
 
@@ -575,6 +579,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mXEmbed = XInternAtom(pDisplay, "_XEMBED", False);
   w.mClipboard.Init(pDisplay, w.mWindow);
   w.mFileDrop.Init(pDisplay, w.mWindow);
+  w.mAppearance.Start();
   w.mCursors.Init(pDisplay);
   // Per connection: key repeat then sends presses only, not release + press pairs.
   XkbSetDetectableAutoRepeat(pDisplay, True, nullptr);
@@ -717,6 +722,7 @@ void IGraphicsLinux::DestroyWindowResources()
       XCloseIM(w.mInputMethod);
     w.mClipboard.Release();
     w.mFileDrop.Release();
+    w.mAppearance.Stop();
     w.mCursors.Free();
     if (w.mTooltipWindow)
       XDestroyWindow(w.mDisplay, w.mTooltipWindow);
@@ -802,6 +808,14 @@ void IGraphicsLinux::OnDisplayTimer()
   if (!ProcessXEvents())
     return;
   mImpl->mFileDrop.Idle();
+  constexpr auto kAppearancePoll = std::chrono::milliseconds(250);
+  const auto now = std::chrono::steady_clock::now();
+  if (now - mImpl->mAppearancePolledAt > kAppearancePoll)
+  {
+    mImpl->mAppearancePolledAt = now;
+    if (mImpl->mAppearance.Poll())
+      OnAppearanceChanged(GetUIAppearance());
+  }
   if (mImpl->mHostSizeUnconfirmed && !TellHostTheOpenedSize())
     return;
   // A host that maps its own window after the open (Carla) gets it managed, and WM_STATE set, only later; no event
@@ -1695,6 +1709,11 @@ bool IGraphicsLinux::SetTextInClipboard(const char* str)
     return false;
   ScopedXErrorTrap trap(w.mDisplay);
   return w.mClipboard.SetText(str, w.mLastEventTime);
+}
+
+EUIAppearance IGraphicsLinux::GetUIAppearance() const
+{
+  return mImpl->mAppearance.IsDark() ? EUIAppearance::Dark : EUIAppearance::Light;
 }
 
 bool IGraphicsLinux::SetFilePathInClipboard(const char* path)

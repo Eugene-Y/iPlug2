@@ -3,7 +3,7 @@
 #include "IPlugPaths.h"
 #include "IconsForkAwesome.h"
 #include "IconsFontaudio.h"
-#if defined IPLUG_TEST_DIALOGS && defined OS_LINUX
+#if (defined IPLUG_TEST_DIALOGS || defined IPLUG_TEST_APPEARANCE) && defined OS_LINUX
   #include <unistd.h>
   #include "Linux/IPlugLinuxHostLoop.h"
 #endif
@@ -511,6 +511,15 @@ IPlugControls::IPlugControls(const InstanceInfo& info)
     
     pGraphics->AttachControl(new IVButtonControl(sameCell().SubRectVertical(5, 4).FracRectHorizontal(0.5f, true), SplashClickActionFunc, "font...", style.WithDrawShadows(false)))->SetAnimationEndActionFunction(promptValueFont);
     
+#if defined IPLUG_TEST_APPEARANCE && defined OS_LINUX
+    // Linux appearance harness (linux-research/evidence/t020/appearance): every change goes to stderr with its thread.
+    pGraphics->SetUIAppearanceChangedFunc([](EUIAppearance appearance) {
+      fprintf(stderr, "IPLUG_TEST_APPEARANCE %s main=%d\n", appearance == EUIAppearance::Dark ? "dark" : "light",
+              HostLoopThreadId() == (long) getpid());
+      fflush(stderr);
+    });
+#endif
+
 #ifdef IPLUG_TEST_DIALOGS
     // Linux dialog harness (linux-research/scripts/dialog-test.sh): every answer goes to stderr with the thread
     // it arrived on. IPLUG_TEST_DIALOG_DIR is where the file and folder dialogs start.
