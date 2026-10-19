@@ -1,7 +1,7 @@
 # T-027 — No plug-in names in iPlug2's docs, README, comments and scripts
 
-- **Status:** ready (small; best right before T-015, and again as T-015's last check)
-- **Owner:** —
+- **Status:** review next
+- **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-027`
 - **Branches/worktrees:** iPlug2 `linux/T-027` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-027`.
 - **Depends on:** nothing. T-015 (README) depends on this.
 - **Conflicts:** `Documentation/`, `LINUX_PORT_RESEARCH.md`, `CLAUDE.md`; any task that edits docs at the same time.
@@ -28,3 +28,11 @@ Out of scope: commit messages (history is pushed), the `linux-research/` work ar
 - The check script exists and the coordinator's merge procedure (`COORDINATOR.md`) calls it.
 
 ## Log
+
+### 2026-10-19 — done
+- `LINUX_PORT_RESEARCH.md` moved to `linux-research/` (user's decision); its link to the work area fixed; `AGENTS.md` and `PLAN.md` point to the new path.
+- `Documentation/linux-development.md`: the clangd note says "projects built as C++23 with `constexpr` lookup tables" (no product, no utility-library name); new paragraph near the top: Linux support in this fork is the fork's work, not iPlug2's maintainers' — report Linux problems to the fork.
+- `CLAUDE.md` port section: "the fork's plug-ins build against it" instead of the product name, plus "The Linux port is this fork's own work, not upstream iPlug2's." The section itself goes when the port is finished (user); the authorship note stays then (in `Documentation/linux-development.md` it already does).
+- Hand search of `IPlug/Linux`, `IGraphics/Platforms/IGraphicsLinux*`, `Scripts/linux`, `Documentation/` for indirect mentions (morph, USER tab, `hvoya/` paths): none.
+- Not changed: "HvoyaAudio" in `Examples/IPlugEffect` (the fork's manufacturer name in its example config, on `hvoya` before the port; not a plug-in name). Out of scope as before: `linux-research/`, `hvoya/`, commit messages.
+- `linux-research/scripts/coord/check-product-names.sh [rev]`: `git grep -w -i` of the names in the tree at `rev` outside `linux-research`, `Dependencies`, `WDL`, `hvoya`; exit 1 on a hit. On this branch: clean; on hvoya-linux before: the hits above. `COORDINATOR.md`'s merge procedure runs it (step 3).
