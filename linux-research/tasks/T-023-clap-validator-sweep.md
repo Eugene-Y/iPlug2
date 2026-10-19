@@ -71,3 +71,51 @@ Every failure in this task's table is gone:
 **After** (`evidence/t023/*-after-*`, this branch): Gneiss and Sand Linux Debug + Release 38/0/0; mac IPlugEffect CLAP built from this tree, 38/0/0.
 
 Next: independent review; then the user's decision on `abfe168fc`.
+
+### Review round 1 (independent reviewer)
+
+Reviewed `hvoya-linux...linux/T-023` (abfe168fc, ea94dc457, 60188aeba), the evidence logs, clap-helpers `plugin.hxx`/`host-proxy.hxx`, the CLAP `params.h`, and the T-024/T-028 Logs. No Docker containers left behind. My test files are in `linux-research/build/t023r*` (git-ignored).
+
+**Re-run and runtime checks:**
+- IPlugEffect CLAP Debug from this tree (`build/t023r`): clap-validator 0.4.1 gives 44 run, 38 passed, 0 failed, 0 warnings, 6 skipped.
+- `InformHostOfPresetChange` and the `FlushParamsIfNeeded` guard, run for real. I built a copy of IPlugEffect with hooks chosen by an env var, plus a small headless CLAP host with `thread-check`. The host logs each `params.*` call, its thread, and `get_value(0)` at rescan time. Files: `build/t023r-presettest/` (`host.cpp`; `run.txt` = this branch; `run-base*.txt` = the pre-change tree, exported with `git archive abfe168fc^`).
+
+| Scenario | Before (abfe168fc^) | This branch |
+|---|---|---|
+| `LoadStateFromFXP` from `OnActivate` (main thread) | no rescan | `rescan(0x1)` on main, synchronous; `get_value` already returns the loaded value |
+| `InformHostOfPresetChange` from `ProcessBlock` (audio thread) | — | `request_callback` from the audio thread, then `on_main_thread`, then `rescan` on main |
+| `LoadStateFromFXP` from `OnIdle` on iPlug's plug-in timer thread | — | queued, then `rescan` on main with the loaded value |
+| Host without `clap.params`, `Begin/Inform/EndInformHostOfParamChange` while not processing | **Debug: assertion `canUseParams()` (exit 134); Release: SIGSEGV (exit 139)** | no call, no crash; no rescan |
+
+**Code:** correct against the spec.
+- `rescan` is `[main-thread]`. Only `CLAP_PARAM_RESCAN_ALL` requires the plug-in to be deactivated, so `VALUES` is legal while active, processing or activating.
+- `runOnMainThread` calls the callback directly when the host's `thread-check` says main. Otherwise it locks a mutex, queues the callback and calls `request_callback`. `clapDestroy` drains the queue with `_isBeingDestroyed` already set, so the lambda's guard holds.
+- No double rescan: `stateLoad` never reaches `InformHostOfPresetChange`, and each FXP/FXB loader calls it once.
+- No product names in the code.
+
+**Findings**
+
+- **M1 (major): the impact written up for the user's decision is wrong in both directions.**
+  - `RestorePreset` never calls `InformHostOfPresetChange` (`IPlugPluginBase.cpp:423-449`). Only `LoadPresetFromFXP` (:890, :908), `LoadStateFromFXP` (:976) and `LoadBankFromFXB` (:1048, :1108) do. So the case named in the Log and the code comment, "a preset restored by iPlug itself (`RestorePreset`)", is **not** fixed. That includes `IVBakedPresetManagerControl` and host program changes.
+  - The claim "Gneiss and Sand restore through their own preset managers, not this path" is also wrong for Gneiss. hvoya `PresetManager` loads user presets with `LoadStateFromFXP`: `loadFromFile`, `preset_manager.hpp:428`, and `applyIdx`, :901. With this proposal, Gneiss on mac/win CLAP asks the host to rescan values after every user-preset load and every strip step onto a user preset. Factory presets (`RestorePreset`, :894) still don't. Sand has no preset manager and is unaffected.
+  - The same error is in `CROSS_PLATFORM_FINDINGS.md:43` ("его PresetManager не зовёт InformHostOfPresetChange").
+  - Fix: correct the Log bullet and the commit rationale, and state the Gneiss behaviour change for the user. Whether `RestorePreset` should also inform the host is a separate question for the user. It is reached from AU/VST2/VST3 program-change paths too.
+- **m1: the `FlushParamsIfNeeded` bug is a Release crash, not only a Debug assertion.** `HostProxy::paramsRequestFlush` (`host-proxy.hxx:374-377`) dereferences a null `_hostParams` in Release (reproduced: SIGSEGV). It happens on a host without `clap.params` whenever the UI changes a parameter while the plug-in isn't processing. The fix is right; the Log and the commit message understate it.
+- **m2: in Gneiss the rescan comes before the workspace restore** (follows from M1). With a `thread-check` host (REAPER, Bitwig) the rescan runs synchronously inside `LoadStateFromFXP`. `applyIdx` restores the CC map and the workspace only afterwards. The workspace restore sets `par_oversampling` and the morph params through `setParamAppliedByCaller` (`Gneiss.cpp:226`, `Gneiss.hpp:585`), which does not inform the host. So the host reads the file's oversampling/morph values while the plug-in runs the live ones. This is display-level staleness until the next change, but it is a Gneiss mac/win difference the user should see next to M1. It is fixed by the product-side C4 fix (notify after the manager has finished), or by iPlug always deferring this rescan.
+- **m3 (acceptance 1): no mac "after" logs for Gneiss and Sand**, only IPlugEffect. That is defensible: no validator test reaches `InformHostOfPresetChange`, and the validator host has `clap.params`, so the new guard is a no-op there. But say so in the Log, or run them.
+- **m4 (step 4): no `CROSS_PLATFORM_FINDINGS.md` row for the proposal** `abfe168fc`, and line 43 still describes the issue as unfixed (and is wrong, see M1).
+- **m5 (acceptance 2): the Sand `process-audio-denormals` warning has no log, root cause or owner.** I could not verify the "2.21×" run: no log was kept. The cause is already known (T-024 Log: Sand sets no flush-to-zero, README "TODO subnormals"). Write cause = no FTZ/DAZ in Sand; it is load/timing-dependent and cross-platform; owner = Sand; won't fix now.
+- **m6 (acceptance 2): `state-invalid-random` is put down to "examples only", but the cause is iPlug's default `UnserializeParams`** (`IPlugPluginBase.cpp:128-149`). It reads raw doubles with no magic or size check, so every plug-in on the default state path accepts random bytes. Gneiss and Sand pass because they override `UnserializeState`. Owner: iPlug2 (upstream), won't fix, low priority.
+- **m7: step 5's short REAPER check on Linux is neither done nor waived in the Log.**
+- **n1: the 6 skipped tests are iPlug-wide, not the plug-ins' choice.** They are:
+  - 3 `preset-discovery-*` (no preset-discovery factory);
+  - `layout-audio-ports-activation` and `layout-configurable-audio-ports` (extensions not implemented);
+  - `process-note-wildcard` (iPlug's note ports declare only `CLAP_NOTE_DIALECT_MIDI`, `IPlugCLAP.cpp:877/884`).
+- **n2: the new comment in `InformHostOfPresetChange` names the wrong callers** ("a preset restored by iPlug"; the callers are the FXP/FXB loaders) and repeats `stateLoad`'s reason. Shorten it to an accurate WHY, or drop it.
+- **n3: thread note.** iPlug's callers are file loaders on the UI thread. A plug-in that calls this from `ProcessBlock` works (tested), but `runOnMainThread` locks a mutex and may allocate there, the same as the existing `SetLatency`/`FlushParamsIfNeeded` patterns. Acceptable; a doc line at most.
+- **n4: Gneiss `process-sleep-process-status` cause and platform answer.** Per T-028, the cause is "the validator host implements `tail`, iPlug reported 0, and the ring length depends on the random starter preset", not "timing". Platform answer: cross-platform, not a port bug. Say so.
+- **n5: leftover detached worktrees** `hvoya/Gneiss-t023mac` and `hvoya/Sand-t023mac` (called temporary in the Log). Remove them at hand-over.
+
+**Evidence checked:** all 11 logs read 44 run / 38 passed / 0 failed / 0 warnings / 6 skipped. `process-sleep-process-status`, `process-audio-double-*`, `param-conversions`, `process-varying-sample-rates`, `process-audio-denormals`, `state-invalid-random` and `param-fuzz-bounds` show PASSED in every log. Gneiss "before" f799cb3 already contains T-028's tail (5b31aa0), so "before" here means after T-024/T-028. The Log says this.
+
+**Verdict:** the code in `abfe168fc` is correct and safe, and I recommend it to the user as a proposal. Changes requested on the write-up before hand-over: M1 (the user would decide on a wrong impact statement), then m1, m2, m4–m6. m3 and m7 need either a run or a sentence in the Log.
