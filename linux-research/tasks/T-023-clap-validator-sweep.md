@@ -1,7 +1,7 @@
 # T-023 — CLAP: every clap-validator failure of Gneiss and Sand, Linux and mac
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** in progress — review next; two shared-code proposals wait for the user
+- **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-023`
 - **Branch/worktree:** `linux/T-023` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-023`. Gneiss/Sand side: local experiment branches in their own worktrees (AGENTS §4), never the main checkouts.
 - **Depends on:** T-006 merged (its state fix removes 3 failures from every list below).
 - **Conflicts:** `IPlug/CLAP/IPlugCLAP.*` (shared with mac/win); Gneiss and Sand sources.
@@ -40,3 +40,34 @@ Also, not from the validator:
 - [ ] Independent review (AGENTS §4); Log complete.
 
 ## Log
+
+### 2026-10-19 — sweep done: Gneiss and Sand clean everywhere; two iPlug CLAP proposals
+
+Worktree `IPlug2-T-023` (`linux/T-023` from hvoya-linux 78253dd4e). clap-validator 0.4.1 on both platforms (mac: the binary T-006 built, copied into this session's scratchpad).
+
+**Before** (`evidence/t023/*-before-*`): Gneiss linux-experiment f799cb3 and Sand linux-experiment 87ccdbf against hvoya-linux; mac against `hvoya` 8ca9f3324 from temporary detached worktrees of their `master` (c6f4442, 0b71747), `xcodebuild` Debug with every path in the scratchpad.
+
+| | Linux Debug | Linux Release | mac Debug |
+|---|---|---|---|
+| Gneiss | 38 / 0 failed / 0 warnings | 38 / 0 / 0 | 38 / 0 / 0 |
+| Sand | 38 / 0 / 0 | 38 / 0 / 0 | 38 / 0 / 0 |
+
+(6 skipped everywhere: tests for extensions the plug-ins don't implement.)
+
+Every failure in this task's table is gone:
+- `process-audio-double-*`, `param-conversions`: C3/C5, fixed in T-024 (Sand) and T-028 (Gneiss).
+- `process-varying-sample-rates` (Sand F3): fixed in T-024.
+- Gneiss `process-sleep-process-status` "Linux only": passes 3/3 configurations after T-028 declared a tail (the cause was "no tail" plus timing, T-028 Log).
+- Sand once showed a `process-audio-denormals` **warning** (2.21× slower on denormal input, one Release run from the IPlug2-linux tree earlier today). It did not recur in the 3 later Sand runs. It is a timing measurement, not a failure; noted only.
+- `state-invalid-random` (warning) and `param-fuzz-bounds`: examples only (IPlugControls, IPlugInstrument), not in Gneiss or Sand. Left as they are (examples, low priority).
+
+**Changes on `linux/T-023`:**
+- `ea94dc457` `scripts/known-clap-failures/Sand.txt` emptied (it still listed F3–F5); Gneiss's was emptied by T-028.
+- `abfe168fc` **proposal, shared code (mac/win CLAP), waits for the user:**
+  - `IPlugCLAP::InformHostOfPresetChange`: new override asking the host to rescan values (`params.rescan(CLAP_PARAM_RESCAN_VALUES)` on the main thread), like `stateLoad` does since f71ddd876. Before it, a preset restored by iPlug itself (`RestorePreset`) changed every parameter while CLAP hosts kept showing and automating the old values. Gneiss and Sand restore through their own preset managers, not this path (C4), so this matters for plug-ins that use iPlug's presets.
+  - `FlushParamsIfNeeded`: `paramsRequestFlush` only when `canUseParams()`; clap-helpers asserts on that call in Debug with a host without `clap.params`.
+  - Not exercised at runtime: no plug-in here restores iPlug presets from its UI. Compiled on Linux and mac.
+
+**After** (`evidence/t023/*-after-*`, this branch): Gneiss and Sand Linux Debug + Release 38/0/0; mac IPlugEffect CLAP built from this tree, 38/0/0.
+
+Next: independent review; then the user's decision on `abfe168fc`.
