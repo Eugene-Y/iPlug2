@@ -67,8 +67,15 @@ uint32_t IPlugCLAP::tailGet() const noexcept
 
 void IPlugCLAP::FlushParamsIfNeeded()
 {
-  if (!isProcessing())
+  if (!isProcessing() && GetClapHost().canUseParams())
     runOnMainThread([&](){ if (!isBeingDestroyed()) GetClapHost().paramsRequestFlush(); });
+}
+
+void IPlugCLAP::InformHostOfPresetChange()
+{
+  // A preset restored by iPlug changes every parameter without the host seeing it, as a state load does.
+  if (GetClapHost().canUseParams())
+    runOnMainThread([&](){ if (!isBeingDestroyed()) GetClapHost().paramsRescan(CLAP_PARAM_RESCAN_VALUES); });
 }
 
 void IPlugCLAP::BeginInformHostOfParamChange(int idx)
