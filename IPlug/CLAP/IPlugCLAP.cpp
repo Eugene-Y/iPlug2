@@ -73,9 +73,19 @@ void IPlugCLAP::FlushParamsIfNeeded()
 
 void IPlugCLAP::InformHostOfPresetChange()
 {
-  // A preset restored by iPlug changes every parameter without the host seeing it, as a state load does.
+  // Always deferred, also from the main thread: the caller may go on applying state after loading the
+  // preset file, and the host should read the values it ends with.
   if (GetClapHost().canUseParams())
-    runOnMainThread([&](){ if (!isBeingDestroyed()) GetClapHost().paramsRescan(CLAP_PARAM_RESCAN_VALUES); });
+  {
+    mPresetRescanPending = true;
+    GetClapHost().requestCallback();
+  }
+}
+
+void IPlugCLAP::onMainThread() noexcept
+{
+  if (mPresetRescanPending.exchange(false) && !isBeingDestroyed())
+    GetClapHost().paramsRescan(CLAP_PARAM_RESCAN_VALUES);
 }
 
 void IPlugCLAP::BeginInformHostOfParamChange(int idx)

@@ -104,6 +104,7 @@ private:
   bool init() noexcept override;
   bool activate(double sampleRate, uint32_t minFrameCount, uint32_t maxFrameCount) noexcept override;
   void deactivate() noexcept override;
+  void onMainThread() noexcept override;
   bool startProcessing() noexcept override { return true; }
   void stopProcessing() noexcept override {}
   void reset() noexcept override { OnReset(); }
@@ -214,6 +215,7 @@ private:
   bool mHostHasTail = false;
   bool mTailUpdate = false;
   std::atomic<bool> mLatencyUpdate { false };
+  std::atomic<bool> mPresetRescanPending { false };
   
   void* mWindow = nullptr;
   bool mGUIOpen = false;
