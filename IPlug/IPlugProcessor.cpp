@@ -15,6 +15,8 @@
 
 #include "IPlugProcessor.h"
 
+#include <thread>
+
 #ifdef OS_WIN
 #define strtok_r strtok_s
 #endif
@@ -271,10 +273,22 @@ void IPlugProcessor::SetChannelLabel(ERoute direction, int idx, const char* form
 
 void IPlugProcessor::SetLatency(int samples)
 {
-  mLatency = samples;
+  // An unchanged latency leaves the delay line alone: a resize silences the bypassed block it meets.
+  if (mLatency.exchange(samples) != samples)
+    ResizeLatencyDelay();
+}
 
-  if (mLatencyDelay)
-    mLatencyDelay->SetDelayTime(mLatency);
+void IPlugProcessor::ResizeLatencyDelay()
+{
+  if (!mLatencyDelay)
+    return;
+
+  // The audio thread holds the flag for one block at most, and never waits for it.
+  while (mLatencyDelayBusy.exchange(true, std::memory_order_acquire))
+    std::this_thread::yield();
+  // Read under the flag, so concurrent callers leave the line at the latency set last.
+  mLatencyDelay->SetDelayTime(GetLatency());
+  mLatencyDelayBusy.store(false, std::memory_order_release);
 }
 
 //static
@@ -448,7 +462,7 @@ void IPlugProcessor::InitLatencyDelay()
   if (MaxNChannels(ERoute::kInput))
   {
     mLatencyDelay = std::unique_ptr<NChanDelayLine<PLUG_SAMPLE_DST>>(new NChanDelayLine<PLUG_SAMPLE_DST>(MaxNChannels(ERoute::kInput), MaxNChannels(ERoute::kOutput)));
-    mLatencyDelay->SetDelayTime(GetLatency());
+    ResizeLatencyDelay();
   }
 }
 
@@ -496,15 +510,35 @@ void IPlugProcessor::AttachBuffers(ERoute direction, int idx, int n, PLUG_SAMPLE
 
 void IPlugProcessor::PassThroughBuffers(PLUG_SAMPLE_DST type, int nFrames)
 {
-  if (mLatency && mLatencyDelay)
-    mLatencyDelay->ProcessBlock(mScratchData[ERoute::kInput].Get(), mScratchData[ERoute::kOutput].Get(), nFrames);
+  sample** inputs = mScratchData[ERoute::kInput].Get();
+  sample** outputs = mScratchData[ERoute::kOutput].Get();
+
+  if (!mLatencyDelay)
+  {
+    IPlugProcessor::ProcessBlock(inputs, outputs, nFrames);
+    return;
+  }
+
+  bool idle = false;
+  if (!mLatencyDelayBusy.compare_exchange_strong(idle, true, std::memory_order_acquire))
+  {
+    // SetLatency() is resizing the delay line, which clears it: the block it would have delayed is silence.
+    for (int c = 0; c < MaxNChannels(ERoute::kOutput); ++c)
+      memset(outputs[c], 0, nFrames * sizeof(sample));
+    return;
+  }
+
+  if (mLatencyDelay->GetDelayTime())
+    mLatencyDelay->ProcessBlock(inputs, outputs, nFrames);
   else
-    IPlugProcessor::ProcessBlock(mScratchData[ERoute::kInput].Get(), mScratchData[ERoute::kOutput].Get(), nFrames);
+    IPlugProcessor::ProcessBlock(inputs, outputs, nFrames);
+
+  mLatencyDelayBusy.store(false, std::memory_order_release);
 }
 
 void IPlugProcessor::PassThroughBuffers(PLUG_SAMPLE_SRC type, int nFrames)
 {
-  // for PLUG_SAMPLE_SRC bit buffers, first run the delay (if mLatency) on the PLUG_SAMPLE_DST IPlug buffers
+  // for PLUG_SAMPLE_SRC bit buffers, first run the delay (if any) on the PLUG_SAMPLE_DST IPlug buffers
   PassThroughBuffers(PLUG_SAMPLE_DST(0.), nFrames);
 
   int i, n = MaxNChannels(ERoute::kOutput);
