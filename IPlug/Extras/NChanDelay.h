@@ -31,6 +31,8 @@ public:
     ClearBuffer();
   }
 
+  int GetDelayTime() const { return mDTSamples; }
+
   void ClearBuffer()
   {
     memset(mBuffer.Get(), 0, mNInChans * mDTSamples * sizeof(T));

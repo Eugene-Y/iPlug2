@@ -1,0 +1,361 @@
+==================
+WARNING: ThreadSanitizer: data race (pid=38)
+  Write of size 4 at 0xfffffffff9a8 by thread T1:
+    #0 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:274 (stress-thread+0x3634) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #4 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #5 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #6 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #7 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Previous read of size 4 at 0xfffffffff9a8 by main thread:
+    #0 iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:499 (stress-thread+0x8054) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:34 (stress-thread+0x2480) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 main evidence/t025/latency-race-stress.cpp:104 (stress-thread+0x2480)
+
+  Location is stack of main thread.
+
+  Location is global '<null>' at 0x000000000000 ([stack]+0x209a8)
+
+  Thread T1 (tid=40, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5dd98) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xe1c64) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+    #2 <null> <null> (libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+
+SUMMARY: ThreadSanitizer: data race build/t025-base-src/IPlugProcessor.cpp:274 in iplug::IPlugProcessor::SetLatency(int)
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=38)
+  Read of size 4 at 0xfffff2600b4c by main thread:
+    #0 WDL_HeapBuf::Get() const ../WDL/heapbuf.h:49 (stress-thread+0x80c0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 WDL_TypedBuf<double>::Get() const ../WDL/heapbuf.h:274 (stress-thread+0x80c0)
+    #2 iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) build/t025-base-src/NChanDelay.h:41 (stress-thread+0x80c0)
+    #3 iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:500 (stress-thread+0x80c0)
+    #4 StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:34 (stress-thread+0x2480) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #5 main evidence/t025/latency-race-stress.cpp:104 (stress-thread+0x2480)
+
+  Previous write of size 4 at 0xfffff2600b4c by thread T1:
+    #0 WDL_HeapBuf::Resize(int, bool) ../WDL/heapbuf.h:203 (stress-thread+0x8c00) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 WDL_TypedBuf<double>::Resize(int, bool) ../WDL/heapbuf.h:280 (stress-thread+0x3684) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:29 (stress-thread+0x3684)
+    #3 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x3684)
+    #4 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #5 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #6 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #7 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #8 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #9 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #10 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Location is heap block of size 40 at 0xfffff2600b40 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.2+0xad458) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 iplug::IPlugProcessor::InitLatencyDelay() build/t025-base-src/IPlugProcessor.cpp:450 (stress-thread+0x7b6c) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 StressProcessor::StressProcessor(iplug::Config const&) evidence/t025/latency-race-stress.cpp:25 (stress-thread+0x2018) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:46 (stress-thread+0x2018)
+
+  Thread T1 (tid=40, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5dd98) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xe1c64) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+    #2 <null> <null> (libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+
+SUMMARY: ThreadSanitizer: data race ../WDL/heapbuf.h:49 in WDL_HeapBuf::Get() const
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=38)
+  Read of size 8 at 0xfffff2600b40 by main thread:
+    #0 WDL_HeapBuf::Get() const ../WDL/heapbuf.h:49 (stress-thread+0x80d4) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 WDL_TypedBuf<double>::Get() const ../WDL/heapbuf.h:274 (stress-thread+0x80d4)
+    #2 iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) build/t025-base-src/NChanDelay.h:41 (stress-thread+0x80d4)
+    #3 iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:500 (stress-thread+0x80d4)
+    #4 StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:34 (stress-thread+0x2480) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #5 main evidence/t025/latency-race-stress.cpp:104 (stress-thread+0x2480)
+
+  Previous write of size 8 at 0xfffff2600b40 by thread T1:
+    #0 WDL_HeapBuf::Resize(int, bool) ../WDL/heapbuf.h:199 (stress-thread+0x8be8) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 WDL_TypedBuf<double>::Resize(int, bool) ../WDL/heapbuf.h:280 (stress-thread+0x3684) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:29 (stress-thread+0x3684)
+    #3 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x3684)
+    #4 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #5 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #6 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #7 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #8 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #9 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #10 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Location is heap block of size 40 at 0xfffff2600b40 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.2+0xad458) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 iplug::IPlugProcessor::InitLatencyDelay() build/t025-base-src/IPlugProcessor.cpp:450 (stress-thread+0x7b6c) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 StressProcessor::StressProcessor(iplug::Config const&) evidence/t025/latency-race-stress.cpp:25 (stress-thread+0x2018) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:46 (stress-thread+0x2018)
+
+  Thread T1 (tid=40, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5dd98) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xe1c64) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+    #2 <null> <null> (libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+
+SUMMARY: ThreadSanitizer: data race ../WDL/heapbuf.h:49 in WDL_HeapBuf::Get() const
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=38)
+  Read of size 4 at 0xfffff2600b60 by main thread:
+    #0 iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) build/t025-base-src/NChanDelay.h:51 (stress-thread+0x81e4) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:500 (stress-thread+0x81e4)
+    #2 StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:34 (stress-thread+0x2480) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:104 (stress-thread+0x2480)
+
+  Previous write of size 4 at 0xfffff2600b60 by thread T1:
+    #0 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:30 (stress-thread+0x368c) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x368c)
+    #2 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #4 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #5 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #6 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #7 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #8 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Location is heap block of size 40 at 0xfffff2600b40 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.2+0xad458) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 iplug::IPlugProcessor::InitLatencyDelay() build/t025-base-src/IPlugProcessor.cpp:450 (stress-thread+0x7b6c) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 StressProcessor::StressProcessor(iplug::Config const&) evidence/t025/latency-race-stress.cpp:25 (stress-thread+0x2018) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:46 (stress-thread+0x2018)
+
+  Thread T1 (tid=40, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5dd98) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xe1c64) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+    #2 <null> <null> (libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+
+SUMMARY: ThreadSanitizer: data race build/t025-base-src/NChanDelay.h:51 in iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int)
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=38)
+  Read of size 8 at 0xfffff2e14000 by main thread:
+    #0 iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) build/t025-base-src/NChanDelay.h:51 (stress-thread+0x8210) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:500 (stress-thread+0x8210)
+    #2 StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:34 (stress-thread+0x2480) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:104 (stress-thread+0x2480)
+
+  Previous write of size 8 at 0xfffff2e14000 by thread T1:
+    #0 memset ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc:87 (libtsan.so.2+0x92dec) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 memset ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc:85 (libtsan.so.2+0x92dec)
+    #2 memset /usr/include/aarch64-linux-gnu/bits/string_fortified.h:59 (stress-thread+0x36dc) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 iplug::NChanDelayLine<double>::ClearBuffer() build/t025-base-src/NChanDelay.h:36 (stress-thread+0x36dc)
+    #4 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:31 (stress-thread+0x36dc)
+    #5 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x36dc)
+    #6 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #7 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #8 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #9 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #10 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #11 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #12 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Location is heap block of size 77728 at 0xfffff2e14000 allocated by thread T1:
+    #0 realloc ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:698 (libtsan.so.2+0x59eb0) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 WDL_HeapBuf::Resize(int, bool) ../WDL/heapbuf.h:177 (stress-thread+0x8bd8) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 WDL_TypedBuf<double>::Resize(int, bool) ../WDL/heapbuf.h:280 (stress-thread+0x3684) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:29 (stress-thread+0x3684)
+    #4 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x3684)
+    #5 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #6 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #7 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #8 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #9 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #10 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #11 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Thread T1 (tid=40, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5dd98) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xe1c64) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+    #2 <null> <null> (libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+
+SUMMARY: ThreadSanitizer: data race build/t025-base-src/NChanDelay.h:51 in iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int)
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=38)
+  Write of size 4 at 0xfffff2600b60 by thread T1:
+    #0 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:30 (stress-thread+0x368c) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x368c)
+    #2 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #4 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #5 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #6 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #7 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #8 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Previous write of size 4 at 0xfffff2600b60 by main thread:
+    #0 iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) build/t025-base-src/NChanDelay.h:57 (stress-thread+0x826c) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:500 (stress-thread+0x826c)
+    #2 StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:34 (stress-thread+0x2480) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:104 (stress-thread+0x2480)
+
+  As if synchronized via sleep:
+    #0 nanosleep ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:397 (libtsan.so.2+0x5bba8) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 void std::this_thread::sleep_for<long, std::ratio<1l, 1000000l> >(std::chrono::duration<long, std::ratio<1l, 1000000l> > const&) /usr/include/c++/13/bits/this_thread_sleep.h:80 (stress-thread+0x2854) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 operator() evidence/t025/latency-race-stress.cpp:97 (stress-thread+0x2854)
+    #3 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #4 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #5 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #6 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #7 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #8 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Location is heap block of size 40 at 0xfffff2600b40 allocated by main thread:
+    #0 operator new(unsigned long) ../../../../src/libsanitizer/tsan/tsan_new_delete.cpp:64 (libtsan.so.2+0xad458) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 iplug::IPlugProcessor::InitLatencyDelay() build/t025-base-src/IPlugProcessor.cpp:450 (stress-thread+0x7b6c) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 StressProcessor::StressProcessor(iplug::Config const&) evidence/t025/latency-race-stress.cpp:25 (stress-thread+0x2018) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:46 (stress-thread+0x2018)
+
+  Thread T1 (tid=40, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5dd98) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xe1c64) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+    #2 <null> <null> (libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+
+SUMMARY: ThreadSanitizer: data race build/t025-base-src/NChanDelay.h:30 in iplug::NChanDelayLine<double>::SetDelayTime(int)
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=38)
+  Write of size 8 at 0xfffff2e14000 by thread T1:
+    #0 realloc ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:698 (libtsan.so.2+0x59eb0) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 WDL_HeapBuf::Resize(int, bool) ../WDL/heapbuf.h:177 (stress-thread+0x8bd8) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 WDL_TypedBuf<double>::Resize(int, bool) ../WDL/heapbuf.h:280 (stress-thread+0x3684) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:29 (stress-thread+0x3684)
+    #4 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x3684)
+    #5 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #6 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #7 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #8 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #9 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #10 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #11 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Previous write of size 8 at 0xfffff2e14000 by main thread:
+    #0 iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) build/t025-base-src/NChanDelay.h:52 (stress-thread+0x8238) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:500 (stress-thread+0x8238)
+    #2 StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:34 (stress-thread+0x2480) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:104 (stress-thread+0x2480)
+
+  Thread T1 (tid=40, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5dd98) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xe1c64) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+    #2 <null> <null> (libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+
+SUMMARY: ThreadSanitizer: data race ../WDL/heapbuf.h:177 in WDL_HeapBuf::Resize(int, bool)
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=38)
+  Write of size 8 at 0xffffef200348 by thread T1:
+    #0 memset ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc:87 (libtsan.so.2+0x92dec) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 memset ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc:85 (libtsan.so.2+0x92dec)
+    #2 memset /usr/include/aarch64-linux-gnu/bits/string_fortified.h:59 (stress-thread+0x36dc) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 iplug::NChanDelayLine<double>::ClearBuffer() build/t025-base-src/NChanDelay.h:36 (stress-thread+0x36dc)
+    #4 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:31 (stress-thread+0x36dc)
+    #5 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x36dc)
+    #6 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #7 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #8 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #9 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #10 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #11 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #12 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Previous write of size 8 at 0xffffef200348 by main thread:
+    #0 iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) build/t025-base-src/NChanDelay.h:52 (stress-thread+0x8238) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:500 (stress-thread+0x8238)
+    #2 StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:34 (stress-thread+0x2480) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:104 (stress-thread+0x2480)
+
+  As if synchronized via sleep:
+    #0 nanosleep ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:397 (libtsan.so.2+0x5bba8) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 void std::this_thread::sleep_for<long, std::ratio<1l, 1000000l> >(std::chrono::duration<long, std::ratio<1l, 1000000l> > const&) /usr/include/c++/13/bits/this_thread_sleep.h:80 (stress-thread+0x2854) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 operator() evidence/t025/latency-race-stress.cpp:97 (stress-thread+0x2854)
+    #3 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #4 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #5 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #6 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #7 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #8 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Location is heap block of size 53152 at 0xffffef200000 allocated by thread T1:
+    #0 realloc ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:698 (libtsan.so.2+0x59eb0) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 WDL_HeapBuf::Resize(int, bool) ../WDL/heapbuf.h:177 (stress-thread+0x8bd8) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 WDL_TypedBuf<double>::Resize(int, bool) ../WDL/heapbuf.h:280 (stress-thread+0x3684) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:29 (stress-thread+0x3684)
+    #4 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x3684)
+    #5 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #6 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #7 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #8 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #9 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #10 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #11 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Thread T1 (tid=40, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5dd98) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xe1c64) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+    #2 <null> <null> (libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+
+SUMMARY: ThreadSanitizer: data race ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc:87 in memset
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=38)
+  Read of size 8 at 0xffffeee03d08 by main thread:
+    #0 iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int) build/t025-base-src/NChanDelay.h:51 (stress-thread+0x8210) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #1 iplug::IPlugProcessor::PassThroughBuffers(double, int) build/t025-base-src/IPlugProcessor.cpp:500 (stress-thread+0x8210)
+    #2 StressProcessor::Bypass(double**, double**, int) evidence/t025/latency-race-stress.cpp:34 (stress-thread+0x2480) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 main evidence/t025/latency-race-stress.cpp:104 (stress-thread+0x2480)
+
+  Previous write of size 8 at 0xffffeee03d08 by thread T1:
+    #0 realloc ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:698 (libtsan.so.2+0x59eb0) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 WDL_HeapBuf::Resize(int, bool) ../WDL/heapbuf.h:177 (stress-thread+0x8bd8) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 WDL_TypedBuf<double>::Resize(int, bool) ../WDL/heapbuf.h:280 (stress-thread+0x3684) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:29 (stress-thread+0x3684)
+    #4 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x3684)
+    #5 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #6 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #7 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #8 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #9 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #10 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #11 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Location is heap block of size 8096 at 0xffffeee02000 allocated by thread T1:
+    #0 realloc ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:698 (libtsan.so.2+0x59eb0) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 WDL_HeapBuf::Resize(int, bool) ../WDL/heapbuf.h:177 (stress-thread+0x8bd8) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #2 WDL_TypedBuf<double>::Resize(int, bool) ../WDL/heapbuf.h:280 (stress-thread+0x3684) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #3 iplug::NChanDelayLine<double>::SetDelayTime(int) build/t025-base-src/NChanDelay.h:29 (stress-thread+0x3684)
+    #4 iplug::IPlugProcessor::SetLatency(int) build/t025-base-src/IPlugProcessor.cpp:277 (stress-thread+0x3684)
+    #5 operator() evidence/t025/latency-race-stress.cpp:94 (stress-thread+0x2744) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #6 __invoke_impl<void, main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (stress-thread+0x28f0) (BuildId: 55b141bed471bd30053013d200f0106f7acc4220)
+    #7 __invoke<main(int, char**)::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (stress-thread+0x28f0)
+    #8 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (stress-thread+0x28f0)
+    #9 operator() /usr/include/c++/13/bits/std_thread.h:299 (stress-thread+0x28f0)
+    #10 _M_run /usr/include/c++/13/bits/std_thread.h:244 (stress-thread+0x28f0)
+    #11 <null> <null> (libstdc++.so.6+0xe1adc) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+
+  Thread T1 (tid=40, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5dd98) (BuildId: dc0d657f42587fea53114ce058dbdfe5834e0205)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xe1c64) (BuildId: 7c239d1743727054caa3df1ab866bfa72cd4dd93)
+    #2 <null> <null> (libc.so.6+0x284c0) (BuildId: 27027b96e5b8c475fc327aa445bea1c71d37b4e2)
+
+SUMMARY: ThreadSanitizer: data race build/t025-base-src/NChanDelay.h:51 in iplug::NChanDelayLine<double>::ProcessBlock(double**, double**, int)
+==================
+
+BEGIN IPLUG CHANNEL IO PARSER --------------------------------------------------
+Channel I/O #1 - 2-2
+               - input bus count: 1, output bus count 1
+               - channel count on input bus 1: 2
+               - channel count on output bus 1: 2
+               - input channel count across all buses: 2, output channel count across all buses 2
+
+1 I/O configs detected
+Total # in chans: 2, Total # out chans: 2 
+
+END IPLUG CHANNEL IO PARSER --------------------------------------------------
+delay-exact
+blocks=3446 silent-blocks=414 latency-changes=85 bad-blocks=10
+ThreadSanitizer: reported 9 warnings
