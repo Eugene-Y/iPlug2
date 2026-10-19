@@ -112,3 +112,37 @@ Grep/read on `hvoya-linux`; for anything ambiguous, build the example in Docker 
 - **M2:** new row "dialogs called synchronously" (❌) and **T-032** (options for the user; recommendation: make iPlug2's own synchronous callers asynchronous now, consider a nested wait later). Verified: `IGraphicsLinux.cpp:2194`–`2205` returns without a completion handler; `IVPresetManagerControls.h:243` calls it synchronously.
 - **M3:** Linux file:line for the platform rows; new rows: `IPlugPaths`, logging, platform views, ImGui (not in the tree), `IShaderControl` (Skia, T-018), CI and the repo's skills (**T-033**), `buildall` scripts (not needed: CMake builds all examples).
 - m1: the drawing row cites the reviewer's sweep of all 28 IGraphicsTest pages. m2: the REAPER-plug-in row says only host detection is shown. m3: the static-UI row names `EnableMouseOver`. m4/m6/m7: StressTest seen on its first page only, OSC send/receive not exercised, only CLAP opened (VST3/APP built) — stated in the note. m5: screenshots stay git-ignored and local; the note says where.
+
+### Review round 2 (independent reviewer)
+2026-10-19, fresh context, reviewed 7e9fc893f (read-only; no Docker/VM).
+
+**Round-1 findings**
+- M1 ✓ T-031 has (a)–(d), the exports and a 2–3 day estimate. Checked: (a) `IGraphicsLinux.cpp:491` `dynamic_cast<IPlugAPIBase*>`; (b) `ReaperExtBase.cpp:434` → `IGraphicsLinux.cpp:525`; (c) `ReaperExt_include_in_plug_src.h:116`, which is also 1 on mac; (d) `ReaperExtBase.cpp:57`, mac only, and win doesn't resize either. Step 4 could state more plainly that the IGraphics editor must render in the docked and undocked window (nit).
+- M2 ✓ The row and T-032 exist, but T-032 has factual errors (R1, R2 below).
+- M3 mostly ✓ Missing still: one line for IPlugUtilities and assert/crash (no Linux-relevant platform code), and one for the portable controls (DirBrowse via `WDL_DirScan`, FlexBox, MIDI keyboard; the sweep covers them). The mac/win side still has no file:line; the overrides diff is the evidence there. Acceptable.
+- m1–m4, m6, m7 ✓
+- m5 not done. The note cites `evidence/t016/run-*` screenshots and the drawing row rests on round 1's `build/review-t016/sheetA/B.png`. All of these are git-ignored, so they vanish when the coordinator removes the worktree (§4.5). `.gitignore` lets `evidence/**/sheet*.png` through: copy the two sheets to `evidence/t016/` and commit them (minor).
+- Nits n1, n2 ("all 19 example projects" = 16 examples + 3 tests), n3 and n5 are not addressed. They are optional.
+
+**file:line spot-checks (20; all on this branch)**
+- `IGraphicsLinux.cpp`, all ✓: 487 `OpenWindow`, 491, 525, 1709 cursor, 1723 / 1747 clipboard, 1732 drag source, 1742 `GetUIAppearance`, 1769 text entry, 1787 menus, 1864 `LoadPlatformFont`, 1924 tooltips, 2178 `ShowMessageBox`, 2194–2203 `PromptForFile` early return, 2225 `PromptForDirectory`, 2270 `OpenURL`.
+- `ReaperExtBase.cpp:434` ✓; `IPlugLinuxPaths.cpp:120/126/157` ✓.
+- Nits: `RevealPathInExplorerOrFinder` is at `:2275`, not 2270. The synchronous call is at `IVPresetManagerControls.h:245` (243 is the lambda). The POSIX OSC branch is at `IPlugOSC_internal.cpp:7-8` (5 is `#ifdef OS_WIN`).
+- My own override `comm` agrees: mac-only = PlatformView ×3, `MeasureText`, bundle and app-group IDs; win-only = `PlatformSupportsMultiTouch` and the module handle.
+
+**T-032 (a user decision, so it must be exact)**
+- **R1 [major for T-032]: `PromptForColor` is not synchronous on mac.** `IGraphicsMac_view.mm:1284-1296` opens the non-modal `NSColorPanel` and returns `true` at once with `color` unchanged. With a null `func`, the first pick calls an empty `std::function`. Only win blocks (`ChooseColorW`, `IGraphicsWin.cpp:1648-1681`). For colour, Linux already equals mac. Fix the row and T-032's Problem.
+- **R2 [major for T-032]: option 1 cannot be "as mac/win do".** mac `runModal` (`IGraphicsMac.mm:381,590`) and win `GetOpenFileNameW` / `MessageBoxW` (`IGraphicsWin.cpp:1551-1556,1027`) run a nested loop that dispatches the whole process's events. The host stays responsive there, and that is where the re-entrancy comes from. A Linux plug-in can pump only its own X connection and the dialog's pipe or D-Bus. The host's GTK/Qt/X loop stalls, so its windows stop repainting, the WM's `_NET_WM_PING` may mark it "not responding", and host main-thread callbacks wait. The one exception is the APP, which owns its loop. Say this, and make "1 later" opt-in at most (or APP-only).
+- **R3 [minor]: option 2's "works the same on mac/win" is not exact.**
+  - On mac, passing a handler switches from an app-modal panel to a window sheet (`beginSheetModalForWindow`, `IGraphicsMac.mm:579-590`). Win is unchanged. This is a visible mac change, so it needs the user's approval under §2.
+  - In favour of option 2, add the precedent. iPlug2 already has async-only platforms: `IGraphicsConstants.h:208` documents `kNoResult` for message boxes that "can't return inline"; iOS returns it (`IGraphicsIOS.mm:187`) and asserts a completion handler in `PromptForFile` (`:216`). So the stock preset control's load button already fails on iOS: the control fix is a cross-platform fix, not a Linux workaround.
+  - Also note that mac/win `ShowMessageBox` blocks and returns the result even when given a handler. Linux returns `kNoResult` always.
+- Recommendation 3, read as "2 now, 1 only opt-in after R2", is fair. The other synchronous callers in the tree are the stock preset control (above) and the `IPlugControls` dialog-test button at `IPlugControls.cpp:609`, which is the port's own test. `TestSVGControl`, `TestImageControl` and `ISkLottieControl` pass handlers.
+
+**T-031 and T-033:** accurate and actionable. T-033 correctly treats the workflow as a proposal (it runs on the user's account); `cmake-ci.yml` has mac/win native jobs at `:192`/`:269` and only parse/WAM/WASM on ubuntu (`:76,739,805`).
+
+**Still missing from the table (minor)**
+- **Text entry with a system input method.** mac/win native text fields get the OS IME (CJK, emoji picker). The Linux stand-in uses only Xlib's built-in IM: compose and dead keys work, but IBus/Fcitx are not reached, because `XMODIFIERS` is deliberately untouched (`IGraphicsLinux.cpp:595-599`, notes/13). Add a row: a deliberate deviation or a task for the user.
+- Checked and fine: `OpenURL`'s confirm/error messages are ignored on Linux, as on mac (`IGraphicsMac.mm:708`), so that is not a gap. The remaining `#if OS_MAC/OS_WIN` in shared code (vDSP in `ISender`, Pro Tools fine-control, win UTF-16, `kWinBinary`) has no Linux gap. Packaging covers the APP icon (`package.sh --icon`).
+
+**Verdict: approved, subject to text fixes; no round 3 needed.** Before merge, fix R1–R3 in T-032 and the "synchronous" row, add the IME row, and commit the two sweep sheets (m5). The rest are nits.
