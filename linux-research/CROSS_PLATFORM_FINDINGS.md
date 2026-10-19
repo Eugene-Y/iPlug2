@@ -40,7 +40,7 @@ Gneiss на mac/win использует нативные меню — его н
 | ID | Серьёзность | Суть | Затрагивает mac/win? |
 |---|---|---|---|
 | T6-1 ✅ одобрено автором 2026-10-17 | Средняя | `stateLoad` восстанавливает параметры, но не зовёт `host->params->rescan(CLAP_PARAM_RESCAN_VALUES)`. Хосты с кэшем значений (общий UI параметров, полосы автоматизации) после открытия проекта / загрузки пресета хостом показывают старые значения. clap-validator `state-reproducibility-basic/-binary/-buffered` падают у всех iPlug2 CLAP, в том числе у установленного mac Gneiss. Фикс 46d10516c: rescan после `OnRestoreState()`; после него все три теста проходят на Linux и mac (IPlugEffect, IPlugControls, IPlugInstrument, Gneiss). Изменение на mac/win: после загрузки состояния хост перечитывает значения параметров; автоматизация из этого не пишется (так по спеке). Доказательства: `tasks/T-006-clap-state-repro.md`, `evidence/t006/` | **Да** (все CLAP) |
-Рядом, не исправлено: CLAP не переопределяет `InformHostOfPresetChange`, поэтому пресеты iPlug (`RestorePreset`, FXP/FXB) тоже оставляют CLAP-хосту старые значения. Gneiss это не покрыло бы: его PresetManager не зовёт `InformHostOfPresetChange`, а morph undo вызывает `UnserializeState` напрямую. Для Gneiss остаётся фикс C4.
+Рядом: CLAP не переопределял `InformHostOfPresetChange`. iPlug зовёт его только из загрузчиков FXP/FXB (`LoadStateFromFXP`/`LoadBankFromFXB` …), не из `RestorePreset`. Предложение T23-1 ниже (T-023).
 
 ## Из T-004 (standalone APP, общий код `IPlug/APP/IPlugAPP_host.cpp`) — исправлено с согласия автора
 Меняют поведение mac/win только в сбойных случаях, нормальная работа не меняется. В `hvoya-linux`; в `hvoya` попадут при будущем слиянии.
@@ -113,3 +113,9 @@ Gneiss на mac/win использует нативные меню — его н
 | ID | Серьёзность | Суть | Статус |
 |---|---|---|---|
 | S-1 | Средняя (UX) | Sand CLAP на маке в REAPER (свежая сборка, 2026-10-19): в поле ввода значения нельзя ни печатать, ни стирать. В VST3 то же поле работает. Поле — нативный `NSTextField` (`IGraphicsMac::CreatePlatformTextEntry`); код mac-вью в `hvoya` с середины сентября не менялся. Гипотеза: REAPER на маке оставляет клавиши CLAP-окна себе (для VST3 он передаёт их через `IPlugView::onKeyDown`) | Ждёт проверок автора: опция REAPER «Send all keyboard input to plug-in»; работал ли ввод в старом релизе |
+
+## Из T-023 (CLAP, общий код `IPlug/CLAP/IPlugCLAP.*`; касается mac/win) — предложение, ждёт решения автора
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T23-1 | Низкая–средняя | После загрузки FXP/FXB (iPlug зовёт `InformHostOfPresetChange`) CLAP-хост продолжал показывать и автоматизировать старые значения. Предложение `linux/T-023`: `InformHostOfPresetChange` всегда откладывает `params.rescan(VALUES)` до ближайшего `on_main_thread` хоста (через `request_callback`, без мьютекса и аллокаций), чтобы хост прочитал значения уже после того, как вызывающий код доприменит состояние. **Поведение на mac/win:** у Gneiss загрузка пользовательского пресета и шаги по полосе пресетов (`PresetManager` → `LoadStateFromFXP`) теперь приводят к повторному чтению значений хостом, уже после восстановления workspace; заводские пресеты (из чанка) — нет; Sand не затронут | Ждёт решения |
+| T23-2 | Средняя (Release-краш) | `FlushParamsIfNeeded` звал `params.request_flush` без проверки `canUseParams()`: у хоста без `clap.params` Debug падает на ассерте clap-helpers, **Release падает** (проверено тестовым хостом ревьюера T-023). Предложение: проверять `canUseParams()` | Ждёт решения (вместе с T23-1) |

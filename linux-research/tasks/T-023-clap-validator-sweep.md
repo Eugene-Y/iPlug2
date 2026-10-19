@@ -1,6 +1,6 @@
 # T-023 — CLAP: every clap-validator failure of Gneiss and Sand, Linux and mac
 
-- **Status:** in progress — review next; two shared-code proposals wait for the user
+- **Status:** review-done after round-1 fixes; shared-code proposals T23-1/T23-2 wait for the user
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-023`
 - **Branch/worktree:** `linux/T-023` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-023`. Gneiss/Sand side: local experiment branches in their own worktrees (AGENTS §4), never the main checkouts.
 - **Depends on:** T-006 merged (its state fix removes 3 failures from every list below).
@@ -119,3 +119,15 @@ Reviewed `hvoya-linux...linux/T-023` (abfe168fc, ea94dc457, 60188aeba), the evid
 **Evidence checked:** all 11 logs read 44 run / 38 passed / 0 failed / 0 warnings / 6 skipped. `process-sleep-process-status`, `process-audio-double-*`, `param-conversions`, `process-varying-sample-rates`, `process-audio-denormals`, `state-invalid-random` and `param-fuzz-bounds` show PASSED in every log. Gneiss "before" f799cb3 already contains T-028's tail (5b31aa0), so "before" here means after T-024/T-028. The Log says this.
 
 **Verdict:** the code in `abfe168fc` is correct and safe, and I recommend it to the user as a proposal. Changes requested on the write-up before hand-over: M1 (the user would decide on a wrong impact statement), then m1, m2, m4–m6. m3 and m7 need either a run or a sentence in the Log.
+
+### 2026-10-19 (2) — review round 1 fixes
+- **M1 (corrected account):** iPlug calls `InformHostOfPresetChange` only from its FXP/FXB loaders (`LoadStateFromFXP`, `LoadBankFromFXB`, …), never from `RestorePreset`. So the proposal does **not** cover `RestorePreset` (factory presets, host program changes), and it **does** affect Gneiss on mac/win CLAP: hvoya `PresetManager` loads user presets with `LoadStateFromFXP` (`preset_manager.hpp:428`, `:901`), so a user-preset load or strip step now makes the host re-read the values; factory presets (`RestorePreset`) don't. Sand is unaffected. `CROSS_PLATFORM_FINDINGS.md` line 43 corrected; rows **T23-1** (rescan) and **T23-2** (flush check) added (m4).
+- **m2 fixed in code:** the rescan is always deferred (`mPresetRescanPending` + `request_callback` → `onMainThread`), so the host reads the values after the caller is done; `PresetManager` restores its workspace in the same call right after `LoadStateFromFXP`. Re-run of the reviewer's harness (`evidence/t023/presettest/`: `host.cpp`, the IPlugEffect test hooks as `IPlugEffect-test-hooks.diff`, `run-after-r1.txt`): every case rescans on the host's main thread, after the load (reads 0.8000), from the main thread, the audio thread and the timer thread; host without `clap.params`: no rescan, no crash (before: Debug assert, **Release crash**, `run-base*.txt` — m1). From the audio thread it is now one host call, no mutex or allocation (n3).
+- **n2:** code comment rewritten (it named the wrong callers and repeated `stateLoad`'s reason).
+- **m7:** REAPER on this branch (Release, CLAP): `gneiss.txt`, `sand.txt`, `state-roundtrip.txt` for both: all PASS (`evidence/t023/reaper-*`); clap-validator Gneiss and Sand 38/0/0 (`linux-after-r1-*`). mac: IPlugEffect CLAP from this tree 38/0/0 (`mac-after-r1-IPlugEffect-Debug.txt`).
+- **m3:** mac "after" logs for Gneiss and Sand are not possible before the proposal is ported to `hvoya` (their Xcode projects build against the main checkout); they go into the port's check if the user approves.
+- **m5:** Sand's `process-audio-denormals` warning: owner Sand. Cause known from T-024: Sand sets no flush-to-zero. Timing-based; not in any of the 7 later Sand runs. No action here.
+- **m6:** `state-invalid-random` warning (examples): cause is iPlug's default `UnserializeParams`, which accepts any bytes of the right length; Gneiss and Sand have their own state formats and pass. Not fixed here (examples only show it).
+- **n1:** the 6 skipped tests are iPlug-wide (extensions iPlug's CLAP wrapper doesn't implement), not the plug-ins' choice.
+- **n4:** Gneiss `process-sleep-process-status`: cause as T-028 found it, a 0 tail plus a random starter preset (cross-platform), fixed by T-028's 15 s tail.
+- **n5:** temporary worktrees `hvoya/Gneiss-t023mac`, `hvoya/Sand-t023mac` removed.

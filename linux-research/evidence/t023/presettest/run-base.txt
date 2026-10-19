@@ -1,0 +1,32 @@
+[36/36] Linking CXX shared module out/IPlugEffect.clap
+===== BASE T023=1 host=params
+[host] init done (host params: present)
+[host] activate
+[plug] OnActivate: saved=1, param0 now 0.2000; LoadStateFromFXP...
+[plug] OnActivate: loaded=1, param0 now 0.8000
+[host] done, 0 rescan(s)
+exit=0
+===== BASE T023=1 host=noparams
+[host] init done (host params: absent)
+[host] activate
+[plug] OnActivate: saved=1, param0 now 0.2000; LoadStateFromFXP...
+[plug] OnActivate: loaded=1, param0 now 0.8000
+[host] done, 0 rescan(s)
+exit=0
+===== BASE T023=4 host=params
+[host] init done (host params: present)
+[host] activate
+[plug] OnActivate: Begin/Inform/EndInformHostOfParamChange
+[host] params.request_flush on main thread
+[host] params.request_flush on main thread
+[host] params.request_flush on main thread
+[plug] OnActivate: saved=1, param0 now 0.2000; LoadStateFromFXP...
+[plug] OnActivate: loaded=1, param0 now 0.8000
+[host] done, 0 rescan(s)
+exit=0
+===== BASE T023=4 host=noparams
+[host] init done (host params: absent)
+[host] activate
+[plug] OnActivate: Begin/Inform/EndInformHostOfParamChange
+host: /Volumes/Storage/code/IPlug2-linux/Dependencies/IPlug/CLAP_HELPERS/include/clap/helpers/host-proxy.hxx:375: void clap::helpers::HostProxy<h, l>::paramsRequestFlush() const [with clap::helpers::MisbehaviourHandler h = clap::helpers::MisbehaviourHandler::Terminate; clap::helpers::CheckingLevel l = clap::helpers::CheckingLevel::Maximal]: Assertion `canUseParams()' failed.
+exit=134
