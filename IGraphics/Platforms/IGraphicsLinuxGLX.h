@@ -29,6 +29,8 @@ BEGIN_IGRAPHICS_NAMESPACE
 struct GLXFunctions
 {
   decltype(&glXChooseVisual) ChooseVisual = nullptr;
+  decltype(&glXChooseFBConfig) ChooseFBConfig = nullptr;
+  decltype(&glXGetVisualFromFBConfig) GetVisualFromFBConfig = nullptr;
   decltype(&glXCreateContext) CreateContext = nullptr;
   decltype(&glXDestroyContext) DestroyContext = nullptr;
   decltype(&glXMakeCurrent) MakeCurrent = nullptr;
@@ -82,6 +84,8 @@ private:
       ok = ok && pFunc;
     };
     load(ChooseVisual, "glXChooseVisual");
+    load(ChooseFBConfig, "glXChooseFBConfig");
+    load(GetVisualFromFBConfig, "glXGetVisualFromFBConfig");
     load(CreateContext, "glXCreateContext");
     load(DestroyContext, "glXDestroyContext");
     load(MakeCurrent, "glXMakeCurrent");

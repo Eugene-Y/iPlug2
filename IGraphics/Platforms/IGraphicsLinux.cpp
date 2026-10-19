@@ -215,6 +215,27 @@ void DisableSwapWait(const GLXFunctions* pGLX, Display* pDisplay, GLXDrawable dr
   }
 }
 
+#ifdef IGRAPHICS_GL3
+/** @return a core 3.2 context, or nullptr when the driver has none (the caller's X error trap catches the error
+ * a refused version raises) */
+GLXContext CreateCoreContext(const GLXFunctions* pGLX, Display* pDisplay, GLXFBConfig fbConfig)
+{
+  const char* glxExtensions = pGLX->QueryExtensionsString(pDisplay, DefaultScreen(pDisplay));
+  auto createContextAttribs = reinterpret_cast<PFNGLXCREATECONTEXTATTRIBSARBPROC>(GLXFunctions::GetProc("glXCreateContextAttribsARB"));
+  if (!HasGLXExtension(glxExtensions, "GLX_ARB_create_context_profile") || !createContextAttribs)
+    return nullptr;
+
+  const int contextAttributes[] = {
+    GLX_CONTEXT_MAJOR_VERSION_ARB, 3, GLX_CONTEXT_MINOR_VERSION_ARB, 2,
+    GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+    None
+  };
+  GLXContext context = createContextAttribs(pDisplay, fbConfig, nullptr, True, contextAttributes);
+  XSync(pDisplay, False);
+  return context;
+}
+#endif
+
 /** Lets the pointer pass through the window, as through native tooltips: an empty input shape (X Shape extension
  * 1.1; libXext is dlopen'ed and never unloaded, the host may use it too).
  * @return false without libXext or the extension */
@@ -507,6 +528,22 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     }
   }
 
+#ifdef IGRAPHICS_GL3
+  // A core profile can only be requested for an FBConfig (glXCreateContextAttribsARB), not for a visual.
+  const int configAttributes[] = {
+    GLX_X_RENDERABLE, True, GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT, GLX_RENDER_TYPE, GLX_RGBA_BIT, GLX_DOUBLEBUFFER, True,
+    GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
+    GLX_STENCIL_SIZE, 8,
+    None
+  };
+  int nConfigs = 0;
+  GLXFBConfig* pConfigs = w.mGLX->ChooseFBConfig(pDisplay, screen, configAttributes, &nConfigs);
+  if (!pConfigs || nConfigs < 1)
+    return fail("no GLX FBConfig with RGB8, stencil 8 and double buffering");
+  const GLXFBConfig fbConfig = pConfigs[0];
+  XFree(pConfigs);
+  XVisualInfo* pVisual = w.mGLX->GetVisualFromFBConfig(pDisplay, fbConfig);
+#else
   int visualAttributes[] = {
     GLX_RGBA, GLX_DOUBLEBUFFER,
     GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
@@ -514,6 +551,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     None
   };
   XVisualInfo* pVisual = w.mGLX->ChooseVisual(pDisplay, screen, visualAttributes);
+#endif
   if (!pVisual)
     return fail("no GLX visual with RGB8, stencil 8 and double buffering");
 
@@ -568,12 +606,19 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     XStoreName(pDisplay, w.mWindow, pPlug->GetPluginName());
   }
 
-  // A legacy context gets whatever version the driver defaults to, down to 2.1 on old or virtual drivers. Only
-  // NanoVG GL2 is guaranteed and tested; IGRAPHICS_GL3 would need a core 3.2 context via glXCreateContextAttribsARB.
+#ifdef IGRAPHICS_GL3
+  w.mGLContext = CreateCoreContext(w.mGLX, pDisplay, fbConfig);
+  XFree(pVisual);
+  if (!w.mGLContext)
+    return fail("no OpenGL 3.2 core context (this build renders with NanoVG GL3)");
+#else
+  // A legacy context gets whatever version the driver defaults to, down to 2.1 on old or virtual drivers, which
+  // is enough for NanoVG GL2.
   w.mGLContext = w.mGLX->CreateContext(pDisplay, pVisual, nullptr, True);
   XFree(pVisual);
   if (!w.mGLContext)
     return fail("glXCreateContext failed");
+#endif
 
   XMapWindow(pDisplay, w.mWindow);
   WatchTopLevel();
