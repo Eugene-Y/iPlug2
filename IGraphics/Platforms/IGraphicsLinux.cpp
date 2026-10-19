@@ -45,6 +45,7 @@
 #include "IGraphicsLinuxGLX.h"
 #include "IGraphicsLinuxKeys.h"
 #include "IGraphicsLinuxClipboard.h"
+#include "IGraphicsLinuxDragSource.h"
 #include "IGraphicsLinuxAppearance.h"
 #include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxCursors.h"
@@ -427,6 +428,7 @@ struct IGraphicsLinux::Impl
   unsigned char mKeptKeys[32] = {};
 
   LinuxClipboard mClipboard;
+  LinuxDragSource mDragSource;
   LinuxFileDrop mFileDrop;
   LinuxAppearance mAppearance;
   std::chrono::steady_clock::time_point mAppearancePolledAt;
@@ -578,6 +580,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mWindowAlive = w.mWindow != 0;
   w.mXEmbed = XInternAtom(pDisplay, "_XEMBED", False);
   w.mClipboard.Init(pDisplay, w.mWindow);
+  w.mDragSource.Init(pDisplay, w.mWindow);
   w.mFileDrop.Init(pDisplay, w.mWindow);
   w.mAppearance.Start();
   w.mCursors.Init(pDisplay);
@@ -721,6 +724,7 @@ void IGraphicsLinux::DestroyWindowResources()
     if (w.mInputMethod)
       XCloseIM(w.mInputMethod);
     w.mClipboard.Release();
+    w.mDragSource.Release();
     w.mFileDrop.Release();
     w.mAppearance.Stop();
     w.mCursors.Free();
@@ -808,6 +812,7 @@ void IGraphicsLinux::OnDisplayTimer()
   if (!ProcessXEvents())
     return;
   mImpl->mFileDrop.Idle();
+  mImpl->mDragSource.Idle();
   constexpr auto kAppearancePoll = std::chrono::milliseconds(250);
   const auto now = std::chrono::steady_clock::now();
   if (now - mImpl->mAppearancePolledAt > kAppearancePoll)
@@ -905,6 +910,13 @@ void IGraphicsLinux::DrawNow()
 void IGraphicsLinux::HandleXEvent(const XEvent& event)
 {
   Impl& w = *mImpl;
+  const bool wasDragging = w.mDragSource.IsDragging();
+  if (w.mDragSource.HandleEvent(event))
+  {
+    if (wasDragging && !w.mDragSource.IsDragging())
+      ReleaseMouseCapture();
+    return;
+  }
   if (w.mClipboard.HandleEvent(event))
     return;
   if (w.mFileDrop.HandleEvent(event, w.mWindowW, w.mWindowH, [this](const std::vector<const char*>& paths, int x, int y) {
@@ -1709,6 +1721,16 @@ bool IGraphicsLinux::SetTextInClipboard(const char* str)
     return false;
   ScopedXErrorTrap trap(w.mDisplay);
   return w.mClipboard.SetText(str, w.mLastEventTime);
+}
+
+bool IGraphicsLinux::InitiateExternalFileDragDrop(const char* path, const IRECT& /*iconBounds*/)
+{
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive)
+    return false;
+  HideTooltip();
+  ScopedXErrorTrap trap(w.mDisplay);
+  return w.mDragSource.Start(path, w.mLastEventTime);
 }
 
 EUIAppearance IGraphicsLinux::GetUIAppearance() const

@@ -90,6 +90,19 @@ public:
     return true;
   }
 
+  /** file:// URI of an absolute path: every byte outside RFC 3986's unreserved set and '/' percent-encoded */
+  static void AppendFileUri(WDL_String& uri, const char* path)
+  {
+    uri.Append("file://");
+    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(path); *p; ++p)
+    {
+      if (isalnum(*p) || strchr("-._~/", *p))
+        uri.Append(reinterpret_cast<const char*>(p), 1);
+      else
+        uri.AppendFormatted(4, "%%%02X", *p);
+    }
+  }
+
   /** Reads the clipboard as UTF-8, waiting at most timeoutMs for the owner. The host's main thread is blocked
    * meanwhile, so an owner that is served by this very thread (the host's own widgets) cannot answer in time. */
   bool GetText(WDL_String& str, int timeoutMs)
@@ -245,19 +258,6 @@ private:
   static WDL_String& SharedText() { static WDL_String sText; return sText; }
   /** The file URI when the clipboard holds a file (SetFilePath), empty for plain text */
   static WDL_String& SharedFileUri() { static WDL_String sUri; return sUri; }
-
-  /** file:// URI of an absolute path: every byte outside RFC 3986's unreserved set and '/' percent-encoded */
-  static void AppendFileUri(WDL_String& uri, const char* path)
-  {
-    uri.Append("file://");
-    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(path); *p; ++p)
-    {
-      if (isalnum(*p) || strchr("-._~/", *p))
-        uri.Append(reinterpret_cast<const char*>(p), 1);
-      else
-        uri.AppendFormatted(4, "%%%02X", *p);
-    }
-  }
   static Window& SharedOwner() { static Window sOwner = 0; return sOwner; }
   static bool& SharedOrphaned() { static bool sOrphaned = false; return sOrphaned; }
   static WDL_PtrList<LinuxClipboard>& OpenEditors() { static WDL_PtrList<LinuxClipboard> sEditors; return sEditors; }

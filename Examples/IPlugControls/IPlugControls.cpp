@@ -8,6 +8,29 @@
   #include "Linux/IPlugLinuxHostLoop.h"
 #endif
 
+#if defined IPLUG_TEST_DRAGOUT && defined OS_LINUX
+// Linux drag-out harness (linux-research/evidence/t020/dragout): dragging this square drags $IPLUG_TEST_DRAG_FILE out.
+class TestDragOutControl : public IControl
+{
+public:
+  using IControl::IControl;
+  void Draw(IGraphics& g) override { g.FillRect(COLOR_ORANGE, mRECT); }
+  void OnMouseDrag(float, float, float, float, const IMouseMod&) override
+  {
+    if (mStarted)
+      return;
+    const char* path = getenv("IPLUG_TEST_DRAG_FILE");
+    mStarted = true;
+    const bool started = path && GetUI()->InitiateExternalFileDragDrop(path, mRECT);
+    fprintf(stderr, "IPLUG_TEST_DRAGOUT start '%s' -> %d\n", path ? path : "", started);
+    fflush(stderr);
+  }
+  void OnMouseDown(float, float, const IMouseMod&) override { mStarted = false; }
+private:
+  bool mStarted = false;
+};
+#endif
+
 IPlugControls::IPlugControls(const InstanceInfo& info)
 : iplug::Plugin(info, MakeConfig(kNumParams, kNumPresets))
 {
@@ -511,6 +534,10 @@ IPlugControls::IPlugControls(const InstanceInfo& info)
     
     pGraphics->AttachControl(new IVButtonControl(sameCell().SubRectVertical(5, 4).FracRectHorizontal(0.5f, true), SplashClickActionFunc, "font...", style.WithDrawShadows(false)))->SetAnimationEndActionFunction(promptValueFont);
     
+#if defined IPLUG_TEST_DRAGOUT && defined OS_LINUX
+    pGraphics->AttachControl(new TestDragOutControl(IRECT::MakeXYWH(700.f, 690.f, 24.f, 24.f)));
+#endif
+
 #if defined IPLUG_TEST_APPEARANCE && defined OS_LINUX
     // Linux appearance harness (linux-research/evidence/t020/appearance): every change goes to stderr with its thread.
     pGraphics->SetUIAppearanceChangedFunc([](EUIAppearance appearance) {
