@@ -18,7 +18,7 @@ Update it at every merge or user decision.
 | Sand `linux-experiment` | `/Volumes/Storage/code/hvoya/Sand-linux` (on `origin` since 2026-10-18) | T-012: 4dcd5cd CMake, 2456460 `std::isfinite`, 60c5b96 presets + workspace, e259e96 C++23, cec9c1d `.clangd` → `compile_flags.txt` (user's D1). Needs GCC 13 on 22.04 (`iplug2-linux:22.04-gcc13`); master merged up to 0b71747 (87ccdbf, 2026-10-18) |
 
 ## In flight
-- **T-028 merged 2026-10-18** (Gneiss master c6f4442, linux-experiment f799cb3, hvoya-linux 9f9afa0e9). **T-025 merged 2026-10-19** (1e0e4be70; `hvoya` 8ca9f3324). In review / waiting: T-023, T-029 (proposals for the user), T-027 (review); T-013 and T-009's VM part wait for the VM (virgl hang 2026-10-19 ~10:20, needs Force Stop + Start in UTM). **T-010 merged 2026-10-18** (11ca71243): no Gneiss code change; VST3 latency from the fallback thread left as is (user), T-013 item 7 checks Bitwig/Renoise.
+- **T-028 merged 2026-10-18** (Gneiss master c6f4442, linux-experiment f799cb3, hvoya-linux 9f9afa0e9). **T-025 merged 2026-10-19** (1e0e4be70; `hvoya` 8ca9f3324). Also merged 2026-10-19: T-027 (b9c864d91), T-020 (aa42322c2). Waiting: T-023, T-029 (proposals for the user); T-013 and T-009's VM part wait for the VM (virgl hang 2026-10-19 ~10:20, needs Force Stop + Start in UTM). **T-010 merged 2026-10-18** (11ca71243): no Gneiss code change; VST3 latency from the fallback thread left as is (user), T-013 item 7 checks Bitwig/Renoise.
 - **T-019 merged 2026-10-18** (tooltips + XDND). Drops in other hosts are T-013's item 8.
 - Nothing else is mid-merge. Latest release archives (T-021 flow on the merged tree, smoke PASS): `linux-research/build/m021-dist/` (ignored, local only).
 

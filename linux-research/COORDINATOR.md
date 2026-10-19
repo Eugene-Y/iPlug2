@@ -47,13 +47,13 @@ Before `git worktree remove --force`, check **`git -C <wt> status --porcelain --
 - REAPER GUI steps: `GUI=<container> scripts/run-gui-test.sh <plugin> <outdir> scripts/steps/<file>.txt <container>`.
 - Long jobs: run in the background and wait for the completion notice; don't poll with sleeps. No `timeout` on macOS: `perl -e 'alarm N; exec @ARGV' cmd`.
 
-## Where the coordinator stopped (2026-10-19 afternoon, second coordinator)
+## Where the coordinator stopped (2026-10-19 evening, second coordinator)
 See `STATUS.md` for the authoritative list. In short:
-- Merged today: **T-025** (+ `hvoya` 8ca9f3324). Earlier: T-028, T-010 (2026-10-18/19).
-- **Waiting for the user's decision** (all reviewed, worktrees kept, locks released):
-  - **T-023** `linux/T-023`: proposals T23-1 (CLAP rescan after an FXP/FXB load, deferred to on_main_thread) + T23-2 (flush only with `clap.params`; Release crash otherwise); plus the question whether `RestorePreset` should inform hosts (all formats). Gneiss/Sand: 0 clap-validator failures everywhere.
-  - **T-029** `linux/T-029`: S-1 text entry (mac field takes edits; params with a parser take any character, 32-char field). Port to `hvoya` as two commits (a) mac formatter, (b) parser params. Needs a typing check in a mac host.
-- **Waiting for the VM** (virgl hang during T-013; the user must Force Stop + Start the VM in UTM): T-013 (Ardour wizard → editors, then Renoise, drops, tooltips), T-009's VM part. Locks T-013 and T-009 held by the coordinator.
-- **T-027 merged** (b9c864d91). **T-020** in review (`linux/T-020`, lock held): GL3, clipboard file, appearance, drag-out; VM checks after the restart. T-030 (multi-touch) split out.
-- Worktrees: `IPlug2-T-009`, `-T-013`, `-T-020`, `-T-023`, `-T-029`; products `Gneiss-linux`, `Sand-linux`.
-- Shared-code (mac/win) changes go to the user before merging; Gneiss commits only on the user's command.
+- Merged 2026-10-19: **T-025** (+ `hvoya` 8ca9f3324), **T-027** (b9c864d91), **T-020** (aa42322c2: GL3, clipboard file, portal dark/light, drag-out). Unpushed: hvoya-linux after 7aeb902fa-era pushes (the user pushes), `hvoya` 8ca9f3324.
+- **Waiting for the user's decision** (reviewed, worktrees kept, locks released):
+  - **T-023** `linux/T-023`: T23-1 (CLAP rescan after FXP/FXB load) + T23-2 (flush only with `clap.params`, Release crash otherwise); the `RestorePreset` question. Port to `hvoya` squashed.
+  - **T-029** `linux/T-029`: S-1 text entry, (a) mac formatter and/or (b) params with a parser; a typing check on mac.
+  - T-027 leftovers: reword the pre-port "morph rig" comment in `IPlugCLAP.cpp` on `hvoya`? Add Bromo/Delta to `check-product-names.sh`?
+- **Waiting for the VM** (virgl hang during T-013; Force Stop + Start in UTM): **T-013** (Ardour wizard → editors; Renoise; drops; tooltips; item 9 = T-020's VM checks), **T-009**'s VM part. Locks T-013 and T-009 held by the coordinator.
+- Free next (no user, no VM): T-016 audit, T-011, then the big T-017 WebView / T-018 Skia; T-030 multi-touch needs a touch device; T-022 low.
+- Worktrees: `IPlug2-T-009`, `-T-013`, `-T-023`, `-T-029`; products `Gneiss-linux`, `Sand-linux`.
