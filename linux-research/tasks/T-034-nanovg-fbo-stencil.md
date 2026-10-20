@@ -30,7 +30,7 @@ Metal clears through its load actions).
 
 ## Acceptance
 - [x] The editor of a plug-in with a concave SVG opens correctly in Ardour on the VM, repeatedly.
-- [ ] Docker smoke (IPlugControls, a product CLAP/VST3) unchanged.
+- [x] Docker smoke (IPlugControls, a product CLAP/VST3) unchanged.
 - [ ] Independent review; the user's OK for the shared-code change.
 
 ## Log
@@ -48,4 +48,7 @@ Metal clears through its load actions).
   | with the fix | 0 of 5 broken (`fixed-first-open-x5.png`) | 0 of 6 broken |
 - Windows GL builds run the same code; Windows drivers usually hand out zeroed memory, so it is unlikely to show
   there, but it is undefined behaviour on every GL driver. Metal (macOS/iOS) is not affected.
-- Next: Docker smoke; independent review; the user's OK (shared code), then merge and port to `hvoya`.
+- Docker smoke `scripts/coord/smoke-t034.sh` (REAPER, llvmpipe): all 6 builds PASS; steps PASS for IPlugControls P3b
+  CLAP, Gneiss and Sand CLAP + VST3; IPlugControls VST3 fails only g04b (host context menu, the known T28-c failure,
+  same as the T-020 merge smoke on aa42322c2). Evidence `evidence/merge-smoke/t034-*`.
+- Next: independent review; the user's OK (shared code), then merge and port to `hvoya`.
