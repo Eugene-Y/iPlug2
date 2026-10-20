@@ -1,6 +1,6 @@
 # T-035 — Real-hardware test kit: live USB on the user's laptop, tester checklist
 
-- **Status:** work-done (awaiting independent review)
+- **Status:** work-done (awaiting independent review, round 2)
 - **Owner:** worker subagent (chat f91df715), lock `.linux-port-locks/T-035` (released)
 - **Branch/worktree:** `linux/T-035` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-035`.
 - **Depends on:** packages from `makedist-linux.sh` (Gneiss, Sand; T-034/T-023 merged).
@@ -13,7 +13,7 @@ has no Linux machine; options: an old ASUS laptop booted from a **live USB** (no
 test a beta.
 
 ## Deliverables
-1. `linux-research/notes/23-real-hardware-testing.md` (internal, English):
+1. `linux-research/notes/25-real-hardware-testing.md` (internal, English):
    - Live USB on an old x86_64 laptop from macOS: which image (Ubuntu 24.04 LTS desktop; note 22.04 for the glibc
      baseline the packages target), how to write it on a Mac (balenaEtcher or `dd` — exact, safe commands with
      `diskutil list` checks), BIOS/boot-menu keys typical for ASUS (Esc/F2), "Try Ubuntu", Secure Boot notes, NVIDIA
@@ -29,7 +29,7 @@ test a beta.
      Wayland, scale factor, host version), how a crash is captured (core/gdb, or the host's crash log), and how our
      `_debug-symbols.tar.gz` (kept in `hvoya/distr/<Plugin>/debug-symbols/`) turns an address into a line.
 2. A short **tester-facing** checklist (customer beta testers; plain language, no internal paths, no repo names), as
-   `linux-research/notes/23-tester-checklist.md` — the user will adapt it for the website/e-mail. It must not promise
+   `linux-research/notes/25-tester-checklist.md` — the user will adapt it for the website/e-mail. It must not promise
    anything the packages don't do. No product-internal jargon.
 3. Optional: `linux-research/scripts/collect-linux-report.sh` — a POSIX script a tester can run that prints the
    environment facts above into one text file (no network, nothing sent anywhere, no personal data beyond what is
@@ -91,4 +91,35 @@ exercised (no such tools/session in the images). No shellcheck available (not on
    mentions it conditionally ("If we sent you …").
 2. Sand text entry: the checklist says units cannot be typed on Linux; update it if T-029 is accepted and merged.
 3. The note's first real run on the ASUS should replace each *unverified* mark with what was seen.
+
+### Review round 1 (`notes/25-review-T-035.md`): approve with fixes — fixes
+- **M1** crash example: the frame is now `(Gneiss.clap + 0x1a0d58)` resolved with `Gneiss.clap.debug`; the note maps
+  each binary to its `.debug` (`.clap` → `Gneiss.clap.debug`, VST3 `.so` → `Gneiss.so.debug`, standalone →
+  `Gneiss.debug`) and says to choose by build-id. Re-run in `iplug2-linux:22.04-gcc13-amd64` (`t035-sym`, `--rm`):
+  `Gneiss.clap.debug` @0x1a0d58 → `IPlugProcessor::ProcessBlock`, IPlugProcessor.cpp:78; gdb on the stripped
+  `Gneiss.clap` via `debug-file-directory` → same line; `Gneiss.so.debug` at the same offset → an unrelated VST3 view
+  thunk (said in the note); `Gneiss.clap.debug` @0x1e13a8 → `fonsTextBounds` (the reviewer's finding confirmed).
+- **M2** BitLocker/Device Encryption warning and saving the recovery key before any BIOS security change.
+- **M3** dd block: `N=` set by hand, every command uses `${N:?set N first}` (checked in zsh and bash: the command is
+  not run while N is empty), "everything on the stick is erased", stop unless `diskutil info` shows the stick.
+- **m1** Sand has no presets: note step 7 and checklist check 6 (Gneiss-only, Sand via the host's preset).
+- **m2** script: `build-id unknown (needs readelf or file)` instead of an empty field.
+- **m3** script: `$HOME` substitution only when HOME is set and not `/`; "Could not write <file>" and exit 1 when the
+  file is empty or not created.
+- **m4** checklist: `coredumpctl info` privacy sentence.
+- **m5** text entry: plain numbers with `.`, `+`, `-` (note and checklist); "yet" dropped from the checklist.
+- **m6** note §8: twelve checks.
+- **m7** note §7: `coredumpctl info` + `addr2line` is the primary route; a core in gdb needs an x86_64 host binary of
+  the same version, `solib-search-path` to the unpacked archive, and leaves system-library frames unresolved.
+- **m8** never click "Install Ubuntu"; ASUS Fast Boot off (F7, F10) if the stick is missing from the Esc menu.
+- **Nits done:** n1 (apport's handler only), n2 (26.04.1 5.9/6.0 GB, 26.10 mentioned), n3 (library check matches the
+  machine's architecture tag), n4 (`ldd … | grep 'not found'` for an installed standalone), n5 (AVX2: check, don't
+  go by age), n6 (Deliverables paths → `25-…`), n8 (Alt-drag line names Gneiss's cutoff snapping).
+- **Nit left:** n7 (`/var/crash` mask with `_` in a user name, `$HOME` containing `|`) — acceptable for testers, as
+  the reviewer says; fixing it would cost lines in a script near its 80-line budget (now 77).
+- **Script re-tests** (all `--rm`, `t035-*`, none left; outputs in scratchpad `t035/out2/`): plain `ubuntu:22.04`
+  (dash) as a user with Gneiss aarch64 installed (build-ids "unknown (needs readelf or file)", the standalone's
+  missing libraries listed by `ldd`), unwritable path ("Could not write", exit 1), HOME unset (38-line report);
+  `iplug2-rt:ubuntu22.04-amd64` with Gneiss + Sand x86_64 installed (all six build-ids, libraries found with
+  `libc6,x86-64`); `iplug2-linux:24.04` with Xvfb and `iplug2-rt:fedora` (libraries found with `libc6,AArch64`).
 

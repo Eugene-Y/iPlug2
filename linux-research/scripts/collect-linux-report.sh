@@ -12,7 +12,8 @@ build_id() {
   if have readelf; then readelf -n "$1" 2>/dev/null | sed -n 's/.*Build ID: //p'
   else file -L "$1" 2>/dev/null | sed -n 's/.*BuildID\[[a-z0-9]*\]=\([0-9a-f]*\).*/\1/p'; fi
 }
-lib() { ldconfig -p 2>/dev/null | grep -q "/$1\$" && echo found || echo MISSING; }
+case "$ARCH" in x86_64) LIBTAG='libc6,x86-64' ;; aarch64) LIBTAG='libc6,AArch64' ;; *) LIBTAG='libc6' ;; esac
+lib() { ldconfig -p 2>/dev/null | grep -qF "$1 ($LIBTAG" && echo found || echo MISSING; }
 [ -x /sbin/ldconfig ] && PATH="$PATH:/sbin"
 
 report() {
@@ -55,8 +56,12 @@ report() {
              "$HOME/.vst3/$n.vst3/Contents/$ARCH-linux/$n.so" /usr/lib/vst3/$n.vst3/Contents/$ARCH-linux/$n.so \
              "$HOME/.local/lib/$n/$n" /opt/$n/$n; do
       [ -f "$f" ] || continue
-      echo "$f  build-id $(build_id "$f")"
-      case "$f" in *.clap) [ -d "${f%.clap}.resources" ] || echo "  $n.resources is missing next to it" ;; esac
+      id="$(build_id "$f")"
+      echo "$f  build-id ${id:-unknown (needs readelf or file)}"
+      case "$f" in
+        *.clap) [ -d "${f%.clap}.resources" ] || echo "  $n.resources is missing next to it" ;;
+        */$n) ldd "$f" 2>/dev/null | grep 'not found' ;;
+      esac
     done
   done
 
@@ -66,5 +71,7 @@ report() {
   ls /var/crash 2>/dev/null | sed 's|_home_[^_]*_|_home_<user>_|'
 }
 
-report 2>&1 | sed "s|$HOME|~|g" > "$OUT"
+if [ -n "$HOME" ] && [ "$HOME" != / ]; then report 2>&1 | sed "s|$HOME|~|g" > "$OUT"
+else report > "$OUT" 2>&1; fi
+[ -s "$OUT" ] || { echo "Could not write $OUT" >&2; exit 1; }
 echo "Written to $OUT. Please add your host (DAW) name and version, and what you did when the problem happened."

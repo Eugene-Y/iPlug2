@@ -41,12 +41,13 @@ For each one: did it work? If not, what did you see? A screenshot or a short scr
 3. **Resize.** Drag the handle at the bottom-right corner of the plug-in window, then close and reopen the window.
    *Expected:* the whole interface scales and keeps its size when reopened.
 4. **Type a value** (Sand): click a value under a knob, type a number, press Enter (or Escape to cancel).
-   *Expected:* the new value is set. On Linux only digits work for now: units such as "kHz" and input methods for
-   non-Latin scripts are not supported yet.
+   *Expected:* the new value is set. On Linux you can type plain numbers (digits, a decimal point, a minus sign);
+   units such as "kHz" cannot be typed, and input methods for non-Latin scripts are not supported.
 5. **Tooltips.** Hover a control (tooltips can be switched on and off in the plug-in). *Expected:* a short help
    text appears near the pointer.
-6. **Presets.** Step through the presets; save one to a file and load it again (Gneiss). *Expected:* the sound and
-   the controls change together; the file window opens and the saved preset comes back.
+6. **Presets** (Gneiss). Step through the presets; save one to a file and load it again. *Expected:* the sound and
+   the controls change together; the file window opens and the saved preset comes back. (Sand has no presets of
+   its own: save its settings as a preset in your host and load them back instead.)
 7. **Automation.** Record a knob movement in the host and play it back, once with the plug-in window open and once
    with it closed. *Expected:* the sound and the knob follow the automation.
 8. **Save and reopen.** Save the project, quit the host, open the project again. *Expected:* every setting is back.
@@ -63,9 +64,9 @@ For each one: did it work? If not, what did you see? A screenshot or a short scr
 
 ## Known limitations on Linux
 - Some desktops (Xfce, MATE, Cinnamon, KDE Plasma 5) move windows when you Alt-drag. There, Alt-drag on a knob
-  moves the plug-in window instead. Change the window manager's move key to Super (Meta in KDE) in its settings.
+  moves the plug-in window instead (in Gneiss, Alt-drag on a cutoff snaps it to notes). Change the window manager's move key to Super (Meta in KDE) in its settings.
 - Input methods for non-Latin scripts do not work in the plug-ins' text fields.
-- Units cannot be typed into value fields yet (see check 4).
+- Units cannot be typed into value fields (see check 4).
 
 ## If something goes wrong
 Send us:
@@ -76,4 +77,5 @@ Send us:
 
 **If the host crashed:** tell us the time it happened. On Fedora, and on other systems where the command exists,
 `coredumpctl list` shows recent crashes; `coredumpctl info <number in the PID column>` prints a report we can read.
-Please send that output too.
+Please send that output too. It contains your computer's name and folder names: remove anything you prefer not to
+share.
