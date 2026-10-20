@@ -23,10 +23,10 @@ Update it at every merge or user decision.
 - Nothing else is mid-merge. Latest release archives (T-021 flow on the merged tree, smoke PASS): `linux-research/build/m021-dist/` (ignored, local only).
 
 ## Waiting on the user
-- **VM restart** (UTM Force Stop + Start): the virgl GPU hung during T-013 (4th time).
+- **T-034 (shared code, 2026-10-20):** clear the NanoVG GL main FBO's stencil on creation (`IGraphicsNanoVG.cpp`, also for `hvoya`/Windows GL). OK to merge?
 - **Decisions:** T-023 (T23-1 + T23-2; `RestorePreset` question), T-029 (S-1 text entry, (a) and/or (b); typing check on mac).
 - **More decisions (2026-10-19 evening):** T-032 (sync dialogs: recommended option 3 = make iPlug2's own callers async now, blocking wait only APP/opt-in); IME via IBus/Fcitx (deviation or task); reword the pre-port "morph rig" comment in `IPlugCLAP.cpp` on `hvoya`; add Bromo/Delta to `check-product-names.sh`; T-033's CI workflow change.
-- **Push:** `hvoya` 8ca9f3324 and hvoya-linux (8b9258b29 and earlier).
+- **Push:** hvoya-linux after d8f363e17 (the user pushed `hvoya` 8ca9f3324 and hvoya-linux up to 8b9258b29 on 2026-10-20).
 0. **Gneiss:** say "commit" for the MANUAL note in `linux-experiment` (T10-1); on mac, type "1.06 kHz" into REAPER's parameter window for Gneiss (the T-028 Release build is installed in `~/Library`).
 1. **Pushes**: everything was pushed on 2026-10-18 with the user's one-off permission (iPlug2 `hvoya` 4fbfc579d and `hvoya-linux` 045b3ca11 to `gene`, Sand and Gneiss `master` + `linux-experiment` to `origin`). The default stays: the user pushes; Claude pushes only with a fresh permission in the current request. `gene` is https without credentials: push to `git@github.com:Eugene-Y/iPlug2.git` (Gneiss: `git@github.com:Eugene-Y/Gneiss.git`) with explicit refspecs, then fetch into `refs/remotes/...`.
 2. **After T-024 (F2):** add `_midiCCMediator.OnIdle();` to `OnIdle` in DMT, Melter, Crust_new (uncommitted one-line changes are ready in `hvoya/DMT-t024`, `Melter-t024`, `Crust_new-t024`; DMT and Melter don't build with current hvoya anyway; Crust_new has the user's own uncommitted edits) and in Scape (not git). Without it their knobs stop following CC (audio still follows).
@@ -63,6 +63,10 @@ Update it at every merge or user decision.
 - A fresh iPlug2 worktree needs `scripts/install-sdks.sh <worktree>` before any build. It modifies `Dependencies/IPlug/VST3_SDK/README.md`; never commit that.
 - REAPER's VST3 host parameter context menu does not open on a same-millisecond synthetic click (`xdotool click`), only on a held right click. Gneiss VST3's right-click harness step therefore fails; this is not a regression.
 - After limits or sleep, orphaned agent scripts can keep running for a day: the `verify.sh` loop, test binaries. Check `ps` and kill them.
+- **Never `xdotool windowclose` a host's window on the VM** (2026-10-20): it *destroys* the window (XDestroyWindow). That
+  crashed `mutter-x11-frames`; gnome-shell did not restart it, so server-decorated windows (Ardour, GTK2) stayed
+  unmapped and Ardour exited on BadWindow. Close windows with their close button. Recovery without a new session:
+  `setsid /usr/libexec/mutter-x11-frames &` (through `vm-x.sh`).
 - **The VM's virgl GPU can hang.**
   - Seen during T-007 mode changes and on 2026-10-16 during T-008.
   - Symptoms: X stops answering (`xdpyinfo` times out), a kworker sits in D state, and `dmesg` shows `drm_atomic_helper_wait_for_fences … blocked`.
