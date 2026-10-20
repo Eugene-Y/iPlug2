@@ -1,6 +1,6 @@
 # T-013 — Host matrix (P10)
 
-- **Status:** in progress (Carla done; Ardour, Renoise next)
+- **Status:** in progress (Carla, Ardour done; Renoise, drops, item 9 next)
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-013`
 - **Branch/worktree:** `linux/T-013` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-013` — for harness/docs and any host-compat fix.
 - **Depends on:** T-002, T-007 (merged). Products: Gneiss (T-003), Sand (T-012).
@@ -73,3 +73,33 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
 - Launched the Ardour GUI with that session: its first-run wizard. While stepping through the wizard with clicks, the **VM's virgl GPU hung** (dmesg: `dma_fence_wait_timeout` ← `drm_atomic_helper_wait_for_fences`, a kworker in D state; X stopped answering, `xdotool`/`import` hang). This is the known hang (STATUS "Environment gotchas", now the 4th time), this time after the Carla runs (≈ 12 editor opens) and Ardour's start; no churn ran on the VM.
 - **Paused: the VM needs Force Stop + Start in UTM (the user).** Then: Ardour wizard → session → open each plug-in's editor (mixer strip), host-loop trace, automation, save/reload; Renoise; drops; tooltips.
 - Note for the hang question: the trace builds open a GL context per editor; Ardour itself is GL-free (GTK2/Cairo).
+
+### 2026-10-20 — Ardour 8.4 (VST3), after the VM restart
+Same builds as Carla (hvoya-linux 86b87408c + trace flags). No first-run wizard: `touch ~/.config/ardour8/.a8` (Ardour's
+"been here before" file). Scripts in `scripts/vm/probe/ardour/` (`open-gneiss.sh`, `quit.sh`, `gneiss-reopen.sh`,
+`gneiss-relaunch.sh`, `gui-probe.lua` for Window > Scripting — Ardour's GUI Lua is sandboxed, no `dofile`/`io`, so the
+probe is typed in as one line). Evidence `evidence/t013/ardour/` (PNGs local).
+
+| Case | Gneiss | Sand | IPlugControls |
+|---|---|---|---|
+| 1 editor opens, renders | PASS (`08`) — but see the logo bug below | PASS (`12`) | PASS (`13`) |
+| 2 mouse: knob drag | PASS (A hz 316 Hz → 9.39 kHz, `09`) | — | — |
+| 2 text entry | — (no text entry in Gneiss) | PASS: click value, type `2000`, Enter → 2.00 kHz; Ardour takes no keys | — |
+| 2 host shortcut with the editor focused | Space starts Ardour's transport (`09`) | | |
+| 2 tooltip | | PASS (`a-law compander…`) | |
+| 2 right-click on a param control | | | no menu: Ardour gives no `IComponentHandler3` context menu, iPlug returns silently (same on every OS) |
+| 4 save with the editor open, quit, reopen | PASS: value and preset restored, Ardour reopens the editor (`11`) | | |
+| 5 latency, editor closed | PASS: OS 1x→8x from Ardour Lua: insert latency 0→8, route playback latency 1040→1048; back to 1x → 0/1040 (`20`, `21`) | | |
+| 6 close the editor with an iPlug menu open | | | PASS (`15`, `16`): first click on the close button closes it, Ardour lives |
+| 7 host loop | editor open: frame `IRunLoop` on the main thread (fd + timer); closed: fallback thread | same | same |
+
+- Ardour's Lua parameter indices are the plug-in's + 1 (Ardour puts Bypass at 0); values are plain.
+- **Found: SVG logo drawn as light boxes on an editor's first frame** (the user's report) → **T-034** (iPlug's NanoVG
+  main FBO stencil is never cleared; fix verified here: unfixed 3 of 4 first opens broken, fixed 0 of 5).
+- **VM/GNOME gotchas (not iPlug):** `xdotool windowclose` *destroys* a window (XDestroyWindow) — never use it on a
+  host's windows: it crashed `mutter-x11-frames`, gnome-shell did not restart it, and every server-decorated window
+  (Ardour is GTK2) stayed unmapped, then Ardour exited on BadWindow. Recovery without a session restart:
+  `setsid /usr/libexec/mutter-x11-frames &` in the session. Close windows with their close button. Ardour's ALSA
+  backend hung in `ardour-request-device` (PipeWire device reservation) after a killed run; switched the VM's Ardour
+  to the Dummy backend (`~/.config/ardour8/config`, backup `config.t013-alsa`).
+- Next: Renoise; drops from GNOME Files (case 8) in Carla/Ardour; item 9 (T-020's VM checks); automation lanes.
