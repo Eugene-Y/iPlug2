@@ -23,6 +23,8 @@ Update it at every merge or user decision.
 - Nothing else is mid-merge. Latest release archives (T-021 flow on the merged tree, smoke PASS): `linux-research/build/m021-dist/` (ignored, local only).
 
 ## Waiting on the user
+- **T-036 (Sand mac/win dist scripts, review-done):** merge Sand `dist-scripts` (bcb22ec) into Sand `master`? Before the first real mac run: bump `config.h` (a default run replaces the hand-made `Sand_v1.1.10_mac/`). Decide: `PLUG_VERSION_HEX 0x00010110` reads as 1.1.16 (also in the shipped 1.1.10); ship docs?; Windows VST3 as a bundle (script) or bare DLL (hand-made zip)?; install by default?; Windows output folder `C:\code\Distributables\Sand`? First Windows run: check zip entry separators, the dirty check's iPlug2 path, `build-win\Sand.vst3` holds only `x86_64-win`.
+- **T-035 questions:** give testers `collect-linux-report.sh`?; the checklist's "units can't be typed" line changes if T-029 is merged.
 - **Decisions:** `RestorePreset` question (T-023 merged), T-029 (S-1 text entry, (a) and/or (b); typing check on mac).
 - **More decisions (2026-10-19 evening):** T-032 (sync dialogs: recommended option 3 = make iPlug2's own callers async now, blocking wait only APP/opt-in); IME via IBus/Fcitx (deviation or task); reword the pre-port "morph rig" comment in `IPlugCLAP.cpp` on `hvoya`; add Bromo/Delta to `check-product-names.sh`; T-033's CI workflow change.
 - **Pushed 2026-10-20 (the user's permission for this push):** `hvoya` f743742bc, hvoya-linux 5cb35ed39, Gneiss `master` b1733b7 + `linux-experiment` 773867e, Sand `master` d2294da + `linux-experiment` 052a0bc. Default stays: the user pushes; Claude only with a fresh permission.
