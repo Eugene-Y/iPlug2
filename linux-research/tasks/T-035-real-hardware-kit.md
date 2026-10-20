@@ -1,6 +1,6 @@
 # T-035 — Real-hardware test kit: live USB on the user's laptop, tester checklist
 
-- **Status:** work-done (awaiting independent review, round 2)
+- **Status:** review-done (independent review approved in round 2; R2-1, R2-2 fixed by the coordinator)
 - **Owner:** worker subagent (chat f91df715), lock `.linux-port-locks/T-035` (released)
 - **Branch/worktree:** `linux/T-035` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-035`.
 - **Depends on:** packages from `makedist-linux.sh` (Gneiss, Sand; T-034/T-023 merged).
@@ -123,3 +123,11 @@ exercised (no such tools/session in the images). No shellcheck available (not on
   `iplug2-rt:ubuntu22.04-amd64` with Gneiss + Sand x86_64 installed (all six build-ids, libraries found with
   `libc6,x86-64`); `iplug2-linux:24.04` with Xvfb and `iplug2-rt:fedora` (libraries found with `libc6,AArch64`).
 
+
+### 2026-10-20 — review round 2 and the last fixes (coordinator)
+- Round 2 (`notes/25-review-T-035.md`): approve; all majors/minors fixed, n7 accepted as is.
+- R2-1 (minor): trailing `#` comments broke the Mac `dd`/`diskutil` lines in zsh (no `interactivecomments`): moved
+  off the command lines into numbered steps; the `ls` in the symbolisation block too.
+- R2-2 (nit): an existing read-only report file made the script say "Written to" and exit 0: the output file is now
+  created in a subshell first ("Could not write …", exit 1). Tested in `ubuntu:22.04` with dash: read-only → exit 1;
+  normal run → 38 lines, exit 0. Script now 78 lines.

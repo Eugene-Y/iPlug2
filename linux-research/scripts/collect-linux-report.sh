@@ -71,6 +71,7 @@ report() {
   ls /var/crash 2>/dev/null | sed 's|_home_[^_]*_|_home_<user>_|'
 }
 
+( : > "$OUT" ) 2>/dev/null || { echo "Could not write $OUT" >&2; exit 1; }
 if [ -n "$HOME" ] && [ "$HOME" != / ]; then report 2>&1 | sed "s|$HOME|~|g" > "$OUT"
 else report > "$OUT" 2>&1; fi
 [ -s "$OUT" ] || { echo "Could not write $OUT" >&2; exit 1; }

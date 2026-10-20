@@ -35,23 +35,32 @@ Balena. If macOS then says the disk is not readable, choose **Eject**, not Initi
 (a Time Machine drive or a second external disk is also "external physical"). So the number is set once, by hand,
 after looking twice; while `N` is empty, `${N:?…}` stops every command below before it runs:
 
-```sh
-diskutil list external physical          # before inserting the stick: note what is listed (maybe nothing)
-# insert the stick, then:
-diskutil list external physical          # the one new entry is the stick
-N=                                       # its number, e.g. N=4 for /dev/disk4 (type it yourself)
-diskutil info /dev/disk${N:?set N first} | grep -E 'Device / Media Name|Disk Size|Removable Media|Protocol'
-```
+No `#` comments on command lines: the Mac's zsh does not treat `#` as a comment when typing or pasting.
+
+1. Before inserting the stick, note what is listed (maybe nothing):
+   ```sh
+   diskutil list external physical
+   ```
+2. Insert the stick and run it again; the one new entry is the stick:
+   ```sh
+   diskutil list external physical
+   ```
+3. Type its number yourself (e.g. `N=4` for `/dev/disk4`), then check it:
+   ```sh
+   N=
+   diskutil info /dev/disk${N:?set N first} | grep -E 'Device / Media Name|Disk Size|Removable Media|Protocol'
+   ```
 
 **Stop** unless that shows the stick's brand, its size, and `Removable Media` / USB. Then:
 
 ```sh
 diskutil unmountDisk /dev/disk${N:?set N first}
-sudo dd if=ubuntu-24.04.5.1-desktop-amd64.iso of=/dev/rdisk${N:?set N first} bs=4m status=progress   # rdisk: the raw, fast node
+sudo dd if=ubuntu-24.04.5.1-desktop-amd64.iso of=/dev/rdisk${N:?set N first} bs=4m status=progress
 sync
 diskutil eject /dev/disk${N:?set N first}
 ```
 
+- `rdisk` is the raw device node: the same disk, written much faster.
 - `bs=4m` and `status=progress` are accepted by the macOS 26 `dd` (checked on the user's Mac); if an older `dd`
   rejects `status=progress`, drop it and press Ctrl+T for progress.
 - Never use `/dev/disk0` or `/dev/disk1`–`3` on an Apple Silicon Mac: they are internal or synthesized APFS disks.
@@ -249,7 +258,8 @@ to the right file. For a frame `(Gneiss.clap + 0x1a0d58)` from the 1.3.1 paid x8
 
 ```sh
 tar -xzf Gneiss_v1.3.1_linux_x86_64_paid_debug-symbols.tar.gz
-ls Gneiss_v1.3.1_linux_x86_64_paid_debug-symbols/.build-id/0d/      # 35b4b8….debug -> ../../Gneiss.clap.debug
+ls -l Gneiss_v1.3.1_linux_x86_64_paid_debug-symbols/.build-id/0d/
+#   35b4b8….debug -> ../../Gneiss.clap.debug
 addr2line -f -C -i -e Gneiss_v1.3.1_linux_x86_64_paid_debug-symbols/Gneiss.clap.debug 0x1a0d58
 #   iplug::IPlugProcessor::ProcessBlock(double**, double**, int)
 #   /Volumes/Storage/code/IPlug2-linux/IPlug/IPlugProcessor.cpp:78 (discriminator 1)

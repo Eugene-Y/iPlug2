@@ -216,3 +216,91 @@ what Alt does. Say "(Gneiss: Alt-drag on a cutoff snaps it to notes)".
 **Approve with fixes.** Fix M1–M3 before the user uses the note on the laptop. M1 gives a wrong function name for a
 CLAP crash; M2 and M3 are data-loss risks that each need a few added lines. m1–m8 should go in the same pass (each is
 a line or two). The nits are optional.
+
+## Round 2 (2026-10-20, same reviewer)
+
+Scope: e4fe7ef72 on `linux/T-035`, which touches the two notes, the script, the task file, and adds this review.
+Re-run myself:
+- the symbolisation in `iplug2-linux:22.04-gcc13-amd64`;
+- the `dd` block in interactive zsh and bash, with `diskutil`, `sudo` and `sync` replaced by echo stubs (nothing was
+  run against a disk);
+- the script in dash on plain `ubuntu:22.04` and on `iplug2-rt:ubuntu22.04-amd64` with both packages installed.
+
+All containers were `--rm`, named `t035r-*`; none are left. Outputs: scratchpad `t035r/out2r/`.
+
+### Per finding
+- **M1: fixed.** `Gneiss.clap.debug` @0x1a0d58 → `iplug::IPlugProcessor::ProcessBlock`, `IPlugProcessor.cpp:78
+  (discriminator 1)`, exactly as the note prints it. gdb with `set debug-file-directory` on the stripped
+  `CLAP/Gneiss.clap`: same line. `.build-id/0d/35b4b8….debug -> ../../Gneiss.clap.debug` as the note shows.
+  `Gneiss.so.debug` at the same offset → `non-virtual thunk to IPlugVST3View<…>::onKeyUp`, so the note's "unrelated
+  VST3 view thunk" is right. The first LOAD segment is at 0 in all three binaries (CLAP, VST3, standalone), so "file
+  address = module offset" holds for each. The binary-to-`.debug` map and "choose by build-id" are clear.
+- **M2: fixed.** The BitLocker / Device Encryption warning comes before any BIOS change. It names the consequence, the
+  check, and where to save the key (aka.ms/myrecoverykey). It says the Esc boot menu alone does not trigger it, and the
+  Fast Boot bullet points back to it. Nit: the Settings path is Windows 11's; on Windows 10 it is Settings → Update &
+  Security → Device encryption. Control Panel → BitLocker covers both, so this is fine as is.
+- **M3: fixed for the danger it was about.** With `N` unset or empty, every `${N:?set N first}` command stops before
+  it runs:
+  - bash 3.2 `-i`: `bash: N: set N first`, for `diskutil info`, `unmountDisk`, `sudo dd` and `eject`;
+  - zsh `-f -i`: `zsh: N: set N first`, for the same four. The stubs show `diskutil`/`sudo` never ran with a disk
+    argument; only `sync` ran, which is harmless.
+
+  The expansion happens in the user's shell before `sudo`, so `dd` never starts. The text says the stick is erased,
+  and to stop unless `diskutil info` shows the stick. A new issue in the same block is **R2-1** below.
+- **m1: fixed.** Note step 7 and checklist check 6 are Gneiss-only; Sand is checked through the host's preset save
+  and load.
+- **m2: fixed.** Plain `ubuntu:22.04` (no readelf/file) prints `build-id unknown (needs readelf or file)`. The amd64
+  image prints all six build-ids, matching `.inspect.txt` (Gneiss `0d35b4b8…`/`467039e6…`/`f1013d1e…`, Sand
+  `3590b44a…`/`ec090980…`/`1235aa40…`).
+- **m3: fixed for the reported cases:**
+  - an unwritable path gives "Could not write /nonexist/x.txt", exit 1;
+  - `HOME` unset gives a 38-line report, no sed error;
+  - `HOME=/` is not substituted (no `~` in place of every `/`).
+
+  One case remains: a **stale, read-only file of the same name**. The shell cannot overwrite it, `[ -s ]` sees the
+  old content, and the script prints "Written to r.txt" with exit 0 (reproduced). Rare (same explicit name, or the
+  same minute, on a read-only medium), so this is a nit (**R2-2**).
+- **m4: fixed.** The checklist now says the crash report contains the computer's name and folder names.
+- **m5: fixed.** "plain numbers (digits, a decimal point, a minus sign)" matches `ITextEntryControl.cpp:279-297`.
+  "yet" is gone.
+- **m6: fixed.** "twelve checks, known limitations".
+- **m7: fixed.** `coredumpctl info` + `addr2line` is the primary route. The core-in-gdb needs (x86_64 host binary of
+  the same version, `solib-search-path`, unresolved system frames) are stated.
+- **m8: fixed.** "never click Install Ubuntu"; the ASUS Fast Boot step (F7, F10).
+- **n1, n2, n3, n4, n5, n6, n8: fixed.**
+  - n3: the arch tag `libc6,x86-64` / `libc6,AArch64` is matched as a fixed-string prefix. An i386-only
+    `(libc6)` line now reads MISSING; an `(libc6,x86-64, OS ABI: …)` line reads found.
+  - n4: `ldd … | grep 'not found'` listed all 15 missing standalone libraries on plain 22.04, and printed nothing on
+    the runtime image.
+- **n7: left by decision.** Accepted.
+
+The script is 77 lines, and `sh -n` and `dash -n` both pass. There are still no comments beyond the header, and no
+network use. The home folder is masked (no `/home` in either output).
+
+### New findings
+- **R2-1 (minor): trailing `#` comments break the Mac commands in the user's zsh.**
+  `notes/25-real-hardware-testing.md:39-44,50` (the two `dd` blocks). In zsh, `interactivecomments` is **off** by
+  default, and it is off in the user's own zsh (`zsh -i -c 'setopt'` does not list it). Pasted or typed as printed:
+  - `diskutil list external physical # before inserting the stick: note what is listed (maybe nothing)` fails with
+    `zsh: number expected`: the `(maybe nothing)` is read as a glob qualifier;
+  - `diskutil list external physical # the one new entry is the stick` passes `#` and the words to diskutil, which
+    prints its usage and exits 1, so the listing never appears;
+  - the `N=   # its number, e.g. N=4 …` line fails (`unknown file attribute: y`);
+  - the `dd` line, even with `N` set correctly, passes `# rdisk: the raw, fast node` as operands. macOS `dd` stops
+    with `dd: unknown operand #` before it opens anything (checked: no output file created).
+
+  So it **fails safe**, nothing is erased, but the procedure does not work as printed in the Mac's default shell.
+  **Fix:** remove the trailing comments from the command lines in §2's two blocks. Put them in the prose, or on
+  their own lines, where zsh only reports `command not found: #` (harmless). Keep `N=` alone on its line.
+  Alternatively, start the block with `setopt interactivecomments 2>/dev/null` (bash ignores it with an error).
+  The first option is cleaner.
+- **R2-2 (nit): a stale read-only output file still produces "Written to".**
+  `scripts/collect-linux-report.sh:74-76`. Fix in one line, before the report: `: > "$OUT" 2>/dev/null || { echo
+  "Could not write $OUT" >&2; exit 1; }`. That keeps the script within its budget (78 lines).
+
+### Round 2 verdict
+**Approve, with one minor fix still to make (R2-1)**: take the trailing comments out of §2's command lines. All three
+majors are resolved. M1 was re-run with the correct result, and M3's guard demonstrably stops every disk command
+while `N` is empty, in both zsh and bash. R2-1 is not a data-loss risk; it fails safe, but the user would hit it on
+the first try in his own shell, so it should be fixed before he uses the note. That is a two-minute edit and needs no
+further review round. R2-2 and n7 are optional.
