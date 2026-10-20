@@ -43,7 +43,7 @@ Gneiss на mac/win использует нативные меню — его н
 Рядом: CLAP не переопределял `InformHostOfPresetChange`. iPlug зовёт его только из загрузчиков FXP/FXB (`LoadStateFromFXP`/`LoadBankFromFXB` …), не из `RestorePreset`. Предложение T23-1 ниже (T-023).
 
 ## Из T-004 (standalone APP, общий код `IPlug/APP/IPlugAPP_host.cpp`) — исправлено с согласия автора
-Меняют поведение mac/win только в сбойных случаях, нормальная работа не меняется. В `hvoya-linux`; в `hvoya` попадут при будущем слиянии.
+Меняют поведение mac/win только в сбойных случаях, нормальная работа не меняется. В `hvoya-linux`; в `hvoya` попадут при будущем слиянии. **Перенесено в `hvoya` 2026-10-20 по команде автора:** b304a5a3c, 41c689868, de16d8c8c; там же 593293cfb (CLAP `paramsValueToText`: запись на байт за буфер, коммит из основы порта).
 | ID | Коммит | Суть |
 |---|---|---|
 | A2 | 013328ba4 | `GetMIDIPortNumber`: разыменование null, если RtMidi не инициализировался, а в settings.ini имя порта ≠ "off" |
