@@ -97,6 +97,8 @@ void IPlugEffect::OnIdle() {
 		tryUpdateLayout();
 
 	_midiCCMediator.OnIdle();
+	if (_midiCCMediator.takeUIDirty()) // a CC just bound by learning: update the CC# indicators
+		_midiCCMediator.refreshUI();
 }
 
 
