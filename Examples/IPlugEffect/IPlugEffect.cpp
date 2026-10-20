@@ -95,6 +95,8 @@ void IPlugEffect::initializeParams() {
 void IPlugEffect::OnIdle() {
 	if (_needsUIUpdate.exchange (false, std::memory_order_acq_rel))
 		tryUpdateLayout();
+
+	_midiCCMediator.OnIdle();
 }
 
 

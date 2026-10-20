@@ -211,7 +211,7 @@ void IPlugEffect::initializeLayout() {
 
 			setTooltips (pG);
 
-            _midiCCMediator.UpdateMidiControllableUI();
+            _midiCCMediator.refreshUI();
         };
 
     #endif
