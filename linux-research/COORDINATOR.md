@@ -47,6 +47,15 @@ Before `git worktree remove --force`, check **`git -C <wt> status --porcelain --
 - REAPER GUI steps: `GUI=<container> scripts/run-gui-test.sh <plugin> <outdir> scripts/steps/<file>.txt <container>`.
 - Long jobs: run in the background and wait for the completion notice; don't poll with sleeps. No `timeout` on macOS: `perl -e 'alarm N; exec @ARGV' cmd`.
 
+## Where the coordinator stopped (2026-10-21 day)
+See `STATUS.md` "Waiting on the user". Since the night section below:
+- **Merged 2026-10-21** (each via worker agent → independent reviewer agent, ≤ 2 rounds): T-013 Renoise (d6a361df0; IGraphicsLinux XEmbed FOCUS_OUT/FOCUS_IN pairing), T-013 drops + T-020 VM checks + PC checklist (c62128b28), T-011 (839e1b51d; `duplicate.py`, shared mac/win, not on `hvoya`), T-031 (cbb4d7105; done and reviewed in another chat, smoke here).
+- **Unpushed:** hvoya-linux after 1cd9110fa (everything above), Sand `dist-scripts`.
+- **Other chats:** T-022 (APP JACK MIDI) in progress, lock `T-022`.
+- **VM state:** `~/.clap/Gneiss.clap` is T-011's Debug build: redeploy before the next VM test. `~/dev/t011/` holds T-011's duplicates for the user to try. Renoise OSC off, colour scheme `prefer-dark`.
+- **T-013 left:** Qtractor, Zrythm (install approved in the task's Hosts section), a Wayland session, the final review. T-009's VM run still open (coordinator holds T-009 and T-013 locks).
+- **Smoke gotcha:** `reaper-ext-test.sh` runs in the GUI container with cwd `linux-research`: pass `build/<dir>/out/reaper_X.so`, not `../build/...`.
+
 ## Where the coordinator stopped (2026-10-21 night, second coordinator, before a context compaction)
 See `STATUS.md` "Waiting on the user" for the authoritative list; the user decides those in the morning.
 - **Done 2026-10-20:** T-034 (NanoVG GL main-FBO stencil; merged 29022e440, `hvoya` 07953bf26), T-023 (CLAP preset rescan + flush check; merged 4cbaaef7a, `hvoya` b5dc25d0d), shared fixes ported to `hvoya` (CLAP `paramsValueToText` off-by-one 593293cfb, APP A1-A4, IPlugEffect example 5b263fc83/f743742bc), Gneiss `master` b1733b7 / Sand `master` d2294da picks, `makedist-linux.sh` for Gneiss and Sand (publish to `hvoya/distr/<Plugin>/`, `debug-symbols/` subfolder, `--allow-dirty`), T-013 Ardour results (`linux/T-013` f932e7e0c), T-035 merged 6ba2a22bf (real-hardware kit, notes/25-*), T-036 review-done (Sand `dist-scripts` bcb22ec in `/Volumes/Storage/code/hvoya/Sand-dist`, not merged). Everything up to 5cb35ed39 pushed with the user's permission; **unpushed:** hvoya-linux after 1cd9110fa (board/STATUS/T-035 merge/T-036 records, HEAD 0b3fcc9fe+), Sand `dist-scripts`.

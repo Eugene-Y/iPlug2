@@ -1,6 +1,6 @@
 # T-031 — REAPER extensions and the REAPER-plug-in example on Linux
 
-- **Status:** review-done (found by the T-016 audit) — independent review approved in round 2
+- **Status:** merged cbb4d7105 (found by the T-016 audit) — independent review approved in round 2
 - **Owner:** Claude Opus 5.5 instance, 2026-10-21 (lock released)
 - **Branch/worktree:** `linux/T-031` from `hvoya-linux`.
 - **Depends on:** nothing. The WebUI extension's web view is T-017.

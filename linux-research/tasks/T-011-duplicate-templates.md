@@ -1,6 +1,6 @@
 # T-011 — Painless duplication: a new plug-in project that builds and debugs on Linux at once
 
-- **Status:** work done, awaiting independent review (AGENTS §4); Gneiss part awaits the user's commit of a patch
+- **Status:** merged 839e1b51d (independent review: round 2 approve, R2-1 fixed by the coordinator); Gneiss part awaits the user's commit of a patch
 - **Owner:** T-011 worker (chat f91df715), lock `.linux-port-locks/T-011`
 - **Branch/worktree:** `linux/T-011` from `hvoya-linux` (64312897b), in `/Volumes/Storage/code/IPlug2-T-011`.
 - **Depends on:** T-005 (presets, `<Name>-linux.code-workspace`, `.clangd`, `Scripts/linux/reaper-open-fx.lua`, `Documentation/linux-development.md`).
