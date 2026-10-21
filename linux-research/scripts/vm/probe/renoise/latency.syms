@@ -1,0 +1,17 @@
+# iPlug VST3 latency path. The host calls these through IAudioProcessor/IComponent, i.e. the non-virtual thunks
+# (_ZThn*), and a tiny body like getLatencySamples is duplicated into its thunks: a break on the method alone misses them.
+_ZN5iplug9IPlugVST310SetLatencyEi
+_ZThn1320_N5iplug9IPlugVST310SetLatencyEi
+_ZN5iplug9IPlugVST317getLatencySamplesEv
+_ZThn1832_N5iplug9IPlugVST317getLatencySamplesEv
+_ZThn2088_N5iplug9IPlugVST317getLatencySamplesEv
+_ZN5iplug9IPlugVST39setActiveEh
+_ZThn1832_N5iplug9IPlugVST39setActiveEh
+_ZThn2080_N5iplug9IPlugVST39setActiveEh
+_ZN5iplug9IPlugVST313setProcessingEh
+_ZThn1832_N5iplug9IPlugVST313setProcessingEh
+_ZThn2088_N5iplug9IPlugVST313setProcessingEh
+# Renoise's side: the restart request, and the deferred lambda that runs it
+_ZN9TVst3Plug16restartComponentEi
+_ZThn1568_N9TVst3Plug16restartComponentEi
+_ZNSt17_Function_handlerIFvvEZN9TVst3Plug16restartComponentEiEUlvE_E9_M_invokeERKSt9_Any_data
