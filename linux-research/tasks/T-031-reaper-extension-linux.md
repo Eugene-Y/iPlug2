@@ -1,7 +1,7 @@
 # T-031 — REAPER extensions and the REAPER-plug-in example on Linux
 
-- **Status:** ready (found by the T-016 audit)
-- **Owner:** —
+- **Status:** in progress (found by the T-016 audit)
+- **Owner:** Claude Opus 5.5 instance, 2026-10-21
 - **Branch/worktree:** `linux/T-031` from `hvoya-linux`.
 - **Depends on:** nothing. The WebUI extension's web view is T-017.
 - **Conflicts:** `Scripts/cmake/ReaperExt.cmake`, `IPlug/ReaperExt/*`, `Examples/IPlugReaperExtension*`, `Examples/IPlugReaperPlugin/CMakeLists.txt`.

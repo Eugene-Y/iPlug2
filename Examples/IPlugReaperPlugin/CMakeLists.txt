@@ -33,8 +33,19 @@ iplug_add_target(_${PROJECT_NAME}-base INTERFACE
 # Font resources for bundles
 set(FONT_FILES ${PLUG_RESOURCES_DIR}/fonts/Roboto-Regular.ttf)
 
+# Linux has no bundles: the resources are copied into <Name>.resources/ beside the module, and the
+# deploy, which carries that folder along, has to come after the copy.
+if(UNIX AND NOT APPLE)
+  set(_IPLUG_DEFER_DEPLOY TRUE)
+endif()
+
 # Helper function to add resources to plugin bundles
-function(iplug_add_plugin_resources target)
+function(iplug_add_plugin_resources target format)
+  if(UNIX AND NOT APPLE)
+    _iplug_add_resources(${target} "${FONT_FILES}")
+    iplug_deploy_target(${target} ${format} ${PROJECT_NAME})
+    return()
+  endif()
   target_sources(${target} PRIVATE ${FONT_FILES})
   set_source_files_properties(${FONT_FILES} PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources
@@ -57,7 +68,7 @@ if(NOT IOS AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     LINK iPlug2::APP ${IGRAPHICS_LIB} _${PROJECT_NAME}-base
   )
   iplug_configure_target(${PROJECT_NAME}-app APP ${PROJECT_NAME})
-  iplug_add_plugin_resources(${PROJECT_NAME}-app)
+  iplug_add_plugin_resources(${PROJECT_NAME}-app APP)
 
   # VST3 Target
   add_library(${PROJECT_NAME}-vst3 MODULE ${SOURCE_FILES})
@@ -65,7 +76,7 @@ if(NOT IOS AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     LINK iPlug2::VST3 ${IGRAPHICS_LIB} _${PROJECT_NAME}-base
   )
   iplug_configure_target(${PROJECT_NAME}-vst3 VST3 ${PROJECT_NAME})
-  iplug_add_plugin_resources(${PROJECT_NAME}-vst3)
+  iplug_add_plugin_resources(${PROJECT_NAME}-vst3 VST3)
 
   # CLAP Target
   if(IPLUG2_CLAP_SUPPORTED)
@@ -74,7 +85,7 @@ if(NOT IOS AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
       LINK iPlug2::CLAP ${IGRAPHICS_LIB} _${PROJECT_NAME}-base
     )
     iplug_configure_target(${PROJECT_NAME}-clap CLAP ${PROJECT_NAME})
-    iplug_add_plugin_resources(${PROJECT_NAME}-clap)
+    iplug_add_plugin_resources(${PROJECT_NAME}-clap CLAP)
   endif()
 
   # AAX Target
@@ -84,7 +95,7 @@ if(NOT IOS AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
       LINK iPlug2::AAX ${IGRAPHICS_LIB} _${PROJECT_NAME}-base
     )
     iplug_configure_target(${PROJECT_NAME}-aax AAX ${PROJECT_NAME})
-    iplug_add_plugin_resources(${PROJECT_NAME}-aax)
+    iplug_add_plugin_resources(${PROJECT_NAME}-aax AAX)
   endif()
 endif()
 
@@ -97,7 +108,7 @@ if(APPLE AND NOT IOS)
     LINK iPlug2::AUv2 ${IGRAPHICS_LIB} _${PROJECT_NAME}-base
   )
   iplug_configure_target(${PROJECT_NAME}-au AUv2 ${PROJECT_NAME})
-  iplug_add_plugin_resources(${PROJECT_NAME}-au)
+  iplug_add_plugin_resources(${PROJECT_NAME}-au AUv2)
 endif()
 
 # ============================================================================
@@ -136,7 +147,7 @@ if(IOS)
     LINK iPlug2::AUv3iOS ${IGRAPHICS_LIB} _${PROJECT_NAME}-base
   )
   iplug_configure_target(${PROJECT_NAME}-ios-app IOSApp ${PROJECT_NAME})
-  iplug_add_plugin_resources(${PROJECT_NAME}-ios-app)
+  iplug_add_plugin_resources(${PROJECT_NAME}-ios-app IOSApp)
 
   iplug_embed_auv3ios_in_app(${PROJECT_NAME}-ios-app ${PROJECT_NAME})
 endif()
