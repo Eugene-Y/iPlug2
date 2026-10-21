@@ -1,0 +1,100 @@
+Breakpoint 1 at 0xa6c70
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0xfffff5536e20 (LWP 79652)]
+[New Thread 0xfffff4c36e20 (LWP 79653)]
+[Thread 0xfffff4c36e20 (LWP 79653) exited]
+[New Thread 0xfffff4c36e20 (LWP 79654)]
+[New Thread 0xffffefff6e20 (LWP 79656)]
+[Thread 0xfffff4c36e20 (LWP 79654) exited]
+[Thread 0xffffefff6e20 (LWP 79656) exited]
+[Thread 0xfffff5536e20 (LWP 79652) exited]
+[New Thread 0xfffff5536e20 (LWP 79657)]
+[New Thread 0xffffefff6e20 (LWP 79658)]
+[Thread 0xffffefff6e20 (LWP 79658) exited]
+[New Thread 0xffffefff6e20 (LWP 79659)]
+[New Thread 0xfffff4c36e20 (LWP 79660)]
+[New Thread 0xffffef7e6e20 (LWP 79661)]
+[New Thread 0xffffeefd6e20 (LWP 79662)]
+[New Thread 0xffffee7c6e20 (LWP 79663)]
+[Thread 0xffffee7c6e20 (LWP 79663) exited]
+[New Thread 0xffffee7c6e20 (LWP 79665)]
+[New Thread 0xffffedfb6e20 (LWP 79666)]
+[New Thread 0xffffed7a6e20 (LWP 79667)]
+[New Thread 0xffffecf96e20 (LWP 79669)]
+[New Thread 0xffffd3ff6e20 (LWP 79670)]
+[New Thread 0xffffd37e6e20 (LWP 79671)]
+[Thread 0xffffd37e6e20 (LWP 79671) exited]
+[New Thread 0xffffd37e6e20 (LWP 79672)]
+[New Thread 0xffffd2fd6e20 (LWP 79673)]
+[Thread 0xffffd37e6e20 (LWP 79672) exited]
+[Thread 0xffffd2fd6e20 (LWP 79673) exited]
+[Thread 0xffffd3ff6e20 (LWP 79670) exited]
+[New Thread 0xffffd3ff6e20 (LWP 79674)]
+[New Thread 0xffffd2fd6e20 (LWP 79675)]
+[Thread 0xffffd2fd6e20 (LWP 79675) exited]
+[New Thread 0xffffd2fd6e20 (LWP 79676)]
+[New Thread 0xffffd37e6e20 (LWP 79677)]
+[Thread 0xffffd2fd6e20 (LWP 79676) exited]
+[Thread 0xffffd37e6e20 (LWP 79677) exited]
+[Thread 0xffffd3ff6e20 (LWP 79674) exited]
+[New Thread 0xffffd3ff6e20 (LWP 79678)]
+[New Thread 0xffffd37e6e20 (LWP 79679)]
+[Thread 0xffffd37e6e20 (LWP 79679) exited]
+[New Thread 0xffffd37e6e20 (LWP 79680)]
+[New Thread 0xffffd2fd6e20 (LWP 79681)]
+[New Thread 0xffffd27c6e20 (LWP 79682)]
+[New Thread 0xffffd1d76e20 (LWP 79684)]
+[Thread 0xffffd1d76e20 (LWP 79684) exited]
+[Thread 0xffffd27c6e20 (LWP 79682) exited]
+[Thread 0xffffd37e6e20 (LWP 79680) exited]
+[Thread 0xffffd2fd6e20 (LWP 79681) exited]
+[Thread 0xffffd3ff6e20 (LWP 79678) exited]
+[Thread 0xffffed7a6e20 (LWP 79667) exited]
+[Thread 0xffffee7c6e20 (LWP 79665) exited]
+[Thread 0xffffedfb6e20 (LWP 79666) exited]
+[Thread 0xffffeefd6e20 (LWP 79662) exited]
+[Thread 0xffffef7e6e20 (LWP 79661) exited]
+[Thread 0xffffefff6e20 (LWP 79659) exited]
+[Thread 0xfffff4c36e20 (LWP 79660) exited]
+[Thread 0xfffff5536e20 (LWP 79657) exited]
+
+Thread 1 "IPlugInstrument" hit Breakpoint 1, __GI_exit (status=0) at ./stdlib/exit.c:138
+warning: 138	./stdlib/exit.c: No such file or directory
+  Id   Target Id                                           Frame 
+* 1    Thread 0xfffff7e35020 (LWP 79650) "IPlugInstrument" __GI_exit (status=0) at ./stdlib/exit.c:138
+  16   Thread 0xffffecf96e20 (LWP 79669) "gmain"           0x0000fffff7110bdc in __GI___poll (fds=0xaaaaab014d80, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+
+Thread 16 (Thread 0xffffecf96e20 (LWP 79669) "gmain"):
+#0  0x0000fffff7110bdc in __GI___poll (fds=0xaaaaab014d80, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000fffff7b91b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000fffff7b2ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+
+Thread 1 (Thread 0xfffff7e35020 (LWP 79650) "IPlugInstrument"):
+#0  __GI_exit (status=0) at ./stdlib/exit.c:138
+#1  0x0000fffff70584c8 in __libc_start_call_main (main=main@entry=0xaaaaaab94c70 <main(int, char**)>, argc=argc@entry=1, argv=argv@entry=0xfffffffff928) at ../sysdeps/nptl/libc_start_call_main.h:74
+#2  0x0000fffff7058598 in __libc_start_main_impl (main=0xaaaaaab94c70 <main(int, char**)>, argc=1, argv=0xfffffffff928, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=<optimized out>) at ../csu/libc-start.c:360
+applied rlimit 16384/1048576
+
+BEGIN IPLUG CHANNEL IO PARSER --------------------------------------------------
+Channel I/O #1 - 0-2
+               - input bus count: 0, output bus count 1
+               - channel count on output bus 1: 2
+               - input channel count across all buses: 0, output channel count across all buses 2
+
+1 I/O configs detected
+Total # in chans: 0, Total # out chans: 2 
+
+END IPLUG CHANNEL IO PARSER --------------------------------------------------
+Reading ini file from /home/gene/iplug-harness/linux-research/evidence/t022/vm-jack-midi/home/.config/IPlugInstrument/settings.ini
+
+RtAudio Version 6.0.1trying to start audio stream @ 48000 sr, buffer size 256
+indev = Dummy Output
+outdev = Dummy Output
+inputs = 0
+outputs = 2
+IGraphics NanoVG @ 60 FPS
+[Thread 0xfffff7e35020 (LWP 79650) exited]
+[Thread 0xffffecf96e20 (LWP 79669) exited]
+[New process 79650]
+[Inferior 1 (process 79650) exited normally]

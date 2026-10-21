@@ -1,0 +1,25 @@
+ok: the audio client keeps the name IPlugInstrument
+ok: the APP's JACK MIDI ports: IPlugInstrument MIDI in:RtMidi Input IPlugInstrument MIDI out:RtMidi Output 
+ok: seq:out -> IPlugInstrument MIDI in
+ok: IPlugInstrument MIDI out -> midi-monitor:input
+ok: JACK MIDI note moves the meter (#24249D9D1010 -> #7F7F7F7F7F7F)
+ok: 5 echoed note-ons at midi-monitor:input
+ok: Preferences 'Preferences'
+ok: ALSA selected: no JACK MIDI ports left
+ok: settings.ini while ALSA is selected: driver=0 indev=off
+ok: Cancel closes Preferences
+ok: settings.ini after Cancel: driver=1 indev=seq:out outdev=midi-monitor:input
+ok: after Cancel: seq:out -> IPlugInstrument MIDI in
+ok: after Cancel the note moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
+ok: PulseAudio selected: no JACK MIDI ports left
+ok: back on JACK, the saved ports turned off: indev=off outdev=off
+ok: picked from the list: seq:out -> IPlugInstrument MIDI in
+ok: settings.ini after OK: driver=1 indev=seq:out
+ok: note after the switches moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
+ok: File > Quit with JACK MIDI connected, exit 0
+ok: no IPlugInstrument MIDI ports after quit
+ok: under gdb: seq:out -> IPlugInstrument MIDI in
+  * 1    Thread 0xfffff7e4eac0 (LWP 1685) "IPlugInstrument" 0x0000fffff706f2f4 in exit () from /lib/aarch64-linux-gnu/libc.so.6
+    9    Thread 0xfffff4e24de0 (LWP 1694) "gmain"           0x0000fffff7110bdc in poll () from /lib/aarch64-linux-gnu/libc.so.6
+ok: 2 thread(s) at exit()
+ok: only main and gmain at exit()

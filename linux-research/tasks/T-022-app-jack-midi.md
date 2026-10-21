@@ -1,7 +1,7 @@
 # T-022 — Standalone APP: JACK MIDI when the audio driver is JACK
 
-- **Status:** todo (low priority: after the Gneiss/Sand work; user, 2026-10-17)
-- **Owner:** —
+- **Status:** in progress (the user asked for it on 2026-10-21; earlier: low priority, after the Gneiss/Sand work)
+- **Owner:** T-022 worker (chat 6db96ccf)
 - **Branch/worktree:** `linux/T-022` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-022`.
 - **Depends on:** T-004 (merged).
 - **Plan phase:** P8 follow-up.
@@ -51,3 +51,46 @@ plain jackd without the a2jmidid bridge.
 - [ ] mac/win unchanged (Linux-only code, or a mac build proof as in T-004). Evidence in `evidence/t022/`.
 
 ## Log
+- 2026-10-21 — implementation and tests (commit 6e8995437, then the harness/evidence commit).
+  - **Code (Linux-only unless noted):**
+    - `InitMidi` constructs RtMidi with `UNIX_JACK` when the audio driver is JACK, `LINUX_ALSA` otherwise, not
+      `UNSPECIFIED`. `UNSPECIFIED` also opened a throwaway JACK client to probe, and could pick JACK on a machine
+      without a sequencer.
+    - `TryToChangeMidiApi()`: when the driver's API differs from the current one, it destroys both RtMidi objects
+      first, then calls `InitMidi`, `ProbeMidiIO` and `SelectMIDIDevice` for the saved ports. A port the other API
+      doesn't have turns off (existing behaviour). The driver combo calls it with `RefreshMidiControls` (resets and
+      refills the four MIDI combos), and Cancel calls it too.
+    - Cancel also calls `UpdateINI()`. While another driver is selected, `SelectMIDIDevice` turns the unknown port off
+      and writes the whole state, the not-yet-applied driver included. Seen in Docker: `driver=0 indev=off` in
+      settings.ini while ALSA was only selected.
+    - The JACK MIDI clients are named `<app> MIDI in` / `<app> MIDI out`. RtMidi opens one JACK client per object at
+      construction, before the audio stream. With `BUNDLE_NAME` they would take the name and push the audio client to
+      `<app>-02`. The ALSA sequencer keeps the plain `BUNDLE_NAME`.
+    - Shared: `ProbeMidiIO` clears both name lists first. On mac/win it runs once, so behaviour there is unchanged.
+  - **Docker** `scripts/app-jack-midi-test.sh` → `evidence/t022/docker-jack-midi` **PASS**. Setup: jackd dummy,
+    `jack_midiseq` → APP, echo → `jack_midi_dump`, no ALSA sequencer in the container. Checks:
+    - The audio client keeps its name, and both MIDI connections come up from settings.ini.
+    - The meter moves and the note-ons are echoed.
+    - Selecting ALSA leaves no JACK MIDI ports and disables the MIDI combos (`04`).
+    - Cancel restores the JACK connection and settings.ini.
+    - PulseAudio → JACK: the saved ports are off, the lists show the JACK ports once (`06`, `07`), and a port picked
+      from the list plays.
+    - File > Quit exits 0. At `exit()` only main and `gmain` are left.
+  - **VM** `scripts/vm/probe/app-jack-midi.sh` → `evidence/t022/vm-jack-midi` **PASS**. Setup: PipeWire's libjack,
+    snd-virmidi, `amidi`. Checks:
+    - JACK: Midi-Bridge port → `IPlugInstrument MIDI in`, no sequencer client, the note plays and is echoed.
+    - PulseAudio: the list shows the sequencer's ports (`03`). The virmidi port picked there connects to sequencer
+      client 128 'IPlugInstrument' and plays.
+    - JACK again: the sequencer client is gone, and the Midi-Bridge port picked from the list (`05`) plays.
+    - File > Quit exits 0. Under gdb at `exit()`: main and `gmain` only.
+  - **macOS:** CMake/Ninja `IPlugInstrument-app` compiles the APP sources and links
+    (`evidence/t022/macos/cmake-ninja-IPlugInstrument-app.txt`). The only warnings are in RtMidi, RtAudio and swell.
+  - **Deviation:** a separate `app-jack-midi-test.sh` instead of extending `app-switch-test.sh`, which stays about the
+    audio switch.
+  - **Cross-platform findings** (report, not fixed):
+    - **minor:** Preferences > Cancel doesn't undo a MIDI port change. Picking a MIDI device opens it at once
+      (`IPlugAPP_dialog.cpp`, `IDC_COMBO_MIDI_IN_DEV`/`OUT_DEV` → `SelectMIDIDevice`). Cancel restores
+      `mState.mMidiInDev` but reselects only the audio. Repro on any platform: pick another MIDI input, then Cancel.
+      The app keeps listening on the new port while the state and the next settings.ini say the old one. On Linux,
+      Cancel after a driver change with another MIDI API does reselect, through `TryToChangeMidiApi`.
+  - **Next:** independent review.
