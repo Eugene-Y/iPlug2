@@ -1,7 +1,7 @@
 # T-031 — REAPER extensions and the REAPER-plug-in example on Linux
 
-- **Status:** in review (found by the T-016 audit)
-- **Owner:** Claude Opus 5.5 instance, 2026-10-21
+- **Status:** review-done (found by the T-016 audit) — independent review approved in round 2
+- **Owner:** Claude Opus 5.5 instance, 2026-10-21 (lock released)
 - **Branch/worktree:** `linux/T-031` from `hvoya-linux`.
 - **Depends on:** nothing. The WebUI extension's web view is T-017.
 - **Conflicts:** `Scripts/cmake/ReaperExt.cmake`, `IPlug/ReaperExt/*`, `Examples/IPlugReaperExtension*`, `Examples/IPlugReaperPlugin/CMakeLists.txt`.
@@ -216,3 +216,23 @@ New: **R2-1 (nit, optional)** `Examples/IPlugReaperPlugin/CMakeLists.txt:33` —
 `set(FONT_FILES …)`; delete it.
 
 Verdict: approve.
+
+### Final verdict and hand-over (implementer, 2026-10-21)
+- **Independent review: approved in round 2** (round 1 "approve with fixes": R1-1 major, R1-2 minor fixed; R1-3 handed
+  to T-017; R1-4/R1-5/R2-1 nits fixed — R2-1, the redundant "# Font resources" comment, removed after round 2).
+- Commits on `linux/T-031` (merge `--no-ff` into `hvoya-linux`): code `8d8ffa465`, `c0b99f50b`, `86f8e2224`,
+  `940cfc6a1`, R2-1 nit `14588023b`; tests/evidence/log `2072a2406`, `fd2570404`, `99a85cc4d`; reviews `14ce018ea`,
+  `db7ca3f52`.
+- Shared files touched (all changes behind `OS_LINUX` / `UNIX AND NOT APPLE`): `IPlug/IPlugEditorDelegate.h`,
+  `IPlug/IPlugAPIBase.h`, `IPlug/ReaperExt/*`, `Scripts/cmake/{ReaperExt,Deploy}.cmake`,
+  `Examples/IPlugReaperPlugin/CMakeLists.txt`, `Examples/IPlugReaperExtension*/CMakeLists.txt` (comment only).
+  Linux-shared: `IGraphics/Platforms/IGraphicsLinux.cpp` (delegate host loop; **clear+swap at open affects every Linux
+  editor**). New: `IPlug/Linux/IPlugLinuxHostLoopSWELL.h`, `Scripts/cmake/Linux/reaperext-exports.map`,
+  `linux-research/scripts/reaper-ext-test.sh`; `reaper-up.sh` installs extensions.
+- Smoke for the coordinator after merging: build `IPlugReaperExtension IPlugReaperExtensionWebUI IPlugControls-clap`,
+  `scripts/gx.sh <c> scripts/reaper-ext-test.sh <out> ../build/<dir>/out/reaper_IPlugReaperExtension.so` (PASS
+  expected), IPlugControls `run-gui-test.sh` CLAP.
+- Open: the web view of the WebUI extension (T-017, note in its task file); not tried on the GNOME VM, XWayland,
+  x86_64 or DRI3 GPU drivers; for PLAN/notes/22: the REAPER extension row can move to ✅ (WebUI: window yes, web view T-017).
+- Docker containers removed; T-031 lock released; worktree left in place. `Dependencies/IPlug/VST3_SDK/README.md` is
+  modified by `install-sdks.sh` and deliberately not committed.
