@@ -30,7 +30,6 @@ iplug_add_target(_${PROJECT_NAME}-base INTERFACE
   LINK iPlug2::IPlug
 )
 
-# Font resources
 set(FONT_FILES ${PLUG_RESOURCES_DIR}/fonts/Roboto-Regular.ttf)
 
 # Linux has no bundles: the resources are copied into <Name>.resources/ beside the module, and the
