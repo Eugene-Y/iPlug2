@@ -150,7 +150,8 @@ So Renoise is a host that reaches the fallback with the editor closed. **It does
 `getLatencySamples`, `setProcessing(1)` (`latency-editor-closed.txt`, lwp = pid). Editor open
 (`latency-editor-open.txt`): `restartComponent` arrives on the main thread and does the same at once, no lambda.
 Both files were re-run in review round 1 with the committed `call-trace.sh` and `latency.syms`, which now also lists
-Renoise's `restartComponent` and the lambda's `_M_invoke`; the first versions came from an earlier script. While the transport is stopped the plug-in is suspended. Renoise then re-reads the latency
+Renoise's `restartComponent` and the lambda's `_M_invoke`; the first versions came from an earlier script.
+While the transport is stopped the plug-in is suspended. Renoise then re-reads the latency
 when processing resumes (`getLatencySamples` on an audio thread). The PDC value itself is not visible: Renoise has
 no API for it. **For T-010: no framework change needed for Renoise.** Bitwig remains the only unknown (x86_64 only, PC
 checklist).
@@ -177,7 +178,7 @@ checklist).
        edit ends (`XEmbed FOCUS_OUT unanswered: the edit ends`; 1.50 kHz committed, `38`).
      - Afterwards a typed `9` goes to Ardour, which forwards it to us; we drop it because the edit is closed (`39`).
        Space starts and stops Ardour's transport (`40`).
-     - **R1-1 downgraded.** Ardour never sent a FOCUS_OUT while the X focus was ours. At the dropdown the X focus was
+     - **R1-1 downgraded.** In the sequences tried, Ardour never sent a FOCUS_OUT while the X focus was ours. At the dropdown the X focus was
        already on Ardour's window, so 196036808 would also have ended the edit there. The reviewer's case (a real
        FOCUS_OUT with the X focus still ours) did not occur in Ardour 8.4. The pairing rule stays: it does not depend
        on where the X focus is, and it costs no X round trip.

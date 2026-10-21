@@ -1331,8 +1331,8 @@ void IGraphicsLinux::HandleClientMessage(const XEvent& event)
       break;
     case kXEmbedFocusOut:
       // Decided in UpdateEditingState: Renoise answers an edit's focus request with FOCUS_OUT and then FOCUS_IN, in
-      // one burst, while the X focus stays ours; a FOCUS_OUT that no FOCUS_IN follows is a real one (a GtkSocket
-      // host moving its focus to one of its widgets keeps the X focus on our window too).
+      // one burst, while the X focus stays ours; a FOCUS_OUT that no FOCUS_IN follows is a real one, wherever the X
+      // focus is.
       if (w.mHoldsFocus)
       {
         w.mEmbedderFocusOutPending = true;
