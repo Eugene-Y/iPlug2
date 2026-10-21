@@ -81,6 +81,7 @@ constexpr long kXEmbedVersion = 0;
 constexpr long kXEmbedMapped = 1;
 constexpr long kXEmbedEmbeddedNotify = 0;
 constexpr long kXEmbedRequestFocus = 3;
+constexpr long kXEmbedFocusIn = 4;
 constexpr long kXEmbedFocusOut = 5;
 constexpr int kClipboardTimeoutMs = 200;
 // After a click, the window manager's click-to-focus and the host's focus proxy (GDK) move the focus within its own
@@ -427,6 +428,8 @@ struct IGraphicsLinux::Impl
   Window mFocusBefore = None;
   int mRevertBefore = RevertToParent;
   Window mEmbedder = 0; // an XEmbed embedder that announced itself with EMBEDDED_NOTIFY
+  bool mEmbedderFocusOutPending = false; // its FOCUS_OUT during an edit, not yet answered by a FOCUS_IN
+  std::chrono::steady_clock::time_point mEmbedderFocusOutAt;
   Atom mXEmbed = None;
   // Keys whose press the editor kept: their releases are kept too, all other releases go on to the host.
   unsigned char mKeptKeys[32] = {};
@@ -1297,6 +1300,7 @@ void IGraphicsLinux::DeclineKeyboardFocus()
 {
   Impl& w = *mImpl;
   w.mHoldsFocus = false;
+  w.mEmbedderFocusOutPending = false;
   w.mFocusDeclined = true;
   EndTextEntryOnFocusLoss();
 }
@@ -1318,23 +1322,28 @@ void IGraphicsLinux::HandleClientMessage(const XEvent& event)
     return;
 
   // Hosts implement XEmbed partially at best (REAPER and Bitwig not at all), so nothing depends on it:
-  // the embedder is remembered for focus requests, and its focus-out ends an edit like a real one.
+  // the embedder is remembered for focus requests; its FOCUS_OUT ends an edit.
+  TRACE_INPUT("XEmbed message %ld, holding focus %d\n", message.data.l[1], w.mHoldsFocus);
   switch (message.data.l[1])
   {
     case kXEmbedEmbeddedNotify:
       w.mEmbedder = static_cast<Window>(message.data.l[3]);
       break;
     case kXEmbedFocusOut:
-    {
-      // Renoise sends FOCUS_OUT when an edit's request moves the X focus from its window into ours (FOCUS_IN
-      // follows), which would end every edit as it opens. A focus that really left is no longer ours.
-      Window focus = None;
-      int revert = 0;
-      XGetInputFocus(w.mDisplay, &focus, &revert);
-      if (w.mHoldsFocus && focus != w.mWindow)
-        DeclineKeyboardFocus();
+      // Decided in UpdateEditingState: Renoise answers an edit's focus request with FOCUS_OUT and then FOCUS_IN, in
+      // one burst, while the X focus stays ours; a FOCUS_OUT that no FOCUS_IN follows is a real one (a GtkSocket
+      // host moving its focus to one of its widgets keeps the X focus on our window too).
+      if (w.mHoldsFocus)
+      {
+        w.mEmbedderFocusOutPending = true;
+        w.mEmbedderFocusOutAt = std::chrono::steady_clock::now();
+      }
       break;
-    }
+    case kXEmbedFocusIn:
+      if (w.mEmbedderFocusOutPending)
+        TRACE_INPUT("XEmbed FOCUS_IN answers the FOCUS_OUT: the edit stays\n");
+      w.mEmbedderFocusOutPending = false;
+      break;
     default:
       break;
   }
@@ -1350,6 +1359,19 @@ void IGraphicsLinux::UpdateEditingState()
     ClearInTextEntryControl();
 
   const auto now = std::chrono::steady_clock::now();
+  if (w.mEmbedderFocusOutPending && now - w.mEmbedderFocusOutAt > kFocusQuiet)
+  {
+    w.mEmbedderFocusOutPending = false;
+    if (w.mHoldsFocus)
+    {
+      TRACE_INPUT("XEmbed FOCUS_OUT unanswered: the edit ends\n");
+      // Ending the edit may close the editor
+      const std::shared_ptr<bool> open = w.mOpen;
+      DeclineKeyboardFocus();
+      if (!*open)
+        return;
+    }
+  }
   // The standalone app's window is the editor's own: a click into it asks for the keys, like a click into a view
   // on mac, and the app keeps them afterwards. In a host, only an edit or an open menu does; an open menu so that
   // Escape closes it rather than (in REAPER) the host's window.
@@ -1513,6 +1535,7 @@ void IGraphicsLinux::RememberHostFocusWindow(unsigned long focus)
 void IGraphicsLinux::RequestKeyboardFocus(unsigned long time)
 {
   Impl& w = *mImpl;
+  w.mEmbedderFocusOutPending = false; // one from before this request is not its answer
   XSetInputFocus(w.mDisplay, w.mWindow, RevertToParent, time);
   if (w.mInputContext)
     XSetICFocus(w.mInputContext);
@@ -1534,6 +1557,7 @@ void IGraphicsLinux::ReleaseKeyboardFocus()
 {
   Impl& w = *mImpl;
   w.mHoldsFocus = false;
+  w.mEmbedderFocusOutPending = false;
   w.mFocusLost = false;
   w.mFocusBeforeKnown = false;
   // The standalone app keeps the focus, and the input context with it.
