@@ -42,7 +42,7 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
 - [ ] Every failure: fixed (Linux-only code, own commit) or ticketed with a minimal repro; host bugs documented as such.
   *So far: the XEmbed text-entry fix (c86d82e5d); Carla main's VST3 IRunLoop threading is documented as Carla's.
   The hosts that drop no files on plug-ins are documented, below.*
-- [ ] PC checklist for Bitwig/x86_64 written (section below; ticked once its review approves it).
+- [x] PC checklist for Bitwig/x86_64 written (section below; review approved, notes/28).
 - [ ] Independent review (AGENTS §4); Log complete.
 
 ## PC checklist (Bitwig, x86_64)
@@ -61,7 +61,8 @@ open; the plug-ins print their diagnostics there.
 - `collect-linux-report.sh`.
 
 Advanced testers who build themselves need:
-- the iPlug2 fork (branch `hvoya-linux`) and the plug-in repo (branch `linux-experiment`), side by side;
+- the iPlug2 fork (branch `hvoya-linux`) and the plug-in repo (branch `linux-experiment`), side by side; we give
+  you access to both;
 - the packages from `Documentation/linux-development.md` §1;
 - the SDKs: `cd <iPlug2>/Dependencies/IPlug && ./download-iplug-sdks.sh`.
 
@@ -82,14 +83,16 @@ The release archives themselves come from the plug-in repo's `scripts/makedist-l
 **Steps.** Run each in Bitwig, once with the CLAP and once with the VST3 version. Start with the user checks 1–11
 of `notes/25-tester-checklist.md` (find and open, use, resize, type a value, tooltips, presets, automation, save and
 reopen, oversampling, two at once, closing), using the trace archives. Then:
-1. **Bitwig's plug-in hosting.** In Bitwig's Settings > Plug-ins, set the plug-in hosting mode to "Individually"
-   (each plug-in in its own process; names as in Bitwig 5). Start Bitwig from a terminal: `bitwig-studio`.
-   *Expected:* lines starting with `IPLUG_HOSTLOOP` appear in the terminal when a plug-in loads. If none do, they
-   are in Bitwig's logs under `~/.BitwigStudio/log/`; send that folder.
+1. **Bitwig's plug-in hosting.** In Bitwig's Settings > Plug-ins, choose the plug-in hosting mode that runs each
+   plug-in in its own process. As far as we know Bitwig 5 calls it "Individually". If your version names it
+   differently, pick the closest one and tell us its name. Start Bitwig from a terminal: `bitwig-studio`.
+   *Expected:* lines starting with `IPLUG_HOSTLOOP` appear in the terminal when a plug-in loads. If none do, look
+   in Bitwig's log folder, usually `~/.BitwigStudio/log/`, and send it. If the lines are in neither place, tell us:
+   that is useful to know too.
 2. **Which event loop Bitwig gives the plug-in.** Load Gneiss, open its window, close it, open it again.
-   *Expected:* the `IPLUG_HOSTLOOP` lines name a backend (`timer-support`, `vst3-irunloop(…)` or `fallback-thread`).
-   Every `first … callback` line ends in `on main`. Lines saying `OFF-MAIN` while the window is open are a problem;
-   report them.
+   *Expected:* the `IPLUG_HOSTLOOP` lines name a backend: `backend=clap-timer-support`,
+   `backend=vst3-irunloop(…)` or `backend=fallback-thread`. Every `first … callback` line contains `on main`. Lines
+   saying `OFF-MAIN` while the window is open are a problem; report them.
 3. **Delay compensation while the window is closed.** This shows whether Bitwig still hears a latency change that
    happens while the plug-in window is closed. Put Gneiss on a track with a click or drum loop, and the same loop
    dry on a second track. Close Gneiss' window, then change its oversampling (OS) from 1x to 8x through Bitwig's
@@ -109,7 +112,8 @@ reopen, oversampling, two at once, closing), using the trace archives. Then:
    and drag its small orange square, bottom right, onto a GNOME Files window, then onto an empty Bitwig track.
    *Expected:* Files copies the file; Bitwig creates a clip from it. While dragging, the pointer shows "not
    allowed" where nothing accepts and a hand where the drop is possible. The terminal shows
-   `IPLUG_TEST_DRAGOUT start '…' -> 1`.
+   `IPLUG_TEST_DRAGOUT start '…' -> 1`. If it shows `IPLUG_TEST_DRAGOUT start '' -> 0`, the variable did not reach
+   the plug-in (Bitwig's plug-in process did not inherit it): tell us.
 6. **Graphics.** On every graphics card you can use (NVIDIA with its own driver, AMD, Intel): open and close each
    plug-in window 20 times. Then install the GL3 IPlugControls and open it; hover the horizontal SVG slider for a
    tooltip.
@@ -131,8 +135,8 @@ reopen, oversampling, two at once, closing), using the trace archives. Then:
 
 **Send back:**
 - pass or fail per step, for CLAP and VST3, with your notes;
-- the whole terminal output, or `~/.BitwigStudio/log/`. We need the lines starting with `IPLUG_HOSTLOOP`,
-  `iPlug2 input:`, `iPlug2 drop:` and `IPLUG_TEST_`;
+- the whole terminal output, or Bitwig's log folder (usually `~/.BitwigStudio/log/`). We need the lines starting
+  with `IPLUG_HOSTLOOP`, `iPlug2 input:`, `iPlug2 drop:` and `IPLUG_TEST_`;
 - the `xprop XdndAware` output from step 4;
 - screenshots or a short screen recording of anything that looks wrong;
 - the output of `sh collect-linux-report.sh` (in our repo: `linux-research/scripts/collect-linux-report.sh`).
@@ -355,12 +359,13 @@ trace and Files' XDND lines; PNGs local).
 | Carla main, VST3 | not checked: Carla crashes after loading Gneiss (below) | — | — | — |
 | Renoise 3.5.4, VST3 | no (its main window is: 5, for its own file drops) | **no**: on the way the drag crosses Renoise's main window, which accepts (`Entering Xdnd window 0x2c0009b`, Status 461); over the plug-in window GTK finds no target ("async callback for #2c000b0", not XdndAware), and the release finishes nothing | neither | PASS: layout loaded (`after-qt-like-deep-gap.png`) |
 
-- **Carla main VST3 crashes after loading Gneiss VST3 alone; deferred.**
+- **Carla main VST3 crashes after loading Gneiss VST3 alone; open, awaiting a decision.**
   - The first run ended in apport (SIGSEGV, no stack). Re-run under gdb, it reproduced
     (`evidence/t013/drops/carla-main-vst3/crash.txt`).
   - Carla main calls the plug frame's `IRunLoop` timer from its engine thread (`CarlaEngineRunner`); the trace says
     `first timer callback … on OFF-MAIN`. On that thread Gneiss' `OnIdle` rebuilds its layout and loads a font into
-    NanoVG (`IGraphics::LoadFont` → `nvgCreateFontFaceMem`), while the main thread is inside GLX opening the editor.
+    NanoVG (`IGraphics::LoadFont` → `nvgCreateFontFaceMem`). Meanwhile the main thread is inside GLX: gdb shows
+    `libGLX_mesa` without symbols, and that it is opening the editor is inferred from the trace order.
     It crashes there.
   - The frames are iPlug's and Gneiss', but the cause is the Carla-main bug of 2026-10-19: VST3 run-loop handlers
     must run on the UI thread. That time it took a second editor; this time the timer fires during the first open.
