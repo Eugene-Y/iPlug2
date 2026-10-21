@@ -88,19 +88,12 @@ def replacestrsChop(filename, s, r):
 
 def replacepathruns(filename, s, r):
   "replace s only where it is a whole run of .. components, so that ../.. never matches inside ../../.."
-  sWin = s.replace('/', '\\')
-  rWin = r.replace('/', '\\')
-
   def swap(match):
     run = match.group(0)
-    if run == s:
-      return r
-    if run == sWin:
-      return rWin
-    return run
+    return r if run == s else run
 
   for line in fileinput.input(glob.glob(filename),inplace=1):
-    sys.stdout.write(re.sub(r'\.\.(?:[/\\]\.\.)*', swap, line))
+    sys.stdout.write(re.sub(r'\.\.(?:/\.\.)*', swap, line))
 
 # dirwalk() rewrites the iPlug2 root as seen from config/ and projects/. Files in the project folder,
 # and in .vscode/ through ${workspaceFolder}, see it from one level up.
@@ -257,8 +250,9 @@ def main():
     oldroot = xcconfig["IPLUG2_ROOT"]
     iplug2folder = os.path.abspath(os.path.join(configpath, oldroot))
     newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config"))
-    oldprojectroot = os.path.relpath(iplug2folder, inputprojectname)
-    newprojectroot = os.path.relpath(iplug2folder, outputpath)
+    # These land in CMake and JSON files, which take '/' on every platform and read '\' as an escape.
+    oldprojectroot = os.path.relpath(iplug2folder, inputprojectname).replace(os.sep, '/')
+    newprojectroot = os.path.relpath(iplug2folder, outputpath).replace(os.sep, '/')
   else:
     newroot = ""
 
