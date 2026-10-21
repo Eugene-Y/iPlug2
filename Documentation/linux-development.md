@@ -126,8 +126,9 @@ Both read the same `CMakePresets.json`, so build settings need no extra files.
 Duplicate an example, then open the new project's `-linux` workspace:
 
 ```sh
+mkdir -p ~/dev
 cd Examples
-./duplicate.py IPlugEffect MyPlugin MyCompany ~/dev   # 4th argument: parent folder, e.g. next to iPlug2
+./duplicate.py IPlugEffect MyPlugin MyCompany ~/dev   # 4th argument: an existing parent folder, e.g. next to iPlug2
 code ~/dev/MyPlugin/MyPlugin-linux.code-workspace
 ```
 
