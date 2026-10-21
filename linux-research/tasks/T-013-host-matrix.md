@@ -42,41 +42,100 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
 - [ ] Every failure: fixed (Linux-only code, own commit) or ticketed with a minimal repro; host bugs documented as such.
   *So far: the XEmbed text-entry fix (c86d82e5d); Carla main's VST3 IRunLoop threading is documented as Carla's.
   The hosts that drop no files on plug-ins are documented, below.*
-- [x] PC checklist for Bitwig/x86_64 written (section below).
+- [ ] PC checklist for Bitwig/x86_64 written (section below; ticked once its review approves it).
 - [ ] Independent review (AGENTS §4); Log complete.
 
 ## PC checklist (Bitwig, x86_64)
-What the VM cannot show: Bitwig (x86_64 only), x86_64 itself, real GPU drivers, GL 3.2 core. For a developer on an
-x86_64 PC with Bitwig 5.x and REAPER. The user-level checks (install, use, resize, text entry, presets, automation,
-save/reopen, oversampling, two instances, closing) are in `notes/25-tester-checklist.md`; run them in Bitwig with
-CLAP and VST3. In addition:
-1. **Builds.** Use the x86_64 packages (`makedist-linux.sh --arch x86_64`). Also build Gneiss, Sand and IPlugControls
-   with `-DIPLUG_TRACE_HOST_LOOP -DIGRAPHICS_TRACE_LINUX_INPUT`, and IPlugControls with
-   `-DIPLUG_TEST_DRAGOUT -DIPLUG_TEST_APPEARANCE` once with GL2 and once with `-DIGRAPHICS_RENDERER=GL3`.
-2. **Host loop (case 7).** Start Bitwig from a terminal and keep the `IPLUG_HOSTLOOP` lines. Bitwig runs plug-ins in
-   its own plug-in host process; use per-plug-in hosting mode, and find the lines in the terminal or in Bitwig's log.
-   Record:
-   - CLAP: whether Bitwig gives timer-support and posix-fd, and that every callback runs on the main thread;
-   - VST3: whether `IRunLoop` comes from the factory, from `initialize`, or only from the plug frame; and which
-     backend runs with the editor closed.
-3. **Latency with the editor closed (case 5, T-010's open point).** Change Gneiss' OS 1x→8x while playing, with the
-   editor closed, in CLAP and in VST3. Does Bitwig's delay compensation follow? Read its latency display if it has
-   one; otherwise record a click through Gneiss next to a dry copy and compare. If VST3 runs on the fallback thread
-   and Bitwig drops the change, that is the case T-010 waits for: report it.
-   `scripts/vm/probe/renoise/call-trace.sh` is arm64-only; on x86_64 replace `$x0`/`$x1` with `$rdi`/`$rsi`.
-4. **Drops (case 8).** Drag a `.hvoya` layout from GNOME Files, and from Dolphin on KDE (a Qt source), onto Gneiss'
-   USER tab, in a gap between its controls. Record the `iPlug2 drop:` lines and `xprop XdndAware` of Bitwig's
-   plug-in window. Also drag IPlugControls' orange square out into Files and onto a Bitwig track.
-5. **Text entry and focus.** Type a value in Sand, press Enter, then Escape; click into Bitwig while an entry is
-   open; check host shortcuts (Space) with the editor focused. Keep the `iPlug2 input:` lines, including any
-   `XEmbed message` lines.
-6. **GPU.** Use NVIDIA (proprietary driver), AMD and Intel (Mesa) where available. Open and close each editor ×20.
-   Then open the GL3 build: it must render, unlike virgl, which has no 3.2 core context. Hover a tooltip in it.
-7. **Scaling and sessions.** Run at 100 %, 150 % and 200 % (GNOME fractional, KDE), with Bitwig's own UI scale, and
-   in a Wayland session (XWayland) as well as X11.
-8. **Appearance.** Switch dark/light in the desktop settings while IPlugControls (`IPLUG_TEST_APPEARANCE`) is open.
-   Its stderr must show the change, with `main=1`.
-9. **Report.** Run `collect-linux-report.sh` (T-035) and attach its output.
+For a tester with an x86_64 PC running Linux, Bitwig Studio 5 and, if possible, REAPER. It covers what our test VM
+cannot: Bitwig, x86_64, real graphics drivers and OpenGL 3.2. Start your host from a terminal and keep that window
+open; the plug-ins print their diagnostics there.
+
+**What you get from us.** Most testers get archives from us; nothing needs to be built:
+- the release archives of Gneiss and Sand (`<Name>_v<version>_linux_x86_64_<edition>.tar.gz`), installed with
+  `./install.sh` as in `notes/25-tester-checklist.md`;
+- "trace" archives of Gneiss, Sand and the IPlugControls example: the same plug-ins with diagnostic output on
+  stderr (host-loop and input traces). IPlugControls also has two test hooks: an orange square that starts a file
+  drag, and a dark/light printout. Install a trace archive the same way; it replaces the release build of the same
+  name;
+- an IPlugControls archive built for OpenGL 3.2 (the "GL3" one), installed only for step 6;
+- `collect-linux-report.sh`.
+
+Advanced testers who build themselves need:
+- the iPlug2 fork (branch `hvoya-linux`) and the plug-in repo (branch `linux-experiment`), side by side;
+- the packages from `Documentation/linux-development.md` §1;
+- the SDKs: `cd <iPlug2>/Dependencies/IPlug && ./download-iplug-sdks.sh`.
+
+Then build these (a build installs into `~/.clap` and `~/.vst3`):
+```sh
+I=<path to the iPlug2 fork>
+# Gneiss or Sand with traces, from the plug-in's folder (Sand: replace Gneiss with Sand)
+cmake -S . -B build-trace -G Ninja -DCMAKE_BUILD_TYPE=Release -DIPLUG2_DIR=$I \
+      "-DCMAKE_CXX_FLAGS=-DIPLUG_TRACE_HOST_LOOP -DIGRAPHICS_TRACE_LINUX_INPUT"
+cmake --build build-trace --target Gneiss-clap Gneiss-vst3
+# IPlugControls with traces and the two test hooks, from $I; add -DIGRAPHICS_RENDERER=GL3 (and use build-gl3) for the GL3 one
+cmake -S $I -B build-controls -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      "-DCMAKE_CXX_FLAGS=-DIGRAPHICS_TRACE_LINUX_INPUT -DIPLUG_TRACE_HOST_LOOP -DIPLUG_TEST_DRAGOUT -DIPLUG_TEST_APPEARANCE"
+cmake --build build-controls --target IPlugControls-clap IPlugControls-vst3
+```
+The release archives themselves come from the plug-in repo's `scripts/makedist-linux.sh --arch x86_64`.
+
+**Steps.** Run each in Bitwig, once with the CLAP and once with the VST3 version. Start with the user checks 1–11
+of `notes/25-tester-checklist.md` (find and open, use, resize, type a value, tooltips, presets, automation, save and
+reopen, oversampling, two at once, closing), using the trace archives. Then:
+1. **Bitwig's plug-in hosting.** In Bitwig's Settings > Plug-ins, set the plug-in hosting mode to "Individually"
+   (each plug-in in its own process; names as in Bitwig 5). Start Bitwig from a terminal: `bitwig-studio`.
+   *Expected:* lines starting with `IPLUG_HOSTLOOP` appear in the terminal when a plug-in loads. If none do, they
+   are in Bitwig's logs under `~/.BitwigStudio/log/`; send that folder.
+2. **Which event loop Bitwig gives the plug-in.** Load Gneiss, open its window, close it, open it again.
+   *Expected:* the `IPLUG_HOSTLOOP` lines name a backend (`timer-support`, `vst3-irunloop(…)` or `fallback-thread`).
+   Every `first … callback` line ends in `on main`. Lines saying `OFF-MAIN` while the window is open are a problem;
+   report them.
+3. **Delay compensation while the window is closed.** This shows whether Bitwig still hears a latency change that
+   happens while the plug-in window is closed. Put Gneiss on a track with a click or drum loop, and the same loop
+   dry on a second track. Close Gneiss' window, then change its oversampling (OS) from 1x to 8x through Bitwig's
+   own parameter view, while playing.
+   *Expected:* the two tracks stay in time (no flam). Bitwig's latency figure for the device, if it shows one,
+   changes. Report both, for CLAP and VST3, and the `IPLUG_HOSTLOOP` lines from that moment.
+4. **Files dropped onto the plug-in.** In Gneiss, click USER (left column), then drag a `.hvoya` layout file (we
+   send one) from GNOME Files onto an empty spot of the USER area, between the knobs. Repeat with Dolphin (KDE)
+   if you have it. In a terminal, run `xprop XdndAware` and click Bitwig's plug-in window.
+   *Expected:* the USER area changes to the dropped layout, and the terminal shows `iPlug2 drop: enter`, `drop`
+   and `finished 1`. If nothing happens, say which of these you saw:
+   - the drop icon turns into a "not allowed" sign over the plug-in (Bitwig accepts no drops there);
+   - the drop is accepted, but Gneiss does not change (Bitwig keeps the drop itself);
+   - nothing at all.
+5. **A file dragged out of the plug-in.** Close Bitwig and start it with a file to drag:
+   `IPLUG_TEST_DRAG_FILE=$HOME/some.wav bitwig-studio` (any short WAV file). Open IPlugControls (trace archive)
+   and drag its small orange square, bottom right, onto a GNOME Files window, then onto an empty Bitwig track.
+   *Expected:* Files copies the file; Bitwig creates a clip from it. While dragging, the pointer shows "not
+   allowed" where nothing accepts and a hand where the drop is possible. The terminal shows
+   `IPLUG_TEST_DRAGOUT start '…' -> 1`.
+6. **Graphics.** On every graphics card you can use (NVIDIA with its own driver, AMD, Intel): open and close each
+   plug-in window 20 times. Then install the GL3 IPlugControls and open it; hover the horizontal SVG slider for a
+   tooltip.
+   *Expected:* every window is fully drawn each time, nothing flickers or stays black, and the GL3 build draws like
+   the normal one. If the GL3 window stays empty, send the line `no OpenGL 3.2 core context`.
+7. **Typing and the keyboard.** In Sand, click a value under a knob, type a number, press Enter. Do it again and
+   press Escape. Open an entry once more and click into Bitwig's own window. Then click the plug-in window (not a
+   value) and press Space.
+   *Expected:* Enter sets the value; Escape keeps the old one; a click into Bitwig ends the entry; Space reaches
+   Bitwig (play/stop) unless an entry is open. Send the `iPlug2 input:` lines if not.
+8. **Display scaling and Wayland.** Repeat steps 1–2 of `notes/25` (open, use) at 100 %, 150 % and 200 % display
+   scaling (GNOME or KDE), and with Bitwig's own UI zoom. Then once in a Wayland session (choose it at login) and
+   once in an X11 session.
+   *Expected:* the plug-in window has the right size for the scale (not tiny, not cut off), text is sharp, and
+   clicks land where you click.
+9. **Dark and light.** With IPlugControls (trace archive) open, switch the desktop between dark and light style
+   (Settings > Appearance).
+   *Expected:* the terminal shows `IPLUG_TEST_APPEARANCE dark main=1` and then `light main=1` (or the reverse).
+
+**Send back:**
+- pass or fail per step, for CLAP and VST3, with your notes;
+- the whole terminal output, or `~/.BitwigStudio/log/`. We need the lines starting with `IPLUG_HOSTLOOP`,
+  `iPlug2 input:`, `iPlug2 drop:` and `IPLUG_TEST_`;
+- the `xprop XdndAware` output from step 4;
+- screenshots or a short screen recording of anything that looks wrong;
+- the output of `sh collect-linux-report.sh` (in our repo: `linux-research/scripts/collect-linux-report.sh`).
 
 ## Log
 (append: date — what was done — commits — next)
