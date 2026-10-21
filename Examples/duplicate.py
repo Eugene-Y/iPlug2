@@ -197,7 +197,8 @@ def main():
     manufacturer=sys.argv[3]
 
   if numargs == 4:
-    outputbasepath=os.path.abspath(sys.argv[4])
+    # The relative iPlug2 paths written below resolve physically; a symlink in the target would skew them.
+    outputbasepath=os.path.realpath(sys.argv[4])
   else:
     outputbasepath=os.getcwd()
 
@@ -250,7 +251,7 @@ def main():
     configpath = os.path.join(inputprojectname, "config")
     xcconfig = parse_xcconfig(configpath + "/" + inputprojectname + "-mac.xcconfig")
     oldroot = xcconfig["IPLUG2_ROOT"]
-    iplug2folder = os.path.abspath(os.path.join(configpath, oldroot))
+    iplug2folder = os.path.realpath(os.path.join(configpath, oldroot))
     newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config"))
     # These land in CMake and JSON files, which take '/' on every platform and read '\' as an escape.
     oldprojectroot = os.path.relpath(iplug2folder, inputprojectname).replace(os.sep, '/')
