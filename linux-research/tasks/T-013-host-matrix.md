@@ -293,11 +293,21 @@ trace and Files' XDND lines; PNGs local).
 | Ardour 8.4, VST3 | yes, 5 (GTK2 top-level) | **PASS**: layout loaded; trace `enter v5 / drop / finished 1`; Files gets XdndFinished from Ardour | forwards to the embedded editor | not needed |
 | Carla 2.5.10, VST3 | yes, **3** (Carla's own host window) | **no**: Carla answers and finishes the drop itself (Files logs XdndFinished from it); nothing reaches the editor | XdndAware itself, does not forward | PASS: layout loaded |
 | Carla main, CLAP | no | **no**: GTK finds no target | neither | PASS |
-| Carla main, VST3 | not checked | — | — | — |
-| Renoise 3.5.4, VST3 | no (its main window is: 5, for its own file drops) | **no**: GTK finds no target ("async callback for #2c000b0" without XdndAware) | neither | PASS: layout loaded (`after-qt-like-deep-gap.png`) |
+| Carla main, VST3 | not checked: Carla crashes after loading Gneiss (below) | — | — | — |
+| Renoise 3.5.4, VST3 | no (its main window is: 5, for its own file drops) | **no**: on the way the drag crosses Renoise's main window, which accepts (`Entering Xdnd window 0x2c0009b`, Status 461); over the plug-in window GTK finds no target ("async callback for #2c000b0", not XdndAware), and the release finishes nothing | neither | PASS: layout loaded (`after-qt-like-deep-gap.png`) |
 
-- Carla main VST3: the Python process (Carla's backend) died with SIGSEGV right after loading Gneiss VST3 alone
-  (apport, no stack). I did not investigate; Carla main's VST3 hosting already has a threading bug (Log 2026-10-19).
+- **Carla main VST3 crashes after loading Gneiss VST3 alone; deferred.**
+  - The first run ended in apport (SIGSEGV, no stack). Re-run under gdb, it reproduced
+    (`evidence/t013/drops/carla-main-vst3/crash.txt`).
+  - Carla main calls the plug frame's `IRunLoop` timer from its engine thread (`CarlaEngineRunner`); the trace says
+    `first timer callback … on OFF-MAIN`. On that thread Gneiss' `OnIdle` rebuilds its layout and loads a font into
+    NanoVG (`IGraphics::LoadFont` → `nvgCreateFontFaceMem`), while the main thread is inside GLX opening the editor.
+    It crashes there.
+  - The frames are iPlug's and Gneiss', but the cause is the Carla-main bug of 2026-10-19: VST3 run-loop handlers
+    must run on the UI thread. That time it took a second editor; this time the timer fires during the first open.
+  - Minimal repro: `carla-hold.py ~/hosts/Carla-main vst3 ~/.vst3/Gneiss.vst3 "" 15` under a dummy jackd.
+  - Reported to the coordinator. No iPlug change made. A framework option would be to ignore run-loop callbacks
+    that arrive off the thread that attached the view; that is a decision for the user.
 - **Conclusion.** Every editor accepts drops from a source that addresses it, so iPlug's side works everywhere.
   Whether a GTK file manager (GNOME Files) can drop onto a plug-in depends on the host:
   - **Works:** REAPER and Ardour forward the drop.
@@ -307,16 +317,16 @@ trace and Files' XDND lines; PNGs local).
     first position only. No change proposed: it is host behaviour, and a Qt source reaches the editor in every host.
 - Tooltip (Sand): Renoise PASS (Log above), Ardour PASS (2026-10-20). Carla not checked.
 
-**Item 9 — T-020's VM checks.** Evidence `evidence/t013/t020/`.
+**Item 9 — T-020's VM checks.** Evidence `evidence/t013/t020/` (text committed; screenshots local, as everywhere).
 
 | Check | Result | Evidence |
 |---|---|---|
 | GL3 build on virgl | **cannot render here**. virgl offers OpenGL 2.1 only (`Max core profile version: 0.0`). The open fails with the intended message ("no OpenGL 3.2 core context …", plus the trapped `GLXBadFBConfig`); REAPER stays alive and shows its generic UI. Rendering GL3, and a tooltip under GL3, go to the PC checklist. | `gl3-virgl.txt`, `01-gl3-clap-open.png` |
 | `SetFilePathInClipboard` → paste into GNOME Files | **PASS**. The clipboard offers `text/uri-list` and `x-special/gnome-copied-files` (`copy`, percent-encoded UTF-8); Ctrl+V in Files copies `Preset #1 ünï.fxp` into the folder. | `clipboard-paste/` |
-| Real GNOME portal, dark/light | **PASS**. IPlugControls (`IPLUG_TEST_APPEARANCE`, REAPER CLAP): `dark` at open, `light` after `color-scheme` → `default` (what Settings → Appearance writes), `dark` after the restore; all `main=1`. The user's `prefer-dark` is restored. | `appearance-portal.txt`, `reaper-gl2-stderr.txt` |
-| Drag out → GNOME Files | **PASS**. `drag me.wav` is copied into the folder; Files logs XdndEnter, Positions, Drop. | `dragout-files/` |
-| Drag out → REAPER | **PASS**. REAPER makes a track with the file. (This happened twice by accident: Files was hidden behind REAPER's main window, which REAPER raises with its FX window.) | `dragout-reaper/` |
-| Drag out → Ardour | **PASS**. Ardour imports the file as a region on a track (copied into the session; the session was not saved, and the copy was removed afterwards). | `dragout-ardour/` |
+| Real GNOME portal, dark/light | **PASS**. IPlugControls (`IPLUG_TEST_APPEARANCE`, REAPER CLAP): `dark` at open, `light` after `color-scheme` → `default` (what Settings → Appearance writes), `dark` after the restore; all `main=1`. Re-run with `scripts/vm/probe/t013/appearance-toggle.sh /tmp/reaper.log`, which puts the user's setting (`prefer-dark`) back on any exit. | `appearance-portal.txt`, `reaper-gl2-stderr.txt` |
+| Drag out → GNOME Files | **PASS**. `drag me.wav` is copied into the folder (`after:` in RESULT.txt); Files, the target, logs XdndEnter, Positions, Drop (`files-dnd.txt`). | `dragout-files/` |
+| Drag out → REAPER | **PASS**. REAPER's tracks go from 1 to 2; track 2 is "drag me", with the dragged file as its media (`reaper-tracks.txt`). The run used `dragout-reaper.sh`; the first runs had dropped onto REAPER by accident. | `dragout-reaper/` |
+| Drag out → Ardour | **PASS**. Ardour imports the file: the copy appeared in the session's `interchange/…/audiofiles/` (`NOTE.txt`); a region shows on a track (local screenshot). The session was not saved, and the copy was removed afterwards. | `dragout-ardour/` |
 | Drag out → Renoise | **delivered**. Renoise's log: `Dropped file (1 from 1): '…/drag me.wav'`; dropped on its song browser, which makes no instrument from it. | `dragout-renoise/` |
 | Drag out → Carla | N/A: Carla's backend without its GUI has no drop target. | — |
 | Drag feedback cursor | **PASS** (XFixes cursor names along the drag): `default` over the square before; `not-allowed` where nothing accepts; the hand `pointer` over accepting targets (REAPER's windows, our own editor, Files); `default` again after the release. | `dragout-files/RESULT.txt`, `dragout-to` RESULTs |
@@ -328,6 +338,17 @@ trace and Files' XDND lines; PNGs local).
 - `pgrep -f '[c]arla-hold'` inside a `vm-x.sh bash -c` matches that bash's own command line, so the loop waits
   forever. Match the interpreter's argv instead.
 - `xwininfo -id ""` waits for a click; `reaper-open.sh` guards against it.
+- `rpr.sh` run from a later `vm-x.sh` session started a second REAPER instance instead of reaching the running one,
+  so `dragout-reaper.sh` does everything in one session.
+- Commands as run, on the VM:
+  - Renoise's OSC server, for `rn-lua.py`. On, while Renoise is not running:
+    `sed -i 's#<OscServerEnabled>false</OscServerEnabled>#<OscServerEnabled>true</OscServerEnabled>#' ~/.config/Renoise/V3.5.4/Config.xml`
+  - Off afterwards: `pgrep -x renoise || sed -i 's#<OscServerEnabled>true</OscServerEnabled>#<OscServerEnabled>false</OscServerEnabled>#' ~/.config/Renoise/V3.5.4/Config.xml`
+  - The IPlugControls test build into `~/.vst3` and `~/.clap` for the drag-out in Ardour and Renoise (from the Mac):
+    `scripts/vm/vm-deploy.sh build/t013-t020-gl2 IPlugControls`
+  - The trace build back afterwards: `scripts/vm/vm-deploy.sh build/t013-rn-controls IPlugControls`, then
+    `LD_LIBRARY_PATH=/usr/lib/ardour8 /usr/lib/ardour8/ardour-vst3-scanner -f ~/.vst3/IPlugControls.vst3`, so that
+    Ardour's cache matches.
 - Clean-up: Renoise quit without saving and its OSC server is off again. Ardour quit with "Just quit" (the session
   file is unchanged). Nautilus and jackd are stopped, apport's dialog is answered "Don't send", and the GNOME
   appearance is back to `prefer-dark`. The VM lock is released.
