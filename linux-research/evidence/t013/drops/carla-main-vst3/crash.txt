@@ -1,0 +1,48 @@
+# Carla main (~/hosts/Carla-main) backend, Gneiss VST3 alone: scripts/vm/probe/t013/carla-hold.py ~/hosts/Carla-main vst3 ~/.vst3/Gneiss.vst3 "" 15
+# run under gdb (2026-10-21, second occurrence; the first ended in apport: /var/crash/_usr_bin_python3.12.1000.crash, Signal 11, no stack)
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[Detaching after vfork from child process 70105]
+engine True
+IPLUG_HOSTLOOP pid=70103 tid=70103 VST3 factory setHostContext: context=0xd5c118 IRunLoop=(nil)
+IPLUG_HOSTLOOP pid=70103 tid=70103 Gneiss@0xd81638: VST3 initialize: factory IRunLoop=(nil) context IRunLoop=(nil)
+iPlug2: the host provides no event loop; timers (OnIdle) run on a plug-in thread
+IPLUG_HOSTLOOP pid=70103 tid=70103 Gneiss@0xd81638: backend=fallback-thread host-driven=0 entries=1 init-tid=70103
+IPLUG_HOSTLOOP pid=70103 tid=70113 Gneiss@0xd81638: fallback thread started
+[31m[carla] Carla assertion failure: "plugin.get() != nullptr && plugin->isEnabled()" in file CarlaEngineJack.cpp, line 4485[0m
+load True
+IPLUG_HOSTLOOP pid=70103 tid=70103 Gneiss@0xd81638: VST3 view attached: frame IRunLoop=0xd5c218
+IPLUG_HOSTLOOP pid=70103 tid=70103 Gneiss@0xd81638: backend fallback-thread -> vst3-irunloop(frame)
+IPLUG_HOSTLOOP pid=70103 tid=70113 Gneiss@0xd81638: fallback thread stopped
+IPLUG_HOSTLOOP pid=70103 tid=70103 Gneiss@0xd81638: backend=vst3-irunloop(frame) host-driven=1 entries=1 init-tid=70103
+IPLUG_HOSTLOOP pid=70103 tid=70111 Gneiss@0xd81638: first timer callback id=1 backend=vst3-irunloop(frame) on OFF-MAIN (init-tid=70103)
+
+Thread 7 "CarlaEngineRunn" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0xfffff39a5180 (LWP 70111)]
+0x0000fffff2e6f440 in nvgCreateFontFaceMem () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#0  0x0000fffff2e6f440 in nvgCreateFontFaceMem () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#1  0x0000fffff2ed8440 in iplug::igraphics::IGraphicsNanoVG::LoadAPIFont(char const*, std::unique_ptr<iplug::igraphics::PlatformFont, std::default_delete<iplug::igraphics::PlatformFont> > const&) () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#2  0x0000fffff2e81e54 in iplug::igraphics::IGraphics::LoadFont(char const*, char const*) () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#3  0x0000fffff2d525a4 in Gneiss::initializeLayout()::{lambda(iplug::igraphics::IGraphics*)#1}::operator()(iplug::igraphics::IGraphics*) const () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#4  0x0000fffff2d4dc88 in Gneiss::rebuildMorphLayout() () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#5  0x0000fffff2d5a4c8 in Gneiss::tryUpdateLayout() () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#6  0x0000fffff2d11e40 in Gneiss::OnIdle() () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#7  0x0000fffff2e38510 in iplug::HostLoop::Dispatch(bool, unsigned long, int) () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#8  0x0000fffff2def5ac in iplug::VST3RunLoopHandler::onTimer() () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#9  0x0000fffff70f497c in ?? () from ~/hosts/Carla-main/bin/libcarla_standalone2.so
+#10 0x0000fffff7044624 in ?? () from ~/hosts/Carla-main/bin/libcarla_standalone2.so
+#11 0x0000fffff702d5c4 in ?? () from ~/hosts/Carla-main/bin/libcarla_standalone2.so
+#12 0x0000fffff6ffc64c in ?? () from ~/hosts/Carla-main/bin/libcarla_standalone2.so
+#13 0x0000fffff7d3582c in start_thread (arg=0xfffff7ff2e60) at ./nptl/pthread_create.c:447
+#14 0x0000fffff7d9bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+  Id   Target Id                                           Frame 
+  1    Thread 0xfffff7ff2720 (LWP 70103) "python3"         0x0000fffff2329710 in ?? () from /lib/aarch64-linux-gnu/libGLX_mesa.so.0
+  2    Thread 0xfffff56af180 (LWP 70106) "python3"         0x0000fffff7d9be74 in __GI_epoll_pwait (epfd=4, events=0xfffff56aded8, maxevents=128, timeout=-1, set=0x0) at ../sysdeps/unix/sysv/linux/epoll_pwait.c:40
+  3    Thread 0xfffff4e9f180 (LWP 70107) "python3"         0x0000fffff7d31d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0xfffff4e9e848, op=137, expected=0, futex_word=0xd34a80) at ./nptl/futex-internal.c:57
+  4    Thread 0xfffff468f180 (LWP 70108) "python3"         0x0000fffff7d9be74 in __GI_epoll_pwait (epfd=7, events=0xfffff468dec8, maxevents=128, timeout=-1, set=0x0) at ../sysdeps/unix/sysv/linux/epoll_pwait.c:40
+  5    Thread 0xfffff3c3f180 (LWP 70109) "python3"         0x0000fffff7d31d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xd52730) at ./nptl/futex-internal.c:57
+  6    Thread 0xfffff3a35180 (LWP 70110) "python3"         0x0000fffff7d91248 in __GI___libc_read (nbytes=4, buf=0xfffff3a34710, fd=15) at ../sysdeps/unix/sysv/linux/read.c:26
+* 7    Thread 0xfffff39a5180 (LWP 70111) "CarlaEngineRunn" 0x0000fffff2e6f440 in nvgCreateFontFaceMem () from ~/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+  8    Thread 0xfffff3195180 (LWP 70112) "python3"         syscall () at ../sysdeps/unix/sysv/linux/aarch64/syscall.S:38
+  10   Thread 0xfffff247f180 (LWP 70114) "python3"         0x0000fffff7d91248 in __GI___libc_read (nbytes=4, buf=0xfffff247e710, fd=23) at ../sysdeps/unix/sysv/linux/read.c:26
+  11   Thread 0xfffff23ef180 (LWP 70115) "python3"         syscall () at ../sysdeps/unix/sysv/linux/aarch64/syscall.S:38
