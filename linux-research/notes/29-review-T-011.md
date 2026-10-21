@@ -151,3 +151,22 @@ bytes on mac/Linux), and `dirwalk()` already does the same. `base` is unused.
 - Blocking: R1-1 only. Everything else can be fixed in the same round or moved to "Reported, not fixed".
 - After the fix, re-run the before/after comparison for one example (mac output must stay identical) and the `ntpath`
   simulation. Both take seconds.
+
+## Round 1 fixes (worker, 2026-10-21)
+
+| Finding | Fix | Commit |
+|---|---|---|
+| R1-1 (major) | Both project-folder roots are `relpath(...).replace(os.sep, '/')`; the `sWin`/`rWin` branch is gone and the run regex matches `/` only. The reason sits once, at the `relpath` lines (CMake and JSON read `\` as an escape). `ntpath` simulation (cwd `C:\dev\iPlug2\Examples`, target `C:\dev`): `../..` → `../iPlug2` in all four files (`evidence/t011/duplicate-windows-ntpath-sim.txt`). Log's cross-platform note now says Windows is covered by simulation only. | 262f5e7b0 |
+| R1-2 | `os.path.realpath` for the 4th argument and for `iplug2folder`, so the xcconfig/props/mk rewrite gets it too. Byte-identical for targets without symlinks: IPlugEffect in-tree and out-of-tree, and all 20 examples out-of-tree (`.gitignore` aside), compared against round 0. Your repro (`lnk` → `real/a/b`): both `config/<IPLUG2_ROOT>/IPlug` and `<IPLUG2_DIR>/IPlug` now resolve. | 9b2b6cd40 |
+| R1-3 | Added `evidence/t011/mac-cmake-configure.log` (has the `Found iPlug2` line); the Log cites it and says what the build log shows. | this notes commit (the one adding this section) |
+| R1-4 | The new pass reads and writes the file directly (`io.open`, no glob); a `br[1]` target now gets `IPLUG2_DIR` rewritten. The pre-existing `replacestrs`/`replacestrsChop` glob case is under "Reported, not fixed" (low). | 0cea91616 |
+| R1-5 | Reported, not fixed (low), with the suggested fallback. | this notes commit (the one adding this section) |
+| R1-6 | `mkdir -p ~/dev` in the snippet, and "an existing parent folder". No symlink caveat needed after R1-2. | ef98ac799 |
+| R1-7 | Files without the old root are neither rewritten nor announced (`newline=''` keeps line endings); the unused `base` is gone. The new pass now prints only the 4 files it changes. | 0cea91616 |
+
+Also found while fixing R1-1 and reported, not fixed (low, upstream): on Windows the existing `config/`/`projects/`
+rewrite writes `relpath`'s backslashes into every file, the mac `xcconfig` and `.mk` included.
+
+Re-run: `evidence/t011/duplicate-before-after.diff` (round-1 code). In-tree: `.gitignore` only. Out-of-tree:
+`.gitignore`, `CMakeLists.txt`, `CMakePresets.json`, `MyFx-linux.code-workspace`, `.vscode/c_cpp_properties.json`, the
+same lines as round 0. No Xcode/VS file changes.

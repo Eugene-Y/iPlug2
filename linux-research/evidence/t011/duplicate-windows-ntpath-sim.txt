@@ -1,0 +1,29 @@
+Windows simulation (ntpath): cwd C:\dev\iPlug2\Examples, target C:\dev\MyFx
+oldprojectroot='../..' newprojectroot='../iPlug2'
+IPlugEffect/CMakeLists.txt:
+  - set(IPLUG2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE PATH "iPlug2 root directory")
+  + set(IPLUG2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../iPlug2" CACHE PATH "iPlug2 root directory")
+IPlugEffect/CMakePresets.json:
+  - "../../Scripts/cmake/Linux/CMakePresets-linux.json"
+  + "../iPlug2/Scripts/cmake/Linux/CMakePresets-linux.json"
+IPlugEffect/IPlugEffect-linux.code-workspace:
+  - "args": ["-newinst", "-new", "${workspaceFolder}/../../Scripts/linux/reaper-open-fx.lua"],
+  + "args": ["-newinst", "-new", "${workspaceFolder}/../iPlug2/Scripts/linux/reaper-open-fx.lua"],
+IPlugEffect/IPlugEffect-linux.code-workspace:
+  - "args": ["-newinst", "-new", "${workspaceFolder}/../../Scripts/linux/reaper-open-fx.lua"],
+  + "args": ["-newinst", "-new", "${workspaceFolder}/../iPlug2/Scripts/linux/reaper-open-fx.lua"],
+IPlugEffect/.vscode/c_cpp_properties.json:
+  - "${workspaceFolder}/../../WDL/**",
+  + "${workspaceFolder}/../iPlug2/WDL/**",
+IPlugEffect/.vscode/c_cpp_properties.json:
+  - "${workspaceFolder}/../../IPlug/**",
+  + "${workspaceFolder}/../iPlug2/IPlug/**",
+IPlugEffect/.vscode/c_cpp_properties.json:
+  - "${workspaceFolder}/../../IGraphics/**",
+  + "${workspaceFolder}/../iPlug2/IGraphics/**",
+IPlugEffect/.vscode/c_cpp_properties.json:
+  - "${workspaceFolder}/../../Dependencies/**"
+  + "${workspaceFolder}/../iPlug2/Dependencies/**"
+IPlugEffect/.vscode/c_cpp_properties.json:
+  - "${workspaceFolder}/../../Dependencies/Build/mac/include/**"
+  + "${workspaceFolder}/../iPlug2/Dependencies/Build/mac/include/**"
