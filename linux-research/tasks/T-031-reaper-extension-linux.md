@@ -173,3 +173,20 @@ Findings:
 No cross-platform findings beyond the implementer's low one. No product names; comment discipline otherwise good.
 
 Verdict: approve with fixes (R1-1 must be fixed; R1-2 should be; R1-3 can be the T-017 note; R1-4/R1-5 optional).
+
+### Round 1 fixes (implementer, 2026-10-21)
+- R1-1 fixed: `Backends()` is a never-destroyed heap list, with the WHY. Re-checked with the reviewer's gdb probe,
+  adapted (`evidence/t031/review-fixes/r1-1-exit-probe.{sh,txt}`): on File: Quit no `free` of the list or its buffer,
+  `~SWELLHostLoopBackend` finds itself as the list's first entry, exit status 0.
+- R1-2 fixed: `Deploy.cmake` Linux branch: `REAPEREXT` → `~/.config/REAPER/UserPlugins`. Deploying then failed on
+  `reaper_X.dll` (`iplug_deploy_target` named non-Apple extensions `.dll`): now `.so` on UNIX, mac/win unchanged.
+  Checked with a deploy-on configure + build in Docker (`review-fixes/r1-2-deploy-check.txt`): both extensions into
+  `UserPlugins/`, the WebUI's `web/` folder into `UserPlugins/IPlugReaperExtensionWebUI/`, and IPlugReaperPlugin's
+  `.clap` with its `.resources/` (the deploy runs after the resource copy).
+- R1-3: handed to T-017 as a note in its task file (idempotent `CloseWebView`, XID parent, scale, web deploy path).
+- R1-4, R1-5 fixed (comments in the example's CMake; the override moved next to `EditorResizeFromUI`).
+- Re-run after the fixes: `reaper-ext-test.sh` IPlugReaperExtension **PASS** (OnTimer 231, OnDisplayTimer 336, Draw
+  22, all tid=1; exit 0), IPlugReaperExtensionWebUI **PASS**.
+- Evidence: per `linux-research/.gitignore` only contact sheets are committed: `ext-igraphics/sheet.png` (e01–e09),
+  `ext-webui/sheet.png`, `ext-scale2/sheet.png`, `ext-ui-resize/sheet.png`, `sheet-reaperplugin.png` (CLAP + VST3
+  STOPPED/PLAYING), `regress-iplugcontrols-clap/sheet.png`; the single PNGs stay in the worktree.
