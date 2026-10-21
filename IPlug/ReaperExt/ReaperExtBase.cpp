@@ -2,11 +2,22 @@
 #define IPLUG_STRINGIFY_HELPER(x) #x
 #define IPLUG_STRINGIFY(x) IPLUG_STRINGIFY_HELPER(x)
 
+#ifdef OS_LINUX
+#include "Linux/IPlugLinuxHostLoopSWELL.h"
+#endif
+
 ReaperExtBase::ReaperExtBase(reaper_plugin_info_t* pRec)
 : EDITOR_DELEGATE_CLASS(0) // zero params
 , mRec(pRec)
 {
+#ifdef OS_LINUX
+  // Timer::Create() would run OnIdle on a thread of its own: Linux has no system main loop to put it on.
+  mHostLoop.SetOwnerName(IPLUG_STRINGIFY(PLUG_CLASS_NAME));
+  mTimer = std::make_unique<Timer_impl>(std::bind(&ReaperExtBase::OnTimer, this, std::placeholders::_1), IDLE_TIMER_RATE, &mHostLoop);
+  mHostLoop.SetBackend(std::make_unique<SWELLHostLoopBackend>(mHostLoop));
+#else
   mTimer = std::unique_ptr<Timer>(Timer::Create(std::bind(&ReaperExtBase::OnTimer, this, std::placeholders::_1), IDLE_TIMER_RATE));
+#endif
   mDockId.Set(IPLUG_STRINGIFY(PLUG_CLASS_NAME));
   mMenuName.Set(IPLUG_STRINGIFY(PLUG_CLASS_NAME));
   memset(&mDockState, 0, sizeof(ReaperExtDockState));
@@ -59,6 +70,13 @@ bool ReaperExtBase::EditorResizeFromUI(int viewWidth, int viewHeight, bool needs
       RECT r;
       GetWindowRect(gHWND, &r);
       SetWindowPos(gHWND, 0, r.left, r.bottom - viewHeight - TITLEBAR_BODGE, viewWidth, viewHeight + TITLEBAR_BODGE, 0);
+#elif defined OS_LINUX
+      RECT client, window;
+      GetClientRect(gHWND, &client);
+      GetWindowRect(gHWND, &window);
+      const int frameWidth = (window.right - window.left) - client.right;
+      const int frameHeight = (window.bottom - window.top) - client.bottom;
+      SetWindowPos(gHWND, 0, 0, 0, viewWidth + frameWidth, viewHeight + frameHeight, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 #endif
     }
 
@@ -431,7 +449,20 @@ WDL_DLGRET ReaperExtBase::MainDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
         ShowWindow(hwnd, SW_SHOW);
       }
 
+#ifdef OS_LINUX
+      // The editor is an X window of its own: SWELL gives it a parent X window inside the dialog and keeps that
+      // one positioned as the dialog moves, docks and resizes, as REAPER does for plug-in editors.
+      {
+        gPlug->SetScreenScale(scale);
+        RECT client;
+        GetClientRect(hwnd, &client);
+        void* pXParent = nullptr;
+        gPlug->mXBridgeWnd = SWELL_CreateXBridgeWindow(hwnd, &pXParent, &client);
+        gPlug->OpenWindow(pXParent);
+      }
+#else
       gPlug->OpenWindow(hwnd);
+#endif
 
       // Trigger initial resize now that IGraphics exists
       // (WM_SIZE during SetWindowPos/DockWindowAddEx above fires before OpenWindow)
@@ -458,6 +489,15 @@ WDL_DLGRET ReaperExtBase::MainDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
     }
     case WM_DESTROY:
     {
+#ifdef OS_LINUX
+      // The editor's X window is a child of the bridge, which goes with this dialog. Not every path here closed the
+      // editor first: REAPER removing a docked window, ~ReaperExtBase.
+#ifndef NO_IGRAPHICS
+      if (gPlug->GetUI())
+#endif
+        gPlug->CloseWindow();
+      gPlug->mXBridgeWnd = nullptr;
+#endif
       if (gPlug->mSaveStateOnDestroy)
         gPlug->SaveDockState();
 
@@ -481,6 +521,10 @@ WDL_DLGRET ReaperExtBase::MainDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
         const float scale = GetScaleForHWND(hwnd);
         w = static_cast<int>(w / scale);
         h = static_cast<int>(h / scale);
+#endif
+#ifdef OS_LINUX
+        if (gPlug->mXBridgeWnd)
+          SetWindowPos(gPlug->mXBridgeWnd, 0, 0, 0, r.right - r.left, r.bottom - r.top, SWP_NOZORDER | SWP_NOACTIVATE);
 #endif
         if (w > 0 && h > 0)
           gPlug->OnParentWindowResize(w, h);

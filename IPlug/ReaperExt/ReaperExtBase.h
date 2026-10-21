@@ -111,6 +111,10 @@ public:
    * @param id Unique identifier string (defaults to PLUG_CLASS_NAME) */
   void SetDockId(const char* id) { mDockId.Set(id); }
 
+#ifdef OS_LINUX
+  HostLoop* GetEditorHostLoop() override { return &mHostLoop; }
+#endif
+
   /** Sets the title of the submenu that this extension's actions are added to,
    * inside REAPER's Extensions menu
    * @param name Submenu title (defaults to PLUG_CLASS_NAME) */
@@ -148,6 +152,10 @@ private:
   void UpdateToggleStates();
 
   reaper_plugin_info_t* mRec = nullptr;
+#ifdef OS_LINUX
+  HostLoop mHostLoop; // declared before mTimer, which unregisters from it on destruction
+  HWND mXBridgeWnd = nullptr; // the child of the main window that holds the editor's X window
+#endif
   std::unique_ptr<Timer> mTimer;
   ReaperExtDockState mDockState = {};
   WDL_FastString mDockId;
