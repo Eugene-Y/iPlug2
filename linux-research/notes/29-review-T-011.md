@@ -170,3 +170,97 @@ rewrite writes `relpath`'s backslashes into every file, the mac `xcconfig` and `
 Re-run: `evidence/t011/duplicate-before-after.diff` (round-1 code). In-tree: `.gitignore` only. Out-of-tree:
 `.gitignore`, `CMakeLists.txt`, `CMakePresets.json`, `MyFx-linux.code-workspace`, `.vscode/c_cpp_properties.json`, the
 same lines as round 0. No Xcode/VS file changes.
+
+## Round 2 (reviewer, 2026-10-21)
+
+Reviewed 262f5e7b0, 0cea91616, 9b2b6cd40, ef98ac799 and fc23d7036.
+
+**Verdict: changes requested, for one line.** R1-1, R1-3, R1-4, R1-6 and R1-7 are fixed as described, and R1-5 is
+reported. On macOS and Linux the R1-2 `realpath` change behaves as intended. On Windows, though, it makes
+`oldprojectroot` inconsistent with the working directory (R2-1). The fix is a one-line change and needs no new round of
+evidence beyond the simulation.
+
+### Re-checked
+
+- **Before/after, new HEAD.** I extracted HEAD with `git archive` and ran all 20 examples × 5 placements (in-tree;
+  4th argument `.`; `../../sib`; deep `deep/a/b/c`; a parent folder with a space), seed 11. The output is `diff -r`-identical
+  to the round-1 code's output in all 100 cases. That output differs from `hvoya-linux` only in `.gitignore`, and out
+  of tree also in `CMakeLists.txt`, `CMakePresets.json`, the `-linux` workspace and `.vscode/c_cpp_properties.json`.
+  No xcconfig, pbxproj, vcxproj, props or `.mk` file changes for a target that involves no symlink.
+- **The cases the coordinator asked about, on macOS** (round 0 vs HEAD, same inputs):
+  - In-tree from a different working directory: the script requires cwd = `Examples/`, before and after (`os.listdir(os.curdir)`,
+    `copy('gitignore_template', …)`). I ran it from a cwd reached through a symlink to `Examples/`. Python's
+    `os.getcwd()` is already physical on POSIX, so `abspath` and `realpath` agree. Result: identical apart from
+    `.gitignore`, the intended CMake/JSON lines and the random unique ID.
+  - Relative 4th argument (`../../rel`, and `.`): xcconfig, props and `.mk` are identical to round 0.
+  - A target that doesn't exist yet: `realpath` is non-strict (Python 3.12 here; also 3.6+), so it returns the path, and
+    `isdir` then prints "error: Output path does not exist", as before. The same happens for a missing parent and for a
+    dangling symlink.
+  - `check-product-names.sh`: clean. Worktree `git status`: clean.
+- **`replaceprojectroot()`** now reads and writes with `io.open(..., newline='')` and writes only on a change, so line
+  endings are kept. Good.
+
+### R2-1 (major, Windows only): `oldprojectroot` mixes a resolved path with the unresolved cwd
+
+`Examples/duplicate.py:258`.
+
+**Why POSIX is fine and Windows is not.** `iplug2folder` is now `realpath(...)`, but
+`relpath(iplug2folder, inputprojectname)` resolves `inputprojectname` against `os.getcwd()`. That is the physical path
+on POSIX, so nothing changes there. On Windows `getcwd()` keeps the drive letter or junction the user `cd`'d through, while
+`ntpath.realpath` (via `GetFinalPathNameByHandleW`) resolves:
+- a `subst` drive to its backing folder;
+- a mapped network drive to its UNC path;
+- a junction to its target.
+
+**Simulation.** `ntpath`, with realpath's resolution stubbed for each case:
+
+| Setup (cwd `X:\iPlug2\Examples`, target `X:\dev`) | Round 0 (`abspath`) | HEAD (`realpath`) |
+|---|---|---|
+| plain `C:` | `../..` → `../iPlug2` | same |
+| `subst S: C:\work` | worked | `ValueError: path is on mount 'C:', start on mount 'S:'`, a traceback after `copytree`, which leaves a half-renamed project |
+| `net use Z: \\srv\share` | worked | `ValueError: ... mount '\\srv\share', start on mount 'Z:'` |
+| junction `C:\dev` → `C:\real` | worked | `oldprojectroot = '../../../../real/iPlug2'`, which never matches `../..`, so the CMake/JSON rewrite is silently skipped |
+
+That is a regression for Windows users who work from a `subst` drive, a mapped drive or a junction, and duplicate with a
+4th argument. Not run on a PC. Junction resolution is documented for `realpath` since Python 3.8. The `subst` and
+mapped-drive resolution comes from `GetFinalPathNameByHandleW`; it is widely reported, but I did not run it here.
+
+**Fix.** `oldprojectroot` describes the example's own layout, not the file system, so compute it lexically:
+```python
+    oldprojectroot = os.path.relpath(os.path.join(configpath, oldroot), inputprojectname).replace(os.sep, '/')
+```
+- Both arguments resolve against the same cwd, so the result is `../..` on every platform and with any drive mapping.
+- Keep `realpath` for `iplug2folder` and the target. `newroot` and `newprojectroot` then compare two resolved paths, which stays
+  consistent, and also fixes the symlink case R1-2 was about.
+- In the simulation, the lexical form gives `../..` in all four rows.
+
+Re-run the before/after diff for one example afterwards. macOS output can't change, because on POSIX this equals the
+current value.
+
+### R2-2 (nit): the R1-2 comment names only the target
+
+`Examples/duplicate.py:200`. `realpath` is also applied to `iplug2folder`. Optional: say it once where both are used, e.g. "Both
+ends resolved: the written relative paths are followed physically, so a symlink on either side would skew them".
+
+### The worker's pre-existing Windows finding (`config/`/`projects/` backslashes)
+
+**Real, and worse than the Log says.** I emulated `ntpath.relpath` (`relpath` returning `\`, `os.sep = '\\'`) on both the
+`hvoya-linux` script and HEAD, with identical results, so it predates T-011 (the code dates from 2018, upstream).
+
+- Every file with forward-slash `../../..` gets `relpath`'s backslashes:
+  - mac/iOS xcconfig, both `project.pbxproj`;
+  - web/wasm `.mk`;
+  - `makedist-*.sh`;
+  - all three `prepare_resources-*.py`.
+- **Doubling.** `dirwalk()` then applies the backslash variant (`..\..\..` → `newroot`) to text the first replacement just
+  wrote. Whenever iPlug2 is not a direct child of the target folder (`newroot` from `config\` starts with `..\..\..`), the
+  path doubles: `IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2`. Seen in the emulation on the 11 forward-slash files above.
+- The `.props`/`.vcxproj` paths come out right, because they only ever contained `..\..\..`. `prepare_resources-win.py` is not called by the
+  VS projects. So a Windows build is unaffected. What breaks is building the same project on mac, iOS or web after it was
+  duplicated on Windows.
+
+**Ticket:** yes, as a separate low-priority cross-platform ticket (not Linux-specific, outside T-011's approved scope).
+Note in it that the fix is one line, the same idea as R1-1: normalise `newroot` to `/` before `dirwalk()`.
+The forward-slash pass then writes `/`, which every one of those files accepts. The backslash pass still writes `\` into
+`.props`/`.vcxproj`, and can no longer re-match the forward-slash result. If the user wants it in T-011 instead, that is
+their call, since it changes Windows output of a shared script.
