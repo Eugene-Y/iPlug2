@@ -106,7 +106,7 @@ probe is typed in as one line). Evidence `evidence/t013/ardour/` (PNGs local).
   to the Dummy backend (`~/.config/ardour8/config`, backup `config.t013-alsa`).
 - Next: Renoise; drops from GNOME Files (case 8) in Carla/Ardour; item 9 (T-020's VM checks); automation lanes.
 
-### 2026-10-21 — Renoise 3.5.4 (CLAP, VST3)
+### 2026-10-21 — Renoise 3.5.4 (VST3; no CLAP in Renoise)
 **Builds:** linux/T-013 after merging hvoya-linux (merge 92738e8c7: T-034 stencil fix, T-023 CLAP rescan), Release with
 `-DIPLUG_TRACE_HOST_LOOP -DIGRAPHICS_TRACE_LINUX_INPUT`: Gneiss (linux-experiment 773867e), Sand (052a0bc),
 IPlugControls, built in Docker against this worktree, deployed to `~/.clap`, `~/.vst3`. Sessions 1–2 ran that build;
@@ -131,7 +131,7 @@ but runs plug-ins in its own process (the trace's pid is Renoise's). An editor i
 | 3 automation read | PASS: an A hz envelope plays, the knob follows (`31-*`) | | |
 | 3 automation write | gestures reach Renoise: begin/perform/end on the main thread, right id (`param-gestures.txt`), Renoise's value follows; Renoise wrote no envelope, but not for its own Gainer either: my recording setup, not settled | | |
 | 4 save with the editor open / closed, change, reload | PASS: Main hz 12.7 kHz and the MORPH-off layout restored (`43`); Renoise does not reopen editors | PASS (closed): 0.770 | PASS (closed): Gain 33 % |
-| 5 latency, editor closed (OS 1x↔8x while playing) | PASS: `SetLatency` on the fallback thread; Renoise moves the restart to its main thread (`latency-editor-closed.txt`) | | |
+| 5 latency, editor closed (OS 1x↔8x while playing) | restart honoured, latency re-read (PDC value not observable): `SetLatency` on the fallback thread; Renoise moves the restart to its main thread (`latency-editor-closed.txt`) | | |
 | 6 two instances | PASS, both editors draw (`45`) | | |
 | 6 close the editor with a menu open | | | PASS (`29`→`30`) |
 | 6 remove the plug-in while playing, editor open | PASS, no hang (`46`) | | |
@@ -144,10 +144,13 @@ but runs plug-ins in its own process (the trace's pid is Renoise's). An editor i
 - editor closed: back to the fallback thread.
 
 So Renoise is a host that reaches the fallback with the editor closed. **It does not drop the latency change.**
-`restartComponent(kLatencyChanged)` from the fallback thread is queued (`TVst3Plug::restartComponent` defers a lambda)
-and runs on Renoise's main thread: `setProcessing(0)`, `setActive(0)`, `setActive(1)`, `getLatencySamples`,
-`setProcessing(1)` (`latency-editor-closed.txt`, lwp = pid). Editor open (`latency-editor-open.txt`): the same calls,
-also on the main thread. While the transport is stopped the plug-in is suspended. Renoise then re-reads the latency
+`restartComponent(kLatencyChanged)` (flag 8) arrives on the fallback thread; Renoise queues it: its
+`std::function` lambda (`TVst3Plug::restartComponent(int)::{lambda()#1}`) runs on the main thread and calls
+`restartComponent` again there, which then does `setProcessing(0)`, `setActive(0)`, `setActive(1)`,
+`getLatencySamples`, `setProcessing(1)` (`latency-editor-closed.txt`, lwp = pid). Editor open
+(`latency-editor-open.txt`): `restartComponent` arrives on the main thread and does the same at once, no lambda.
+Both files were re-run in review round 1 with the committed `call-trace.sh` and `latency.syms`, which now also lists
+Renoise's `restartComponent` and the lambda's `_M_invoke`; the first versions came from an earlier script. While the transport is stopped the plug-in is suspended. Renoise then re-reads the latency
 when processing resumes (`getLatencySamples` on an audio thread). The PDC value itself is not visible: Renoise has
 no API for it. **For T-010: no framework change needed for Renoise.** Bitwig remains the only unknown (x86_64 only, PC
 checklist).
@@ -157,12 +160,29 @@ checklist).
    value creates the entry and takes the X focus (`XSetInputFocus` + XEmbed `REQUEST_FOCUS`). Renoise then sends
    `FOCUS_OUT` (5), `WINDOW_DEACTIVATE` (2) and `FOCUS_IN` (4) ×2, and keeps the X focus on our window. iPlug ended
    the edit on `FOCUS_OUT` (`DeclineKeyboardFocus` → `CommitEdit`), so the typed keys went "to host"
-   (`textentry-sand-unfixed.txt`, with gdb backtraces and the XEmbed message codes). Fix 196036808 in
-   `IGraphicsLinux::HandleClientMessage`: `FOCUS_OUT` ends an edit only when the X focus is no longer ours. A real
-   focus loss still arrives as an X `FocusOut` (click into Renoise: `56`). Docker REAPER regression with the fix: IPlugControls `iplugcontrols-p3b.txt` (text
-   entry, focus, menus, clipboard, key forwarding) and Sand `sand.txt`, CLAP + VST3: all PASS
-   (`evidence/t013/renoise-fix-docker/`).
-   **Needs the independent review** (focus code; AGENTS §4).
+   (`textentry-sand-unfixed.txt`, with gdb backtraces and the XEmbed message codes).
+   - **Fix 196036808** (round 0): `FOCUS_OUT` ends an edit only when the X focus is no longer ours.
+   - **Replaced by 916df0fd2** (review R1-1). A `FOCUS_OUT` now ends the edit only if no `FOCUS_IN` follows within
+     150 ms, decided in `UpdateEditingState`. XEmbed messages are traced (`XEmbed message N`).
+   - **VM, session 4** (`stderr-session4-r1.txt`; `60`–`63`): `5, 2, 4 → "FOCUS_IN answers the FOCUS_OUT: the edit
+     stays"`. Typing 3000 and Enter gives 3.00 kHz; a click into Renoise commits 700 Hz.
+   - **Ardour, with the new build** (`evidence/t013/ardour/r1-input-trace.txt`; `34`–`40`):
+     - Ardour's GtkSocket sends EMBEDDED_NOTIFY, FOCUS_IN and WINDOW_ACTIVATE at attach, and nothing on the edit's
+       focus take. The edit works: 1500 → 1.50 kHz.
+     - A click on a header button of the plug-in window (an ArdourButton) moves the X focus to Ardour's window,
+       an ancestor of ours (`FocusOut mode 0 detail 0`), and sends no FOCUS_OUT. The edit stays open, as before any of
+       these fixes: a focus move into the host's own window keeps an edit (`LoseKeyboardFocusToHost`). Ardour still
+       sees the keys first: Space starts its transport (`37`), and only the release is forwarded to us.
+     - Opening the preset dropdown then sends MODALITY_ON, FOCUS_OUT and WINDOW_DEACTIVATE, and no FOCUS_IN. The
+       edit ends (`XEmbed FOCUS_OUT unanswered: the edit ends`; 1.50 kHz committed, `38`).
+     - Afterwards a typed `9` goes to Ardour, which forwards it to us; we drop it because the edit is closed (`39`).
+       Space starts and stops Ardour's transport (`40`).
+     - **R1-1 downgraded.** Ardour never sent a FOCUS_OUT while the X focus was ours. At the dropdown the X focus was
+       already on Ardour's window, so 196036808 would also have ended the edit there. The reviewer's case (a real
+       FOCUS_OUT with the X focus still ours) did not occur in Ardour 8.4. The pairing rule stays: it does not depend
+       on where the X focus is, and it costs no X round trip.
+   - **Docker REAPER regression** with 916df0fd2: IPlugControls `iplugcontrols-p3b.txt` and Sand `sand.txt`, CLAP +
+     VST3: all PASS (`evidence/t013/renoise-fix-r1-docker/`; round 0: `renoise-fix-docker/`).
 2. **Host shortcuts with the editor focused do not work in Renoise (host design, nothing to fix in iPlug).** With
    Renoise's plug-in window focused, Renoise forwards every key to the plug-in as a synthetic event
    (`(sent by a client): dropped` in the trace). iPlug drops unhandled synthetic keys, which avoids a loop with
