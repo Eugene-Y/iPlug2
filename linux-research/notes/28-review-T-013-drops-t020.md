@@ -309,3 +309,7 @@ who finds different names or an empty folder should know that this is expected a
 **Fix:**
 - Add `#!/usr/bin/env bash`, or run it as `bash …` in the usage line.
 - Guard before installing the trap: `orig=$(gsettings get $KEY) || exit 1`.
+
+## Round 2 fixes
+
+R2-1 to R2-4 and the R1-5 wording are fixed in 24fdffe0f, and the PC-checklist acceptance box is ticked.
