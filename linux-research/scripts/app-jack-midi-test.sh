@@ -11,6 +11,7 @@ mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"; : > "$OUT/checks.txt"
 FAILS=0
 fail() { echo "FAIL: $*" | tee -a "$OUT/checks.txt"; FAILS=$((FAILS + 1)); }
 pass() { echo "ok: $*" | tee -a "$OUT/checks.txt"; }
+info() { echo "info: $*" | tee -a "$OUT/checks.txt"; }
 pkill -x "$NAME"; pkill -x jack_midiseq; pkill -x jack_midi_dump; sleep 0.5
 
 SRC=seq:out
@@ -78,7 +79,7 @@ APID=$!
 sleep 5
 dismiss_audio_box && fail "Audio box at start on JACK: $(grep -a 'Audio is off' "$OUT/stderr.txt" | tail -1)"
 [ "$(jack_lsp | grep -c "^$NAME:outport ")" -ge 2 ] && pass "the audio client keeps the name $NAME" || fail "audio ports: $(jack_lsp | tr '\n' ' ')"
-pass "the APP's JACK MIDI ports: $(app_midi_ports)"
+info "the APP's JACK MIDI ports: $(app_midi_ports)"
 connected "$SRC" "$NAME MIDI in:" && pass "$SRC -> $NAME MIDI in" || fail "$SRC not connected to the APP"
 connected "$DUMP" "$NAME MIDI out:" && pass "$NAME MIDI out -> $DUMP" || fail "the APP's MIDI output not connected to $DUMP"
 M=$(meter_moves "$OUT/01-jack-midi-note.png") && pass "JACK MIDI note moves the meter ($M)" || fail "meter unchanged ($M) with $SRC"
@@ -92,7 +93,7 @@ midi_list $MIDI_OUT "$OUT/03-jack-midi-outputs.png"
 prefs_driver 0
 import -window root "$OUT/04-alsa-selected.png"
 [ -z "$(app_midi_ports)" ] && pass "ALSA selected: no JACK MIDI ports left" || fail "JACK MIDI ports left on ALSA: $(app_midi_ports)"
-pass "settings.ini while ALSA is selected: $(ini audio driver) $(ini midi indev)"
+info "settings.ini while ALSA is selected: $(ini audio driver) $(ini midi indev)"
 prefs_button $CANCEL
 dismiss_audio_box && fail "Audio box after Cancel: $(grep -a 'Audio is off' "$OUT/stderr.txt" | tail -1)"
 [ -z "$(win 'Preferences.*')" ] && pass "Cancel closes Preferences" || fail "Preferences still open"
@@ -106,7 +107,7 @@ prefs_driver 2
 [ -z "$(app_midi_ports)" ] && pass "PulseAudio selected: no JACK MIDI ports left" || fail "JACK MIDI ports left on PulseAudio: $(app_midi_ports)"
 prefs_driver 1
 import -window root "$OUT/05-jack-again.png"
-pass "back on JACK, the saved ports turned off: $(ini midi indev) $(ini midi outdev)"
+info "back on JACK, the saved ports: $(ini midi indev) $(ini midi outdev)"
 midi_list $MIDI_OUT "$OUT/06-jack-again-midi-outputs.png"
 midi_list $MIDI_IN "$OUT/07-jack-again-midi-inputs.png" 1
 import -window root "$OUT/08-input-picked.png"

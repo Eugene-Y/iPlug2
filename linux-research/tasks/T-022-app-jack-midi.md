@@ -94,3 +94,33 @@ plain jackd without the a2jmidid bridge.
       The app keeps listening on the new port while the state and the next settings.ini say the old one. On Linux,
       Cancel after a driver change with another MIDI API does reselect, through `TryToChangeMidiApi`.
   - **Next:** independent review.
+- 2026-10-21 — review round 1 (`notes/29-review-T-022.md`): request changes, one blocker. Fixed in 47951f3a0.
+  - **R1-1 blocker, fixed:** a JACK MIDI output object now exists while the output is "off". IPlugInstrument echoes
+    every note into it, and RtMidi queues them; picking an output later dumped the backlog into one cycle and crashed
+    the APP (`jack_midi_event_reserve` → NULL). Now `SendMidiMsg`/`SendSysEx` send only while
+    `IsMidiOutPortOpen()`, a Linux-only atomic flag cleared before `closePort` and set after `openPort`.
+    - Re-run of the reviewer's `adversarial.sh` A–E → `evidence/t022/fix-adversarial`:
+      - C (30 s with the output off, then an output picked): no crash, and 0 stale events reach the monitor.
+      - A, B, D: as in the review.
+      - E: the existing Cancel bug, below.
+  - **R1-3, done:**
+    - `checks.txt` lines that only report are `info:` now, in both harnesses.
+    - Quit on every driver: the VM probe's gdb run is now on PulseAudio, with the sequencer input picked from the
+      list. It checks the connection to client 'IPlugInstrument' and the note, then quits; main + `gmain` at `exit()`.
+      The JACK quit stays covered by the VM's File > Quit run and by Docker's gdb run. ALSA uses the same RtMidi
+      sequencer objects as PulseAudio.
+  - **R1-4, R1-6 (computed once), done.** The assert for "audio stopped" is not added: both callers stop audio first
+    (`TryToChangeAudioDriverType` → `CloseAudio`), and the reviewer checked that.
+  - **R1-5, not done:** in RtMidi (third-party, not modified).
+  - **R1-2, open, for the user to decide:** the saved MIDI ports are lost when the API cannot see them. The cases are a
+    driver round trip through the other API, and a start on JACK while no JACK server is running: settings.ini gets
+    `indev=off`. This is the task's "unknown → off" rule. Keeping a saved name the current API doesn't list would mean
+    changing `SelectMIDIDevice`/`PopulateMidiDialogs` (shared code).
+  - Re-runs after the fix: Docker `evidence/t022/docker-jack-midi` PASS, VM `evidence/t022/vm-jack-midi` PASS,
+    macOS CMake `IPlugInstrument-app` links with no warnings in the APP files.
+  - **Cross-platform findings from the review** (bugs that predate T-022; reported, not fixed):
+    - **major:** after a driver change and back in Preferences, Cancel leaves the audio off
+      (`IPlugAPP_dialog.cpp`, the IDCANCEL branch). The reviewer's scenario E: 2 JACK audio ports before, 0 after
+      Cancel.
+    - **minor:** `--no-io` writes `indev=off outdev=off` over the saved MIDI ports at start
+      (`IPlugAPP_host.cpp`: `Init` → `SelectMIDIDevice` with no RtMidi objects).

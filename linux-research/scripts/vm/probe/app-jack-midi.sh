@@ -3,7 +3,8 @@
 # port and, through PipeWire's Midi-Bridge, a JACK MIDI port; amidi plays a note into it. JACK (pipewire-jack's
 # libjack): the APP's JACK MIDI input from the bridge, the echo at jack_midi_dump. PulseAudio: the MIDI list shows the
 # sequencer's ports, one picked there plays. JACK again: the JACK port picked from the list plays. Then File > Quit
-# and the threads left at exit(). VM only (needs /dev/snd/seq and the module).
+# on JACK; then a run under gdb on PulseAudio with the sequencer input open, File > Quit and the threads left at
+# exit(). VM only (needs /dev/snd/seq and the module).
 # Usage: vm-run.sh vm/probe/app-jack-midi.sh <out> <IPlugInstrument APP>
 set -uo pipefail
 OUT="$1"; APP="$2"; NAME=$(basename "$APP")
@@ -12,6 +13,7 @@ mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"; : > "$OUT/checks.txt"
 FAILS=0
 fail() { echo "FAIL: $*" | tee -a "$OUT/checks.txt"; FAILS=$((FAILS + 1)); }
 pass() { echo "ok: $*" | tee -a "$OUT/checks.txt"; }
+info() { echo "info: $*" | tee -a "$OUT/checks.txt"; }
 JACKLIB="LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu/pipewire-0.3/jack"
 jack() { env "$JACKLIB" "$@" 2>/dev/null; }
 pkill -x "$NAME"; pkill -x jack_midi_dump; sleep 0.5
@@ -76,7 +78,7 @@ env "$JACKLIB" "$APP" > "$OUT/stderr.txt" 2>&1 &
 APID=$!
 sleep 5
 dismiss_audio_box && fail "Audio box at start on JACK: $(grep -a 'Audio is off' "$OUT/stderr.txt" | tail -1)"
-pass "the APP's JACK MIDI ports: $(app_jack_midi_ports)"
+info "the APP's JACK MIDI ports: $(app_jack_midi_ports)"
 jack_connected "$SRC" "$NAME MIDI in:" && pass "JACK: '$SRC' -> $NAME MIDI in" || fail "JACK: '$SRC' not connected to the APP"
 jack_connected "$DUMP" "$NAME MIDI out:" && pass "JACK: $NAME MIDI out -> $DUMP" || fail "JACK: the APP's MIDI output not connected to $DUMP"
 aconnect -l | grep -q "^client [0-9]*: '$NAME" && fail "an ALSA sequencer client on JACK: $(aconnect -l | grep "'$NAME")" || pass "no ALSA sequencer client on JACK"
@@ -99,7 +101,8 @@ TONAME=$(aconnect -l | grep -m1 "^client $TO:" | sed -E "s/^client [0-9]+: '([^'
   || fail "PulseAudio: virmidi not connected to '$NAME' after picking it ($(aconnect -l | tr '\n' ' '))"
 prefs_button $OK
 dismiss_audio_box && fail "Audio box on PulseAudio: $(grep -a 'Audio is off' "$OUT/stderr.txt" | tail -1)"
-pass "settings.ini on PulseAudio: $(ini audio driver) $(ini midi indev)"
+SEQ_IN=$(ini midi indev); SEQ_IN=${SEQ_IN#indev=}
+info "settings.ini on PulseAudio: $(ini audio driver) indev=$SEQ_IN"
 M=$(note_moves_meter "$OUT/04-pulse-note.png") && pass "PulseAudio: amidi note through the sequencer moves the meter ($M)" || fail "PulseAudio: meter unchanged ($M)"
 
 prefs_open
@@ -107,7 +110,7 @@ prefs_driver 1
 aconnect -l | grep -q "^client [0-9]*: '$NAME'" && fail "JACK: sequencer client left" || pass "JACK again: no sequencer client left"
 # JACK's MIDI outputs in jack_get_ports order after "off"
 ROW=$(jack jack_lsp -p -t | awk -v s="$SRC" '/^[^ \t]/{n=$0;next} /properties:/{o=($0~/output/)} /midi/&&o{i++; if(n==s){print i; exit}}')
-pass "JACK again: '$SRC' is row $ROW of the MIDI input list"
+info "JACK again: '$SRC' is row $ROW of the MIDI input list"
 midi_list $MIDI_IN "$OUT/05-jack-again-midi-inputs.png" "$ROW"
 jack_connected "$SRC" "$NAME MIDI in:" && pass "JACK again: picked from the list, '$SRC' -> $NAME MIDI in" || fail "JACK again: '$SRC' not connected after picking it"
 prefs_button $OK
@@ -119,9 +122,10 @@ read -r X Y < <(origin "$(win "$NAME")")
 slow_click $((X + 16)) $((Y + 6)); slow_click $((X + 41)) $((Y + 49))
 for _ in $(seq 50); do kill -0 "$APID" 2>/dev/null || break; sleep 0.1; done
 if kill -0 "$APID" 2>/dev/null; then fail "APP still running 5 s after File > Quit"; kill -9 "$APID"
-else wait "$APID"; RC=$?; [ "$RC" = 0 ] && pass "File > Quit with JACK MIDI connected, exit 0" || fail "File > Quit, exit $RC"; fi
+else wait "$APID"; RC=$?; [ "$RC" = 0 ] && pass "File > Quit on JACK with JACK MIDI connected, exit 0" || fail "File > Quit, exit $RC"; fi
 [ -z "$(app_jack_midi_ports)" ] && pass "no JACK MIDI ports after quit" || fail "JACK MIDI ports after quit: $(app_jack_midi_ports)"
 
+# The quit above was on JACK; this one is on PulseAudio with the sequencer input from the list.
 # /usr/bin/gdb, not the VM's sudo wrapper: the APP must run as the desktop user to reach PipeWire
 cat > "$OUT/exit-threads.gdb" <<'EOF'
 set pagination off
@@ -131,10 +135,14 @@ info threads
 thread apply all bt 3
 continue
 EOF
-env "$JACKLIB" /usr/bin/gdb -q -batch -x "$OUT/exit-threads.gdb" "$APP" > "$OUT/exit-threads.txt" 2>&1 &
+printf '[audio]\ndriver=2\nsr=48000\nbuffer=256\n[midi]\nindev=%s\noutdev=off\ninchan=0\noutchan=0\n' "$SEQ_IN" > "$INI"
+/usr/bin/gdb -q -batch -x "$OUT/exit-threads.gdb" "$APP" > "$OUT/exit-threads.txt" 2>&1 &
 GPID=$!
 sleep 8
-jack_connected "$SRC" "$NAME MIDI in:" && pass "under gdb: '$SRC' -> $NAME MIDI in" || fail "under gdb: '$SRC' not connected"
+TO=$(aconnect -l | grep -A3 "^client $SEQCLIENT:" | sed -nE 's/.*Connecting To: ([0-9]+):.*/\1/p' | head -1)
+TONAME=$(aconnect -l | grep -m1 "^client $TO:" | sed -E "s/^client [0-9]+: '([^']*)'.*/\1/")
+[ "$TONAME" = "$NAME" ] && pass "under gdb on PulseAudio: virmidi -> sequencer client $TO '$TONAME'" || fail "under gdb on PulseAudio: virmidi not connected ($(aconnect -l | tr '\n' ' '))"
+M=$(note_moves_meter) && pass "under gdb on PulseAudio: amidi note moves the meter ($M)" || fail "under gdb on PulseAudio: meter unchanged ($M)"
 read -r X Y < <(origin "$(win "$NAME")")
 slow_click $((X + 16)) $((Y + 6)); slow_click $((X + 41)) $((Y + 49))
 for _ in $(seq 100); do kill -0 "$GPID" 2>/dev/null || break; sleep 0.1; done
