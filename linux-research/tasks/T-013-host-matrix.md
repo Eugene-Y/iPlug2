@@ -34,6 +34,8 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
    cannot drop onto plug-ins); a trace build (`-DIGRAPHICS_TRACE_LINUX_INPUT`) logs `iPlug2 drop:` lines. Also a
    tooltip (Sand) in each host.
 
+9. **From T-020** (merged aa42322c2, Docker-tested only): paste a file put on the clipboard by `SetFilePathInClipboard` into GNOME Files; drag a file out of the editor (`InitiateExternalFileDragDrop`, IPlugControls `-DIPLUG_TEST_DRAGOUT`) into Files and into each host; the real GNOME portal (Settings → Appearance dark/light switch, IPlugControls `-DIPLUG_TEST_APPEARANCE`); a GL3 build (`-DIGRAPHICS_RENDERER=GL3`) on virgl; the drag feedback cursor.
+
 ## Acceptance
 - [ ] Matrix table (host × product × format × case) in the Log with evidence paths (`evidence/t013/`).
 - [ ] Every failure: fixed (Linux-only code, own commit) or ticketed with a minimal repro; host bugs documented as such.

@@ -1,0 +1,58 @@
+--- ../Examples/IPlugEffect/IPlugEffect.cpp	2026-10-19 09:18:21
++++ build/t023r-presettest/IPlugEffect/IPlugEffect.cpp	2026-10-19 09:30:36
+@@ -4,6 +4,21 @@
+ 
+ 
+ using namespace hvoya;
++
++#include <cstdlib>
++#include <cstdio>
++#include <thread>
++static int T023Scenario() { const char* s = getenv("T023"); return s ? atoi(s) : 0; }
++static const char* kT023Fxp = "/tmp/t023r.fxp";
++static std::atomic<int> sT023IdleTicks { 0 };
++static void T023SaveThenLoad(iplug::IPluginBase& plug, const char* where) {
++  plug.GetParam(0)->SetNormalized(0.8);
++  bool saved = plug.SavePresetAsFXP(kT023Fxp);
++  plug.GetParam(0)->SetNormalized(0.2);
++  fprintf(stderr, "[plug] %s: saved=%d, param0 now %.4f; LoadStateFromFXP...\n", where, saved, plug.GetParam(0)->Value());
++  bool loaded = plug.LoadStateFromFXP(kT023Fxp);
++  fprintf(stderr, "[plug] %s: loaded=%d, param0 now %.4f\n", where, loaded, plug.GetParam(0)->Value());
++}
+ 
+ 
+ void logBuildInfo() {
+@@ -51,6 +66,10 @@
+ 
+     void IPlugEffect::ProcessBlock (sample** ins, sample** outs, int numFrames) {
+ 		++_bufId;
++		if (T023Scenario() == 2 && _bufId == 5) {
++			fprintf(stderr, "[plug] ProcessBlock (audio thread): InformHostOfPresetChange\n");
++			InformHostOfPresetChange();
++		}
+ 		_hostInfoModel.updateAll (numFrames);
+ 
+ 		const auto numChans = _hostInfoModel.getMinChans();
+@@ -93,6 +112,8 @@
+ 
+ 
+ void IPlugEffect::OnIdle() {
++	if (T023Scenario() == 3 && ++sT023IdleTicks == 20)
++		T023SaveThenLoad(*this, "OnIdle (timer)");
+ 	if (_needsUIUpdate.exchange (false, std::memory_order_acq_rel))
+ 		tryUpdateLayout();
+ 
+@@ -103,6 +124,13 @@
+ 
+ 
+ void IPlugEffect::OnActivate (bool enable) {
++	if (enable && (T023Scenario() == 1 || T023Scenario() == 4)) {
++		if (T023Scenario() == 4) {
++			fprintf(stderr, "[plug] OnActivate: Begin/Inform/EndInformHostOfParamChange\n");
++			BeginInformHostOfParamChange(0); InformHostOfParamChange(0, 0.5); EndInformHostOfParamChange(0);
++		}
++		T023SaveThenLoad(*this, "OnActivate");
++	}
+ 	//LOGD << "OnActivate " << enable;
+     #ifdef IPLUG_TEST_LATENCY_FROM_IDLE
+         _testInActivate = true;

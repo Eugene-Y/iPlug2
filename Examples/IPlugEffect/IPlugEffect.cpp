@@ -96,6 +96,10 @@ void IPlugEffect::OnIdle() {
 	if (_needsUIUpdate.exchange (false, std::memory_order_acq_rel))
 		tryUpdateLayout();
 
+	_midiCCMediator.OnIdle();
+	if (_midiCCMediator.takeUIDirty()) // a CC just bound by learning: update the CC# indicators
+		_midiCCMediator.refreshUI();
+
 	#ifdef IPLUG_TEST_LATENCY_FROM_IDLE
 		testLatencyFromIdle();
 	#endif

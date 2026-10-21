@@ -1,8 +1,2 @@
-# clap-validator tests Sand fails for its own reasons (not the port), as of T-021. package-smoke-in.sh fails on any other.
-# F5: processes in the host's input buffer
-process-audio-double-in-place
-process-audio-double-out-of-place
-# F3: NaN at 768 kHz (HilbertEnvelopeDetector kMaxCoefs overrun; fixed in another worktree, not yet on linux-experiment)
-process-varying-sample-rates
-# F4: 'flt hz' text does not parse back
-param-conversions
+# clap-validator tests Sand fails for its own reasons (not the port). package-smoke-in.sh fails on any other.
+# Empty since T-024 (F3, F4, F5 fixed in Sand) and T-023's re-run: 0 failures on Linux (Debug, Release) and mac.

@@ -67,8 +67,25 @@ uint32_t IPlugCLAP::tailGet() const noexcept
 
 void IPlugCLAP::FlushParamsIfNeeded()
 {
-  if (!isProcessing())
+  if (!isProcessing() && GetClapHost().canUseParams())
     runOnMainThread([&](){ if (!isBeingDestroyed()) GetClapHost().paramsRequestFlush(); });
+}
+
+void IPlugCLAP::InformHostOfPresetChange()
+{
+  // Always deferred, also from the main thread: the caller may go on applying state after loading the
+  // preset file, and the host should read the values it ends with.
+  if (GetClapHost().canUseParams())
+  {
+    mPresetRescanPending = true;
+    GetClapHost().requestCallback();
+  }
+}
+
+void IPlugCLAP::onMainThread() noexcept
+{
+  if (mPresetRescanPending.exchange(false) && !isBeingDestroyed())
+    GetClapHost().paramsRescan(CLAP_PARAM_RESCAN_VALUES);
 }
 
 void IPlugCLAP::BeginInformHostOfParamChange(int idx)

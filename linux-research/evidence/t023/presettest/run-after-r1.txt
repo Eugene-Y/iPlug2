@@ -1,0 +1,75 @@
+===== T023=0 host=params
+[host] init done (host params: present)
+[host] activate
+[host] done, 0 rescan(s)
+exit=0
+===== T023=0 host=noparams
+[host] init done (host params: absent)
+[host] activate
+[host] done, 0 rescan(s)
+exit=0
+===== T023=1 host=params
+[host] init done (host params: present)
+[host] activate
+[plug] OnActivate: saved=1, param0 now 0.2000; LoadStateFromFXP...
+[host] request_callback on main thread
+[plug] OnActivate: loaded=1, param0 now 0.8000
+[host] -> on_main_thread
+[host] params.rescan(flags=0x1) on main thread; param0 get_value=0.8000
+[host] done, 1 rescan(s)
+exit=0
+===== T023=1 host=noparams
+[host] init done (host params: absent)
+[host] activate
+[plug] OnActivate: saved=1, param0 now 0.2000; LoadStateFromFXP...
+[plug] OnActivate: loaded=1, param0 now 0.8000
+[host] done, 0 rescan(s)
+exit=0
+===== T023=2 host=params
+[host] init done (host params: present)
+[host] activate
+[plug] ProcessBlock (audio thread): InformHostOfPresetChange
+[host] request_callback on OTHER thread
+[host] -> on_main_thread
+[host] params.rescan(flags=0x1) on main thread; param0 get_value=0.0000
+[host] done, 1 rescan(s)
+exit=0
+===== T023=3 host=params
+[host] init done (host params: present)
+[host] activate
+[plug] OnIdle (timer): saved=1, param0 now 0.2000; LoadStateFromFXP...
+[host] request_callback on OTHER thread
+[plug] OnIdle (timer): loaded=1, param0 now 0.8000
+[host] -> on_main_thread
+[host] params.rescan(flags=0x1) on main thread; param0 get_value=0.8000
+[host] done, 1 rescan(s)
+exit=0
+===== T023=3 host=noparams
+[host] init done (host params: absent)
+[host] activate
+[plug] OnIdle (timer): saved=1, param0 now 0.2000; LoadStateFromFXP...
+[plug] OnIdle (timer): loaded=1, param0 now 0.8000
+[host] done, 0 rescan(s)
+exit=0
+===== T023=4 host=params
+[host] init done (host params: present)
+[host] activate
+[plug] OnActivate: Begin/Inform/EndInformHostOfParamChange
+[host] params.request_flush on main thread
+[host] params.request_flush on main thread
+[host] params.request_flush on main thread
+[plug] OnActivate: saved=1, param0 now 0.2000; LoadStateFromFXP...
+[host] request_callback on main thread
+[plug] OnActivate: loaded=1, param0 now 0.8000
+[host] -> on_main_thread
+[host] params.rescan(flags=0x1) on main thread; param0 get_value=0.8000
+[host] done, 1 rescan(s)
+exit=0
+===== T023=4 host=noparams
+[host] init done (host params: absent)
+[host] activate
+[plug] OnActivate: Begin/Inform/EndInformHostOfParamChange
+[plug] OnActivate: saved=1, param0 now 0.2000; LoadStateFromFXP...
+[plug] OnActivate: loaded=1, param0 now 0.8000
+[host] done, 0 rescan(s)
+exit=0

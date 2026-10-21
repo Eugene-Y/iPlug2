@@ -23,6 +23,7 @@
 #include "IPlugAPIBase.h"
 #include "IPopupMenuControl.h"
 #include "ITextEntryControl.h"
+#include "Linux/IPlugLinuxDBus.h" // before Xlib, whose Bool macro would rename linux_dbus::Bool
 #include "Linux/IPlugLinuxHostLoop.h"
 #include "Linux/IPlugLinuxOpen.h"
 
@@ -44,8 +45,10 @@
 #include "IGraphicsLinuxGLX.h"
 #include "IGraphicsLinuxKeys.h"
 #include "IGraphicsLinuxClipboard.h"
-#include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxCursors.h"
+#include "IGraphicsLinuxDragSource.h"
+#include "IGraphicsLinuxAppearance.h"
+#include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxFontconfig.h"
 
 using namespace iplug;
@@ -66,6 +69,10 @@ namespace
 constexpr long kWindowEventMask = ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask
                                 | PointerMotionMask | LeaveWindowMask | KeyPressMask | KeyReleaseMask
                                 | FocusChangeMask | PropertyChangeMask | VisibilityChangeMask;
+// Every pointer event selection (X.h); the drag's grab must keep whichever of them the window selects.
+constexpr long kPointerEventMasks = ButtonPressMask | ButtonReleaseMask | EnterWindowMask | LeaveWindowMask | PointerMotionMask
+                                  | PointerMotionHintMask | Button1MotionMask | Button2MotionMask | Button3MotionMask
+                                  | Button4MotionMask | Button5MotionMask | ButtonMotionMask | KeymapStateMask;
 constexpr Time kDoubleClickMs = 400;
 constexpr float kDoubleClickSlop = 4.f;
 constexpr unsigned kWheelUp = Button4;
@@ -214,6 +221,27 @@ void DisableSwapWait(const GLXFunctions* pGLX, Display* pDisplay, GLXDrawable dr
       swapInterval(0);
   }
 }
+
+#ifdef IGRAPHICS_GL3
+/** @return a core 3.2 context, or nullptr when the driver has none (the caller's X error trap catches the error
+ * a refused version raises) */
+GLXContext CreateCoreContext(const GLXFunctions* pGLX, Display* pDisplay, GLXFBConfig fbConfig)
+{
+  const char* glxExtensions = pGLX->QueryExtensionsString(pDisplay, DefaultScreen(pDisplay));
+  auto createContextAttribs = reinterpret_cast<PFNGLXCREATECONTEXTATTRIBSARBPROC>(GLXFunctions::GetProc("glXCreateContextAttribsARB"));
+  if (!HasGLXExtension(glxExtensions, "GLX_ARB_create_context_profile") || !createContextAttribs)
+    return nullptr;
+
+  const int contextAttributes[] = {
+    GLX_CONTEXT_MAJOR_VERSION_ARB, 3, GLX_CONTEXT_MINOR_VERSION_ARB, 2,
+    GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+    None
+  };
+  GLXContext context = createContextAttribs(pDisplay, fbConfig, nullptr, True, contextAttributes);
+  XSync(pDisplay, False);
+  return context;
+}
+#endif
 
 /** Lets the pointer pass through the window, as through native tooltips: an empty input shape (X Shape extension
  * 1.1; libXext is dlopen'ed and never unloaded, the host may use it too).
@@ -404,7 +432,10 @@ struct IGraphicsLinux::Impl
   unsigned char mKeptKeys[32] = {};
 
   LinuxClipboard mClipboard;
+  LinuxDragSource mDragSource;
   LinuxFileDrop mFileDrop;
+  LinuxAppearance mAppearance;
+  std::chrono::steady_clock::time_point mAppearancePolledAt;
   bool mPasteKeyPending = false; // Ctrl+V of an edit, replayed once the clipboard's text is here
   IKeyPress mPasteKey { "v", 'V' };
 
@@ -507,6 +538,24 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     }
   }
 
+#ifdef IGRAPHICS_GL3
+  // A core profile can only be requested for an FBConfig (glXCreateContextAttribsARB), not for a visual.
+  const int configAttributes[] = {
+    GLX_X_RENDERABLE, True, GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT, GLX_RENDER_TYPE, GLX_RGBA_BIT, GLX_DOUBLEBUFFER, True,
+    GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
+    GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
+    GLX_STENCIL_SIZE, 8,
+    None
+  };
+  int nConfigs = 0;
+  GLXFBConfig* pConfigs = w.mGLX->ChooseFBConfig && w.mGLX->GetVisualFromFBConfig
+                        ? w.mGLX->ChooseFBConfig(pDisplay, screen, configAttributes, &nConfigs) : nullptr;
+  if (!pConfigs || nConfigs < 1)
+    return fail("no GLX FBConfig with RGB8, stencil 8 and double buffering");
+  const GLXFBConfig fbConfig = pConfigs[0];
+  XFree(pConfigs);
+  XVisualInfo* pVisual = w.mGLX->GetVisualFromFBConfig(pDisplay, fbConfig);
+#else
   int visualAttributes[] = {
     GLX_RGBA, GLX_DOUBLEBUFFER,
     GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
@@ -514,6 +563,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     None
   };
   XVisualInfo* pVisual = w.mGLX->ChooseVisual(pDisplay, screen, visualAttributes);
+#endif
   if (!pVisual)
     return fail("no GLX visual with RGB8, stencil 8 and double buffering");
 
@@ -536,7 +586,9 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mWindowAlive = w.mWindow != 0;
   w.mXEmbed = XInternAtom(pDisplay, "_XEMBED", False);
   w.mClipboard.Init(pDisplay, w.mWindow);
+  w.mDragSource.Init(pDisplay, w.mWindow, &w.mCursors, kWindowEventMask & kPointerEventMasks);
   w.mFileDrop.Init(pDisplay, w.mWindow);
+  w.mAppearance.Start();
   w.mCursors.Init(pDisplay);
   // Per connection: key repeat then sends presses only, not release + press pairs.
   XkbSetDetectableAutoRepeat(pDisplay, True, nullptr);
@@ -568,12 +620,19 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     XStoreName(pDisplay, w.mWindow, pPlug->GetPluginName());
   }
 
-  // A legacy context gets whatever version the driver defaults to, down to 2.1 on old or virtual drivers. Only
-  // NanoVG GL2 is guaranteed and tested; IGRAPHICS_GL3 would need a core 3.2 context via glXCreateContextAttribsARB.
+#ifdef IGRAPHICS_GL3
+  w.mGLContext = CreateCoreContext(w.mGLX, pDisplay, fbConfig);
+  XFree(pVisual);
+  if (!w.mGLContext)
+    return fail("no OpenGL 3.2 core context (this build renders with NanoVG GL3)");
+#else
+  // A legacy context gets whatever version the driver defaults to, down to 2.1 on old or virtual drivers, which
+  // is enough for NanoVG GL2.
   w.mGLContext = w.mGLX->CreateContext(pDisplay, pVisual, nullptr, True);
   XFree(pVisual);
   if (!w.mGLContext)
     return fail("glXCreateContext failed");
+#endif
 
   XMapWindow(pDisplay, w.mWindow);
   WatchTopLevel();
@@ -671,7 +730,9 @@ void IGraphicsLinux::DestroyWindowResources()
     if (w.mInputMethod)
       XCloseIM(w.mInputMethod);
     w.mClipboard.Release();
+    w.mDragSource.Release();
     w.mFileDrop.Release();
+    w.mAppearance.Stop();
     w.mCursors.Free();
     if (w.mTooltipWindow)
       XDestroyWindow(w.mDisplay, w.mTooltipWindow);
@@ -757,6 +818,15 @@ void IGraphicsLinux::OnDisplayTimer()
   if (!ProcessXEvents())
     return;
   mImpl->mFileDrop.Idle();
+  mImpl->mDragSource.Idle();
+  constexpr auto kAppearancePoll = std::chrono::milliseconds(250);
+  const auto now = std::chrono::steady_clock::now();
+  if (mImpl->mAppearance.IsWaitingForAnswer() || now - mImpl->mAppearancePolledAt > kAppearancePoll)
+  {
+    mImpl->mAppearancePolledAt = now;
+    if (mImpl->mAppearance.Poll())
+      OnAppearanceChanged(GetUIAppearance());
+  }
   if (mImpl->mHostSizeUnconfirmed && !TellHostTheOpenedSize())
     return;
   // A host that maps its own window after the open (Carla) gets it managed, and WM_STATE set, only later; no event
@@ -846,6 +916,13 @@ void IGraphicsLinux::DrawNow()
 void IGraphicsLinux::HandleXEvent(const XEvent& event)
 {
   Impl& w = *mImpl;
+  const bool wasDragging = w.mDragSource.IsDragging();
+  if (w.mDragSource.HandleEvent(event))
+  {
+    if (wasDragging && !w.mDragSource.IsDragging())
+      ReleaseMouseCapture();
+    return;
+  }
   if (w.mClipboard.HandleEvent(event))
     return;
   if (w.mFileDrop.HandleEvent(event, w.mWindowW, w.mWindowH, [this](const std::vector<const char*>& paths, int x, int y) {
@@ -1650,6 +1727,30 @@ bool IGraphicsLinux::SetTextInClipboard(const char* str)
     return false;
   ScopedXErrorTrap trap(w.mDisplay);
   return w.mClipboard.SetText(str, w.mLastEventTime);
+}
+
+bool IGraphicsLinux::InitiateExternalFileDragDrop(const char* path, const IRECT& /*iconBounds*/)
+{
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive)
+    return false;
+  HideTooltip();
+  ScopedXErrorTrap trap(w.mDisplay);
+  return w.mDragSource.Start(path, w.mLastEventTime);
+}
+
+EUIAppearance IGraphicsLinux::GetUIAppearance() const
+{
+  return mImpl->mAppearance.IsDark() ? EUIAppearance::Dark : EUIAppearance::Light;
+}
+
+bool IGraphicsLinux::SetFilePathInClipboard(const char* path)
+{
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive)
+    return false;
+  ScopedXErrorTrap trap(w.mDisplay);
+  return w.mClipboard.SetFilePath(path, w.mLastEventTime);
 }
 
 bool IGraphicsLinux::GetTextFromClipboard(WDL_String& str)
