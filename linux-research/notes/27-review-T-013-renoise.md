@@ -161,3 +161,94 @@ Renoise has no CLAP (every CLAP cell N/A).
 | R1-7 nit | Heading changed to "Renoise 3.5.4 (VST3; no CLAP in Renoise)". | cc282e3da |
 | R1-8 nit | The `call-trace.sh` header says it is arm64-only. The `rn-lua.py` header warns that the OSC server evaluates Lua from any interface and must be turned off afterwards. | 24b59a29d |
 | Also | `Dependencies/IPlug/VST3_SDK/README.md` restored. The Renoise OSC server is off and the VM lock released; Ardour quit with "Just quit", so the session file is unchanged. | — |
+
+## Round 2
+
+Range `45b148cb2..2755ffa37` (c86d82e5d, 24b59a29d, cc282e3da, 2755ffa37). Same reviewer, 2026-10-21.
+
+**Verdict: approve.** R2-1 is a one-line comment fix; it should land before the merge, and no further review round
+is needed. R2-2 and R2-3 are optional.
+
+### What was checked
+
+**The pairing logic** (`IGraphicsLinux.cpp:1332-1347`, `1361-1373`):
+- A FOCUS_OUT is recorded only while `mHoldsFocus`. Renoise's FOCUS_OUT at the opening click, before we take the
+  focus, is ignored as before.
+- A FOCUS_IN clears it.
+- `UpdateEditingState` declines once the FOCUS_OUT has been pending for more than 150 ms. That function runs after
+  every X event and on every display-timer tick, so the deadline is met within about one frame. The `mOpen` guard
+  after the decline matches the other call sites.
+- The pending flag is also cleared by:
+  - `RequestKeyboardFocus`, so a click back into the editor wins;
+  - `ReleaseKeyboardFocus`, when the edit ends by Return or Escape;
+  - `DeclineKeyboardFocus`;
+  - `CloseWindow` (`w = Impl()`), so nothing survives a close and reopen.
+- I found no way for a stale FOCUS_OUT to end a later edit, or for an edit to stay open after an unanswered
+  FOCUS_OUT while we hold the focus. A menu is ended the same way as an edit (`EndTextEntryOnFocusLoss`), consistent
+  with the X path.
+- One timing assumption: Renoise's FOCUS_IN must reach us within 150 ms of its FOCUS_OUT. Renoise sends them in one
+  burst (`stderr-session4-r1.txt:123-127`: 5, 2, 4), so only a stall in Renoise of more than 150 ms between the two
+  sends could end an edit wrongly. That is acceptable.
+
+**R1-1 to R1-8:** all resolved as the "Round 1 fixes" table says.
+- R1-1: the redesign is the fix I proposed. The downgrade is fair; the evidence is under "Evidence" below.
+- R1-2: resolved, but see R2-1.
+- R1-3: the traces are in place and are what made the VM evidence readable.
+- R1-4: there is no X call left on the message.
+- R1-5: the latency evidence was re-run (see below).
+- R1-6, R1-7: the Log wording is fixed.
+- R1-8: both probe headers have the clauses.
+
+**Evidence:**
+- `stderr-session4-r1.txt`: two edits, each "5, 2, 4 → FOCUS_IN answers the FOCUS_OUT: the edit stays". The keys
+  are handled. The click-away is `FocusOut detail 3` (`Elsewhere`).
+- `ardour/r1-input-trace.txt`:
+  - The header-button click gives `FocusOut detail 0, holding focus 1`, with no "focus lost" line (outside the
+    episode), so the edit stays.
+  - MODALITY_ON, FOCUS_OUT and WINDOW_DEACTIVATE follow, with no FOCUS_IN, then "FOCUS_OUT unanswered: the edit
+    ends".
+  - The later forwarded keys are dropped.
+- The new `latency-editor-*.txt` match the committed `call-trace.sh` format. In the closed run, `SetLatency` and the
+  first `restartComponent` run on lwp 41235, which `stderr-session4-r1.txt:60` names as Gneiss' fallback thread. The
+  lambda's `_M_invoke` and the restart run on 41209 (pid, main). In the open run, all of it runs on main after the
+  view attached (`:170-174`).
+- The Log's claims hold.
+
+**Docker** (scratchpad build dir):
+- IPlugControls CLAP + VST3 at 2755ffa37 with `-DIGRAPHICS_TRACE_LINUX_INPUT`: builds, with no IGraphicsLinux
+  warnings, and the new trace strings are in the binary.
+- REAPER `iplugcontrols-p3b.txt` smoke: **PASS** on both formats.
+- REAPER sends no XEmbed, so the new branch is covered only by the VM evidence above.
+
+**Rules:** the change is Linux-only (`IGraphicsLinux.cpp` only) and the style matches the surrounding code.
+
+### R2-1 — minor — `IGraphicsLinux.cpp:1333-1335`: the comment claims something the Ardour evidence contradicts
+
+"(a GtkSocket host moving its focus to one of its widgets keeps the X focus on our window too)" was my round-1
+hypothesis. Round 1's own Ardour trace shows the opposite: a click on Ardour's header button moved the X focus to
+Ardour's window (`FocusOut mode 0 detail 0`). A comment stating an unverified, contradicted behaviour as fact will
+mislead the next reader. The table's R1-2 row repeats the claim ("a GtkSocket keeps the X focus on our window").
+
+**Fix:** end the comment with "a FOCUS_OUT that no FOCUS_IN follows is a real one, wherever the X focus is." and
+drop the parenthetical. Optionally, the member comment at `:431` could say "while we hold the focus" instead of
+"during an edit": a menu takes the focus too.
+
+### R2-2 — nit (optional) — `IGraphicsLinux.cpp:1364`: an unanswered FOCUS_OUT is dropped if the X focus went to the host during the click episode
+
+If the embedder sends a real FOCUS_OUT and also moves the X focus into its own window within 1.5 s of the
+edit-opening click, the following happens:
+- `LoseKeyboardFocusToHost` clears `mHoldsFocus`.
+- The deadline then finds `!mHoldsFocus` and drops the FOCUS_OUT.
+- `AskForKeyboardFocusAgain` takes the focus back.
+
+This is the same as before these commits, which depended on event order, and needs a host click within 1.5 s.
+Declining on `mHoldsFocus || mFocusLost` (and clearing `mFocusLost`) would let the embedder's explicit signal win
+over the episode heuristic. Leave it unless a host shows it.
+
+### R2-3 — nit — T-013 Log line 153 and notes/27 R1-1 row: wording
+
+- Log line 153 runs on past the wrap ("…from an earlier script. While the transport is stopped…"). Break it, or put
+  the re-run note on its own line.
+- The R1-1 row says "Ardour 8.4 never sent a FOCUS_OUT while the X focus was ours". The trace covers one sequence:
+  a header-button click, then the dropdown. "In the sequences tried" is what the evidence supports, as the Log
+  already says ("did not occur in Ardour 8.4").
