@@ -197,7 +197,8 @@ def main():
     manufacturer=sys.argv[3]
 
   if numargs == 4:
-    # The relative iPlug2 paths written below resolve physically; a symlink in the target would skew them.
+    # The new relative iPlug2 paths resolve physically, so the target and the iPlug2 root are both resolved; a symlink
+    # would skew a lexical relpath.
     outputbasepath=os.path.realpath(sys.argv[4])
   else:
     outputbasepath=os.getcwd()
@@ -254,7 +255,8 @@ def main():
     iplug2folder = os.path.realpath(os.path.join(configpath, oldroot))
     newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config"))
     # These land in CMake and JSON files, which take '/' on every platform and read '\' as an escape.
-    oldprojectroot = os.path.relpath(iplug2folder, inputprojectname).replace(os.sep, '/')
+    # Lexical, like inputprojectname, which is relative to the unresolved cwd (on Windows: a subst or mapped drive).
+    oldprojectroot = os.path.relpath(os.path.join(configpath, oldroot), inputprojectname).replace(os.sep, '/')
     newprojectroot = os.path.relpath(iplug2folder, outputpath).replace(os.sep, '/')
   else:
     newroot = ""

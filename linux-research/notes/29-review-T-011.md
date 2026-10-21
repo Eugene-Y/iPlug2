@@ -264,3 +264,6 @@ Note in it that the fix is one line, the same idea as R1-1: normalise `newroot` 
 The forward-slash pass then writes `/`, which every one of those files accepts. The backslash pass still writes `\` into
 `.props`/`.vcxproj`, and can no longer re-match the forward-slash result. If the user wants it in T-011 instead, that is
 their call, since it changes Windows output of a shared script.
+
+### Coordinator after round 2
+R2-1 applied as proposed (`oldprojectroot` lexical from `configpath`/`oldroot`; `realpath` kept for the iPlug2 root and the target) and R2-2 reworded. Checked on mac: an IPlugEffect duplicate 4 levels out of the tree gets `IPLUG2_DIR`, the presets include, the workspace lua path and `IPLUG2_ROOT` all pointing at the root. The pre-existing backslash bug in the `config/`/`projects/` rewrite is a separate low-priority cross-platform ticket for the user (outside T-011's approved scope).
