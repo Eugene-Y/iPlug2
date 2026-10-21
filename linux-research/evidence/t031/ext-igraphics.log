@@ -1,0 +1,30 @@
+53000 IPlugReaperExtension: Action 1 - MsgBox
+53001 IPlugReaperExtension: Action 2 - AddTrack
+53002 IPlugReaperExtension: Action 3 - Show/Hide UI
+53003 IPlugReaperExtension: Toggle dock UI
+window toggle: 1
+editor[open]: 0x600002 300x300+651+370 in a 300x300 client
+paint[open] ok (stddev 0.104846)
+paint[open] no black band (black fraction 0.00357778)
+tracks 0 -> 1
+editor[resized]: 0x600002 520x420+651+370 in a 520x420 client
+paint[resized] ok (stddev 0.0679521)
+paint[resized] no black band (black fraction 0.00141941)
+dock toggle: 1
+docked editor 1024x60+81+793
+docked editor after the splitter drag 1024x350+81+503
+paint[docked] ok (stddev 0.0532241)
+paint[docked] no black band (black fraction 0.000864955)
+editor[undocked]: 0x600002 520x420+651+370 in a 520x420 client
+paint[undocked] ok (stddev 0.0679521)
+paint[undocked] no black band (black fraction 0.00141941)
+editor[after-reopen]: 0x600002 520x420+651+370 in a 520x420 client
+paint[after-reopen] ok (stddev 0.0679521)
+paint[after-reopen] no black band (black fraction 0.00141941)
+--- hits by gdb thread id (1 = REAPER main thread):
+    231 HIT iplug::ReaperExtBase::OnTimer tid=1
+     22 HIT iplug::igraphics::IGraphics::Draw(iplug::igraphics::IRECTList&) tid=1
+    336 HIT iplug::igraphics::IGraphicsLinux::OnDisplayTimer tid=1
+    336 HIT iplug::igraphics::IGraphicsLinux::ProcessXEvents() tid=1
+REAPER exit status: 0
+RESULT: PASS

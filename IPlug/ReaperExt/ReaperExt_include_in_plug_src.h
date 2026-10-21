@@ -113,10 +113,18 @@ extern "C"
 #undef END
 #include "swell-menugen.h"
 #include "main.rc_mac_menu"
+#ifdef OS_LINUX
+// SWELL lays REAPER out in physical pixels at its own UI scale
+float iplug::GetScaleForHWND(HWND hWnd)
+{
+  return static_cast<float>(SWELL_GetScaling256()) / 256.f;
+}
+#else
 float iplug::GetScaleForHWND(HWND hWnd)
 {
   return 1.f;
 }
+#endif
 #else
 
 UINT(WINAPI* __GetDpiForWindow)(HWND);

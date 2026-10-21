@@ -491,12 +491,14 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
 {
   CloseWindow();
 
-  auto* pPlug = dynamic_cast<IPlugAPIBase*>(GetDelegate());
-  if (!pPlug)
+  HostLoop* pLoop = GetDelegate()->GetEditorHostLoop();
+  if (!pLoop)
   {
-    fprintf(stderr, "iPlug2: IGraphicsLinux needs an IPlugAPIBase delegate for its host loop, the editor cannot open\n");
+    fprintf(stderr, "iPlug2: the editor's delegate has no host loop, the editor cannot open\n");
     return nullptr;
   }
+  // nullptr for a delegate that is not a plug-in instance, such as a REAPER extension
+  auto* pPlug = dynamic_cast<IPlugAPIBase*>(GetDelegate());
 
   Impl& w = *mImpl;
   w.mGLX = GLXFunctions::Get();
@@ -620,7 +622,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   {
     w.mWMDeleteWindow = XInternAtom(pDisplay, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(pDisplay, w.mWindow, &w.mWMDeleteWindow, 1);
-    XStoreName(pDisplay, w.mWindow, pPlug->GetPluginName());
+    XStoreName(pDisplay, w.mWindow, pPlug ? pPlug->GetPluginName() : "");
   }
 
 #ifdef IGRAPHICS_GL3
@@ -651,6 +653,12 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   }
 
   DisableSwapWait(w.mGLX, pDisplay, w.mWindow);
+  // Mesa's software rasterizer takes the drawable's size at the first make-current and looks again only after a
+  // swap. Without this one, a resize before the first frame (a host sizing the editor right after the open) leaves
+  // that frame drawn at the old size and cut off.
+  glClearColor(0.f, 0.f, 0.f, 1.f);
+  glClear(GL_COLOR_BUFFER_BIT);
+  w.mGLX->SwapBuffers(pDisplay, w.mWindow);
 
   OnViewInitialized(w.mGLContext);
   w.mViewInitialized = true;
@@ -662,9 +670,9 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
 
   // The standalone app's window is the editor's own, so it takes the keys like a focused view on mac.
   // In a host they stay with the host outside text entry: its shortcuts must keep working.
-  w.mFocusOnClick = pPlug->GetAPI() == kAPIAPP;
+  w.mFocusOnClick = pPlug && pPlug->GetAPI() == kAPIAPP;
   w.mOpen = std::make_shared<bool>(true);
-  w.mLoop = &pPlug->GetHostLoop();
+  w.mLoop = pLoop;
   w.mFdId = w.mLoop->AddFd(ConnectionNumber(pDisplay), HostLoop::kFdRead,
                            [this](int, int flags) { OnXConnectionReadable(flags); });
   const uint32_t frameMs = static_cast<uint32_t>(std::max(1, 1000 / std::max(1, FPS())));

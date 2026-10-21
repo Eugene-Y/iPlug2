@@ -77,8 +77,10 @@ if(NOT TARGET iPlug2::ReaperExt)
       iPlug2::IPlug
     )
   elseif(UNIX AND NOT APPLE)
-    # Linux needs SWELL for the generic GDK/headless backend
+    # As on macOS: REAPER provides SWELL, and the generic module stub binds to it through SWELL_dllMain.
     target_include_directories(iPlug2::ReaperExt INTERFACE ${SWELL_DIR})
+    target_sources(iPlug2::ReaperExt INTERFACE "${SWELL_DIR}/swell-modstub-generic.cpp")
+    target_compile_definitions(iPlug2::ReaperExt INTERFACE SWELL_PROVIDED_BY_APP)
     target_link_libraries(iPlug2::ReaperExt INTERFACE iPlug2::IPlug)
   endif()
 endif()
@@ -148,6 +150,7 @@ function(iplug_configure_reaperext target project_name)
       SUFFIX ".so"
       PREFIX ""
     )
+    iplug_linux_restrict_exports(${target} ${IPLUG2_LINUX_EXPORT_MAPS_DIR}/reaperext-exports.map)
   endif()
 
   # Auto-deploy to REAPER UserPlugins if enabled
