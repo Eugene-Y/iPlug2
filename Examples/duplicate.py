@@ -24,7 +24,7 @@
 
 from __future__ import generators
 
-import fileinput, glob, string, sys, os, re, uuid, pprint, random
+import fileinput, glob, io, string, sys, os, re, uuid, pprint, random
 from shutil import copy, copytree, ignore_patterns, rmtree
 from os.path import join
 
@@ -86,14 +86,9 @@ def replacestrsChop(filename, s, r):
       line = r + "\n"
     sys.stdout.write(line)
 
-def replacepathruns(filename, s, r):
+def replacepathruns(text, s, r):
   "replace s only where it is a whole run of .. components, so that ../.. never matches inside ../../.."
-  def swap(match):
-    run = match.group(0)
-    return r if run == s else run
-
-  for line in fileinput.input(glob.glob(filename),inplace=1):
-    sys.stdout.write(re.sub(r'\.\.(?:/\.\.)*', swap, line))
+  return re.sub(r'\.\.(?:/\.\.)*', lambda match: r if match.group(0) == s else match.group(0), text)
 
 # dirwalk() rewrites the iPlug2 root as seen from config/ and projects/. Files in the project folder,
 # and in .vscode/ through ${workspaceFolder}, see it from one level up.
@@ -104,11 +99,18 @@ def replaceprojectroot(projectpath, oldroot, newroot):
 
     for f in os.listdir(dir):
       fullpath = os.path.join(dir, f)
-      base, extension = os.path.splitext(f)
+      extension = os.path.splitext(f)[1]
 
       if os.path.isfile(fullpath) and not(extension in FILTERED_FILE_EXTENSIONS):
-        print("Replacing iPlug2 root folder in file " + f)
-        replacepathruns(fullpath, oldroot, newroot)
+        with io.open(fullpath, newline='') as handle:
+          text = handle.read()
+
+        newtext = replacepathruns(text, oldroot, newroot)
+
+        if newtext != text:
+          print("Replacing iPlug2 root folder in file " + f)
+          with io.open(fullpath, 'w', newline='') as handle:
+            handle.write(newtext)
 
 def dirwalk(dir, searchproject, replaceproject, searchman, replaceman, oldroot= "", newroot=""):
   for f in os.listdir(dir):
