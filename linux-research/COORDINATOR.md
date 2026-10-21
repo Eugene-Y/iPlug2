@@ -47,14 +47,11 @@ Before `git worktree remove --force`, check **`git -C <wt> status --porcelain --
 - REAPER GUI steps: `GUI=<container> scripts/run-gui-test.sh <plugin> <outdir> scripts/steps/<file>.txt <container>`.
 - Long jobs: run in the background and wait for the completion notice; don't poll with sleeps. No `timeout` on macOS: `perl -e 'alarm N; exec @ARGV' cmd`.
 
-## Where the coordinator stopped (2026-10-20, second coordinator, before a context compaction)
-See `STATUS.md` for the authoritative list. In short:
-- Merged 2026-10-19: **T-025** (+ `hvoya` 8ca9f3324), **T-027** (b9c864d91), **T-020** (aa42322c2: GL3, clipboard file, portal dark/light, drag-out). Unpushed: hvoya-linux after 7aeb902fa-era pushes (the user pushes), `hvoya` 8ca9f3324.
-- **Waiting for the user's decision** (reviewed, worktrees kept, locks released):
-  - **T-023** `linux/T-023`: T23-1 (CLAP rescan after FXP/FXB load) + T23-2 (flush only with `clap.params`, Release crash otherwise); the `RestorePreset` question. Port to `hvoya` squashed.
-  - **T-029** `linux/T-029`: S-1 text entry, (a) mac formatter and/or (b) params with a parser; a typing check on mac.
-  - T-027 leftovers: reword the pre-port "morph rig" comment in `IPlugCLAP.cpp` on `hvoya`? Add Bromo/Delta to `check-product-names.sh`?
-- **Waiting for the VM** (virgl hang during T-013; Force Stop + Start in UTM): **T-013** (Ardour wizard → editors; Renoise; drops; tooltips; item 9 = T-020's VM checks), **T-009**'s VM part. Locks T-013 and T-009 held by the coordinator.
-- **T-016 merged** (8a0d19093): `notes/22` is the parity table. New: T-031 (REAPER extensions, 2–3 d), T-032 (sync dialogs — user decision), T-033 (CI/skills; workflow change needs the user's OK). Also for the user: IME (IBus/Fcitx) row in notes/22 — deviation or task?
-- Next for the coordinator (the user said so 2026-10-19): **T-031** (not started, no lock yet). Then: T-011, T-011, then the big T-017 WebView / T-018 Skia; T-030 needs a touch device; T-022 low.
-- Worktrees: `IPlug2-T-009`, `-T-013`, `-T-023`, `-T-029`; products `Gneiss-linux`, `Sand-linux`.
+## Where the coordinator stopped (2026-10-21 night, second coordinator, before a context compaction)
+See `STATUS.md` "Waiting on the user" for the authoritative list; the user decides those in the morning.
+- **Done 2026-10-20:** T-034 (NanoVG GL main-FBO stencil; merged 29022e440, `hvoya` 07953bf26), T-023 (CLAP preset rescan + flush check; merged 4cbaaef7a, `hvoya` b5dc25d0d), shared fixes ported to `hvoya` (CLAP `paramsValueToText` off-by-one 593293cfb, APP A1-A4, IPlugEffect example 5b263fc83/f743742bc), Gneiss `master` b1733b7 / Sand `master` d2294da picks, `makedist-linux.sh` for Gneiss and Sand (publish to `hvoya/distr/<Plugin>/`, `debug-symbols/` subfolder, `--allow-dirty`), T-013 Ardour results (`linux/T-013` f932e7e0c), T-035 merged 6ba2a22bf (real-hardware kit, notes/25-*), T-036 review-done (Sand `dist-scripts` bcb22ec in `/Volumes/Storage/code/hvoya/Sand-dist`, not merged). Everything up to 5cb35ed39 pushed with the user's permission; **unpushed:** hvoya-linux after 1cd9110fa (board/STATUS/T-035 merge/T-036 records, HEAD 0b3fcc9fe+), Sand `dist-scripts`.
+- **Review practice (the user asked 2026-10-20):** every task runs worker agent → independent reviewer agent (≤ 2 rounds), one subagent at a time; today's earlier unreviewed changes got a retro review (`notes/24-review-2026-10-20.md`, approved). Don't skip the reviewer again, even when the user says "merge".
+- **VM:** restarted by the user 2026-10-20; Ardour done; set to the Dummy backend (`~/.config/ardour8/config`, backup `config.t013-alsa`). `mutter-x11-frames` was restarted by hand after `xdotool windowclose` crashed it (STATUS gotcha). Locks held: T-009, T-013 (both coordinator, VM work pending). No VM lock held.
+- **Next for the coordinator (the user: "take priority tasks you can do yourself during the night"):** pick from: T-013 (Renoise, drops from GNOME Files, item 9 = T-020's VM checks; needs the VM lock), T-031 (REAPER extensions, 2-3 d), T-011 (duplicate.py, ready), T-009's VM part. Run each through worker + reviewer agents. Don't merge shared-code (mac/win) changes or anything into plug-in `master`s without the user.
+- Worktrees: `IPlug2-T-009`, `-T-013`, `-T-029` (T-029 proposal waits for the user), Sand `Sand-dist` (T-036), products `Gneiss-linux`, `Sand-linux`.
+
