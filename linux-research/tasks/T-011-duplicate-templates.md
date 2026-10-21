@@ -1,8 +1,8 @@
 # T-011 — Painless duplication: a new plug-in project that builds and debugs on Linux at once
 
-- **Status:** ready once T-005 is merged (its files are the template). The T-005 worker takes it after T-005's review.
-- **Owner:** —
-- **Branch/worktree:** `linux/T-011` from `hvoya-linux` after the T-005 merge (or from `linux/T-005` if the merge is still pending), in `/Volumes/Storage/code/IPlug2-T-011`.
+- **Status:** in progress
+- **Owner:** T-011 worker (chat f91df715), lock `.linux-port-locks/T-011`
+- **Branch/worktree:** `linux/T-011` from `hvoya-linux` (64312897b), in `/Volumes/Storage/code/IPlug2-T-011`.
 - **Depends on:** T-005 (presets, `<Name>-linux.code-workspace`, `.clangd`, `Scripts/linux/reaper-open-fx.lua`, `Documentation/linux-development.md`).
 - **Plan phase:** P11b.
 - **Conflicts:** `Examples/duplicate.py`, `Examples/gitignore_template` (shared with mac/win).

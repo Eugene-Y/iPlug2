@@ -37,7 +37,7 @@ from parse_config import parse_config, parse_xcconfig, set_uniqueid
 VERSION = "0.96"
 
 # binary files that we don't want to do find and replace inside
-FILTERED_FILE_EXTENSIONS = [".ico",".icns", ".pdf", ".png", ".zip", ".exe", ".wav", ".aif"]
+FILTERED_FILE_EXTENSIONS = [".ico",".icns", ".pdf", ".png", ".zip", ".exe", ".wav", ".aif", ".knob"]
 # files that we don't want to duplicate
 DONT_COPY = ("node_modules", ".vs", "*.exe", "*.dmg", "*.pkg", "*.mpkg", "*.svn", "*.ncb", "*.suo", "*sdf", "ipch", "build-*", "*.layout", "*.depend", ".DS_Store", "xcuserdata", "*.aps", ".reapeaks")
 
@@ -85,6 +85,37 @@ def replacestrsChop(filename, s, r):
     if(line.startswith(s)):
       line = r + "\n"
     sys.stdout.write(line)
+
+def replacepathruns(filename, s, r):
+  "replace s only where it is a whole run of .. components, so that ../.. never matches inside ../../.."
+  sWin = s.replace('/', '\\')
+  rWin = r.replace('/', '\\')
+
+  def swap(match):
+    run = match.group(0)
+    if run == s:
+      return r
+    if run == sWin:
+      return rWin
+    return run
+
+  for line in fileinput.input(glob.glob(filename),inplace=1):
+    sys.stdout.write(re.sub(r'\.\.(?:[/\\]\.\.)*', swap, line))
+
+# dirwalk() rewrites the iPlug2 root as seen from config/ and projects/. Files in the project folder,
+# and in .vscode/ through ${workspaceFolder}, see it from one level up.
+def replaceprojectroot(projectpath, oldroot, newroot):
+  for dir in [projectpath, os.path.join(projectpath, ".vscode")]:
+    if not os.path.isdir(dir):
+      continue
+
+    for f in os.listdir(dir):
+      fullpath = os.path.join(dir, f)
+      base, extension = os.path.splitext(f)
+
+      if os.path.isfile(fullpath) and not(extension in FILTERED_FILE_EXTENSIONS):
+        print("Replacing iPlug2 root folder in file " + f)
+        replacepathruns(fullpath, oldroot, newroot)
 
 def dirwalk(dir, searchproject, replaceproject, searchman, replaceman, oldroot= "", newroot=""):
   for f in os.listdir(dir):
@@ -226,12 +257,17 @@ def main():
     oldroot = xcconfig["IPLUG2_ROOT"]
     iplug2folder = os.path.abspath(os.path.join(configpath, oldroot))
     newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config"))
+    oldprojectroot = os.path.relpath(iplug2folder, inputprojectname)
+    newprojectroot = os.path.relpath(iplug2folder, outputpath)
   else:
     newroot = ""
 
   #replace manufacturer name strings
   for dir in dirwalk(outputpath, inputprojectname, outputprojectname, "AcmeInc", manufacturer, oldroot, newroot):
     pass
+
+  if numargs == 4:
+    replaceprojectroot(outputpath, oldprojectroot, newprojectroot)
 
   print("\ncopying gitignore template into project folder\n")
 

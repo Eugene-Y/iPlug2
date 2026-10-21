@@ -1,0 +1,46 @@
+# duplicate.py before (hvoya-linux 64312897b) vs after (linux/T-011), IPlugEffect -> MyFx, random.seed(11)
+# Out-of-tree target: /private/tmp/claude-501/-Volumes-Storage-code-IPlug2-linux/f91df715-d8e2-4a5b-b1d6-6e68afefbe6a/scratchpad/t011/{before,after2}/oot
+
+## in-tree: diff -r before/intree-MyFx after2/intree-MyFx
+diff -r before/intree-MyFx/.gitignore after2/intree-MyFx/.gitignore
+18a19
+> plug_build_info.hpp
+
+## out-of-tree: diff -r before/oot/MyFx after2/oot/MyFx
+diff -r before/oot/MyFx/.gitignore after2/oot/MyFx/.gitignore
+18a19
+> plug_build_info.hpp
+diff -r before/oot/MyFx/.vscode/c_cpp_properties.json after2/oot/MyFx/.vscode/c_cpp_properties.json
+5,8c5,8
+<             "${workspaceFolder}/../../WDL/**",
+<             "${workspaceFolder}/../../IPlug/**",
+<             "${workspaceFolder}/../../IGraphics/**",
+<             "${workspaceFolder}/../../Dependencies/**"
+---
+>             "${workspaceFolder}/../../../../../../../../../../Volumes/Storage/code/IPlug2-T-011/WDL/**",
+>             "${workspaceFolder}/../../../../../../../../../../Volumes/Storage/code/IPlug2-T-011/IPlug/**",
+>             "${workspaceFolder}/../../../../../../../../../../Volumes/Storage/code/IPlug2-T-011/IGraphics/**",
+>             "${workspaceFolder}/../../../../../../../../../../Volumes/Storage/code/IPlug2-T-011/Dependencies/**"
+23c23
+<                 "${workspaceFolder}/../../Dependencies/Build/mac/include/**"
+---
+>                 "${workspaceFolder}/../../../../../../../../../../Volumes/Storage/code/IPlug2-T-011/Dependencies/Build/mac/include/**"
+diff -r before/oot/MyFx/CMakeLists.txt after2/oot/MyFx/CMakeLists.txt
+6c6
+<   set(IPLUG2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE PATH "iPlug2 root directory")
+---
+>   set(IPLUG2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../../../../Volumes/Storage/code/IPlug2-T-011" CACHE PATH "iPlug2 root directory")
+diff -r before/oot/MyFx/CMakePresets.json after2/oot/MyFx/CMakePresets.json
+4c4
+<     "../../Scripts/cmake/Linux/CMakePresets-linux.json"
+---
+>     "../../../../../../../../../../Volumes/Storage/code/IPlug2-T-011/Scripts/cmake/Linux/CMakePresets-linux.json"
+diff -r before/oot/MyFx/MyFx-linux.code-workspace after2/oot/MyFx/MyFx-linux.code-workspace
+75c75
+<         "args": ["-newinst", "-new", "${workspaceFolder}/../../Scripts/linux/reaper-open-fx.lua"],
+---
+>         "args": ["-newinst", "-new", "${workspaceFolder}/../../../../../../../../../../Volumes/Storage/code/IPlug2-T-011/Scripts/linux/reaper-open-fx.lua"],
+92c92
+<         "args": ["-newinst", "-new", "${workspaceFolder}/../../Scripts/linux/reaper-open-fx.lua"],
+---
+>         "args": ["-newinst", "-new", "${workspaceFolder}/../../../../../../../../../../Volumes/Storage/code/IPlug2-T-011/Scripts/linux/reaper-open-fx.lua"],
