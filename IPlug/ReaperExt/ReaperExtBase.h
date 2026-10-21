@@ -51,6 +51,10 @@ public:
   
   bool EditorResizeFromUI(int viewWidth, int viewHeight, bool needsPlatformResize) override;
 
+#ifdef OS_LINUX
+  HostLoop* GetEditorHostLoop() override { return &mHostLoop; }
+#endif
+
   /** Called during idle processing - override to perform periodic tasks */
   virtual void OnIdle() {}; // NO-OP
 
@@ -110,10 +114,6 @@ public:
   /** Sets the unique identifier used for dock state persistence
    * @param id Unique identifier string (defaults to PLUG_CLASS_NAME) */
   void SetDockId(const char* id) { mDockId.Set(id); }
-
-#ifdef OS_LINUX
-  HostLoop* GetEditorHostLoop() override { return &mHostLoop; }
-#endif
 
   /** Sets the title of the submenu that this extension's actions are added to,
    * inside REAPER's Extensions menu

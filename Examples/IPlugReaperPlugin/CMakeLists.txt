@@ -30,7 +30,7 @@ iplug_add_target(_${PROJECT_NAME}-base INTERFACE
   LINK iPlug2::IPlug
 )
 
-# Font resources for bundles
+# Font resources
 set(FONT_FILES ${PLUG_RESOURCES_DIR}/fonts/Roboto-Regular.ttf)
 
 # Linux has no bundles: the resources are copied into <Name>.resources/ beside the module, and the
@@ -39,7 +39,7 @@ if(UNIX AND NOT APPLE)
   set(_IPLUG_DEFER_DEPLOY TRUE)
 endif()
 
-# Helper function to add resources to plugin bundles
+# Adds the resources to a target: into its bundle on macOS/iOS; on Linux, beside it, then deploys it
 function(iplug_add_plugin_resources target format)
   if(UNIX AND NOT APPLE)
     _iplug_add_resources(${target} "${FONT_FILES}")

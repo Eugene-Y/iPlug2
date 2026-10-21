@@ -69,8 +69,10 @@ private:
 
   static WDL_PtrList<SWELLHostLoopBackend>& Backends()
   {
-    static WDL_PtrList<SWELLHostLoopBackend> sBackends;
-    return sBackends;
+    // Never destroyed: a backend can outlive any static of this module (a REAPER extension's instance is destroyed
+    // at exit, after statics constructed later than it).
+    static auto* sBackends = new WDL_PtrList<SWELLHostLoopBackend>;
+    return *sBackends;
   }
 };
 
