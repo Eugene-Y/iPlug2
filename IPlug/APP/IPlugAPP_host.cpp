@@ -662,6 +662,9 @@ bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
     if (mMidiOut)
     {
       //TODO: send all notes off?
+#ifdef OS_LINUX
+      mMidiOutPortOpen = false;
+#endif
       mMidiOut->closePort();
       
       if (port == 0)
@@ -689,6 +692,7 @@ bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
       else
       {
         mMidiOut->openPort(port-1);
+        mMidiOutPortOpen = true;
         return true;
       }
 #endif
@@ -788,8 +792,8 @@ static RtMidi::Api MidiApiForAudioDriver(int audioDriverType)
   return audioDriverType == kDeviceJack ? RtMidi::UNIX_JACK : RtMidi::LINUX_ALSA;
 }
 
-// The client name in aconnect and PipeWire. JACK gives every RtMidi object its own client, and a second client
-// named BUNDLE_NAME would push the audio client, opened later, to JACK's "-01" name.
+// The client name in aconnect and PipeWire. JACK gives every RtMidi object its own client; clients named BUNDLE_NAME
+// would push the audio client, opened later, to a numbered name like "<app>-02".
 static std::string MidiClientName(RtMidi::Api api, const char* pDirection)
 {
   std::string name(BUNDLE_NAME);
@@ -805,6 +809,7 @@ void IPlugAPPHost::TryToChangeMidiApi()
 
   // The old input's thread or JACK client must be gone before the new one feeds mMidiMsgsFromCallback
   mMidiIn = nullptr;
+  mMidiOutPortOpen = false;
   mMidiOut = nullptr;
   InitMidi();
   ProbeMidiIO();
@@ -819,10 +824,13 @@ bool IPlugAPPHost::InitMidi()
   if (mNoIO || IsScreenshotMode())
     return true;
 
+#ifdef OS_LINUX
+  const RtMidi::Api api = MidiApiForAudioDriver(mState.mAudioDriverType);
+#endif
+
   try
   {
 #ifdef OS_LINUX
-    const RtMidi::Api api = MidiApiForAudioDriver(mState.mAudioDriverType);
     mMidiIn = std::make_unique<RtMidiIn>(api, MidiClientName(api, "in"));
 #else
     mMidiIn = std::make_unique<RtMidiIn>();
@@ -838,7 +846,6 @@ bool IPlugAPPHost::InitMidi()
   try
   {
 #ifdef OS_LINUX
-    const RtMidi::Api api = MidiApiForAudioDriver(mState.mAudioDriverType);
     mMidiOut = std::make_unique<RtMidiOut>(api, MidiClientName(api, "out"));
 #else
     mMidiOut = std::make_unique<RtMidiOut>();

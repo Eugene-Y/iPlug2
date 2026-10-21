@@ -34,6 +34,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <atomic>
 
 #include "wdltypes.h"
 #include "wdlstring.h"
@@ -253,6 +254,10 @@ public:
    * ports (unknown ones turn off). Call while audio is stopped: the audio thread sends to mMidiOut. */
   void TryToChangeMidiApi();
   void RefreshMidiControls(HWND hwndDlg);
+
+  /** RtMidi's JACK output queues what it is sent while no port is open, and writes the whole backlog into one
+   * cycle's buffer when a port opens: past the buffer's end once there is enough of it. */
+  bool IsMidiOutPortOpen() const { return mMidiOutPortOpen; }
 #endif
 
 private:
@@ -261,6 +266,7 @@ private:
   void ReportAudioOff(const char* reason);
 
   WDL_String mAudioOffReason;
+  std::atomic<bool> mMidiOutPortOpen = false;
 #endif
 
   std::unique_ptr<IPlugAPP> mIPlug = nullptr;
