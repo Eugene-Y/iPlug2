@@ -123,10 +123,24 @@ Both read the same `CMakePresets.json`, so build settings need no extra files.
 
 ## 6. New projects
 
-`Examples/duplicate.py` copies an example under a new name. The Linux files come along renamed: `CMakePresets.json`,
-`<New>-linux.code-workspace` with `<New>-clap`/`-vst3`/`-app` targets, and `.clangd`. Builds live in
-`build-linux/`, which `duplicate.py` does not copy. Duplicate inside `Examples/` for now. Duplicating to a path
-outside the iPlug2 tree leaves `../..` paths that need fixing (T-011).
+Duplicate an example, then open the new project's `-linux` workspace:
+
+```sh
+mkdir -p ~/dev
+cd Examples
+./duplicate.py IPlugEffect MyPlugin MyCompany ~/dev   # 4th argument: an existing parent folder, e.g. next to iPlug2
+code ~/dev/MyPlugin/MyPlugin-linux.code-workspace
+```
+
+Without the 4th argument the project lands in `Examples/`. Out of the tree, `duplicate.py` points every iPlug2 path
+at this checkout, as a relative path: the Xcode/VS configs, `CMakeLists.txt` (`IPLUG2_DIR`), the `CMakePresets.json`
+include, the workspace's REAPER script and `.vscode/c_cpp_properties.json`. Moving the project or iPlug2 later
+breaks them; `cmake -DIPLUG2_DIR=<path>` overrides the CMake one.
+
+The Linux files come along renamed: `CMakePresets.json`, `<New>-linux.code-workspace` with
+`<New>-clap`/`-vst3`/`-app` targets, and `.clangd` (outside the iPlug2 tree, iPlug2's own `.clangd` does not reach
+the project). Builds go to `build-linux/`, which `duplicate.py` does not copy and the new project's `.gitignore`
+ignores. Then continue with §2: pick the preset, build, debug.
 
 ## 7. Release packages
 
