@@ -190,3 +190,29 @@ Verdict: approve with fixes (R1-1 must be fixed; R1-2 should be; R1-3 can be the
 - Evidence: per `linux-research/.gitignore` only contact sheets are committed: `ext-igraphics/sheet.png` (e01–e09),
   `ext-webui/sheet.png`, `ext-scale2/sheet.png`, `ext-ui-resize/sheet.png`, `sheet-reaperplugin.png` (CLAP + VST3
   STOPPED/PLAYING), `regress-iplugcontrols-clap/sheet.png`; the single PNGs stay in the worktree.
+
+### Review round 2 (independent reviewer, 2026-10-21)
+
+Checked `940cfc6a1` (code) and `99a85cc4d` (log, sheets, T-017 note); rebuilt `build/t031r` (3 targets PASS).
+- **R1-1 resolved.** `Backends()` now returns a never-destroyed heap list; the WHY comment is accurate. Re-ran the
+  implementer's probe against my build (`build/t031r/gdbexit2/`): on File: Quit no `free` of the list or its buffer,
+  `~SWELLHostLoopBackend this=0x3943f5e0` finds itself as the list's first entry, exit status 0.
+- **R1-2 resolved.** `Deploy.cmake`: the `REAPEREXT` case is inside the Linux branch only, and the file-name change is a
+  new `elseif(UNIX)` between the unchanged `if(APPLE)` (`.dylib`) and `else()` (`.dll`), so macOS and Windows behave as
+  before (confirmed from the diff). The `.dll` → `.so` fix is right: the source path is `out/<name>`, which never
+  existed as `.dll` on Linux. My own deploy-on configure + build of `IPlugReaperExtensionWebUI` with a throwaway
+  `HOME` inside `build/t031r/fakehome` (default method): no warning, `reaper_IPlugReaperExtensionWebUI.so` and
+  `IPlugReaperExtensionWebUI/{index.html,script.js}` land in `~/.config/REAPER/UserPlugins/`.
+- **R1-3 resolved** as a hand-off: the note at the end of `tasks/T-017-webview.md` states the XID parent, the
+  second `CloseWindow` (idempotent `CloseWebView` required), the scale division and the web deploy path, all accurate.
+- **R1-4, R1-5 resolved** (helper comment reworded; the override sits with `EditorResizeFromUI`).
+- Re-ran `reaper-ext-test.sh`: IPlugReaperExtension **PASS** (OnTimer 232, OnDisplayTimer 334, Draw 22, all tid=1;
+  exit 0), IPlugReaperExtensionWebUI **PASS**.
+- The "Round 1 fixes" section matches what I found. Contact sheets opened: `ext-igraphics/sheet.png` (e01–e09, e09
+  with the Extensions submenu and Show/Hide tick) and `sheet-reaperplugin.png` (CLAP and VST3 STOPPED/PLAYING with
+  track name and channel count) show what the Log says.
+
+New: **R2-1 (nit, optional)** `Examples/IPlugReaperPlugin/CMakeLists.txt:33` — `# Font resources` now only restates
+`set(FONT_FILES …)`; delete it.
+
+Verdict: approve.
