@@ -1,6 +1,6 @@
 # T-013 — Host matrix (P10)
 
-- **Status:** in progress (Carla, Ardour, Renoise done; drops, item 9 next)
+- **Status:** in progress (Carla, Ardour, Renoise, drops (case 8) and item 9 done; PC checklist written; Qtractor, Zrythm, Wayland and the final review next)
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-013`
 - **Branch/worktree:** `linux/T-013` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-013` — for harness/docs and any host-compat fix.
 - **Depends on:** T-002, T-007 (merged). Products: Gneiss (T-003), Sand (T-012).
@@ -37,10 +37,46 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
 9. **From T-020** (merged aa42322c2, Docker-tested only): paste a file put on the clipboard by `SetFilePathInClipboard` into GNOME Files; drag a file out of the editor (`InitiateExternalFileDragDrop`, IPlugControls `-DIPLUG_TEST_DRAGOUT`) into Files and into each host; the real GNOME portal (Settings → Appearance dark/light switch, IPlugControls `-DIPLUG_TEST_APPEARANCE`); a GL3 build (`-DIGRAPHICS_RENDERER=GL3`) on virgl; the drag feedback cursor.
 
 ## Acceptance
-- [ ] Matrix table (host × product × format × case) in the Log with evidence paths (`evidence/t013/`).
+- [ ] Matrix table (host × product × format × case) in the Log with evidence paths (`evidence/t013/`). *Done for Carla,
+  Ardour, Renoise (cases 1–8) and item 9; Qtractor, Zrythm and a Wayland session are not yet.*
 - [ ] Every failure: fixed (Linux-only code, own commit) or ticketed with a minimal repro; host bugs documented as such.
-- [ ] PC checklist for Bitwig/x86_64 written.
+  *So far: the XEmbed text-entry fix (c86d82e5d); Carla main's VST3 IRunLoop threading is documented as Carla's.
+  The hosts that drop no files on plug-ins are documented, below.*
+- [x] PC checklist for Bitwig/x86_64 written (section below).
 - [ ] Independent review (AGENTS §4); Log complete.
+
+## PC checklist (Bitwig, x86_64)
+What the VM cannot show: Bitwig (x86_64 only), x86_64 itself, real GPU drivers, GL 3.2 core. For a developer on an
+x86_64 PC with Bitwig 5.x and REAPER. The user-level checks (install, use, resize, text entry, presets, automation,
+save/reopen, oversampling, two instances, closing) are in `notes/25-tester-checklist.md`; run them in Bitwig with
+CLAP and VST3. In addition:
+1. **Builds.** Use the x86_64 packages (`makedist-linux.sh --arch x86_64`). Also build Gneiss, Sand and IPlugControls
+   with `-DIPLUG_TRACE_HOST_LOOP -DIGRAPHICS_TRACE_LINUX_INPUT`, and IPlugControls with
+   `-DIPLUG_TEST_DRAGOUT -DIPLUG_TEST_APPEARANCE` once with GL2 and once with `-DIGRAPHICS_RENDERER=GL3`.
+2. **Host loop (case 7).** Start Bitwig from a terminal and keep the `IPLUG_HOSTLOOP` lines. Bitwig runs plug-ins in
+   its own plug-in host process; use per-plug-in hosting mode, and find the lines in the terminal or in Bitwig's log.
+   Record:
+   - CLAP: whether Bitwig gives timer-support and posix-fd, and that every callback runs on the main thread;
+   - VST3: whether `IRunLoop` comes from the factory, from `initialize`, or only from the plug frame; and which
+     backend runs with the editor closed.
+3. **Latency with the editor closed (case 5, T-010's open point).** Change Gneiss' OS 1x→8x while playing, with the
+   editor closed, in CLAP and in VST3. Does Bitwig's delay compensation follow? Read its latency display if it has
+   one; otherwise record a click through Gneiss next to a dry copy and compare. If VST3 runs on the fallback thread
+   and Bitwig drops the change, that is the case T-010 waits for: report it.
+   `scripts/vm/probe/renoise/call-trace.sh` is arm64-only; on x86_64 replace `$x0`/`$x1` with `$rdi`/`$rsi`.
+4. **Drops (case 8).** Drag a `.hvoya` layout from GNOME Files, and from Dolphin on KDE (a Qt source), onto Gneiss'
+   USER tab, in a gap between its controls. Record the `iPlug2 drop:` lines and `xprop XdndAware` of Bitwig's
+   plug-in window. Also drag IPlugControls' orange square out into Files and onto a Bitwig track.
+5. **Text entry and focus.** Type a value in Sand, press Enter, then Escape; click into Bitwig while an entry is
+   open; check host shortcuts (Space) with the editor focused. Keep the `iPlug2 input:` lines, including any
+   `XEmbed message` lines.
+6. **GPU.** Use NVIDIA (proprietary driver), AMD and Intel (Mesa) where available. Open and close each editor ×20.
+   Then open the GL3 build: it must render, unlike virgl, which has no 3.2 core context. Hover a tooltip in it.
+7. **Scaling and sessions.** Run at 100 %, 150 % and 200 % (GNOME fractional, KDE), with Bitwig's own UI scale, and
+   in a Wayland session (XWayland) as well as X11.
+8. **Appearance.** Switch dark/light in the desktop settings while IPlugControls (`IPLUG_TEST_APPEARANCE`) is open.
+   Its stderr must show the change, with `main=1`.
+9. **Report.** Run `collect-linux-report.sh` (T-035) and attach its output.
 
 ## Log
 (append: date — what was done — commits — next)
@@ -225,3 +261,73 @@ checklist).
 - `~/t013-renoise/t013.xrns` holds Gneiss (track 1), Sand (track 2) and IPlugControls (instrument 1).
 - Recording plug-in or Gainer tweaks into automation did not work as set up: edit mode and the transport were
   started from Lua; `record_parameter_mode` was tried in both modes.
+
+### 2026-10-21 (2) — drops (case 8) and T-020's VM checks (item 9)
+**Builds** (worktree at f9644cb91):
+- Gneiss, Sand and IPlugControls trace builds as in the Renoise session (`-DIGRAPHICS_TRACE_LINUX_INPUT`, deployed).
+- IPlugControls `-DIPLUG_TEST_DRAGOUT -DIPLUG_TEST_APPEARANCE` + input trace, GL2 and `-DIGRAPHICS_RENDERER=GL3`, staged
+  in `~/iplug-builds/t013-t020-{gl2,gl3}`. For the drag into Ardour and Renoise the GL2 one was put in `~/.vst3`; the
+  trace build is back there since.
+- `evidence/t020/clipboard/clipboard-file-test.cpp`, built in Docker.
+
+**Probes** (`scripts/vm/probe/t013/`, through `vm-x.sh`):
+- `reaper-open.sh`: the harness REAPER with one plug-in in a floating FX window.
+- `drop-chain.sh`: the window chain under a point, with XdndAware/XdndProxy.
+- `editor-view.sh`: the editor's own window and its root position.
+- `drop-from-files.sh`: a real mouse drag from GNOME Files.
+- `carla-hold.py`: Carla's backend with the editor open for N seconds.
+- `dragout-files.sh`, `dragout-to.sh`: drag-out with XFixes cursor samples.
+- `clip-paste-files.sh`.
+
+xdotool's press/move/release from a Files icon starts a real GTK XDND session; Files' `GDK_DEBUG=dnd` log shows
+Enter/Position/Drop. The scripted source `scripts/probe/xdnd-source.c` (`deep` = Qt's choice of the deepest
+XdndAware window) stands in for a Qt file manager. None is installed on the VM, and no packages were added.
+
+**Case 8 — a `.hvoya` layout dragged from GNOME Files onto Gneiss' USER tab** (a gap between its controls; the layout
+loaded is the visible result). Evidence `evidence/t013/drops/<host>/` (`RESULT.txt` with the window chain, the drop
+trace and Files' XDND lines; PNGs local).
+
+| Host, format | Plug-in window XdndAware | Files → editor | What the host does | Qt-like source (deepest aware window) |
+|---|---|---|---|---|
+| REAPER (T-019) | yes, 5 | PASS | forwards to our child as its own v3 source (first three types only, T-019 R6) | — |
+| Ardour 8.4, VST3 | yes, 5 (GTK2 top-level) | **PASS**: layout loaded; trace `enter v5 / drop / finished 1`; Files gets XdndFinished from Ardour | forwards to the embedded editor | not needed |
+| Carla 2.5.10, VST3 | yes, **3** (Carla's own host window) | **no**: Carla answers and finishes the drop itself (Files logs XdndFinished from it); nothing reaches the editor | XdndAware itself, does not forward | PASS: layout loaded |
+| Carla main, CLAP | no | **no**: GTK finds no target | neither | PASS |
+| Carla main, VST3 | not checked | — | — | — |
+| Renoise 3.5.4, VST3 | no (its main window is: 5, for its own file drops) | **no**: GTK finds no target ("async callback for #2c000b0" without XdndAware) | neither | PASS: layout loaded (`after-qt-like-deep-gap.png`) |
+
+- Carla main VST3: the Python process (Carla's backend) died with SIGSEGV right after loading Gneiss VST3 alone
+  (apport, no stack). I did not investigate; Carla main's VST3 hosting already has a threading bug (Log 2026-10-19).
+- **Conclusion.** Every editor accepts drops from a source that addresses it, so iPlug's side works everywhere.
+  Whether a GTK file manager (GNOME Files) can drop onto a plug-in depends on the host:
+  - **Works:** REAPER and Ardour forward the drop.
+  - **Swallowed:** Carla 2.5.10 is XdndAware itself and keeps the drop.
+  - **No target:** Carla main (CLAP) and Renoise are neither.
+  - For iPlug, the only lever is `XdndProxy` on the host's top-level, rejected in T-019: GTK 4 follows it for the
+    first position only. No change proposed: it is host behaviour, and a Qt source reaches the editor in every host.
+- Tooltip (Sand): Renoise PASS (Log above), Ardour PASS (2026-10-20). Carla not checked.
+
+**Item 9 — T-020's VM checks.** Evidence `evidence/t013/t020/`.
+
+| Check | Result | Evidence |
+|---|---|---|
+| GL3 build on virgl | **cannot render here**. virgl offers OpenGL 2.1 only (`Max core profile version: 0.0`). The open fails with the intended message ("no OpenGL 3.2 core context …", plus the trapped `GLXBadFBConfig`); REAPER stays alive and shows its generic UI. Rendering GL3, and a tooltip under GL3, go to the PC checklist. | `gl3-virgl.txt`, `01-gl3-clap-open.png` |
+| `SetFilePathInClipboard` → paste into GNOME Files | **PASS**. The clipboard offers `text/uri-list` and `x-special/gnome-copied-files` (`copy`, percent-encoded UTF-8); Ctrl+V in Files copies `Preset #1 ünï.fxp` into the folder. | `clipboard-paste/` |
+| Real GNOME portal, dark/light | **PASS**. IPlugControls (`IPLUG_TEST_APPEARANCE`, REAPER CLAP): `dark` at open, `light` after `color-scheme` → `default` (what Settings → Appearance writes), `dark` after the restore; all `main=1`. The user's `prefer-dark` is restored. | `appearance-portal.txt`, `reaper-gl2-stderr.txt` |
+| Drag out → GNOME Files | **PASS**. `drag me.wav` is copied into the folder; Files logs XdndEnter, Positions, Drop. | `dragout-files/` |
+| Drag out → REAPER | **PASS**. REAPER makes a track with the file. (This happened twice by accident: Files was hidden behind REAPER's main window, which REAPER raises with its FX window.) | `dragout-reaper/` |
+| Drag out → Ardour | **PASS**. Ardour imports the file as a region on a track (copied into the session; the session was not saved, and the copy was removed afterwards). | `dragout-ardour/` |
+| Drag out → Renoise | **delivered**. Renoise's log: `Dropped file (1 from 1): '…/drag me.wav'`; dropped on its song browser, which makes no instrument from it. | `dragout-renoise/` |
+| Drag out → Carla | N/A: Carla's backend without its GUI has no drop target. | — |
+| Drag feedback cursor | **PASS** (XFixes cursor names along the drag): `default` over the square before; `not-allowed` where nothing accepts; the hand `pointer` over accepting targets (REAPER's windows, our own editor, Files); `default` again after the release. | `dragout-files/RESULT.txt`, `dragout-to` RESULTs |
+
+**VM notes**
+- GNOME Files' first start (Tracker) can take several seconds before its window maps. A drag started before that
+  lands on whatever lies below, so `dragout-files.sh` now expects Files to be open already.
+- A press in REAPER's FX window also raises REAPER's main window over Files: move the main window aside first.
+- `pgrep -f '[c]arla-hold'` inside a `vm-x.sh bash -c` matches that bash's own command line, so the loop waits
+  forever. Match the interpreter's argv instead.
+- `xwininfo -id ""` waits for a click; `reaper-open.sh` guards against it.
+- Clean-up: Renoise quit without saving and its OSC server is off again. Ardour quit with "Just quit" (the session
+  file is unchanged). Nautilus and jackd are stopped, apport's dialog is answered "Don't send", and the GNOME
+  appearance is back to `prefer-dark`. The VM lock is released.
