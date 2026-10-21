@@ -1,6 +1,7 @@
 # Drag IPlugControls' IPLUG_TEST_DRAGOUT square (view +712,+702) out of the editor to root point x,y and release;
 # log the displayed cursor (XFixes, /tmp/cursor-probe) on the way and the window chain under the target.
 # Usage: dragout-to.sh <out> <view-x> <view-y> <x> <y> <host-stderr>   (run through vm-x.sh)
+# Needs /tmp/cursor-probe: gcc -O1 -o /tmp/cursor-probe scripts/cursor-probe.c -lX11 -lXfixes
 OUT="$1"; VX="$2"; VY="$3"; TX="$4"; TY="$5"; LOG="$6"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$OUT"; R="$OUT/RESULT.txt"; : > "$R"

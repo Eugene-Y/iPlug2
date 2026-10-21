@@ -1,14 +1,13 @@
 # Drag IPlugControls' IPLUG_TEST_DRAGOUT square (view +712,+702) out of the editor onto a GNOME Files window showing
 # <dst> (already open); log the displayed cursor (XFixes, /tmp/cursor-probe) along the way and what lands in <dst>.
 # Usage: dragout-files.sh <out> <view-x> <view-y> <dst> [escape]   (run through vm-x.sh after reaper-open.sh)
+# Needs /tmp/cursor-probe: gcc -O1 -o /tmp/cursor-probe scripts/cursor-probe.c -lX11 -lXfixes
 OUT="$1"; VX="$2"; VY="$3"; DST="$4"; ESC="${5:-}"
 mkdir -p "$OUT"; R="$OUT/RESULT.txt"; : > "$R"
 log() { echo "$*" | tee -a "$R"; }
 # Files must already show <dst> (start it with GDK_DEBUG=dnd if wanted): a nautilus started here can stay unmapped
 # while its first start (Tracker) runs, and the drop then lands on whatever is below.
 N=$(for w in $(xdotool search --onlyvisible --name "^$(basename "$DST")\$" 2>/dev/null); do xprop -id "$w" WM_STATE | grep -q Normal && echo "$w"; done | tail -1)
-wmctrl -i -a "$N" 2>/dev/null
-sleep 1
 [ -n "$N" ] || { log "no Files window"; exit 1; }
 wmctrl -i -r "$N" -e 0,20,80,400,500; wmctrl -i -a "$N"; sleep 1
 log "Files window $N XdndAware: $(xprop -id "$N" XdndAware 2>&1 | cut -c1-60)"

@@ -3,7 +3,7 @@
 # Usage: drop-chain.sh <x> <y>
 xdotool mousemove "$1" "$2"; sleep 0.3
 eval "$(xdotool getmouselocation --shell)"
-W=$WINDOW
+W=$(printf "0x%x" "$WINDOW")   # getmouselocation prints it in decimal, xwininfo its parents in hex
 for i in $(seq 1 12); do
   info=$(xwininfo -id "$W" 2>/dev/null)
   [ -n "$info" ] || break
