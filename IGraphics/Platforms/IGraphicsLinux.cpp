@@ -1325,9 +1325,16 @@ void IGraphicsLinux::HandleClientMessage(const XEvent& event)
       w.mEmbedder = static_cast<Window>(message.data.l[3]);
       break;
     case kXEmbedFocusOut:
-      if (w.mHoldsFocus)
+    {
+      // Renoise sends FOCUS_OUT when an edit's request moves the X focus from its window into ours (FOCUS_IN
+      // follows), which would end every edit as it opens. A focus that really left is no longer ours.
+      Window focus = None;
+      int revert = 0;
+      XGetInputFocus(w.mDisplay, &focus, &revert);
+      if (w.mHoldsFocus && focus != w.mWindow)
         DeclineKeyboardFocus();
       break;
+    }
     default:
       break;
   }
