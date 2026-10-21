@@ -162,7 +162,7 @@ checklist).
    the edit on `FOCUS_OUT` (`DeclineKeyboardFocus` → `CommitEdit`), so the typed keys went "to host"
    (`textentry-sand-unfixed.txt`, with gdb backtraces and the XEmbed message codes).
    - **Fix 196036808** (round 0): `FOCUS_OUT` ends an edit only when the X focus is no longer ours.
-   - **Replaced by 916df0fd2** (review R1-1). A `FOCUS_OUT` now ends the edit only if no `FOCUS_IN` follows within
+   - **Replaced by c86d82e5d** (review R1-1). A `FOCUS_OUT` now ends the edit only if no `FOCUS_IN` follows within
      150 ms, decided in `UpdateEditingState`. XEmbed messages are traced (`XEmbed message N`).
    - **VM, session 4** (`stderr-session4-r1.txt`; `60`–`63`): `5, 2, 4 → "FOCUS_IN answers the FOCUS_OUT: the edit
      stays"`. Typing 3000 and Enter gives 3.00 kHz; a click into Renoise commits 700 Hz.
@@ -181,7 +181,7 @@ checklist).
        already on Ardour's window, so 196036808 would also have ended the edit there. The reviewer's case (a real
        FOCUS_OUT with the X focus still ours) did not occur in Ardour 8.4. The pairing rule stays: it does not depend
        on where the X focus is, and it costs no X round trip.
-   - **Docker REAPER regression** with 916df0fd2: IPlugControls `iplugcontrols-p3b.txt` and Sand `sand.txt`, CLAP +
+   - **Docker REAPER regression** with c86d82e5d: IPlugControls `iplugcontrols-p3b.txt` and Sand `sand.txt`, CLAP +
      VST3: all PASS (`evidence/t013/renoise-fix-r1-docker/`; round 0: `renoise-fix-docker/`).
 2. **Host shortcuts with the editor focused do not work in Renoise (host design, nothing to fix in iPlug).** With
    Renoise's plug-in window focused, Renoise forwards every key to the plug-in as a synthetic event

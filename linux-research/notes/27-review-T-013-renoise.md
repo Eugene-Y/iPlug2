@@ -147,3 +147,17 @@ Renoise has no CLAP (every CLAP cell N/A).
   turned off afterwards. That warning lives only in the Log.
 
 **Fix:** one clause in each header.
+
+## Round 1 fixes
+
+| Finding | Resolution | Commit |
+|---|---|---|
+| R1-1 major | The XEmbed FOCUS_OUT check is redesigned. A FOCUS_OUT during an edit is now only recorded, with its time. A FOCUS_IN clears it. `UpdateEditingState` ends the edit once it has been pending longer than `kFocusQuiet` (150 ms). The pending flag is also cleared by our own focus request, release and decline, so a stale FOCUS_OUT cannot end a later edit. The `XGetInputFocus` check is gone. Tested on the VM: Renoise (5, 2, 4 → the edit stays; type, Enter, click-away all work) and Ardour. In Ardour, the edit commits on the preset dropdown's FOCUS_OUT, which no FOCUS_IN follows, and host keys reach Ardour afterwards. Docker REAPER smoke (`iplugcontrols-p3b`, `sand`; CLAP and VST3): PASS. **Downgraded:** Ardour 8.4 never sent a FOCUS_OUT while the X focus was ours. A click on a header button moves the X focus to Ardour's window first, so 196036808 would also have ended the edit at the dropdown. The pairing rule stays because it is independent of the X focus. | c86d82e5d; Log and evidence cc282e3da |
+| R1-2 minor | The preamble now says the embedder is remembered for focus requests and that its FOCUS_OUT ends an edit. The WHY (Renoise's FOCUS_OUT/FOCUS_IN burst; a GtkSocket keeps the X focus on our window) is stated once, at the FOCUS_OUT case. notes/13 XEmbed row updated. | c86d82e5d |
+| R1-3 minor | `TRACE_INPUT("XEmbed message %ld, holding focus %d")` before the switch, plus one line when a FOCUS_IN answers the FOCUS_OUT and one when an unanswered FOCUS_OUT ends the edit. | c86d82e5d |
+| R1-4 nit | No X call remains on the message; FOCUS_OUT does nothing unless `mHoldsFocus`. | c86d82e5d |
+| R1-5 minor | `latency-editor-{closed,open}.txt` re-run with the committed `call-trace.sh`. `latency.syms` now also lists Renoise's `restartComponent` and its lambda's `_M_invoke`. The closed run shows `restartComponent` on the fallback thread, the lambda on main, then `restartComponent` again on main, followed by the restart. The open run shows `restartComponent` on main, handled at once. The Log states this and notes the re-run. | cc282e3da |
+| R1-6 nit | The case 5 cell now reads "restart honoured, latency re-read (PDC value not observable)". | cc282e3da |
+| R1-7 nit | Heading changed to "Renoise 3.5.4 (VST3; no CLAP in Renoise)". | cc282e3da |
+| R1-8 nit | The `call-trace.sh` header says it is arm64-only. The `rn-lua.py` header warns that the OSC server evaluates Lua from any interface and must be turned off afterwards. | 24b59a29d |
+| Also | `Dependencies/IPlug/VST3_SDK/README.md` restored. The Renoise OSC server is off and the VM lock released; Ardour quit with "Just quit", so the session file is unchanged. | — |
