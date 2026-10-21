@@ -150,3 +150,82 @@ unaffected.
 - My mac CMake configure ran without `-DIPLUG_DEPLOY_PLUGINS=OFF`, so the build copied the APP to
   `~/Applications/IPlugInstrument.app`. The directory's birth time is the build time, so it is most likely new. It
   was left in place for the user to delete. Nothing went to `~/Library`, because only the APP target was built.
+
+# Round 2
+
+Range `55979e325..df033f7a7`: 47951f3a0 (code), df033f7a7 (harness `info:` lines, VM quit on PulseAudio, re-runs,
+Log).
+
+**Final verdict: approve.** R1-1 is fixed and verified. R1-3, R1-4 and R1-6 are done (the R1-6 assert is declined,
+with a reason that holds). R1-5 is left in RtMidi, which is acceptable. R1-2 is acceptable to hand over as an open
+user decision (below).
+
+## The fix (R1-1)
+- **Open/close paths.** `mMidiOutPortOpen` (`std::atomic<bool>`, Linux-only member) changes in three places:
+  - **Cleared before `closePort`** in `SelectMIDIDevice(kOutput)`. This covers "off", an unknown name (port -1 → 0)
+    and a switch from one port to another.
+  - **Cleared in `TryToChangeMidiApi`** before `mMidiOut` is reset. If `InitMidi` then fails, `mMidiOut` is null and
+    the flag is false. `SelectMIDIDevice` with a null `mMidiOut` doesn't touch the flag, and nothing can open a port
+    while `mMidiOut` is null.
+  - **Set only after `openPort` returns.** RtMidi's port errors (`DRIVER_ERROR`) throw, so a failed open never sets
+    it. Before T-022 such a throw was uncaught on every platform, and it still is.
+- **Memory ordering.** Seq-cst by default.
+  - Open: the port is registered before the store, so the audio thread can only see `true` after the port exists.
+  - Close: the audio thread may have loaded `true` just before the clear, and then writes one block's messages after
+    `closePort`. RtMidi's ring buffers outlive `closePort`, so those few bytes reach the next opened port. That is
+    harmless and bounded, not the unbounded backlog of R1-1.
+  - The recreate paths still run only while audio is stopped (round 1), so the `mMidiOut` pointer itself never races.
+- **mac/win.**
+  - The checks in `IPlugAPP.cpp:124-128, 152-156` and the clear in `SelectMIDIDevice` are inside `#ifdef OS_LINUX`.
+  - The set is inside the `#elif defined OS_LINUX` branch, and `TryToChangeMidiApi`/`InitMidi`'s `api` are Linux-only.
+  - The only unconditional change is `#include <atomic>` in `IPlugAPP_host.h`, which is harmless.
+  - I rebuilt `IPlugInstrument-app` on macOS (CMake/Ninja, `IPLUG_DEPLOY_PLUGINS=OFF` this time). All four APP files
+    compile with 0 warnings, and the target links.
+  - ALSA: sending only while a port is open changes nothing that can be observed. The Linux APP has no virtual
+    output, so with the output "off" nothing could be subscribed to it.
+- **Comments.**
+  - The `MidiClientName` comment (R1-4) is right now.
+  - Nit, no action needed: the doc on `IsMidiOutPortOpen` says the backlog is written "past the buffer's end". In fact
+    `jack_midi_event_reserve` returns NULL and RtMidi copies into it. The WHY is right.
+
+## Re-runs (fresh Debug build in Docker, container t022r, removed)
+`evidence/t022/review2-adversarial` (`adversarial.sh` from round 1 plus scenario C2 and a positive check). See
+`log.txt`.
+- **C (output off for 30 s while about 200 messages/s are echoed, then an output picked):**
+  - no crash, and 0 events at the monitor with the source stopped, so no backlog;
+  - then the source restarted and reconnected for 3.5 s: 8 events arrive, so the picked output works;
+  - Quit exits 0.
+- **C2 (the second path: output connected → "off" for 30 s → connected again):**
+  - 947 events echoed while connected, and 0 while off;
+  - 0 right after reconnecting, so no backlog;
+  - 6 in 3.5 s after the source restarted;
+  - Quit exits 0.
+- My first C2 run showed 0 events after the restart. That was a flaw in my script: a restarted `jack_midiseq` is a new
+  port, and the APP's connection to it was gone. The script now reconnects it with `restart_source`, and `log.txt`
+  holds only the corrected run.
+- **The author's `evidence/t022/fix-adversarial` (A–E on the fixed build):** consistent with my run and with round
+  1. E still shows the old Cancel bug from before T-022, as expected.
+
+## New evidence checked
+- **`vm-jack-midi/checks.txt`:**
+  - the reporting lines are `info:` now;
+  - the gdb run is on PulseAudio with the sequencer input picked from the list (virmidi → client 128
+    'IPlugInstrument'), and the note moves the meter;
+  - main and `gmain` only at `exit()`, so the "every driver" quit gap from R1-3 is closed.
+  - I opened `04-pulse-note.png` and `06-jack-again-note.png`: the meter is up and the key is highlighted in both.
+- **`docker-jack-midi/checks.txt`:** PASS with the `info:` lines.
+- **`macos/`:** the APP files compile, `IPlugAPP.cpp` included, with no APP warnings. This matches my own build.
+
+## R1-2 as an open user decision
+Acceptable for handing over.
+- It is the task's stated "unknown → off" rule, applied to a new case. It is not a crash or a bad connection.
+- The Log names both cases (a driver round trip, and a start without a JACK server).
+- A fix changes what settings.ini keeps, which is the user's call.
+- When the user decides: a fix can stay Linux-only, inside `TryToChangeMidiApi` or with a Linux branch in
+  `SelectMIDIDevice`. "Shared code" alone is not a reason against it.
+
+## Still open, for the coordinator
+- The cross-platform findings from round 1 are recorded in the task Log: Cancel after a driver round trip leaves the
+  audio off, and `--no-io` erases the saved MIDI ports.
+- `~/Applications/IPlugInstrument.app` from my round-1 mac build is still there (unchanged since 15:52). The user can
+  delete it.
