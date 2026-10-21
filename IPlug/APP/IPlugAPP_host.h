@@ -247,6 +247,12 @@ public:
 #ifdef OS_LINUX
   /** @return Why the last attempt to start audio failed, empty when it started */
   const char* GetAudioOffReason() const { return mAudioOffReason.Get(); }
+
+  /** JACK MIDI goes with the JACK audio driver, the ALSA sequencer with the others. When the audio driver's MIDI
+   * API differs from the current one, closes the MIDI ports, reopens them on the other API and reselects the saved
+   * ports (unknown ones turn off). Call while audio is stopped: the audio thread sends to mMidiOut. */
+  void TryToChangeMidiApi();
+  void RefreshMidiControls(HWND hwndDlg);
 #endif
 
 private:

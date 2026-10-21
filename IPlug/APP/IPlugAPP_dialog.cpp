@@ -324,6 +324,18 @@ static void ShowMidiUnavailable(HWND hwndDlg)
   }
 }
 
+void IPlugAPPHost::RefreshMidiControls(HWND hwndDlg)
+{
+  for (int combo : {IDC_COMBO_MIDI_IN_DEV, IDC_COMBO_MIDI_OUT_DEV, IDC_COMBO_MIDI_IN_CHAN, IDC_COMBO_MIDI_OUT_CHAN})
+  {
+    SendDlgItemMessage(hwndDlg, combo, CB_RESETCONTENT, 0, 0);
+    EnableWindow(GetDlgItem(hwndDlg, combo), TRUE);
+  }
+
+  if (!PopulateMidiDialogs(hwndDlg))
+    ShowMidiUnavailable(hwndDlg);
+}
+
 void IPlugAPPHost::PopulatePreferencesDialog(HWND hwndDlg)
 {
   for (const char* driverName : kAudioDriverNames)
@@ -333,10 +345,7 @@ void IPlugAPPHost::PopulatePreferencesDialog(HWND hwndDlg)
   EnableWindow(GetDlgItem(hwndDlg, IDC_BUTTON_OS_DEV_SETTINGS), FALSE);
 
   PopulateAudioDialogs(hwndDlg);
-
-  if (!PopulateMidiDialogs(hwndDlg))
-    ShowMidiUnavailable(hwndDlg);
-
+  RefreshMidiControls(hwndDlg);
   ShowAudioStateInTitle(hwndDlg, *this);
 }
 #endif
@@ -397,6 +406,11 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
             mState = mTempState;
 
             _this->TryToChangeAudioDriverType();
+#ifdef OS_LINUX
+            _this->TryToChangeMidiApi();
+            // Switching the MIDI API turns off a saved port the other API doesn't have, and saves the cancelled driver with it
+            _this->UpdateINI();
+#endif
             _this->ProbeAudioIO();
             _this->TryToChangeAudio();
           }
@@ -426,6 +440,10 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
               mState.mAudioOutChanR = 2;
 
               _this->PopulateAudioDialogs(hwndDlg);
+#ifdef OS_LINUX
+              _this->TryToChangeMidiApi();
+              _this->RefreshMidiControls(hwndDlg);
+#endif
             }
           }
           break;
