@@ -4,6 +4,7 @@
 # Usage: call-trace.sh <out-file> <secs> <symbols-file> <action> [action ...]
 # Symbols are linkage (mangled) names, one per line; '#' lines are comments; "<symbol> bt" also logs a backtrace,
 # "<symbol> x <gdb expression>" also logs the expression's value as a long (e.g. *(long*)($x1+64)).
+# arm64 only: every hit logs the argument registers $x0/$x1, and the .syms offsets assume that ABI.
 OUT=$1; SECS=$2; SYMS=$3; shift 3
 HERE=$(cd "$(dirname "$0")" && pwd)
 P=$(pgrep -x renoise) || { echo "renoise is not running"; exit 1; }

@@ -2,7 +2,9 @@
 """Run Lua in a running Renoise through its OSC server (/renoise/evaluate; Preferences > OSC, UDP 8000).
 Usage: rn-lua.py '<lua chunk>'   The chunk may return a value: it is shown in Renoise's status bar (bottom left),
 since OSC has no reply and the evaluate sandbox has neither io nor a print that reaches stdout. Read it from a
-screenshot (vm-shot.sh)."""
+screenshot (vm-shot.sh).
+The OSC server evaluates Lua sent from any interface, not only localhost: turn it on only for the run and off
+afterwards (OscServerEnabled in ~/.config/Renoise/V3.5.4/Config.xml while Renoise is not running)."""
 import socket, sys
 
 
