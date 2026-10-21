@@ -1,0 +1,21 @@
+pid=22008 (main LWP)
+ACTION 03:15:43.776 sh:xdotool mousemove 240 225; sleep 0.4; xdotool mousedown 1; sleep 0.08; xdotool mouseup 1
+ACTION 03:15:47.269 sh:xdotool type --delay 80 abc
+HIT _ZN5iplug9igraphics9IGraphics15CreateTextEntryERNS0_8IControlERKNS0_5ITextERKNS0_5IRECTEPKci lwp=22008 x0=0x391fbfb0 x1=958388240
+HIT _ZN5iplug9igraphics17ITextEntryControl15CreateTextEntryEiRKNS0_5ITextERKNS0_5IRECTEiPKc lwp=22008 x0=0x320e54d0 x1=839800052
+  X *(long*)($x1+64) = 1
+HIT _ZN5iplug9igraphics14IGraphicsLinux19HandleClientMessageERK7_XEvent lwp=22008 x0=0x391fbfb0 x1=3506422856
+HIT _ZN5iplug9igraphics14IGraphicsLinux17TakeKeyboardFocusEm lwp=22008 x0=0x391fbfb0 x1=65387868
+HIT _ZN5iplug9igraphics14IGraphicsLinux14HandleFocusOutERK7_XEvent lwp=22008 x0=0x391fbfb0 x1=3506422504
+HIT _ZN12_GLOBAL__N_111LocateFocusEP9_XDisplaymm lwp=22008 x0=0x358cfc70 x1=46137346
+  X *(long*)($x1+64) = 5
+HIT _ZN5iplug9igraphics14IGraphicsLinux19HandleClientMessageERK7_XEvent lwp=22008 x0=0x391fbfb0 x1=3506422856
+BT iplug::igraphics::ITextEntryControl::CommitEdit() <- iplug::igraphics::IGraphicsLinux::ProcessXEvents() <- iplug::HostLoop::Dispatch(bool, unsigned long, int) <- non-virtual thunk to iplug::VST3RunLoopHandler::onFDIsSet(int) <- TVst3Plug::CallPlugin(char const*, std::function<void ()> const&) const <- TThirdPartyVst3Editor::OnEvent(TApplicationEvent*) <- TApplicationEventQueueImpl::OnDispatchEvent(TApplicationEvent*) <- TApplication::RunOneFrame() <- TApplication::RunMainLoop() <- TApplication::DoRun(std::deque<TString, std::allocator<TString> > const&, bool)
+HIT _ZN5iplug9igraphics17ITextEntryControl10CommitEditEv lwp=22008 x0=0x320e54d0 x1=1
+HIT _ZN5iplug9igraphics9IGraphics28SetControlValueAfterTextEditEPKc lwp=22008 x0=0x391fbfb0 x1=874832000
+  X *(long*)($x1+64) = 2
+HIT _ZN5iplug9igraphics14IGraphicsLinux19HandleClientMessageERK7_XEvent lwp=22008 x0=0x391fbfb0 x1=3506422856
+  X *(long*)($x1+64) = 4
+HIT _ZN5iplug9igraphics14IGraphicsLinux19HandleClientMessageERK7_XEvent lwp=22008 x0=0x391fbfb0 x1=3506422856
+  X *(long*)($x1+64) = 4
+HIT _ZN5iplug9igraphics14IGraphicsLinux19HandleClientMessageERK7_XEvent lwp=22008 x0=0x391fbfb0 x1=3506422856

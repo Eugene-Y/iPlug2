@@ -1,6 +1,6 @@
 # T-013 — Host matrix (P10)
 
-- **Status:** in progress (Carla, Ardour done; Renoise, drops, item 9 next)
+- **Status:** in progress (Carla, Ardour, Renoise done; drops, item 9 next)
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-013`
 - **Branch/worktree:** `linux/T-013` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-013` — for harness/docs and any host-compat fix.
 - **Depends on:** T-002, T-007 (merged). Products: Gneiss (T-003), Sand (T-012).
@@ -105,3 +105,102 @@ probe is typed in as one line). Evidence `evidence/t013/ardour/` (PNGs local).
   backend hung in `ardour-request-device` (PipeWire device reservation) after a killed run; switched the VM's Ardour
   to the Dummy backend (`~/.config/ardour8/config`, backup `config.t013-alsa`).
 - Next: Renoise; drops from GNOME Files (case 8) in Carla/Ardour; item 9 (T-020's VM checks); automation lanes.
+
+### 2026-10-21 — Renoise 3.5.4 (CLAP, VST3)
+**Builds:** linux/T-013 after merging hvoya-linux (merge 92738e8c7: T-034 stencil fix, T-023 CLAP rescan), Release with
+`-DIPLUG_TRACE_HOST_LOOP -DIGRAPHICS_TRACE_LINUX_INPUT`: Gneiss (linux-experiment 773867e), Sand (052a0bc),
+IPlugControls, built in Docker against this worktree, deployed to `~/.clap`, `~/.vst3`. Sessions 1–2 ran that build;
+session 3 the same plus the XEmbed fix below.
+
+**Renoise 3.5.4 on Linux hosts VST2, VST3, LADSPA and DSSI, not CLAP** (no CLAP path, setting or string in the
+binary; it scans `~/.vst3` only). So every CLAP cell is N/A. It scans in a separate `AudioPluginServer_arm64` process
+but runs plug-ins in its own process (the trace's pid is Renoise's). An editor is a Renoise top-level window
+("HvoyaAudio: Gneiss") that embeds ours via XEmbed ("Plugin window attached via `_XEMBED_INFO`"). Renoise calls
+`XInitThreads` itself. Driving: `scripts/vm/probe/renoise/` (below); evidence `evidence/t013/renoise/` (PNGs local).
+
+| Case (VST3) | Gneiss | Sand | IPlugControls |
+|---|---|---|---|
+| 1 scan, editor opens, renders | PASS (`06`), logo fine | PASS (`20`) | PASS (`28`), instrument |
+| 1 resize, plug-in-initiated | PASS: MORPH off 940×620→940×200 (`08`); corner resizer 940×200→1020×217 (`47`); Renoise's window follows | — | — |
+| 1 resize, host-initiated; HiDPI | N/A (`PLUG_HOST_RESIZE 0` in all three); HiDPI not tried (VM at scale 1) | | |
+| 2 mouse | knob drag PASS (`09`, A hz 933 Hz→20 kHz), wheel PASS (`10`) | tooltip PASS (`27`) | IVMenuButton menu PASS (`29`) |
+| 2 text entry | — (none in Gneiss) | **FAIL → fixed** (Linux-only commit below): `53`–`55` value 10 kHz→`2000`→2.00 kHz; click into Renoise commits (`56`) | same bug and fix: IEditableTextControl (`58`, `59`) |
+| 2 host shortcut (Space) with the editor focused | no: host design (finding 2); with Renoise's main window focused it plays (`11`) | | |
+| 2 right-click on a control | no menu (`12`): Renoise implements `IComponentHandler` only, no `IComponentHandler3` | | no menu (`48`) |
+| 3 names/values in the host | PASS: Lua lists 63 names and value strings | PASS (28) | PASS |
+| 3 automation read | PASS: an A hz envelope plays, the knob follows (`31-*`) | | |
+| 3 automation write | gestures reach Renoise: begin/perform/end on the main thread, right id (`param-gestures.txt`), Renoise's value follows; Renoise wrote no envelope, but not for its own Gainer either: my recording setup, not settled | | |
+| 4 save with the editor open / closed, change, reload | PASS: Main hz 12.7 kHz and the MORPH-off layout restored (`43`); Renoise does not reopen editors | PASS (closed): 0.770 | PASS (closed): Gain 33 % |
+| 5 latency, editor closed (OS 1x↔8x while playing) | PASS: `SetLatency` on the fallback thread; Renoise moves the restart to its main thread (`latency-editor-closed.txt`) | | |
+| 6 two instances | PASS, both editors draw (`45`) | | |
+| 6 close the editor with a menu open | | | PASS (`29`→`30`) |
+| 6 remove the plug-in while playing, editor open | PASS, no hang (`46`) | | |
+| 6 load another song / quit with editors open | PASS, clean teardown (`stderr-session2.txt`) | PASS | PASS |
+| 7 host loop | see below | same | same |
+
+**Case 7 (decides T-010's open point).** VST3 in Renoise, the same for all three:
+- factory `setHostContext` and `initialize`: no `IRunLoop` → fallback thread;
+- editor attached: the plug frame's `IRunLoop`; timers and the X connection fd are called on Renoise's main thread;
+- editor closed: back to the fallback thread.
+
+So Renoise is a host that reaches the fallback with the editor closed. **It does not drop the latency change.**
+`restartComponent(kLatencyChanged)` from the fallback thread is queued (`TVst3Plug::restartComponent` defers a lambda)
+and runs on Renoise's main thread: `setProcessing(0)`, `setActive(0)`, `setActive(1)`, `getLatencySamples`,
+`setProcessing(1)` (`latency-editor-closed.txt`, lwp = pid). Editor open (`latency-editor-open.txt`): the same calls,
+also on the main thread. While the transport is stopped the plug-in is suspended. Renoise then re-reads the latency
+when processing resumes (`getLatencySamples` on an audio thread). The PDC value itself is not visible: Renoise has
+no API for it. **For T-010: no framework change needed for Renoise.** Bitwig remains the only unknown (x86_64 only, PC
+checklist).
+
+**Findings**
+1. **Fixed (Linux-only): Renoise's XEmbed `FOCUS_OUT` ended every text entry as it opened.** A click on an editable
+   value creates the entry and takes the X focus (`XSetInputFocus` + XEmbed `REQUEST_FOCUS`). Renoise then sends
+   `FOCUS_OUT` (5), `WINDOW_DEACTIVATE` (2) and `FOCUS_IN` (4) ×2, and keeps the X focus on our window. iPlug ended
+   the edit on `FOCUS_OUT` (`DeclineKeyboardFocus` → `CommitEdit`), so the typed keys went "to host"
+   (`textentry-sand-unfixed.txt`, with gdb backtraces and the XEmbed message codes). Fix 196036808 in
+   `IGraphicsLinux::HandleClientMessage`: `FOCUS_OUT` ends an edit only when the X focus is no longer ours. A real
+   focus loss still arrives as an X `FocusOut` (click into Renoise: `56`). Docker REAPER regression with the fix: IPlugControls `iplugcontrols-p3b.txt` (text
+   entry, focus, menus, clipboard, key forwarding) and Sand `sand.txt`, CLAP + VST3: all PASS
+   (`evidence/t013/renoise-fix-docker/`).
+   **Needs the independent review** (focus code; AGENTS §4).
+2. **Host shortcuts with the editor focused do not work in Renoise (host design, nothing to fix in iPlug).** With
+   Renoise's plug-in window focused, Renoise forwards every key to the plug-in as a synthetic event
+   (`(sent by a client): dropped` in the trace). iPlug drops unhandled synthetic keys, which avoids a loop with
+   REAPER. With the pointer over the editor the key comes to iPlug directly; iPlug forwards it to its parent, and
+   Renoise ignores it. Space works once Renoise's main window has the focus.
+3. Gneiss: with MORPH on, a knob drag before a morph point is selected changes nothing (`07`, `34`). That is Gneiss's
+   morph UX, not the host: with MORPH off the same drag works (`36`).
+
+**Probes** (`scripts/vm/probe/renoise/`, run through `vm-x.sh`):
+- `launch.sh [log] [song]`: starts Renoise from its folder with stderr in the log and clicks "Ok" on its start-up
+  notices.
+- `rn-lua.py '<lua>'`: Lua in the running Renoise over OSC `/renoise/evaluate`. Insert devices
+  (`insert_device_at("Audio/Effects/VST3/<uid>")`, an instrument with `plugin_properties:load_plugin`), open and
+  close editors (`external_editor_visible`), set parameters, automation, transport, save and load. The sandbox has no
+  `io` and its `print` does not reach stdout, so a result goes to the status bar (`show_status`), to be read off a
+  screenshot.
+- `call-trace.sh <out> <secs> <syms> <actions…>`: gdb (the sudo wrapper) logs hits with the caller's LWP while it
+  runs Lua (`lua:`) or shell (`sh:`) actions.
+  Symbol lists:
+  - `latency.syms`: iPlug's VST3 latency path. Renoise calls through the interface thunks (`_ZThn…`), and a tiny body
+    such as `getLatencySamples` is duplicated into them, so a break on the plain method misses those calls.
+  - `textentry.syms`, `mouse.syms`: IGraphics text entry and mouse.
+  - `edits.syms`: Renoise's own `TVst3Plug::beginEdit/performEdit/endEdit/restartComponent` (its binary is not
+    stripped).
+
+**VM/host gotchas**
+- The process is `./renoise`: use `pgrep -x renoise`, not a path pattern.
+- The second and later starts show an RT-thread warning dialog (no RT rights); `launch.sh` clicks Ok.
+- `Ctrl+Q` does not quit: use File > Quit, then "No" in "Save changes?".
+- The demo saves songs, and no nag dialog appeared.
+- Audio: ALSA `default` (PipeWire), picked by itself.
+- `~/.config/Renoise/V3.5.4/Config.xml`:
+  - `ShowWelcomeDialog` is now false.
+  - The OSC server (UDP 8000 on all interfaces, evaluates Lua) is **off** again. Turn it on for `rn-lua.py`
+    (`OscServerEnabled`, or Preferences > OSC) and off afterwards.
+  - The original is kept as `Config.xml.t013-orig`.
+- Renoise logs to stdout and to `~/.config/Renoise/V3.5.4/Log.txt`.
+- While gdb holds Renoise, mutter greys its windows ("not responding"); this is harmless.
+- `~/t013-renoise/t013.xrns` holds Gneiss (track 1), Sand (track 2) and IPlugControls (instrument 1).
+- Recording plug-in or Gainer tweaks into automation did not work as set up: edit mode and the transport were
+  started from Lua; `record_parameter_mode` was tried in both modes.
