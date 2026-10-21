@@ -186,3 +186,126 @@ the coordinator wants `~` in evidence from now on.
 | R1-6 | The Log's Renoise row says the drag crosses Renoise's main window, which accepts, and that over the plug-in window GTK finds no target. Each run in `nautilus-dnd-all-runs.txt` now starts with a `== run N: <host>` line. | 0962c907f |
 | R1-7 | `dragout-files.sh` and `dragout-to.sh` give the `cursor-probe` build line. `drop-chain.sh` prints the first id in hex. `dragout-files.sh` checks for the Files window before using it. | 096191f2a |
 | R1-8 | `/home/<user>` is replaced by `~` in this part's text evidence (`t020/`, `drops/`); older evidence is unchanged. | 0962c907f |
+
+## Round 2
+
+Range `a17b09c69..2938b5ac7` (096191f2a, 0962c907f, 3ea51c129, 2938b5ac7). Same reviewer, 2026-10-21. Still no
+framework code; `check-product-names.sh HEAD` is clean.
+
+**Verdict: approve.** One condition: R2-1, a wording-only change to the checklist, should land before the
+acceptance box is ticked. It needs no further round. R2-2 to R2-4 are nits.
+
+### R1-n status
+- **R1-1:** resolved, apart from R2-1 to R2-3. The checklist now reads as a tester's document:
+  - it starts with the archives we send;
+  - it gives copy-paste builds, for those who build themselves;
+  - every step has an "Expected:" line, including the three host behaviours for drops;
+  - the drag-out step has `IPLUG_TEST_DRAG_FILE`;
+  - no internal ids are left;
+  - it ends with a "Send back" list.
+
+  I checked its facts against the repos:
+  - `Dependencies/IPlug/download-iplug-sdks.sh` exists.
+  - `Documentation/linux-development.md` §1 is "Install".
+  - The plug-in CMake takes `-DIPLUG2_DIR`.
+  - `IPLUG_DEPLOY_PLUGINS` defaults to ON, so a build does install into `~/.clap`/`~/.vst3`.
+  - The archive names match the plug-in repo's `makedist-linux.sh`.
+  - The SVG slider in step 6 has a tooltip ("ISVGSlider H").
+- **R1-2:** resolved: the sentence is gone.
+- **R1-3:** resolved.
+  - `appearance-toggle.sh` is reviewed below.
+  - The Renoise OSC commands are written so that "off" runs only while Renoise is not running, so Renoise cannot
+    write the setting back on quit.
+  - The `~/.vst3` swap and Ardour's rescan are given as the exact commands run.
+- **R1-4:** resolved.
+  - `dragout-reaper/reaper-tracks.txt`: tracks 1 → 2, and track 2 is "drag me" with `~/t013-t020/src/drag me.wav`
+    as its media. It was made by the new one-session `dragout-reaper.sh`.
+  - `dragout-files/files-dnd.txt` has Files' own XdndEnter, Position and Drop for the drag-out.
+  - Ardour's `NOTE.txt` gives the `find` command and its result: the imported copy in
+    `interchange/…/audiofiles/`. This is a transcription, not raw output, which is acceptable for a deleted file.
+- **R1-5:** the evidence supports the stated cause (details below).
+- **R1-6:** resolved: the Renoise row explains the crossing, and the all-runs file has `== run N: <host>` labels.
+- **R1-7:** resolved:
+  - the build line for `cursor-probe` is in both headers;
+  - `drop-chain.sh` prints hex ids, and its one comment is a WHY;
+  - the Files check now comes first.
+
+  RESULTs made before the change still show decimal ids, which is harmless.
+- **R1-8:** resolved: there is no `/home/` left in `drops/` or `t020/`.
+
+### R1-5: does `crash.txt` support the stated cause?
+
+Yes, and the parts that are inferred are inferred reasonably.
+- **The timer runs off the main thread.** After `VST3 view attached`, the trace switches to
+  `backend fallback-thread -> vst3-irunloop(frame)`. The next line is
+  `first timer callback id=1 … on OFF-MAIN`, on tid 70111. gdb names thread 70111 `CarlaEngineRunn`, and it is the
+  thread that segfaults.
+- **The crashing stack.** Thread 70111 runs `nvgCreateFontFaceMem` ← `IGraphicsNanoVG::LoadAPIFont` ←
+  `IGraphics::LoadFont` ← the layout lambda ← `rebuildMorphLayout` ← `tryUpdateLayout` ← `Gneiss::OnIdle` ←
+  `HostLoop::Dispatch` ← `VST3RunLoopHandler::onTimer` ← `libcarla_standalone2`. That is the claimed chain, frame
+  for frame.
+- **The main thread.** gdb shows `libGLX_mesa.so.0` for it, with no symbols above. "Opening the editor" is inferred
+  from the order of the trace (the timer fires right after the view is attached), and is the only GLX work at
+  that point. The trace cannot tell whether NanoVG's context is half-created or merely in use on another thread.
+  "Racing" is a fair summary, but the Log could say "inferred" for the main-thread half.
+- **The cause.** Either way, nothing would reach `LoadFont` concurrently with `OpenWindow` if the frame's
+  `IRunLoop` were dispatched on the UI thread, as VST3 requires. Attributing it to Carla main's off-thread dispatch,
+  the same bug as 2026-10-19, is correct.
+- **Process.** The Log reports it to the coordinator, makes no iPlug change, and leaves the framework option (drop
+  run-loop callbacks from a thread other than the attaching one) as a decision for the user. That is right.
+  "Deferred" in the bullet's title could read as decided; "open, awaiting a decision" would match the text under it.
+
+### `appearance-toggle.sh` (restore on exit)
+
+- **Restore:** `trap '… gsettings set $KEY "$orig" …' EXIT` is installed before the first change. bash runs the EXIT
+  trap on normal exit and on SIGINT, SIGTERM and SIGHUP, but not on SIGKILL, which nothing can catch.
+- **Values:** `orig` keeps gsettings' GVariant quoting (`'prefer-dark'`), which `gsettings set` accepts as given.
+  The unquoted `$KEY` is split into schema and key on purpose. The script restores twice ("set back", then the
+  trap), which is harmless.
+- **Evidence:** `appearance-portal.txt` shows `original 'prefer-dark'` → `set default` → `set back` → three
+  `IPLUG_TEST_APPEARANCE … main=1` lines → `restored 'prefer-dark'`.
+- **Gaps** (R2-4):
+  - It has no shebang: the EXIT-on-signal behaviour needs bash, and under `sh` (dash) a Ctrl+C skips the restore.
+  - If `gsettings get` fails (no session bus in the shell), `orig` is empty and the trap then tries to set an empty
+    value.
+
+### R2-1 — minor — PC checklist steps 1 and "Send back": Bitwig's setting names and log path are stated as fact, but were written from memory
+
+- Step 1 says: Settings > Plug-ins, hosting mode "Individually" "(names as in Bitwig 5)".
+- Steps 1 and "Send back" say the IPLUG_HOSTLOOP lines "are in Bitwig's logs under `~/.BitwigStudio/log/`" and ask
+  the tester to send that folder.
+
+These match my own recollection: the modes are Within Bitwig / Together / By manufacturer / By plug-in /
+Individually, and the logs go under `~/.BitwigStudio/log/`. But nobody has checked them against a Bitwig 5 install,
+and nobody knows whether the plug-in host processes' stderr reaches the terminal or that folder at all. A tester
+who finds different names or an empty folder should know that this is expected and what to do.
+
+**Fix:**
+- Step 1: "the plug-in hosting mode that runs each plug-in in its own process ('Individually' in Bitwig 5 as far
+  as we know; if your version names it differently, pick the closest and tell us its name)".
+- Log path: "Bitwig's log folder, usually `~/.BitwigStudio/log/`".
+- Add: "if the lines are in neither place, tell us; that is useful to know too".
+
+### R2-2 — nit — step 2: the trace text does not quite match what the tester will see
+
+- The CLAP backend prints as `backend=clap-timer-support`, not `timer-support`. The latter appears only in the
+  host line `timer-support=1 posix-fd-support=1`.
+- The `first … callback` lines end in `on main (init-tid=…)`, not in `on main`.
+
+**Fix:** list the exact names, `clap-timer-support`, `vst3-irunloop(…)` and `fallback-thread`, and say "contains
+`on main`".
+
+### R2-3 — nit — steps 5 and the build section: two assumptions a tester cannot check
+
+- **Step 5.** With "Individually" hosting, `IPLUG_TEST_DRAG_FILE` must survive Bitwig's spawning of its plug-in
+  host process. That is likely, but unverified.
+  **Fix:** "if the terminal shows `IPLUG_TEST_DRAGOUT start '' -> 0`, the variable did not reach the plug-in: tell
+  us".
+- **Build section.** It names "the iPlug2 fork" and "the plug-in repo" without saying where to get them.
+  **Fix:** "we give you access to …".
+
+### R2-4 — nit — `scripts/vm/probe/t013/appearance-toggle.sh:1,6-7`
+
+**Fix:**
+- Add `#!/usr/bin/env bash`, or run it as `bash …` in the usage line.
+- Guard before installing the trap: `orig=$(gsettings get $KEY) || exit 1`.
