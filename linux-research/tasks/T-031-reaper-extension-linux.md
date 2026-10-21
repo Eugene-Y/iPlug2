@@ -1,6 +1,6 @@
 # T-031 — REAPER extensions and the REAPER-plug-in example on Linux
 
-- **Status:** in progress (found by the T-016 audit)
+- **Status:** in review (found by the T-016 audit)
 - **Owner:** Claude Opus 5.5 instance, 2026-10-21
 - **Branch/worktree:** `linux/T-031` from `hvoya-linux`.
 - **Depends on:** nothing. The WebUI extension's web view is T-017.
@@ -72,7 +72,7 @@ Tests (Docker `iplug2-linux:24.04`, REAPER 7.82 aarch64, Xvfb + openbox; evidenc
   (OnIdle → ITextControl); floating resize to 520×420, dock (1024×60), a taller docker (1024×350), undock (520×420,
   no black band — this check caught the Mesa bug above), close/reopen ×5; the MsgBox action shows and closes its
   box; File: Quit with the window open: exit status 0; stderr clean (only REAPER's own `GdkWindow … unexpectedly
-  destroyed` from the About nag, also without the extension). Thread count (gdb, 8 s, slider dragged): `OnTimer`
+  destroyed` from closing the About nag; `reaper-up.sh` with no extension prints the same line). Thread count (gdb, 8 s, slider dragged): `OnTimer`
   230, `OnDisplayTimer`/`ProcessXEvents` 333, `IGraphics::Draw` 22 — **all tid=1** (REAPER's main thread).
   `e09-extensions-menu.png`: Extensions → IPlugReaperExtension submenu with the Show/Hide tick.
 - **IPlugReaperExtensionWebUI: PASS for what exists** (`ext-webui.log`): actions, window open/resize/dock/undock/
@@ -87,6 +87,8 @@ Tests (Docker `iplug2-linux:24.04`, REAPER 7.82 aarch64, Xvfb + openbox; evidenc
   green "PLAYING", both with the track name ("Bass Track") and "Channel count 6"; no "resource folder … not found" on
   stderr; reopen ×5 and a second instance alive. `run-gui-test.sh`'s `render[...] blank` FAILs are false positives:
   this editor is one solid fill with a little text, below its stddev threshold of 0.02.
+- Regression for the shared `IGraphicsLinux` change: IPlugControls full step script (`run-gui-test.sh`) CLAP **PASS**,
+  VST3 **PASS**, APP 0 fails (`regress-iplugcontrols-{clap,vst3,app}/`).
 - macOS (shared files touched): xcodebuild IPlugEffect `macOS-CLAP` Debug and IPlugReaperExtension Debug (signing
   off), DerivedData and install paths in the scratchpad: both **BUILD SUCCEEDED**; no `.rc_mac` regenerated.
 
