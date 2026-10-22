@@ -234,7 +234,7 @@ bool IPlugAPPHost::PopulateMidiDialogs(HWND hwndDlg)
 
     if (indevidx == -1)
     {
-      TurnOffMissingMidiPort(mState.mMidiInDev);
+      HandleMissingMidiPort(mState.mMidiInDev);
       indevidx = 0;
     }
 
@@ -249,7 +249,7 @@ bool IPlugAPPHost::PopulateMidiDialogs(HWND hwndDlg)
 
     if (outdevidx == -1)
     {
-      TurnOffMissingMidiPort(mState.mMidiOutDev);
+      HandleMissingMidiPort(mState.mMidiOutDev);
       outdevidx = 0;
     }
 
@@ -380,23 +380,33 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
       switch (LOWORD(wParam))
       {
         case IDOK:
+          // On Linux also when the audio isn't running: picking a driver in the combo stops it, and the settings are
+          // equal again once the user picks the old driver back (Cancel below likewise)
           if (mActiveState != mState
 #ifdef OS_LINUX
               || !_this->IsAudioRunning()
 #endif
              )
-            _this->TryToChangeAudio();
+          {
 #ifdef OS_LINUX
-          _this->ReopenSavedMidiPorts();
+            _this->RecreateJackMidiIfAudioStopped();
+#endif
+            _this->TryToChangeAudio();
+          }
+#ifdef OS_LINUX
+          _this->ReselectSavedMidiPorts();
 #endif
 
           EndDialog(hwndDlg, IDOK); // INI file will be changed see MainDialogProc
           break;
         case IDAPPLY:
+#ifdef OS_LINUX
+          _this->RecreateJackMidiIfAudioStopped();
+#endif
           _this->TryToChangeAudio();
 #ifdef OS_LINUX
           _this->PopulateDriverSpecificControls(hwndDlg); // the sample rate may have followed the device
-          _this->ReopenSavedMidiPorts();
+          _this->ReselectSavedMidiPorts();
           _this->RefreshMidiControls(hwndDlg);
           ShowAudioStateInTitle(hwndDlg, *_this);
 #endif
@@ -413,7 +423,9 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
              )
           {
             mState = mTempState;
-
+#ifdef OS_LINUX
+            _this->RecreateJackMidiIfAudioStopped();
+#endif
             _this->TryToChangeAudioDriverType();
 #ifdef OS_LINUX
             _this->TryToChangeMidiApi();

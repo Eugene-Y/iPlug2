@@ -600,11 +600,11 @@ void IPlugAPPHost::ReportAudioOff(const char* reason)
 }
 #endif
 
-void IPlugAPPHost::TurnOffMissingMidiPort([[maybe_unused]] WDL_String& portName)
+void IPlugAPPHost::HandleMissingMidiPort([[maybe_unused]] WDL_String& portName)
 {
 #ifdef OS_LINUX
   // The MIDI API follows the audio driver, and JACK's ports exist only while its server runs, so a saved port is
-  // often missing just for now; it stays saved and reconnects when it is back.
+  // often missing just for now: it stays saved, closed, and Apply or OK connects it once it is back.
 #else
   portName.Set(OFF_TEXT);
   UpdateINI();
@@ -619,7 +619,7 @@ bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
   {
     if (port == -1)
     {
-      TurnOffMissingMidiPort(mState.mMidiInDev);
+      HandleMissingMidiPort(mState.mMidiInDev);
       port = 0;
     }
 
@@ -664,7 +664,7 @@ bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
   {
     if (port == -1)
     {
-      TurnOffMissingMidiPort(mState.mMidiOutDev);
+      HandleMissingMidiPort(mState.mMidiOutDev);
       port = 0;
     }
     
@@ -813,9 +813,18 @@ static std::string MidiClientName(RtMidi::Api api, const char* pDirection)
 
 void IPlugAPPHost::TryToChangeMidiApi()
 {
-  if (mMidiIn && mMidiIn->getCurrentApi() == MidiApiForAudioDriver(mState.mAudioDriverType))
-    return;
+  if (!mMidiIn || mMidiIn->getCurrentApi() != MidiApiForAudioDriver(mState.mAudioDriverType))
+    RecreateMidi();
+}
 
+void IPlugAPPHost::RecreateJackMidiIfAudioStopped()
+{
+  if (mState.mAudioDriverType == kDeviceJack && !IsAudioRunning())
+    RecreateMidi();
+}
+
+void IPlugAPPHost::RecreateMidi()
+{
   // The old input's thread or JACK client must be gone before the new one feeds mMidiMsgsFromCallback
   mMidiIn = nullptr;
   mMidiOutPortOpen = false;
@@ -826,15 +835,11 @@ void IPlugAPPHost::TryToChangeMidiApi()
   SelectMIDIDevice(ERoute::kOutput, mState.mMidiOutDev.Get());
 }
 
-void IPlugAPPHost::ReopenSavedMidiPorts()
+void IPlugAPPHost::ReselectSavedMidiPorts()
 {
   ProbeMidiIO();
-
-  if (mMidiIn && !mMidiIn->isPortOpen())
-    SelectMIDIDevice(ERoute::kInput, mState.mMidiInDev.Get());
-
-  if (mMidiOut && !IsMidiOutPortOpen())
-    SelectMIDIDevice(ERoute::kOutput, mState.mMidiOutDev.Get());
+  SelectMIDIDevice(ERoute::kInput, mState.mMidiInDev.Get());
+  SelectMIDIDevice(ERoute::kOutput, mState.mMidiOutDev.Get());
 }
 #endif
 
