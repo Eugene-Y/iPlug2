@@ -342,3 +342,45 @@ Independent reviewer, fresh context, 2026-10-22.
   file manager was run.
 - **Fix:** "A source that targets the deepest drop-aware window, as Qt's do (tested with a scripted source), reached
   the editor in every host tried."
+
+## Round 3 (2026-10-22)
+
+| Part | Commits | Verdict |
+|---|---|---|
+| A | Sand `1b3a82a` (dist-scripts), `95be3b0` (linux-experiment) | **approve**: A7 and A8 fixed, no new findings |
+| C | hvoya-linux `2b3060e32` | **approve**: C6-C8 fixed, no new findings |
+
+### A
+**A7: fixed.** In `makedist-win.ps1`, every `Test-Path`, `Remove-Item`, `Move-Item`, `Copy-Item`, `Get-ChildItem`,
+`Select-String` and `Set-Content` now takes `-LiteralPath`. `Copy-Item` and `Move-Item` also pass `-Destination`
+explicitly. A grep of the file finds no other path-taking cmdlet without `-LiteralPath` apart from the three `New-Item`
+calls (`:145, 147, 182`). `Join-Path`, `Split-Path` and `GetUnresolvedProviderPathFromPSPath` resolve nothing against
+the file system. The file is still pure ASCII. A one-line WHY comment sits at `:37`.
+
+**The worker's `New-Item` claim is correct for how the script calls it.** I checked Microsoft's New-Item reference
+for PowerShell 5.1 (learn.microsoft.com, `?view=powershell-5.1`):
+- The 5.1 syntax has no `-LiteralPath`. The parameter sets are `pathSet`, `nameSet` and the WSMan and Alias variants.
+- The `-Path` parameter says it "works like the LiteralPath parameter of other cmdlets. Wildcard characters are not
+  interpreted", and the parameter is listed as not supporting wildcards.
+- The same page's Example 6 does expand a wildcard (`New-Item -Path C:\Temp\* -Name temp.txt`). That is the `nameSet`
+  form, where `-Path` names the parent containers.
+- All three calls in the script use `pathSet`: `-ItemType Directory -Force -Path <full path>`, with no `-Name`. So
+  brackets are passed through literally.
+
+Keep it that way: adding `-Name` to any of these calls would bring the expansion back.
+
+**A8: fixed.**
+- mac: `--out ""` and a bare `--out` both give "--out needs a directory", exit 2 (run).
+- Linux: `--out ""`, `--arch ""` and a bare `--arch` all exit 2 with their message (run). `bash -n` passes.
+
+**Merges:** master+dist-scripts, master+linux-experiment and dist-scripts+linux-experiment are all still clean
+(`merge-tree --write-tree`). Sand-dist `git status --ignored` shows only the ignored build dirs.
+
+The Windows script has still never been run or parsed; that remains open in the task file.
+
+### C
+- **C6: fixed.** "iPlug2 handles them (text entry works) but does not pass unhandled ones back (that loops in
+  REAPER)" matches `IGraphicsLinux.cpp:1243-1244` and T-013.
+- **C7: fixed.** The virgl example is now inside "(old or virtual GPUs, e.g. a VM's virgl driver)".
+- **C8: fixed.** The text adds "(tested with a scripted source)".
+- `check-product-names.sh`: clean.
