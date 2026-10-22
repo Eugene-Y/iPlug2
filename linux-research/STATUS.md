@@ -29,7 +29,7 @@ Update it at every merge or user decision.
 - **T-031:** port to `hvoya`? All shared-file changes are behind `OS_LINUX` / `UNIX AND NOT APPLE` (CROSS_PLATFORM_FINDINGS T31-1); nothing to decide unless you want it on `hvoya` before the Linux port lands there.
 - **VM hung (2026-10-22 16:53, virgl):** Force Stop + Start in UTM. Then: T-013's GNOME Wayland run (steps in its Log, no password needed), T-009's VM run. VM has Release Gneiss/Sand/IPlugControls (iPlug2 29d9410c0); Ardour's VST3 cache may need a rescan.
 - **T-010 item 1 (from T-013 Qtractor):** with the editor closed, iPlug calls VST3 `restartComponent` (latency change) from its fallback thread — a breach of VST3's UI-thread rule (Linux-only code). Renoise queues it to its main thread; Qtractor 1.5.3 runs `getState`/`setState` on that thread. Fix in iPlug (e.g. defer the restart until a host run loop is available), or leave?
-- **Qtractor CLAP timer bug:** closing the last CLAP editor stops every CLAP plug-in's timers (`OnIdle` stops); same code in 1.6.4. Report upstream (public, under your name)? Documented in §8.
+- **Qtractor CLAP timer bug:** the draft upstream report is in `notes/35-qtractor-clap-timer-report.md`; the user may send it (2026-10-23).
 - **T-011 left:** port `duplicate.py` to `hvoya`? Is VS Code on one out-of-tree duplicate + gdb for the others enough for its first acceptance box?
 - **Decisions:** `RestorePreset` question (T-023 merged), T-029 (S-1 text entry, (a) and/or (b); typing check on mac).
 - **More decisions (2026-10-19 evening):** IME via IBus/Fcitx (deviation or task); reword the pre-port "morph rig" comment in `IPlugCLAP.cpp` on `hvoya`; T-033's CI workflow change.
