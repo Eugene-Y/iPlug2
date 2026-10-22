@@ -246,3 +246,99 @@ Independent reviewer, fresh context, 2026-10-22.
 - **Problem:** every other `## N.` heading is followed by a blank line; §8's is not. The file now ends with an extra
   blank line (`\n\n`).
 - **Fix:** add the blank line after the heading and drop the trailing one.
+
+## Round 2 (2026-10-22)
+
+| Part | Commits | Verdict |
+|---|---|---|
+| A | Sand `c523661` (docs, on `92aeb3f`) → `4fd09d9`/`3cc46a2`; `6643648` (dist-scripts); `689ab58` (linux-experiment); task file `4971b04e4` | **approve** (A1-A6 fixed; new A7 minor, A8 nit) |
+| B | approved in round 1; B2 comment in `7def0ffea`, B1 in T-037 | approved (comment read: accurate) |
+| C | `7def0ffea` | **changes requested**: one phrase (C6); C7, C8 nits |
+
+### A. Re-checked
+- **A1:** `makedist-mac.sh` loops over `${DOCS[@]+"${DOCS[@]}"}` again, with a one-line WHY. Fixed.
+- **A2:**
+  - mac and win delete `"$DEST.zip"` / `"$dest.zip"` only after the swap, and say so when `--zip` is absent.
+  - `--zip` no longer deletes the zip a second time.
+  - On mac this can't delete anything else. I ran the script from another cwd with
+    `--out 'o u[t]*/'`, a relative path with a space, glob characters and a trailing slash. The folder held decoys:
+    `Sand_v1.1.9_mac.zip`, `Sand_v1.1.10_win.zip`, `Sand_v1.1.10_mac.zip.bak`, and an old `Sand_v1.1.10_mac/OLD.txt`.
+    Sibling folders `o ut/` and `o u/` each held a `Sand_v1.1.10_mac.zip`.
+  - Result: exit 0, and only `o u[t]*/Sand_v1.1.10_mac.zip` was removed. All decoys and both sibling zips survived, and
+    `OLD.txt` went with the intended folder swap.
+  - A `--zip` re-run into the same folder gave exit 0 and a 76-entry zip with no `.DS_Store`/`__MACOSX`/`._*`.
+  - `--out ""` stops with exit 1 at `mkdir /Sand_v1.1.10_mac.partial` (read-only root) before any build (see A8).
+  - `~/Library/Audio/Plug-Ins` and `distr/Sand` are unchanged, and Sand-dist `git status --ignored` shows only the
+    ignored build dirs.
+  - Windows: see A7.
+- **A3, A4:** `Installation instructions.txt` names each mac bundle with its folder and says "corresponding". `file`
+  reports pure ASCII. It is identical on both branches.
+- **A5:** `makedist-linux.sh` makes `--allow-dirty` need `--out` (exit 2). `--out`/`--arch` without a value exit 2, and
+  the dirty message names `--allow-dirty --out DIR`. Read only, not run; the change is option parsing before any
+  build.
+- **A6:** Status and Acceptance are updated.
+- **Merges** (`merge-tree --write-tree`):
+  - master+dist-scripts `c2c6347`, master+linux-experiment `f344232` and dist-scripts+linux-experiment `498878c`
+    are all clean.
+  - (master+dist-scripts)+linux-experiment also gives `498878c`, matching the task Log.
+
+### A. New findings
+
+**A7 (minor) `makedist-win.ps1` passes user paths to wildcard `-Path` parameters**
+- **Where:** `scripts/makedist-win.ps1:198-199` (new in A2), and the same class at `:113-115, 145, 161, 168, 192,
+  194-195, 214`.
+- **Problem:** `Test-Path`, `Remove-Item`, `Move-Item` and `Copy-Item` take `-Path` positionally, and PowerShell
+  expands `[...]` there as a wildcard. `[` and `]` are legal in Windows folder names. With `-Out 'C:\dist[1]'`:
+  - `Test-Path 'C:\dist[1]\Sand_v1.1.10_win.zip'` matches `C:\dist1\Sand_v1.1.10_win.zip`, and line 199 deletes that
+    other folder's zip;
+  - line 194 likewise removes `C:\dist1\Sand_v1.1.10_win` recursively, while the real `C:\dist[1]\…` is never matched,
+    so the following `Move-Item` misbehaves.
+
+  This is reasoned from PowerShell's documented `-Path` semantics; there is no `pwsh` here to run it. The mac script is
+  immune because bash quoting does not glob. Gneiss' Windows script has the same pattern.
+- **Fix:** use `-LiteralPath` on every `Test-Path`, `Remove-Item`, `Move-Item`, `Copy-Item` and `Get-ChildItem` that
+  takes a computed path. `Copy-Item`'s `-Destination` is already literal. The minimal alternative is to refuse an
+  `-Out` (and a `$ProjectDir`) containing `[` or `]` with a `throw` next to the `-AllowDirty` check.
+
+**A8 (nit) An empty `--out` value is accepted**
+- **Where:** `scripts/makedist-mac.sh:34-35`; `scripts/makedist-linux.sh` (the `--out)` case on linux-experiment).
+- **Problem:** `--out ""` makes the release folder `/Sand_v<ver>_<os>`. On macOS the run dies at `mkdir`, after a
+  harmless `rm -rf /Sand_v…partial`. On Linux the archive would be copied to `/` if writable.
+- **Fix:** `[ -n "${2:-}" ]` in the `[ $# -ge 2 ]` checks.
+
+### C. Re-checked
+`7def0ffea`, checked against T-013's Log, its evidence and `IGraphicsLinux.cpp`. `check-product-names.sh`: clean.
+- **C1:** fixed. The drop bullet is scoped to GTK sources, explains why (top-level under the pointer), and gives each
+  host's behaviour and the deepest-window source result.
+- **C2:** partly fixed; see C6.
+- **C3:** fixed. The bullet is gone and virgl is named in the intro (wording: C7).
+- **C4:** fixed. It now says timers and the X connection's fd, tested at 97a9e07, and CLAP in main plus 2.5.10 VST3
+  were fine.
+- **C5:** fixed. There is a blank line after the heading and the file ends with a single `\n`.
+- **B2** (`Examples/duplicate.py:258-259`): accurate, and names the junction case.
+
+### C. New findings
+
+**C6 (minor) "synthetic events, which iPlug2 ignores" is wrong**
+- **Where:** `Documentation/linux-development.md:188`.
+- **Problem:** iPlug2 handles synthetic keys like any other: text entry in Renoise works (T-013, after c86d82e5d), and
+  the editor's own key handling sees them. What it does not do is pass an **unhandled** synthetic key on to the parent
+  (`IGraphicsLinux.cpp:1243-1244`: `!handled && !modal && !key.send_event`). As written, a reader concludes that
+  keyboard input doesn't work in Renoise.
+- **Fix:** "…Renoise delivers keys to it as synthetic events; iPlug2 handles them but does not pass unhandled ones
+  back (that loops in REAPER), and Renoise ignores the keys iPlug2 does pass to the parent window, so host shortcuts
+  (Space) don't work until the focus leaves the editor."
+
+**C7 (nit) The virgl example hangs off the wrong noun**
+- **Where:** `Documentation/linux-development.md:12`.
+- **Problem:** "…prints `no OpenGL 3.2 core context` on stderr (e.g. a VM's virgl driver)" reads as if stderr were the
+  driver.
+- **Fix:** "where the driver has none (old or virtual GPUs, e.g. a VM's virgl driver), the editor does not open and
+  the plug-in prints …".
+
+**C8 (nit) "as Qt's do" is stated as tested**
+- **Where:** `Documentation/linux-development.md:192`.
+- **Problem:** T-013 used a scripted source (`xdnd-source.c` `deep`) as the stand-in for a Qt file manager; no Qt
+  file manager was run.
+- **Fix:** "A source that targets the deepest drop-aware window, as Qt's do (tested with a scripted source), reached
+  the editor in every host tried."
