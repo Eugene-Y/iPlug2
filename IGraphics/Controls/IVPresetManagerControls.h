@@ -16,6 +16,8 @@
  * Includes meta controls for basic preset managers
  */
 
+#include <memory>
+
 #include "IControl.h"
 
 #include "IPlugPluginBase.h"
@@ -242,20 +244,12 @@ public:
 
     auto loadPresetFunc = [&](IControl* pCaller) {
       WDL_String fileName, path;
-      pCaller->GetUI()->PromptForFile(fileName, path, EFileAction::Open, mExtension.Get());
-
-      if (path.GetLength())
-      {
-        ClearPathList();
-        AddPath(path.Get(), "");
-        SetupMenu();
-      }
-
-      if (fileName.GetLength())
-      {
-        SetSelectedFile(fileName.Get());
-        LoadPresetAtCurrentIndex();
-      }
+      std::weak_ptr<bool> alive = mAlive;
+      pCaller->GetUI()->PromptForFile(fileName, path, EFileAction::Open, mExtension.Get(),
+        [this, alive](const WDL_String& chosenFile, const WDL_String& chosenFolder) {
+          if (!alive.expired())
+            OnPresetFileChosen(chosenFile, chosenFolder);
+        });
     };
 
     auto choosePresetFunc = [&](IControl* pCaller) {
@@ -311,10 +305,27 @@ public:
   }
 
 private:
+  /** Lists the chosen file's folder and loads the file; an empty file name (cancelled) changes nothing */
+  void OnPresetFileChosen(const WDL_String& fileName, const WDL_String& folder)
+  {
+    if (folder.GetLength())
+    {
+      ClearPathList();
+      AddPath(folder.Get(), "");
+      SetupMenu();
+    }
+
+    if (fileName.GetLength())
+    {
+      SetSelectedFile(fileName.Get());
+      LoadPresetAtCurrentIndex();
+    }
+  }
+
   IRECT GetSubControlBounds(ESubControl control)
   {
     auto sections = mWidgetBounds;
-    
+
     std::array<IRECT, 4> rects = {
       sections.ReduceFromLeft(50),
       sections.ReduceFromLeft(50),
@@ -327,6 +338,8 @@ private:
 
   IVButtonControl* mPresetNameButton = nullptr;
   OnLoadFunc mOnLoadFunc;
+  // The file dialog can outlive this control (on macOS it is a sheet on the host's window), so its handler checks it.
+  std::shared_ptr<bool> mAlive = std::make_shared<bool>(true);
 };
 
 END_IGRAPHICS_NAMESPACE

@@ -5,7 +5,8 @@
 # Checks, each a FAIL line when it does not hold:
 #   open / save (extension added) / save onto an existing name (our overwrite question) / folder / cancel each,
 #   message boxes (Yes-No-Cancel by button and by Escape, OK with Cyrillic text, OK-Cancel), colour, the
-#   synchronous call (empty at once), Cyrillic and spaces in every path, every handler on REAPER's main thread,
+#   synchronous call (empty at once), the stock disk preset manager's Load button (the chosen file loads and its folder
+#   becomes the preset list; cancel keeps both), Cyrillic and spaces in every path, every handler on REAPER's main thread,
 #   the editor closed with a dialog open (dialog gone, no handler, REAPER alive, dialogs work after reopening),
 #   no GTK library added to REAPER's process while a dialog shows, the dialog program not REAPER's child.
 # EXPECT_PORTAL=1 (the VM): file and folder dialogs must come from xdg-desktop-portal (no zenity while they show),
@@ -25,7 +26,8 @@ D="/tmp/dlg/Пресеты с пробелами"
 echo "view origin $OX $OY, REAPER pid $RPID"
 
 declare -A BUTTON=( [t-open]="759 628" [t-save]="889 628" [t-dir]="759 658" [t-ync]="889 658"
-                    [t-ok]="759 688" [t-okc]="889 688" [t-color]="759 718" [t-sync]="889 718" )
+                    [t-ok]="759 688" [t-okc]="889 688" [t-color]="759 718" [t-sync]="889 718"
+                    [preset-next]="769 598" [preset-load]="929 598" )
 lines_seen=0
 click() { read -r bx by <<<"${BUTTON[$1]}"; xdotool mousemove $((OX + bx)) $((OY + by)) click 1; }
 shot() { import -window root "$OUT/$1.png"; }
@@ -97,6 +99,20 @@ expect dir "dir .* first='' second='$D/подпапка два/'"
 click t-dir; w=$(wait_window "Choose a Directory") && xdotool key Escape
 expect dir-cancel "dir .* first='' second=''"
 
+# the stock disk preset manager (it lists the start folder): Load opens the file dialog; the handler loads the file and
+# lists its folder, so ">" then steps through that folder
+P="$D/подпапка два"
+printf 'a' > "$P/пресет А.fxp"; printf 'b' > "$P/пресет Б.fxp"
+click preset-load; w=$(wait_window "Open File") && { shot d09-preset-load-dialog; xdotool key ctrl+l; sleep 0.3; paste_text "$P/пресет А.fxp"; xdotool key Return; }
+expect preset-load "preset .* first='$P/пресет А\.fxp'"
+sleep 0.5; shot d10-preset-loaded
+click preset-next
+expect preset-next-in-chosen-folder "preset .* first='$P/пресет Б\.fxp'"
+click preset-load; w=$(wait_window "Open File") && xdotool key Escape
+expect_none preset-load-cancel
+click preset-next
+expect preset-cancel-kept-folder "preset .* first='$P/пресет А\.fxp'"
+
 # message boxes
 click t-ync; w=$(wait_window "Dialog test") && {
   shot d05-msg-yesnocancel
@@ -121,8 +137,9 @@ expect sync "sync .* first='' second=''" 2
 grep -q 'without a completion handler cannot block' /tmp/reaper.log && pass "sync warning on stderr" || fail "no sync warning"
 
 # the editor closes while a dialog shows: the dialog goes, no handler runs
-for kind in t-save t-ync t-color; do
+for kind in t-save t-ync t-color preset-load; do
   click $kind; title="Save File"; [ $kind = t-ync ] && title="Dialog test"; [ $kind = t-color ] && title="Dialog test colour"
+  [ $kind = preset-load ] && title="Open File"
   w=$(wait_window "$title") || { fail "close-mid-dialog $kind: no dialog"; continue; }
   "$HERE/rpr.sh" "reaper.TrackFX_Show(reaper.GetTrack(0,0),0,2)" >/dev/null
   sleep 1.5
