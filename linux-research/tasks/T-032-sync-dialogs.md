@@ -1,6 +1,6 @@
 # T-032 — Synchronous dialogs on Linux (PromptForFile/Directory/Color, ShowMessageBox without a completion handler)
 
-- **Status:** review-done (option 2, user 2026-10-22)
+- **Status:** merged 9dd0a8d48 (option 2, user 2026-10-22)
 - **Owner:** T-032 worker (coordinator chat f91df715)
 - **Branch:** `linux/T-032` in `/Volumes/Storage/code/IPlug2-T-032`
 - **Conflicts:** `IGraphics/Platforms/IGraphicsLinux*`, `IGraphics/Controls/IVPresetManagerControls.h`.
