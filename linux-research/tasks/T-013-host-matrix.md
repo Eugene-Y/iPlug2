@@ -359,7 +359,7 @@ trace and Files' XDND lines; PNGs local).
 | Carla main, VST3 | not checked: Carla crashes after loading Gneiss (below) | — | — | — |
 | Renoise 3.5.4, VST3 | no (its main window is: 5, for its own file drops) | **no**: on the way the drag crosses Renoise's main window, which accepts (`Entering Xdnd window 0x2c0009b`, Status 461); over the plug-in window GTK finds no target ("async callback for #2c000b0", not XdndAware), and the release finishes nothing | neither | PASS: layout loaded (`after-qt-like-deep-gap.png`) |
 
-- **Carla main VST3 crashes after loading Gneiss VST3 alone; open, awaiting a decision.**
+- **Carla main VST3 crashes after loading Gneiss VST3 alone: a host bug, documented (user 2026-10-22: no framework guard against individual hosts' bugs; `Documentation/linux-development.md` §8).**
   - The first run ended in apport (SIGSEGV, no stack). Re-run under gdb, it reproduced
     (`evidence/t013/drops/carla-main-vst3/crash.txt`).
   - Carla main calls the plug frame's `IRunLoop` timer from its engine thread (`CarlaEngineRunner`); the trace says

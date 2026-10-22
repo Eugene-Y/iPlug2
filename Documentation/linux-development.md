@@ -178,3 +178,15 @@ id (`readelf -n <binary>` shows it; `….inspect.txt` lists them):
 tar -xzf Name_v1.0.0_linux_x86_64_debug-symbols.tar.gz
 gdb -iex "set debug-file-directory $PWD/Name_v1.0.0_linux_x86_64_debug-symbols" /opt/REAPER/reaper core
 ```
+
+## 8. Known host issues
+Host behaviour seen while testing on Linux; iPlug2 does not work around it.
+- **Carla's development version (main), VST3:** runs the plug frame's `IRunLoop` timers on its engine thread instead of
+  the UI thread, so the editor's timers (`OnIdle`, drawing) run off the main thread and can crash while the editor
+  opens. Carla 2.5.x releases and CLAP in Carla main are fine.
+- **Renoise 3.5:** hosts VST3 (no CLAP on Linux). While an editor has the keyboard focus, Renoise sends every key to the
+  plug-in and ignores the ones it hands back, so host shortcuts (Space) don't work until the focus leaves the editor.
+- **Files dropped from a file manager:** reach the editor only if the host forwards XDND to its plug-in window
+  (REAPER, Ardour do; Carla and Renoise don't). Dragging files *out* of the editor works in every host tried.
+- **GL3 on a VM's virgl driver:** no OpenGL 3.2 core profile; a GL3 build's editor does not open (GL2 works).
+
