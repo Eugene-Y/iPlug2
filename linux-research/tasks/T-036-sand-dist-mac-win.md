@@ -242,3 +242,10 @@ docs identical to the repo's, codesign OK ×3. `~/Library/Audio/Plug-Ins` and `d
 `git status --ignored` = `!! build-mac/`, `!! plug_build_info.hpp`. `git merge-tree --write-tree`: master+dist-scripts,
 master+linux-experiment, dist-scripts+linux-experiment, and both orders of all three → clean (same tree `498878c`).
 Linux not re-run (A5 touches only option parsing, before any build); Windows still not run.
+
+### 2026-10-22 — review round 2 (notes/30 "Round 2") fixes
+- **A7** `1b3a82a` (dist-scripts): every `Test-Path`/`Remove-Item`/`Move-Item`/`Copy-Item`/`Get-ChildItem`/`Select-String`/`Set-Content`
+  in `makedist-win.ps1` takes `-LiteralPath` (`New-Item -Path` does not expand wildcards and has no `-LiteralPath` in 5.1), so `-Out`
+  may contain `[`/`]`. Unverified until a Windows run. **Gneiss' `makedist-win.ps1` has the same `-Path` pattern** (not changed).
+- **A8** `1b3a82a` (mac) and `95be3b0` (linux-experiment; also `--arch ""`): `[ -n "${2:-}" ]`. Tested: mac `--out ""`, `--out`,
+  `--allow-dirty` → exit 2; Linux `--out ""`, `--arch ""`, `--out` → exit 2. `merge-tree` of master/dist-scripts/linux-experiment still clean.
