@@ -1,0 +1,37 @@
+=== F: the source vanishes and comes back while the APP's input is open
+F: at start: in-connected out-connected
+F: source restarted (same port name seq:out): in-NOT-connected out-connected; APP MIDI ports: IPlugInstrument MIDI in:RtMidi Input IPlugInstrument MIDI out:RtMidi Output 
+F: after Apply: in-connected out-connected
+F: after OK: in-connected out-connected; settings.ini: indev=seq:out
+F: APP alive
+F: File > Quit exit 0
+=== G: the JACK server restarts while the APP runs
+G: at start: in-connected out-connected, audio ports 2
+G: server stopped; boxes: 0
+G: APP alive
+G: server back: in-NOT-connected out-NOT-connected, audio ports 0
+G: Preferences 'Preferences'
+G: boxes after Apply: 0
+G: after Apply: in-connected out-connected, audio ports 2, APP MIDI ports: IPlugInstrument MIDI in:RtMidi Input IPlugInstrument MIDI out:RtMidi Output 
+G: boxes after OK: 0
+G: after OK: in-connected out-connected, audio ports 2; settings.ini indev=seq:out outdev=midi-monitor:input
+G: APP alive
+G: File > Quit exit 0
+=== L: a connection made outside the APP; Apply and OK
+L: patchbay connection seq2:out -> IPlugInstrument MIDI in made
+L: after Apply: seq2:out still connected
+L: after OK: seq2:out still connected
+L: APP alive
+L: File > Quit exit 0
+=== L2: a second monitor connected to the APP's output in a patchbay; Apply and OK
+L2: patchbay connection IPlugInstrument MIDI out -> midi-monitor-01:input made
+L2: after Apply: still connected
+L2: after OK: still connected (in-connected out-connected)
+L2: events at midi-monitor-01:input in 3 s after OK: 6
+L2: APP alive
+L2: File > Quit exit 0
+=== P: saved input off; seq:out picked, Cancel (old bug: the port stays open); then OK
+P: after the pick and Cancel: in-connected out-connected; settings.ini indev=off
+P: after OK: in-connected out-connected; settings.ini indev=off
+P: APP alive
+P: File > Quit exit 0

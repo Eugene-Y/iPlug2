@@ -455,3 +455,47 @@ it as accepted, whichever the user prefers.
   whose close keeps subscriptions anyway.
 - **Alternative:** record it as accepted. QjackCtl/Carla users then lose their extra MIDI connections on each
   Preferences OK.
+
+## R3b-1 re-check
+
+Range `dd4805276..e885d27fa`: 7dfcf2a2e (`ReselectSavedMidiPort`), e885d27fa (harness, re-runs, Log).
+
+**Verdict: approve.** R3b-1 is fixed. Connections made in a patchbay now survive Apply and OK, on both the input and
+the output. One nit, not blocking.
+
+### The code
+- **`openPort` on an open JACK output while the audio thread sends:** RtMidi's JACK `openPort` keeps the registered
+  port (`data->port != NULL`) and only calls `jack_connect`. The port the audio thread writes to stays the same,
+  `mMidiOutPortOpen` stays true, and no buffer or flag changes. This is safer than the close + reopen it replaces.
+- **The missing-source case:** `port == -1` does nothing. The APP's port stays registered, so patchbay connections
+  stay, and the name stays saved. The next Apply/OK reconnects the source once it is back (F).
+- **In/out symmetry:** one helper serves both directions. For the output, `isPortOpen()` and `mMidiOutPortOpen` are
+  set and cleared together in `SelectMIDIDevice`.
+- **`mState.mAudioDriverType` as the JACK test:** correct. The MIDI API is always in step with it: `Init`, the driver
+  combo, Cancel and `RecreateMidi` all go through `MidiApiForAudioDriver(mState.mAudioDriverType)`, and the dialog
+  never changes `mState`'s driver without them. `pMidi->getCurrentApi() == RtMidi::UNIX_JACK` would state the
+  intent more directly. That's optional.
+- **mac/win:** the helper and its declaration are inside `#ifdef OS_LINUX`. My macOS CMake rebuild of
+  `IPlugInstrument-app` links, with 0 warnings in the APP files.
+
+### Re-runs (fresh Debug build `build/t022r3c-debug`, 0 warnings; container `t022r3c` removed)
+`evidence/t022/review3c-adversarial` (`adversarial3c.sh` = the 3b script plus L2 and P):
+- **F:** the source restarts under the same name; Apply and OK reconnect it; Quit exits 0.
+- **L:** the patchbay connection `seq2:out` → the APP's input survives Apply and OK; Quit exits 0. The "already
+  connected?" line in the output comes from my script's own `jack_connect`. The APP's stderr is clean: re-connecting
+  the source prints nothing.
+- **L2 (new):** a second monitor connected to the APP's output in a patchbay survives Apply and OK, and receives 6
+  events in 3 s afterwards.
+- **G:** after a JACK server restart, Apply and OK bring back both MIDI ports and the audio; Quit exits 0.
+- **P:** see the nit below.
+
+### Nit — "off" with an open JACK port is left open
+- Scenario P:
+  1. The saved input is "off".
+  2. Pick `seq:out`, then Cancel. The port stays open: the old bug, Cancel doesn't undo a MIDI pick.
+  3. OK.
+
+  The input stays connected while settings.ini says `indev=off`.
+- With f48e2803f, the reselect on that OK closed it. Now `port == 0` returns early.
+- This doesn't regress 607bb7250, and the underlying Cancel bug is the known cross-platform finding.
+- A one-line change would close the port again: when `port == 0`, fall through to `SelectMIDIDevice`.
