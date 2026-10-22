@@ -320,7 +320,7 @@ Independent reviewer, fresh context, 2026-10-22.
 ### C. New findings
 
 **C6 (minor) "synthetic events, which iPlug2 ignores" is wrong**
-- **Where:** `Documentation/linux-development.md:188`.
+- **Where:** `Documentation/linux-development.md:189`.
 - **Problem:** iPlug2 handles synthetic keys like any other: text entry in Renoise works (T-013, after c86d82e5d), and
   the editor's own key handling sees them. What it does not do is pass an **unhandled** synthetic key on to the parent
   (`IGraphicsLinux.cpp:1243-1244`: `!handled && !modal && !key.send_event`). As written, a reader concludes that
@@ -337,7 +337,7 @@ Independent reviewer, fresh context, 2026-10-22.
   the plug-in prints …".
 
 **C8 (nit) "as Qt's do" is stated as tested**
-- **Where:** `Documentation/linux-development.md:192`.
+- **Where:** `Documentation/linux-development.md:193`.
 - **Problem:** T-013 used a scripted source (`xdnd-source.c` `deep`) as the stand-in for a Qt file manager; no Qt
   file manager was run.
 - **Fix:** "A source that targets the deepest drop-aware window, as Qt's do (tested with a scripted source), reached
