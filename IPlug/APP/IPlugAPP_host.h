@@ -273,6 +273,7 @@ private:
   /** Closes the MIDI ports, recreates the RtMidi objects on the audio driver's API and reselects the saved ports
    * (missing ones stay saved, closed). Call while the audio is stopped: the audio thread sends to mMidiOut. */
   void RecreateMidi();
+  void ReselectSavedMidiPort(ERoute direction, RtMidi* pMidi, const WDL_String& portName);
   void UseSampleRateTheDeviceSupports(uint32_t outputID);
   void ReportAudioOff(const char* reason);
 
