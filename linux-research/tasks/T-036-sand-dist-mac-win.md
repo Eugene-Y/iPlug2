@@ -1,10 +1,12 @@
 # T-036 — Sand: makedist-mac.sh and makedist-win.ps1 like Gneiss'
 
-- **Status:** review-done (round 2 approved; r2 nits fixed)
+- **Status:** review-done (2026-10-22 round approved in `notes/30-review-T-036-T-011-r2-docs8.md` part A; A1-A6 fixed)
 - **Owner:** T-036 worker (Claude), 2026-10-20
 - **Branch/worktree:** Sand repo, branch `dist-scripts` from Sand `master`, worktree `/Volumes/Storage/code/hvoya/Sand-dist`.
-  (Not an iPlug2 branch. The coordinator merges into Sand `master` only on the user's command.)
-- **Conflicts:** none. Never touch `/Volumes/Storage/code/hvoya/Sand` (the user's main checkout) or `Sand-linux`.
+  Since 2026-10-22 also `linux-experiment` (worktree `Sand-linux`) for the Linux archive, and the docs lineage `92aeb3f` ← `c523661`
+  (on master `d2294da`, no branch of its own) merged into both.
+  (Not an iPlug2 branch. The coordinator merges `dist-scripts` into Sand `master` after review — the user's decision, 2026-10-22.)
+- **Conflicts:** none. Never touch `/Volumes/Storage/code/hvoya/Sand` (the user's main checkout).
 
 ## Why
 Gneiss has `scripts/makedist-mac.sh` and `scripts/makedist-win.ps1` that build every shipped format and stage them,
@@ -33,8 +35,8 @@ Sand.vst3, Sand.component; `…_win.zip`: Sand.clap, Sand.vst3). Sand now has `s
   build dirs) — Gneiss' mac build regenerates `resources/main.rc_mac_dlg` and `plug_build_info.hpp`; check Sand's.
 
 ## Acceptance
-- [ ] Both scripts, mac one run end-to-end into scratch, archives' contents listed in the Log.
-- [ ] Independent review (AGENTS §4).
+- [x] Both scripts, mac one run end-to-end into scratch, archives' contents listed in the Log.
+- [x] Independent review (AGENTS §4): rounds 1-2 in `notes/26-review-T-036.md`, the 2026-10-22 round in `notes/30-…` part A.
 
 ## Log
 
@@ -222,3 +224,21 @@ Scratch: `/private/tmp/claude-501/-Volumes-Storage-code-IPlug2-linux/f91df715-d8
 `Installation instructions.txt` names a VST2 `.dll` it does not ship and does not mention CLAP (Gneiss not changed).
 Still open from before: version hex (bundles report 1.1.16), Windows VST3 bundle vs bare DLL, install by default, Windows root,
 first real Windows run, and a version bump before the first default (non-`--out`) run.
+
+### 2026-10-22 — review (notes/30 part A) fixes
+Verdict: approve, minors/nits A1-A6, all fixed.
+- **A3, A4** `c523661` on top of `92aeb3f` (docs lineage), merged into `dist-scripts` (`4fd09d9`) and `linux-experiment` (`3cc46a2`):
+  `Installation instructions.txt` names each mac bundle with its folder, "corresponding", ASCII apostrophes only (file is pure ASCII).
+- **A1, A2** `6643648` on `dist-scripts`: the DOCS loop is `${DOCS[@]+"${DOCS[@]}"}` again (checked with `/bin/bash` 3.2.57, empty
+  list and names with spaces). A run removes `Sand_v<ver>_<os>.zip` after the swap; without `--zip`/`-Zip` it says so. Deleting
+  rather than warning: a zip of an older build next to the new folder is exactly the mismatched release `.partial` exists to prevent.
+- **A5** `689ab58` on `linux-experiment`: `--allow-dirty` needs `--out` (exit 2); `--out`/`--arch` without a value → exit 2;
+  the dirty refusal names `--allow-dirty --out DIR`. Tested: each error path, and a dirty tree → exit 1, nothing built.
+- **A6** this Status and the Acceptance boxes.
+
+Tests: `makedist-mac.sh --no-install --out <scratch>/t036a/distr` → exit 0, "removed …/Sand_v1.1.10_mac.zip: it held the previous
+build", no zip left; then `--no-install --zip --out` same dir → exit 0, 3× BUILD SUCCEEDED, zip 76 entries, no `.DS_Store`/`__MACOSX`/`._*`,
+docs identical to the repo's, codesign OK ×3. `~/Library/Audio/Plug-Ins` and `distr/Sand` unchanged; Sand-dist
+`git status --ignored` = `!! build-mac/`, `!! plug_build_info.hpp`. `git merge-tree --write-tree`: master+dist-scripts,
+master+linux-experiment, dist-scripts+linux-experiment, and both orders of all three → clean (same tree `498878c`).
+Linux not re-run (A5 touches only option parsing, before any build); Windows still not run.
