@@ -846,9 +846,9 @@ void IPlugAPPHost::ReselectSavedMidiPort(ERoute direction, RtMidi* pMidi, const 
 {
   // Closing a JACK port unregisters it, which drops the connections made to it in a patchbay. RtMidi's JACK openPort
   // on an open port only connects it to the saved one again.
-  if (pMidi && pMidi->isPortOpen() && mState.mAudioDriverType == kDeviceJack)
+  const int port = GetMIDIPortNumber(direction, portName.Get());
+  if (pMidi && pMidi->isPortOpen() && mState.mAudioDriverType == kDeviceJack && port != 0)
   {
-    const int port = GetMIDIPortNumber(direction, portName.Get());
     if (port > 0)
       pMidi->openPort(port - 1);
     return;

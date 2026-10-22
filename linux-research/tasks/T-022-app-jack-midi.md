@@ -218,3 +218,11 @@ plain jackd without the a2jmidid bridge.
       because the input stays open.
     - VM PASS, no orphan processes. macOS links, no warnings in the APP files.
   - **Open, optional:** R3-3 (show a kept missing port as "<name> (not found)" instead of "off").
+- 2026-10-22 — R3b-1 re-check (`notes/29-review-T-022.md`, f60c64f2a): **approve**. The reviewer's nit is fixed in
+  the last code commit: when "off" is saved but a JACK port is open (left open by the known Cancel bug), OK now closes
+  it through `SelectMIDIDevice`. The `getCurrentApi()` test is left as is (optional). Re-runs: Docker `docker-jack-midi`
+  PASS; F G H K2 L N → `evidence/t022/final-adversarial3b`, all quit with exit 0, and the patchbay connection survives
+  Apply and OK. This code is Linux-only, so mac/win are unchanged and macOS was not rebuilt.
+  - **Hand-over:** branch `linux/T-022` from 6e8995437 to the last commit. Open: R3-3 (optional UX). The cross-platform
+    findings are above: Cancel doesn't undo a MIDI port pick (all platforms); bug E and the `--no-io` erasing remain on
+    mac/win.
