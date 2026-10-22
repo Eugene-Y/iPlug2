@@ -8,8 +8,8 @@ Linux support in this fork is not upstream iPlug2's: it builds on Benjamin Reed'
 Stillwell Audio's Linux work, and was completed in this fork. Report Linux problems to this fork, not upstream.
 
 The renderer is NanoVG GL2 by default (`IGRAPHICS_RENDERER=GL2`, as on Windows), which runs on any GL 2.1 driver.
-`IGRAPHICS_RENDERER=GL3` asks for an OpenGL 3.2 core context; where the driver has none (old or virtual GPUs), the
-editor does not open and the plug-in prints `no OpenGL 3.2 core context` on stderr (e.g. a VM's virgl driver).
+`IGRAPHICS_RENDERER=GL3` asks for an OpenGL 3.2 core context; where the driver has none (old or virtual GPUs, e.g. a
+VM's virgl driver), the editor does not open and the plug-in prints `no OpenGL 3.2 core context` on stderr.
 
 ## 1. Install
 
@@ -186,9 +186,11 @@ Host behaviour seen while testing on Linux; iPlug2 does not work around it.
   the X connection's fd) on its engine thread instead of the UI thread, so the editor's `OnIdle` and drawing run off
   the main thread and can crash while the editor opens. CLAP in Carla main and VST3 in Carla 2.5.10 were fine.
 - **Renoise 3.5.4:** hosts VST3 (no CLAP on Linux). While an editor has the keyboard focus, Renoise delivers keys to it
-  as synthetic events, which iPlug2 ignores (they loop between host and plug-in in REAPER), and Renoise ignores the keys
-  iPlug2 passes on to the parent window, so host shortcuts (Space) don't work until the focus leaves the editor.
+  as synthetic events. iPlug2 handles them (text entry works) but does not pass unhandled ones back (that loops in
+  REAPER), and Renoise ignores keys passed to the parent window, so host shortcuts (Space) don't work until the focus
+  leaves the editor.
 - **Files dropped from a GTK file manager (GNOME Files):** it drops on the top-level window under the pointer, so a file
   reaches the editor only if the host forwards XDND to its plug-in window: Ardour and REAPER do; Carla 2.5.10 takes the
-  drop itself; Carla main (CLAP) and Renoise don't. A source that targets the deepest drop-aware window, as Qt's do,
-  reached the editor in every host tried. Dragging files *out* of the editor works in every host tried.
+  drop itself; Carla main (CLAP) and Renoise don't. A source that targets the deepest drop-aware window, as Qt's do
+  (tested with a scripted source), reached the editor in every host tried. Dragging files *out* of the editor works
+  in every host tried.
