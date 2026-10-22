@@ -1,0 +1,19 @@
+
+IPlug Project Duplicator v0.96 by Oli Larkin ------------------------------
+
+copying IPlugEffect folder to <R>/driveD/out/XEffectDrive
+Traceback (most recent call last):
+  File "<evidence>/dup-emul.py", line 21, in <module>
+    runpy.run_path("duplicate.py", run_name="__main__")
+  File "<frozen runpy>", line 286, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "duplicate.py", line 292, in <module>
+    main()
+  File "duplicate.py", line 256, in main
+    newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config"))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<evidence>/dup-emul.py", line 14, in relpath
+    raise ValueError("path is on mount 'C:', start on mount 'D:'")
+ValueError: path is on mount 'C:', start on mount 'D:'
+exit=1
