@@ -6,7 +6,7 @@
 - **Conflicts:** `IGraphics/Platforms/IGraphicsLinux*`, `IGraphics/Controls/IVPresetManagerControls.h`.
 
 ## Problem
-Without a completion handler, mac and Windows **file prompts and message boxes** block in a modal loop and return the result; Linux (T-002, asynchronous only) returns at once with nothing, and `ShowMessageBox` returns `kNoResult` (`IGraphics/Platforms/IGraphicsLinux.cpp:2178–2260`). **Colour prompts:** mac's panel is non-modal and returns at once too (Linux matches mac); only Windows blocks. In iPlug2 itself the stock `IVDiskPresetManagerControl` load button calls `PromptForFile` synchronously (`IGraphics/Controls/IVPresetManagerControls.h:245`): it does nothing on Linux, and on iOS it already asserts (iOS file prompts require a handler) — so it is a cross-platform defect, not only a Linux one. The API already documents `kNoResult` for message boxes that cannot answer inline.
+Without a completion handler, mac and Windows **file prompts and message boxes** block in a modal loop and return the result; Linux (T-002, asynchronous only) returns at once with nothing, and `ShowMessageBox` returns `kNoResult` (`IGraphics/Platforms/IGraphicsLinux.cpp`, `IGraphicsLinux::ShowMessageBox` … `PromptForColor`). **Colour prompts:** mac's panel is non-modal and returns at once too (Linux matches mac); only Windows blocks. In iPlug2 itself the stock `IVDiskPresetManagerControl` load button calls `PromptForFile` synchronously (`IVDiskPresetManagerControl::OnAttached`, `loadPresetFunc`, before this task): it does nothing on Linux, and on iOS it already asserts (iOS file prompts require a handler) — so it is a cross-platform defect, not only a Linux one. The API already documents `kNoResult` for message boxes that cannot answer inline.
 
 ## Options (for the user)
 1. **A blocking wait on Linux.** It cannot be "as mac/win do": their modal loops dispatch the whole process's events, so the host stays responsive. A Linux plug-in can only pump its own window's events; the host's windows would freeze while the dialog is open. Acceptable only for the standalone APP, or as an opt-in.
@@ -43,7 +43,8 @@ Option 2: iPlug2's own callers use the completion-handler form; plug-ins are tol
 **Setup.** Lock `T-032`; worktree from `refs/heads/hvoya-linux`; SDKs `cp -cR` from the integration worktree.
 
 **Callers without a completion handler** (grep of `PromptForFile|PromptForDirectory|PromptForColor|ShowMessageBox`
-in `IGraphics/ IPlug/ Examples/ Tests/`; no wrappers exist — `IPlug/` has no calls, the APP's own dialogs are SWELL):
+in `IGraphics/ IPlug/ Examples/ Tests/`; no wrappers exist — `IPlug/` has no calls; the `MessageBox` calls in `IPlug/APP` and
+`Examples/IPlugReaperExtension*` are SWELL/REAPER API, not IGraphics):
 
 | Caller | Form before | Result used in the same frame? | Context that must finish synchronously? | Decision |
 |---|---|---|---|---|
@@ -122,9 +123,15 @@ platform's behaviour.
   with `showFileExtensions=false` and an `onLoadFunc` that opens the path.
 - **XP-3, trivial.** `Controls/Test/TestSVGControl.h:60`, `Test/Skia/ISkLottieControl.h:129`: `SetDirty(false)` is
   indented under `if (fileName.GetLength())` but runs unconditionally (no braces). Test controls only.
+- **XP-4, low (web only).** `IGraphicsWeb.cpp:1176-1185` `ShowMessageBox`: the `kMB_YESNO`/`kMB_OKCANCEL` case has no
+  `break`, falls into `default` and returns `kNoResult` without calling the completion handler; `kMB_YESNOCANCEL` is not
+  handled at all. Found while wording the API docs (review R1-2).
 - **For CROSS_PLATFORM_FINDINGS (behaviour change of this task):** the stock `IVDiskPresetManagerControl` Load panel
   becomes a window-modal sheet on macOS (was app-modal); Windows unchanged; iOS no longer asserts.
 
 **Incident:** the first mac screenshot attempt used a full-screen `screencapture`, which made macOS show the user a
 "Claude is requesting to bypass the system private window picker" prompt. Not answered by the worker; the capture was
 deleted. Window captures (`screencapture -l`) need no such permission and were used from then on.
+
+**Review round 1** (`notes/31-review-T-032.md`): approve, 1 minor + 6 nits (R1-1…R1-7), all fixed; dialog tests re-run
+after the fixes: CLAP PASS, VST3 PASS.
