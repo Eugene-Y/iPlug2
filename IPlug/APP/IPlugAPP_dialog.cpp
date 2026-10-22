@@ -232,11 +232,9 @@ bool IPlugAPPHost::PopulateMidiDialogs(HWND hwndDlg)
 
     LRESULT indevidx = SendDlgItemMessage(hwndDlg,IDC_COMBO_MIDI_IN_DEV,CB_FINDSTRINGEXACT, -1, (LPARAM)mState.mMidiInDev.Get());
 
-    // if the midi port name wasn't found update the ini file, and set to off
     if (indevidx == -1)
     {
-      mState.mMidiInDev.Set("off");
-      UpdateINI();
+      HandleMissingMidiPort(mState.mMidiInDev);
       indevidx = 0;
     }
 
@@ -249,11 +247,9 @@ bool IPlugAPPHost::PopulateMidiDialogs(HWND hwndDlg)
 
     LRESULT outdevidx = SendDlgItemMessage(hwndDlg,IDC_COMBO_MIDI_OUT_DEV,CB_FINDSTRINGEXACT, -1, (LPARAM)mState.mMidiOutDev.Get());
 
-    // if the midi port name wasn't found update the ini file, and set to off
     if (outdevidx == -1)
     {
-      mState.mMidiOutDev.Set("off");
-      UpdateINI();
+      HandleMissingMidiPort(mState.mMidiOutDev);
       outdevidx = 0;
     }
 
@@ -324,6 +320,18 @@ static void ShowMidiUnavailable(HWND hwndDlg)
   }
 }
 
+void IPlugAPPHost::RefreshMidiControls(HWND hwndDlg)
+{
+  for (int combo : {IDC_COMBO_MIDI_IN_DEV, IDC_COMBO_MIDI_OUT_DEV, IDC_COMBO_MIDI_IN_CHAN, IDC_COMBO_MIDI_OUT_CHAN})
+  {
+    SendDlgItemMessage(hwndDlg, combo, CB_RESETCONTENT, 0, 0);
+    EnableWindow(GetDlgItem(hwndDlg, combo), TRUE);
+  }
+
+  if (!PopulateMidiDialogs(hwndDlg))
+    ShowMidiUnavailable(hwndDlg);
+}
+
 void IPlugAPPHost::PopulatePreferencesDialog(HWND hwndDlg)
 {
   for (const char* driverName : kAudioDriverNames)
@@ -333,10 +341,7 @@ void IPlugAPPHost::PopulatePreferencesDialog(HWND hwndDlg)
   EnableWindow(GetDlgItem(hwndDlg, IDC_BUTTON_OS_DEV_SETTINGS), FALSE);
 
   PopulateAudioDialogs(hwndDlg);
-
-  if (!PopulateMidiDialogs(hwndDlg))
-    ShowMidiUnavailable(hwndDlg);
-
+  RefreshMidiControls(hwndDlg);
   ShowAudioStateInTitle(hwndDlg, *this);
 }
 #endif
@@ -375,15 +380,34 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
       switch (LOWORD(wParam))
       {
         case IDOK:
-          if (mActiveState != mState)
+          // On Linux also when the audio isn't running: picking a driver in the combo stops it, and the settings are
+          // equal again once the user picks the old driver back (Cancel below likewise)
+          if (mActiveState != mState
+#ifdef OS_LINUX
+              || !_this->IsAudioRunning()
+#endif
+             )
+          {
+#ifdef OS_LINUX
+            _this->RecreateJackMidiIfAudioStopped();
+#endif
             _this->TryToChangeAudio();
+          }
+#ifdef OS_LINUX
+          _this->ReselectSavedMidiPorts();
+#endif
 
           EndDialog(hwndDlg, IDOK); // INI file will be changed see MainDialogProc
           break;
         case IDAPPLY:
+#ifdef OS_LINUX
+          _this->RecreateJackMidiIfAudioStopped();
+#endif
           _this->TryToChangeAudio();
 #ifdef OS_LINUX
           _this->PopulateDriverSpecificControls(hwndDlg); // the sample rate may have followed the device
+          _this->ReselectSavedMidiPorts();
+          _this->RefreshMidiControls(hwndDlg);
           ShowAudioStateInTitle(hwndDlg, *_this);
 #endif
           break;
@@ -392,11 +416,20 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
 
           // if state has been changed reset to previous state, INI file won't be changed
           if (!_this->AudioSettingsInStateAreEqual(mState, mTempState)
-              || !_this->MIDISettingsInStateAreEqual(mState, mTempState))
+              || !_this->MIDISettingsInStateAreEqual(mState, mTempState)
+#ifdef OS_LINUX
+              || !_this->IsAudioRunning()
+#endif
+             )
           {
             mState = mTempState;
-
+#ifdef OS_LINUX
+            _this->RecreateJackMidiIfAudioStopped();
+#endif
             _this->TryToChangeAudioDriverType();
+#ifdef OS_LINUX
+            _this->TryToChangeMidiApi();
+#endif
             _this->ProbeAudioIO();
             _this->TryToChangeAudio();
           }
@@ -426,6 +459,10 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
               mState.mAudioOutChanR = 2;
 
               _this->PopulateAudioDialogs(hwndDlg);
+#ifdef OS_LINUX
+              _this->TryToChangeMidiApi();
+              _this->RefreshMidiControls(hwndDlg);
+#endif
             }
           }
           break;

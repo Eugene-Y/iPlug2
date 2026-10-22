@@ -34,6 +34,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <atomic>
 
 #include "wdltypes.h"
 #include "wdlstring.h"
@@ -247,14 +248,37 @@ public:
 #ifdef OS_LINUX
   /** @return Why the last attempt to start audio failed, empty when it started */
   const char* GetAudioOffReason() const { return mAudioOffReason.Get(); }
+
+  /** JACK MIDI goes with the JACK audio driver, the ALSA sequencer with the others: RecreateMidi when the audio
+   * driver's MIDI API differs from the current one. */
+  void TryToChangeMidiApi();
+  /** Call before restarting the audio. Stopped JACK audio may mean the server went away, and the MIDI clients died
+   * with it while still reporting their ports open, so on JACK they are recreated. */
+  void RecreateJackMidiIfAudioStopped();
+  /** Reopens the saved MIDI ports, so that ones which appeared or came back connect, e.g. JACK's once its server runs */
+  void ReselectSavedMidiPorts();
+  void RefreshMidiControls(HWND hwndDlg);
+
+  /** RtMidi's JACK output queues what it is sent while no port is open, and writes the whole backlog into one
+   * cycle's buffer when a port opens: past the buffer's end once there is enough of it. */
+  bool IsMidiOutPortOpen() const { return mMidiOutPortOpen; }
+
+  bool IsAudioRunning() const { return mDAC && mDAC->isStreamRunning(); }
 #endif
 
 private:
+  void HandleMissingMidiPort(WDL_String& portName);
+
 #ifdef OS_LINUX
+  /** Closes the MIDI ports, recreates the RtMidi objects on the audio driver's API and reselects the saved ports
+   * (missing ones stay saved, closed). Call while the audio is stopped: the audio thread sends to mMidiOut. */
+  void RecreateMidi();
+  void ReselectSavedMidiPort(ERoute direction, RtMidi* pMidi, const WDL_String& portName);
   void UseSampleRateTheDeviceSupports(uint32_t outputID);
   void ReportAudioOff(const char* reason);
 
   WDL_String mAudioOffReason;
+  std::atomic<bool> mMidiOutPortOpen = false;
 #endif
 
   std::unique_ptr<IPlugAPP> mIPlug = nullptr;

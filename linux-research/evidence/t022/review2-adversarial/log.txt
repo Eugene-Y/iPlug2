@@ -1,0 +1,18 @@
+=== C: MIDI output off while the instrument echoes notes; then an output picked
+C: seq:out -> IPlugInstrument MIDI in
+C: waiting 30 s with the MIDI output off
+C: APP alive
+C: APP alive
+C: IPlugInstrument MIDI out -> midi-monitor:input
+C: events at midi-monitor:input after the output was picked, with the source stopped: 0
+C: distinct timestamps column values (one burst => events share a cycle): 
+C: after restarting the source for 3.5 s (a note a second): 8 events at midi-monitor:input (expect about 6-8)
+C: File > Quit exit 0
+=== C2: output connected -> off for 30 s while notes are echoed -> connected again
+C2: echoed events with the output connected (5 s): 947
+C2: output off, waiting 30 s
+C2: events at midi-monitor:input during the 30 s off: 0
+C2: APP alive
+C2: events at midi-monitor:input right after reconnecting, source stopped: 0
+C2: after restarting the source for 3.5 s: 6 events (expect about 6-8)
+C2: File > Quit exit 0

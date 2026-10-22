@@ -121,7 +121,11 @@ bool IPlugAPP::EditorResize(int viewWidth, int viewHeight)
 
 bool IPlugAPP::SendMidiMsg(const IMidiMsg& msg)
 {
-  if (DoesMIDIOut() && mAppHost->mMidiOut)
+  if (DoesMIDIOut() && mAppHost->mMidiOut
+#ifdef OS_LINUX
+      && mAppHost->IsMidiOutPortOpen()
+#endif
+     )
   {
     //TODO: midi out channel
 //    uint8_t status;
@@ -145,7 +149,11 @@ bool IPlugAPP::SendMidiMsg(const IMidiMsg& msg)
 
 bool IPlugAPP::SendSysEx(const ISysEx& msg)
 {
-  if (DoesMIDIOut() && mAppHost->mMidiOut)
+  if (DoesMIDIOut() && mAppHost->mMidiOut
+#ifdef OS_LINUX
+      && mAppHost->IsMidiOutPortOpen()
+#endif
+     )
   {
     //TODO: midi out channel
     std::vector<uint8_t> message;
