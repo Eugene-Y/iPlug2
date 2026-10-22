@@ -120,3 +120,37 @@ Verdict round 1: approve
 - R1-6 fixed: `preset-prev` (719 598) after the cancel, expecting А.
 - R1-7 fixed: the Problem names functions instead of line numbers; the table note names the SWELL/REAPER `MessageBox` calls.
 - Re-run after the fixes (rebuilt `build/t032-test`): `dialog-test.sh` CLAP **PASS**, VST3 **PASS**, sheets regenerated.
+
+## Round 2
+
+I re-checked c2e589cbe (fixes) and 704aa0fd8 (response, Log, evidence) against round 1. The full header diff against
+`refs/heads/hvoya-linux` has no whitespace-only hunk left.
+
+- **R1-1 fixed.** `PromptForColor`'s `@param color`, `@param str`, `@param func` and `@return` now match the code on
+  each platform:
+  - **Windows** writes the colour back and uses `str` as the window text.
+  - **Linux** uses `str` as the title and returns `false`.
+  - **macOS** returns `colorPanel != nil`.
+  - **iOS** and **web** return `false`.
+
+  The malformed `@param IColorPickerHandlerFunc func` and the `/c` typo are also fixed.
+- **R1-2 fixed.** The web note was added to `PromptForFile`, which `PromptForDirectory` inherits through "as in
+  PromptForFile", and to the colour summary. Leaving the web out of `ShowMessageBox` is right. **Correction to my round
+  1 text:** the web Yes-No/OK-Cancel case has no `break`. It falls into `default` and returns `kNoResult` without
+  calling the handler (`IGraphicsWeb.cpp:1176-1185`), so it does not "block via `confirm`" as I wrote. XP-4 in the Log
+  is accurate.
+- **R1-3 fixed.** `LoadPresetFromFXP` is the real `IPluginBase` member, and the `weak_ptr` token pattern is now named.
+- **R1-4 fixed.** "A cancelled dialog passes two empty strings" states the one non-obvious fact.
+- **R1-5 fixed.** The `GetSubControlBounds` whitespace was restored byte for byte.
+- **R1-6 fixed.** `preset-prev` (719 598) is used after the cancel, and the script comment correctly says why. In my
+  re-run the `<` click hit the button: the check produced a handler line with А, which a miss could not have produced.
+- **R1-7 fixed.** The Problem now names functions instead of line numbers, and the caller-table note names the
+  SWELL/REAPER `MessageBox` calls.
+- **Re-run.** I used my `build/t032-review` CLAP; the C++ changes since then are comment and whitespace only. I ran it
+  with the updated `dialog-test.sh` in container `t032r`: **RESULT: PASS**, 39/39 ok, including
+  `preset-cancel-kept-folder` via `<`. The container is removed and `evidence/t032-review` is deleted. The worker's
+  regenerated `dialogs-{clap,vst3}/checks.txt` files are 39/39 ok and PASS.
+
+No new findings.
+
+Verdict round 2: approve

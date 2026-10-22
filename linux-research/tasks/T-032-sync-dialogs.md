@@ -1,6 +1,6 @@
 # T-032 — Synchronous dialogs on Linux (PromptForFile/Directory/Color, ShowMessageBox without a completion handler)
 
-- **Status:** in progress (option 2, user 2026-10-22)
+- **Status:** review-done (option 2, user 2026-10-22)
 - **Owner:** T-032 worker (coordinator chat f91df715)
 - **Branch:** `linux/T-032` in `/Volumes/Storage/code/IPlug2-T-032`
 - **Conflicts:** `IGraphics/Platforms/IGraphicsLinux*`, `IGraphics/Controls/IVPresetManagerControls.h`.
@@ -35,7 +35,7 @@ Option 2: iPlug2's own callers use the completion-handler form; plug-ins are tol
 - [x] macOS: builds (IPlugControls APP with the test define, IPlugEffect CLAP); the Load button opens an `NSOpenPanel`
       sheet on the window; cancel/OK through the handler keep the APP alive. Choosing a real file on mac not driven.
 - [ ] Windows: not run (no machine); reasoned from `IGraphicsWin.cpp` below.
-- [ ] Independent review approved.
+- [x] Independent review approved (round 1 approve with 1 minor + 6 nits, all fixed; round 2 approve, no findings).
 
 ## Log
 
@@ -135,3 +135,12 @@ deleted. Window captures (`screencapture -l`) need no such permission and were u
 
 **Review round 1** (`notes/31-review-T-032.md`): approve, 1 minor + 6 nits (R1-1…R1-7), all fixed; dialog tests re-run
 after the fixes: CLAP PASS, VST3 PASS.
+
+**Review round 2** (`notes/31-review-T-032.md`): approve, no new findings; the reviewer re-ran `dialog-test.sh` CLAP
+(39/39 ok). **Final verdict: approve.**
+
+**Hand-over.** Commits on `linux/T-032`: 098ebce5a (control + test harness), 2d8b0e302 (docs), c2e589cbe (review
+fixes), plus Log/evidence/notes commits. Evidence `evidence/t032/`. Open items: Windows not run; macOS verified only
+in the standalone APP via an in-process probe (no plug-in in a host, no real file chosen, guard not exercised);
+XP-1…XP-4 for the coordinator. Ignored build dirs left: `build/t032-test`, `build/t032-plain`, `build/t032-base`,
+`build/t032-review`.
