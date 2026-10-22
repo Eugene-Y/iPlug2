@@ -610,6 +610,13 @@ IPlugControls::IPlugControls(const InstanceInfo& info)
         report("sync", fileName.Get(), path.Get());
       });
       pGraphics->AttachControl(new ITextControl(area.GetGridCell(4, 0, 5, 1), "dialog result", IText(11.f, EAlign::Near)), kTagTestResult);
+
+      if (const WDL_String presetDir = startDir(); presetDir.GetLength())
+      {
+        const IRECT presetBounds(area.L, area.T - 28.f, area.R, area.T - 2.f);
+        auto onPresetLoaded = [report](const WDL_String& fileName) { report("preset", fileName.Get(), ""); };
+        pGraphics->AttachControl(new IVDiskPresetManagerControl(presetBounds, presetDir.Get(), "fxp", true, "", testStyle, onPresetLoaded));
+      }
     }
 #endif
 

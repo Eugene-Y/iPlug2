@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(IPlugReaperExtension VERSION 1.0.0)
 
-# REAPER Extensions are macOS and Windows only (no iOS, no Emscripten)
+# REAPER extensions run on macOS, Windows and Linux (no iOS, no Emscripten)
 if(IOS OR CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   message(STATUS "IPlugReaperExtension is not supported on ${CMAKE_SYSTEM_NAME}. Skipping.")
   return()

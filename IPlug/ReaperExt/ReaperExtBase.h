@@ -51,6 +51,10 @@ public:
   
   bool EditorResizeFromUI(int viewWidth, int viewHeight, bool needsPlatformResize) override;
 
+#ifdef OS_LINUX
+  HostLoop* GetEditorHostLoop() override { return &mHostLoop; }
+#endif
+
   /** Called during idle processing - override to perform periodic tasks */
   virtual void OnIdle() {}; // NO-OP
 
@@ -148,6 +152,10 @@ private:
   void UpdateToggleStates();
 
   reaper_plugin_info_t* mRec = nullptr;
+#ifdef OS_LINUX
+  HostLoop mHostLoop; // declared before mTimer, which unregisters from it on destruction
+  HWND mXBridgeWnd = nullptr; // the child of the main window that holds the editor's X window
+#endif
   std::unique_ptr<Timer> mTimer;
   ReaperExtDockState mDockState = {};
   WDL_FastString mDockId;

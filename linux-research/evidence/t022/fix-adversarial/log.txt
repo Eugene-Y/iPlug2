@@ -1,0 +1,41 @@
+=== A: JACK selected, no JACK server
+A: Audio box at start (expected): IPlugInstrument: Audio is off (JACK): no device found.
+A: APP alive
+A: RtMidi warnings in stderr: 6
+A: settings.ini after start: indev=off outdev=off
+A: Preferences 'Preferences - audio off: no device found'
+A: server up; Apply on JACK (same MIDI API, no re-probe)
+A: APP MIDI ports now: 
+A: picked after ALSA->JACK: seq:out -> IPlugInstrument MIDI in
+A: APP alive
+A: APP JACK ports: IPlugInstrument MIDI in:RtMidi Input IPlugInstrument:outport 0 IPlugInstrument:outport 1 
+A: File > Quit exit 0
+A: RtMidi warnings in stderr at the end: 6
+=== B: --no-io, JACK in settings.ini, server running
+B: APP alive
+B: APP JACK ports: ''
+B: settings.ini after start: indev=off outdev=off
+B: Preferences 'Preferences - audio off (--no-io)'
+B: APP JACK ports after switches: ''
+B: APP alive
+B: settings.ini after Cancel: driver=1 indev=off outdev=off
+B: File > Quit exit 0
+=== C: MIDI output off while the instrument echoes notes; then an output picked
+C: seq:out -> IPlugInstrument MIDI in
+C: waiting 30 s with the MIDI output off
+C: APP alive
+C: APP alive
+C: IPlugInstrument MIDI out -> midi-monitor:input
+C: events at midi-monitor:input after the output was picked, with the source stopped: 0
+C: distinct timestamps column values (one burst => events share a cycle): 
+C: File > Quit exit 0
+=== D: JACK <-> ALSA x10 in the driver combo while notes flow
+D: APP alive
+D: input not connected after toggles (saved port turned off by the ALSA step): indev=off
+D: APP JACK clients: IPlugInstrument|
+D: File > Quit exit 0
+=== E: MIDI ports off; JACK -> ALSA -> JACK in the combo, then Cancel
+E: audio ports before: 2
+E: audio ports with Preferences open after the switches: 0
+E: audio ports after Cancel: 0
+E: File > Quit exit 0

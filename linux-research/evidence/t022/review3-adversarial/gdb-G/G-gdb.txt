@@ -1,0 +1,120 @@
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0xfffff527ede0 (LWP 2779)]
+[New Thread 0xfffff5076de0 (LWP 2780)]
+[Thread 0xfffff5076de0 (LWP 2780) exited]
+[Thread 0xfffff527ede0 (LWP 2779) exited]
+[New Thread 0xfffff527ede0 (LWP 2781)]
+[New Thread 0xfffff5076de0 (LWP 2782)]
+[New Thread 0xfffff4fd4de0 (LWP 2783)]
+[New Thread 0xfffff4f44de0 (LWP 2784)]
+[New Thread 0xfffff4eb4de0 (LWP 2785)]
+[New Thread 0xfffff4e24de0 (LWP 2786)]
+[New Thread 0xfffff4614de0 (LWP 2787)]
+[Thread 0xfffff4614de0 (LWP 2787) exited]
+[New Thread 0xfffff4614de0 (LWP 2788)]
+[Thread 0xfffff4614de0 (LWP 2788) exited]
+[New Thread 0xfffff4614de0 (LWP 2789)]
+[New Thread 0xfffff4584de0 (LWP 2790)]
+[New Thread 0xffffe954ede0 (LWP 2791)]
+[New Thread 0xffffe8d3ede0 (LWP 2792)]
+[New Thread 0xffffcee7ede0 (LWP 2793)]
+[New Thread 0xffffce66ede0 (LWP 2794)]
+[New Thread 0xffffcde5ede0 (LWP 2795)]
+[New Thread 0xffffcd64ede0 (LWP 2796)]
+[New Thread 0xffffcce3ede0 (LWP 2797)]
+[New Thread 0xffffafffede0 (LWP 2798)]
+[New Thread 0xffffaf7eede0 (LWP 2799)]
+[New Thread 0xffffaefdede0 (LWP 2800)]
+[New Thread 0xffffae7cede0 (LWP 2801)]
+[New Thread 0xffffadfbede0 (LWP 2802)]
+[New Thread 0xffffad7aede0 (LWP 2803)]
+[New Thread 0xffffaca96de0 (LWP 2950)]
+[Thread 0xfffff4614de0 (LWP 2789) exited]
+[Thread 0xfffff4f44de0 (LWP 2784) exited]
+[Thread 0xfffff5076de0 (LWP 2782) exited]
+applied rlimit 16384/524288
+
+BEGIN IPLUG CHANNEL IO PARSER --------------------------------------------------
+Channel I/O #1 - 0-2
+               - input bus count: 0, output bus count 1
+               - channel count on output bus 1: 2
+               - input channel count across all buses: 0, output channel count across all buses 2
+
+1 I/O configs detected
+Total # in chans: 0, Total # out chans: 2 
+
+END IPLUG CHANNEL IO PARSER --------------------------------------------------
+Reading ini file from /Volumes/Storage/code/IPlug2-T-022/linux-research/evidence/t022/review3-adversarial/gdb-G/home/.config/IPlugInstrument/settings.ini
+
+RtAudio Version 6.0.1trying to start audio stream @ 48000 sr, buffer size 256
+indev = system
+outdev = system
+inputs = 0
+outputs = 2
+IGraphics NanoVG @ 60 FPS
+
+errorCallback: RtApiJack: the Jack server is shutting down this client ... stream stopped and closed!
+
+[Thread 0xfffff4584de0 (LWP 2790) exited]
+[Thread 0xffffaca96de0 (LWP 2950) exited]
+[Thread 0xfffff4fd4de0 (LWP 2783) exited]
+[Thread 0xfffff4eb4de0 (LWP 2785) exited]
+[Thread 0xfffff527ede0 (LWP 2781) exited]
+[New Thread 0xfffff527ede0 (LWP 3028)]
+[New Thread 0xfffff4f44de0 (LWP 3029)]
+[Thread 0xfffff4f44de0 (LWP 3029) exited]
+[Thread 0xfffff527ede0 (LWP 3028) exited]
+[New Thread 0xfffff527ede0 (LWP 3030)]
+[New Thread 0xfffff4f44de0 (LWP 3031)]
+[Thread 0xfffff4f44de0 (LWP 3031) exited]
+[Thread 0xfffff527ede0 (LWP 3030) exited]
+[New Thread 0xfffff527ede0 (LWP 3032)]
+[New Thread 0xfffff4f44de0 (LWP 3033)]
+[New Thread 0xfffff4eb4de0 (LWP 3034)]
+[Thread 0xffffadfbede0 (LWP 2802) exited]
+[Thread 0xffffad7aede0 (LWP 2803) exited]
+[Thread 0xffffae7cede0 (LWP 2801) exited]
+[Thread 0xffffaefdede0 (LWP 2800) exited]
+[Thread 0xffffaf7eede0 (LWP 2799) exited]
+[Thread 0xffffafffede0 (LWP 2798) exited]
+[Thread 0xffffcce3ede0 (LWP 2797) exited]
+[Thread 0xffffcd64ede0 (LWP 2796) exited]
+[Thread 0xffffcde5ede0 (LWP 2795) exited]
+[Thread 0xffffce66ede0 (LWP 2794) exited]
+[Thread 0xffffcee7ede0 (LWP 2793) exited]
+[Thread 0xffffe8d3ede0 (LWP 2792) exited]
+[Thread 0xffffe954ede0 (LWP 2791) exited]
+[Thread 0xfffff4eb4de0 (LWP 3034) exited]
+[Thread 0xfffff4f44de0 (LWP 3033) exited]
+[Thread 0xfffff527ede0 (LWP 3032) exited]
+
+Thread 1 "IPlugInstrument" received signal SIGSEGV, Segmentation fault.
+0x0000aaaaadcfe230 in ?? ()
+  Id   Target Id                                          Frame 
+* 1    Thread 0xfffff7e4eac0 (LWP 2777) "IPlugInstrument" 0x0000aaaaadcfe230 in ?? ()
+  9    Thread 0xfffff4e24de0 (LWP 2786) "gmain"           0x0000fffff7110bdc in poll () from /lib/aarch64-linux-gnu/libc.so.6
+#0  0x0000aaaaadcfe230 in ??? ()
+#1  0x0000aaaaab07e2c0 in ??? ()
+#2  0x0000aaaaab0776d0 in ??? ()
+#3  0x0000aaaaaab820fc in std::__uniq_ptr_impl<iplug::IPlugAPPHost, std::default_delete<iplug::IPlugAPPHost> >::reset (this=0xaaaaaafc4d00 <iplug::IPlugAPPHost::sInstance>, __p=0xaaaaab02e850) at /usr/include/c++/13/bits/unique_ptr.h:211
+#4  0x0000aaaaaab820fc in std::__uniq_ptr_impl<iplug::IPlugAPPHost, std::default_delete<iplug::IPlugAPPHost> >::reset (this=0xaaaaab02e850, __p=0xffffffffef30) at /usr/include/c++/13/bits/unique_ptr.h:211
+#5  0x0000aaaaaad8e7f8 in iplug::igraphics::IGraphicsLinux::CloseWindow (this=0xaaaaaafc4d00 <iplug::IPlugAPPHost::sInstance>) at /Volumes/Storage/code/IPlug2-T-022/IGraphics/Platforms/IGraphicsLinux.cpp:701
+#6  0x0000aaaaaab86a98 in iplug::IPlugAPPHost::CloseWindow (this=0x0) at /Volumes/Storage/code/IPlug2-T-022/IPlug/APP/IPlugAPP_host.cpp:110
+#7  0x0000aaaaaafc4d00 in ??? ()
+
+Thread 9 (Thread 0xfffff4e24de0 (LWP 2786) "gmain"):
+#0  0x0000fffff7110bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff7ba1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000fffff7b3ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000fffff7b3ec24 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#4  0x0000fffff7b6f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000fffff70b582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 1 (Thread 0xfffff7e4eac0 (LWP 2777) "IPlugInstrument"):
+#0  0x0000aaaaadcfe230 in ??? ()
+#1  0x0000aaaaab07e2c0 in ??? ()
+#2  0x0000aaaaab0776d0 in ??? ()
+#3  0x0000aaaaaab820fc in std::__uniq_ptr_impl<iplug::IPlugAPPHost, std::default_delete<iplug::IPlugAPPHost> >::reset (this=0xaaaaaafc4d00 <iplug::IPlugAPPHost::sInstance>, __p=0xaaaaab02e850) at /usr/include/c++/13/bits/unique_ptr.h:211
+#4  0x0000aaaaaab820fc in std::__uniq_ptr_impl<iplug::IPlugAPPHost, std::default_delete<iplug::IPlugAPPHost> >::reset (this=0xaaaaab02e850, __p=0xffffffffef30) at /usr/include/c++/13/bits/unique_ptr.h:211
+#5  0x0000aaaaaad8e7f8 in iplug::igraphics::IGraphicsLinux::CloseWindow (this=0xaaaaaafc4d00 <iplug::IPlugAPPHost::sInstance>) at /Volumes/Storage/code/IPlug2-T-022/IGraphics/Platforms/IGraphicsLinux.cpp:701

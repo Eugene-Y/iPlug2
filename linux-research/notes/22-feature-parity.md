@@ -48,7 +48,7 @@ Method: every `override` in `IGraphicsMac.h`/`IGraphicsWin.h` diffed against `IG
 | CLAP, VST3, standalone APP | ✓ | ✓ | ✅ all 19 example projects build | P0–P8 |
 | VST2 (deprecated) | ✓ | ✓ | not built (no SDK here; deprecated) | — |
 | REAPER-API plug-in (`IPlugReaperPlugin`) | ✓ | ✓ | ✅ builds and detects REAPER as host (red fill); API import and its text not shown yet: the example's CMake ships no fonts on Linux | T-031 |
-| REAPER extension (`IPlugReaperExtension`, `…WebUI`) | ✓ | ✓ | ❌ link fails (SWELL modstub missing in `Scripts/cmake/ReaperExt.cmake`'s Linux branch); after that the editor would still not open: `OpenWindow` needs an `IPlugAPIBase` delegate (`IGraphics/Platforms/IGraphicsLinux.cpp:491`), the SWELL HWND is passed as an X window (`IPlug/ReaperExt/ReaperExtBase.cpp:434`), no HiDPI, UI resize mac-only | T-031 |
+| REAPER extension (`IPlugReaperExtension`, `…WebUI`) | ✓ | ✓ | ✅ T-031 (merged cbb4d7105): links against REAPER's SWELL, editor opens in a SWELL X bridge, SWELL-timer host loop, UI scale, docking and resize from the UI; WebUI: window yes, web view → T-017 | T-031 |
 | LV2 | — | — | planned (Linux extra) | T-014 |
 | AU, AUv3, AAX, WAM | ✓ | (AAX) | n/a | — |
 | `IPlug/Extras`: OSC | ✓ | ✓ | ✅ POSIX branch (`IPlug/Extras/OSC/IPlugOSC_internal.cpp:7-8`); IPlugOSCEditor opens; OSC send/receive itself not exercised | — |

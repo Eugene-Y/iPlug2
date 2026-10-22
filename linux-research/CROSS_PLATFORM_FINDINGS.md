@@ -124,3 +124,29 @@ Gneiss на mac/win использует нативные меню — его н
 |---|---|---|---|
 | T23-1 | Низкая–средняя | После загрузки FXP/FXB (iPlug зовёт `InformHostOfPresetChange`) CLAP-хост продолжал показывать и автоматизировать старые значения. Предложение `linux/T-023`: `InformHostOfPresetChange` всегда откладывает `params.rescan(VALUES)` до ближайшего `on_main_thread` хоста (через `request_callback`, без мьютекса и аллокаций), чтобы хост прочитал значения уже после того, как вызывающий код доприменит состояние. **Поведение на mac/win:** у Gneiss загрузка пользовательского пресета и шаги по полосе пресетов (`PresetManager` → `LoadStateFromFXP`) теперь приводят к повторному чтению значений хостом, уже после восстановления workspace; заводские пресеты (из чанка) — нет; Sand не затронут | Исправлено (OK автора 2026-10-20): hvoya-linux, `hvoya`. Открыто: звать ли то же из `RestorePreset` (общий для всех форматов) |
 | T23-2 | Средняя (Release-краш) | `FlushParamsIfNeeded` звал `params.request_flush` без проверки `canUseParams()`: у хоста без `clap.params` Debug падает на ассерте clap-helpers, **Release падает** (проверено тестовым хостом ревьюера T-023). Предложение: проверять `canUseParams()` | Исправлено (OK автора 2026-10-20): hvoya-linux, `hvoya` |
+
+## Из T-011 (`Examples/duplicate.py`, `Examples/gitignore_template`; касается mac/win) — OK автора на правку 2026-10-16, в `hvoya` не перенесено
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T11-1 | Средняя | Дубликат вне дерева iPlug2 (4-й аргумент) получал верный `IPLUG2_ROOT` только в `config/*.xcconfig`/props; `CMakeLists.txt` (`IPLUG2_DIR`), `CMakePresets.json`, `-linux.code-workspace`, `.vscode/c_cpp_properties.json` сохраняли `../..` — CMake-сборка такого дубликата ломалась на всех платформах. Теперь эти файлы переписываются (пути с `/` на всех ОС; цель и корень через `realpath`). Вывод Xcode/VS для обычных путей байт-в-байт тот же (20 примеров × 5 размещений) | Исправлено: hvoya-linux 839e1b51d. Перенос в `hvoya` — решение автора |
+| T11-2 | Средняя | Дублирование IPlugControls падало на полпути (`UnicodeDecodeError` на `scripts/IBitmapSlider.knob`) на всех ОС: `.knob` теперь бинарный | Исправлено: hvoya-linux 839e1b51d |
+| T11-3 | Низкая | `gitignore_template` не игнорировал `plug_build_info.hpp` (мак-сборка оставляла его неотслеживаемым в каждом дубликате) | Исправлено: hvoya-linux 839e1b51d |
+| T11-4 | Низкая (Windows) | Существующая (апстрим, 2018) замена путей в `config/`/`projects/` пишет обратные слэши `relpath` во все файлы, включая mac xcconfig/pbxproj, web `.mk`, `makedist-*.sh`, `prepare_resources-*.py`; если iPlug2 не прямой потомок целевой папки, путь удваивается (`..\..\..\iPlug2\iPlug2`). Сборка на Windows не страдает, дубликат с Windows не собирается на mac/iOS/web. Исправление в одну строку: нормализовать `newroot` к `/` до `dirwalk()` | Исправлено: T-037, hvoya-linux dc753df33 (эмуляция Windows и `ntpath`; реальный Windows не запускался). В `hvoya` не перенесено |
+| T11-5 | Низкая | Не исправлено, отчёт: путь цели с `[ ] * ?` делает старый `replacestrs` молчаливым no-op (glob); цель на другом диске Windows → `ValueError` (исправлено в T-037: понятная ошибка до копирования); первая сборка Xcode меняет 6 отслеживаемых `resources/*-Info.plist`; `.RPP` дубликата ссылается на плагин примера | Отчёт |
+| T37-1 | Низкая | Замена корня — простая подстрока: в дубликате вне дерева `@executable_path/../../../../Frameworks` в mac pbxproj IPlugConvoEngine, IPlugWebUI, IPlugOSCEditor становится `@executable_path/../../iPlug2/../Frameworks`; так же портится iOS-путь `netinc.h` у IPlugOSCEditor. На всех платформах | Отчёт (T-037 Log) |
+| T37-2 | Низкая (Windows) | Скрипт пишет файлы в текстовом режиме: на Windows все тронутые файлы получают CRLF; `.sh`, перенесённый на мак без git, bash не запустит. Не проверено на PC | Отчёт |
+| T37-3 | Тривиальная | `.gitattributes:34` содержит `.mk` вместо `*.mk` — правило ни к чему не применяется | Отчёт |
+
+## Из T-031 (REAPER-расширения на Linux; общий код `IPlug/ReaperExt/*`, `IPlugEditorDelegate.h`, `IPlugAPIBase.h`, `Scripts/cmake/{ReaperExt,Deploy}.cmake`)
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T31-1 | — | Все изменения в общих файлах под `OS_LINUX` / `UNIX AND NOT APPLE`; на mac/win поведение не меняется. Единственное общее изменение без гарда: `iplug_add_plugin_resources(target format)` в `Examples/IPlugReaperPlugin/CMakeLists.txt` получила аргумент формата (на mac тот же результат) | hvoya-linux cbb4d7105; в `hvoya` — вместе с Linux-портом |
+
+## Из T-032 (общий код `IGraphics/Controls/IVPresetManagerControls.h`, `IGraphics.h`; касается mac/win) — по решению автора 2026-10-22 («асинхронно, если нет весомых причин»)
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T32-0 | — | **Изменение поведения:** кнопка Load у `IVDiskPresetManagerControl` вызывает `PromptForFile` с completion handler. На маке панель — sheet на окне плагина (была app-modal); Windows без изменений (handler вызывается до возврата); iOS больше не падает на ассерте (не собиралось). Доки: `linux-development.md` §9, комментарии к диалогам в `IGraphics.h` | hvoya-linux; в `hvoya` не перенесено |
+| XP-1 | Низкая | Мак: `PromptForColor` без handler бросает `bad_function_call`, когда пользователь выбирает цвет (`IGraphicsMac_view.mm:1300`) | Отчёт (`tasks/T-032-sync-dialogs.md`, Log) |
+| XP-2 | Средняя | `IVDiskPresetManagerControl` с `showFileExtensions=false` передаёт в `OnLoadFunc` путь без расширения — плагин просят загрузить несуществующий файл | Отчёт |
+| XP-3 | Тривиальная | В двух тестовых контролах `SetDirty(false)` вне `if` (нет фигурных скобок) | Отчёт |
+| XP-4 | Низкая (web) | `ShowMessageBox`: ветка Yes-No/OK-Cancel проваливается, возвращает `kNoResult` и не зовёт handler | Отчёт |

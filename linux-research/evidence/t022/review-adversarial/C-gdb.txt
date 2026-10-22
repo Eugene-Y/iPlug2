@@ -1,0 +1,183 @@
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0xfffff527ede0 (LWP 1634)]
+[New Thread 0xfffff5076de0 (LWP 1635)]
+[Thread 0xfffff5076de0 (LWP 1635) exited]
+[Thread 0xfffff527ede0 (LWP 1634) exited]
+[New Thread 0xfffff527ede0 (LWP 1636)]
+[New Thread 0xfffff5076de0 (LWP 1637)]
+[New Thread 0xfffff4fd4de0 (LWP 1638)]
+[New Thread 0xfffff4f44de0 (LWP 1639)]
+[New Thread 0xfffff4eb4de0 (LWP 1640)]
+[New Thread 0xfffff4e24de0 (LWP 1641)]
+[New Thread 0xfffff4614de0 (LWP 1642)]
+[Thread 0xfffff4614de0 (LWP 1642) exited]
+[New Thread 0xfffff4614de0 (LWP 1643)]
+[Thread 0xfffff4614de0 (LWP 1643) exited]
+[New Thread 0xfffff4614de0 (LWP 1644)]
+[New Thread 0xfffff4584de0 (LWP 1645)]
+[New Thread 0xffffe954ede0 (LWP 1646)]
+[New Thread 0xffffe8d3ede0 (LWP 1647)]
+[New Thread 0xffffd912ede0 (LWP 1648)]
+[New Thread 0xffffd891ede0 (LWP 1649)]
+[New Thread 0xffffc9d4ede0 (LWP 1650)]
+[New Thread 0xffffc953ede0 (LWP 1651)]
+[New Thread 0xffffc8d2ede0 (LWP 1652)]
+[New Thread 0xffffabffede0 (LWP 1653)]
+[New Thread 0xffffab7eede0 (LWP 1654)]
+[New Thread 0xffffaafdede0 (LWP 1655)]
+[New Thread 0xffffaa7cede0 (LWP 1656)]
+[New Thread 0xffffa9fbede0 (LWP 1657)]
+[New Thread 0xffffa97aede0 (LWP 1658)]
+
+Thread 8 "IPlugInstrument" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0xfffff4eb4de0 (LWP 1640)]
+0x0000fffff70d19bc in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  Id   Target Id                                          Frame 
+  1    Thread 0xfffff7e4eac0 (LWP 1632) "IPlugInstrument" 0x0000fffff70b1d6c in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  4    Thread 0xfffff527ede0 (LWP 1636) "IPlugInstrument" 0x0000fffff70b1d6c in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  5    Thread 0xfffff5076de0 (LWP 1637) "IPlugInstrument" 0x0000fffff7111248 in read () from /lib/aarch64-linux-gnu/libc.so.6
+  6    Thread 0xfffff4fd4de0 (LWP 1638) "IPlugInstrument" 0x0000fffff7119764 in syscall () from /lib/aarch64-linux-gnu/libc.so.6
+  7    Thread 0xfffff4f44de0 (LWP 1639) "IPlugInstrument" 0x0000fffff7111248 in read () from /lib/aarch64-linux-gnu/libc.so.6
+* 8    Thread 0xfffff4eb4de0 (LWP 1640) "IPlugInstrument" 0x0000fffff70d19bc in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  9    Thread 0xfffff4e24de0 (LWP 1641) "gmain"           0x0000fffff7110bdc in poll () from /lib/aarch64-linux-gnu/libc.so.6
+  12   Thread 0xfffff4614de0 (LWP 1644) "IPlugInstrument" 0x0000fffff7111248 in read () from /lib/aarch64-linux-gnu/libc.so.6
+  13   Thread 0xfffff4584de0 (LWP 1645) "IPlugInstrument" 0x0000fffff7119764 in syscall () from /lib/aarch64-linux-gnu/libc.so.6
+  14   Thread 0xffffe954ede0 (LWP 1646) "llvmpipe-0"      0x0000fffff7ad85c8 in ?? ()
+  15   Thread 0xffffe8d3ede0 (LWP 1647) "llvmpipe-1"      0x0000fffff7ad71b0 in ?? ()
+  16   Thread 0xffffd912ede0 (LWP 1648) "llvmpipe-2"      0x0000fffff70b369c in pthread_barrier_wait () from /lib/aarch64-linux-gnu/libc.so.6
+  17   Thread 0xffffd891ede0 (LWP 1649) "llvmpipe-3"      0x0000fffff7ad81a8 in ?? ()
+  18   Thread 0xffffc9d4ede0 (LWP 1650) "llvmpipe-4"      0x0000fffff7ad7164 in ?? ()
+  19   Thread 0xffffc953ede0 (LWP 1651) "llvmpipe-5"      0x0000fffff7ad7dec in ?? ()
+  20   Thread 0xffffc8d2ede0 (LWP 1652) "IPlugInstrument" 0x0000fffff70b1d6c in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  21   Thread 0xffffabffede0 (LWP 1653) "IPlugInstrument" 0x0000fffff70b1d6c in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  22   Thread 0xffffab7eede0 (LWP 1654) "IPlugInstrument" 0x0000fffff70b1d6c in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  23   Thread 0xffffaafdede0 (LWP 1655) "IPlugInstrument" 0x0000fffff70b1d6c in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  24   Thread 0xffffaa7cede0 (LWP 1656) "IPlugInstrument" 0x0000fffff70b1d6c in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  25   Thread 0xffffa9fbede0 (LWP 1657) "IPlugInstrument" 0x0000fffff70b1d6c in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+  26   Thread 0xffffa97aede0 (LWP 1658) "IPlugIn:disk$0"  0x0000fffff70b1d6c in ?? () from /lib/aarch64-linux-gnu/libc.so.6
+#0  0x0000fffff70d19bc in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff7656648 in jack_ringbuffer_read () at /lib/aarch64-linux-gnu/libjack.so.0
+#2  0x0000aaaaaabb3744 [PAC] in jackProcessOut (nframes=256, arg=0xaaaaab0670e0) at /Volumes/Storage/code/IPlug2-T-022/Dependencies/IPlug/RTMidi/RtMidi.cpp:3234
+#3  0x0000fffff7653fac in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#4  0x0000fffff7653c70 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#5  0x0000fffff76742d8 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#6  0x0000fffff70b582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000fffff711bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 26 (Thread 0xffffa97aede0 (LWP 1658) "IPlugIn:disk$0"):
+#0  0x0000fffff70b1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70b49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ffffd96eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ffffd96c8cdc [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 25 (Thread 0xffffa9fbede0 (LWP 1657) "IPlugInstrument"):
+#0  0x0000fffff70b1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70b49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ffffd96eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ffffd998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 24 (Thread 0xffffaa7cede0 (LWP 1656) "IPlugInstrument"):
+#0  0x0000fffff70b1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70b49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ffffd96eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ffffd998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 23 (Thread 0xffffaafdede0 (LWP 1655) "IPlugInstrument"):
+#0  0x0000fffff70b1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70b49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ffffd96eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ffffd998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 22 (Thread 0xffffab7eede0 (LWP 1654) "IPlugInstrument"):
+#0  0x0000fffff70b1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70b49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ffffd96eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ffffd998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 21 (Thread 0xffffabffede0 (LWP 1653) "IPlugInstrument"):
+#0  0x0000fffff70b1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70b49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ffffd96eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ffffd998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 20 (Thread 0xffffc8d2ede0 (LWP 1652) "IPlugInstrument"):
+#0  0x0000fffff70b1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70b49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ffffd96eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ffffd998bf9c [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 19 (Thread 0xffffc953ede0 (LWP 1651) "llvmpipe-5"):
+#0  0x0000fffff7ad7dec in ??? ()
+
+Thread 18 (Thread 0xffffc9d4ede0 (LWP 1650) "llvmpipe-4"):
+#0  0x0000fffff7ad7164 in ??? ()
+
+Thread 17 (Thread 0xffffd891ede0 (LWP 1649) "llvmpipe-3"):
+#0  0x0000fffff7ad81a8 in ??? ()
+
+Thread 16 (Thread 0xffffd912ede0 (LWP 1648) "llvmpipe-2"):
+#0  0x0000fffff70b369c in pthread_barrier_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000ffffd96c9df0 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#2  0x0000ffffd9990168 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ffffd96eebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+
+Thread 15 (Thread 0xffffe8d3ede0 (LWP 1647) "llvmpipe-1"):
+#0  0x0000fffff7ad71b0 in ??? ()
+
+Thread 14 (Thread 0xffffe954ede0 (LWP 1646) "llvmpipe-0"):
+#0  0x0000fffff7ad85c8 in ??? ()
+
+Thread 13 (Thread 0xfffff4584de0 (LWP 1645) "IPlugInstrument"):
+#0  0x0000fffff7119764 in syscall () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff767670c in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#2  0x0000fffff7655030 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#3  0x0000fffff7653ef0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+
+Thread 12 (Thread 0xfffff4614de0 (LWP 1644) "IPlugInstrument"):
+#0  0x0000fffff7111248 in read () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff76759f4 in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#2  0x0000fffff767ae60 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#3  0x0000fffff767ac70 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+
+Thread 9 (Thread 0xfffff4e24de0 (LWP 1641) "gmain"):
+#0  0x0000fffff7110bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff7ba1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000fffff7b3ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000fffff7b3ec24 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+
+Thread 8 (Thread 0xfffff4eb4de0 (LWP 1640) "IPlugInstrument"):
+#0  0x0000fffff70d19bc in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff7656648 in jack_ringbuffer_read () at /lib/aarch64-linux-gnu/libjack.so.0
+#2  0x0000aaaaaabb3744 [PAC] in jackProcessOut (nframes=256, arg=0xaaaaab0670e0) at /Volumes/Storage/code/IPlug2-T-022/Dependencies/IPlug/RTMidi/RtMidi.cpp:3234
+#3  0x0000fffff7653fac in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+
+Thread 7 (Thread 0xfffff4f44de0 (LWP 1639) "IPlugInstrument"):
+#0  0x0000fffff7111248 in read () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff76759f4 in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#2  0x0000fffff767ae60 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#3  0x0000fffff767ac70 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+
+Thread 6 (Thread 0xfffff4fd4de0 (LWP 1638) "IPlugInstrument"):
+#0  0x0000fffff7119764 in syscall () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff767670c in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#2  0x0000fffff7655030 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#3  0x0000fffff7653ef0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+
+Thread 5 (Thread 0xfffff5076de0 (LWP 1637) "IPlugInstrument"):
+#0  0x0000fffff7111248 in read () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff76759f4 in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#2  0x0000fffff767ae60 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#3  0x0000fffff767ac70 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+
+Thread 4 (Thread 0xfffff527ede0 (LWP 1636) "IPlugInstrument"):
+#0  0x0000fffff70b1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70b49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fffff7674f78 in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#3  0x0000fffff7669240 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+
+Thread 1 (Thread 0xfffff7e4eac0 (LWP 1632) "IPlugInstrument"):
+#0  0x0000fffff70b1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70b49f0 in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000ffffd96eed20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#3  0x0000ffffd998cc44 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so

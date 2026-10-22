@@ -32,3 +32,13 @@
 
 ## Log
 (append: date — what was done — commits — next)
+
+### Note from T-031 (2026-10-21) — the REAPER WebUI extension
+`IPlugReaperExtensionWebUI` now links and opens its window on Linux (T-031). For its web view:
+- `ReaperExtBase` (Linux) hands `OpenWindow` the X window id of a `SWELL_CreateXBridgeWindow` child of the dialog, not
+  an HWND; SWELL keeps that X window placed as the dialog moves, docks and resizes.
+- Its `WM_DESTROY` calls `CloseWindow()` again after `DestroyMainWindow`/`ToggleDocking`/`WM_CLOSE` already did (the
+  IGraphics path is guarded by `GetUI()`, the WebView path is not): the Linux `CloseWebView` must be idempotent.
+- `WM_INITDIALOG`/`WM_SIZE` divide the client size by `GetScaleForHWND()` (SWELL's UI scale) for the WebView delegate.
+- Release deploy copies `resources/web/` to `~/.config/REAPER/UserPlugins/IPlugReaperExtensionWebUI/`.
+- Test: `scripts/reaper-ext-test.sh <out> reaper_IPlugReaperExtensionWebUI.so` (today it skips the paint checks for it).

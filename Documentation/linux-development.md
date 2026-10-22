@@ -8,8 +8,8 @@ Linux support in this fork is not upstream iPlug2's: it builds on Benjamin Reed'
 Stillwell Audio's Linux work, and was completed in this fork. Report Linux problems to this fork, not upstream.
 
 The renderer is NanoVG GL2 by default (`IGRAPHICS_RENDERER=GL2`, as on Windows), which runs on any GL 2.1 driver.
-`IGRAPHICS_RENDERER=GL3` asks for an OpenGL 3.2 core context; where the driver has none (old or virtual GPUs), the
-editor does not open and the plug-in prints `no OpenGL 3.2 core context` on stderr.
+`IGRAPHICS_RENDERER=GL3` asks for an OpenGL 3.2 core context; where the driver has none (old or virtual GPUs, e.g. a
+VM's virgl driver), the editor does not open and the plug-in prints `no OpenGL 3.2 core context` on stderr.
 
 ## 1. Install
 
@@ -123,10 +123,24 @@ Both read the same `CMakePresets.json`, so build settings need no extra files.
 
 ## 6. New projects
 
-`Examples/duplicate.py` copies an example under a new name. The Linux files come along renamed: `CMakePresets.json`,
-`<New>-linux.code-workspace` with `<New>-clap`/`-vst3`/`-app` targets, and `.clangd`. Builds live in
-`build-linux/`, which `duplicate.py` does not copy. Duplicate inside `Examples/` for now. Duplicating to a path
-outside the iPlug2 tree leaves `../..` paths that need fixing (T-011).
+Duplicate an example, then open the new project's `-linux` workspace:
+
+```sh
+mkdir -p ~/dev
+cd Examples
+./duplicate.py IPlugEffect MyPlugin MyCompany ~/dev   # 4th argument: an existing parent folder, e.g. next to iPlug2
+code ~/dev/MyPlugin/MyPlugin-linux.code-workspace
+```
+
+Without the 4th argument the project lands in `Examples/`. Out of the tree, `duplicate.py` points every iPlug2 path
+at this checkout, as a relative path: the Xcode/VS configs, `CMakeLists.txt` (`IPLUG2_DIR`), the `CMakePresets.json`
+include, the workspace's REAPER script and `.vscode/c_cpp_properties.json`. Moving the project or iPlug2 later
+breaks them; `cmake -DIPLUG2_DIR=<path>` overrides the CMake one.
+
+The Linux files come along renamed: `CMakePresets.json`, `<New>-linux.code-workspace` with
+`<New>-clap`/`-vst3`/`-app` targets, and `.clangd` (outside the iPlug2 tree, iPlug2's own `.clangd` does not reach
+the project). Builds go to `build-linux/`, which `duplicate.py` does not copy and the new project's `.gitignore`
+ignores. Then continue with §2: pick the preset, build, debug.
 
 ## 7. Release packages
 
@@ -164,3 +178,43 @@ id (`readelf -n <binary>` shows it; `….inspect.txt` lists them):
 tar -xzf Name_v1.0.0_linux_x86_64_debug-symbols.tar.gz
 gdb -iex "set debug-file-directory $PWD/Name_v1.0.0_linux_x86_64_debug-symbols" /opt/REAPER/reaper core
 ```
+
+## 8. Known host issues
+
+Host behaviour seen while testing on Linux; iPlug2 does not work around it.
+- **Carla, development version (main, tested at 97a9e07), VST3:** runs the plug frame's `IRunLoop` handlers (timers and
+  the X connection's fd) on its engine thread instead of the UI thread, so the editor's `OnIdle` and drawing run off
+  the main thread and can crash while the editor opens. CLAP in Carla main and VST3 in Carla 2.5.10 were fine.
+- **Renoise 3.5.4:** hosts VST3 (no CLAP on Linux). While an editor has the keyboard focus, Renoise delivers keys to it
+  as synthetic events. iPlug2 handles them (text entry works) but does not pass unhandled ones back (that loops in
+  REAPER), and Renoise ignores keys passed to the parent window, so host shortcuts (Space) don't work until the focus
+  leaves the editor.
+- **Files dropped from a GTK file manager (GNOME Files):** it drops on the top-level window under the pointer, so a file
+  reaches the editor only if the host forwards XDND to its plug-in window: Ardour and REAPER do; Carla 2.5.10 takes the
+  drop itself; Carla main (CLAP) and Renoise don't. A source that targets the deepest drop-aware window, as Qt's do
+  (tested with a scripted source), reached the editor in every host tried. Dragging files *out* of the editor works
+  in every host tried.
+
+## 9. Plug-in code: differences from macOS and Windows
+
+- **Dialogs are asynchronous only.** `PromptForFile`, `PromptForDirectory`, `PromptForColor` and `ShowMessageBox`
+  return at once on Linux, as on iOS, and the answer arrives later in the completion handler, on the host's main
+  thread. A plug-in cannot block there: a nested event loop would pump only the plug-in's own window and freeze the
+  host's. Without a handler the file, folder and colour prompts show nothing, return an empty name or `false` and print
+  one warning on stderr; `ShowMessageBox` shows the message and returns `kNoResult`. Pass a handler everywhere and do
+  the work that needs the answer inside it:
+
+  ```cpp
+  WDL_String fileName, path;
+  GetUI()->PromptForFile(fileName, path, EFileAction::Open, "fxp",
+    [this](const WDL_String& chosenFile, const WDL_String& chosenFolder) {
+      if (chosenFile.GetLength())
+        LoadPresetFromFXP(chosenFile.Get());
+    });
+  ```
+
+  The same code works on macOS and Windows: Windows still shows a modal dialog and calls the handler before
+  `PromptForFile` returns; macOS shows the file and folder panels as sheets on the plug-in's window. A Linux dialog closes
+  without calling its handler when the editor closes; on macOS a sheet can outlive the editor, so a handler that
+  captures a control should check that the control still exists, e.g. through a `std::weak_ptr` to a token the control
+  owns. iPlug2's own controls use the handler form (`IVDiskPresetManagerControl` does both).

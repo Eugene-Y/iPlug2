@@ -1,0 +1,161 @@
+# before = hvoya-linux at 8f7b9f613, after = linux/T-037 a15efea90 (re-run on 3b8fc76de after review R1-1: same output); ./compare.sh <worktree> 8f7b9f613 <after> <out> && ./analyse.sh <out>
+# duplicate.py before/after: 20 examples x 6 placements (Intree = 3 args, Dot = '.', Parent = '../..',
+# Sib = '../../sib', Deep = <R>/deep/a/b/c, Space = '<R>/with space/x'), random.seed(11).
+# mac = native run; win = dup-emul.py's Windows separator emulation. <R> = the side's root, iPlug2 at <R>/iPlug2.
+
+## exit codes (per mode/side: 120 runs; the win-only other-drive run is at the end)
+mac/before:  120 exit=0 
+mac/after:  120 exit=0 
+win/before:  120 exit=0 
+win/after:  120 exit=0 
+
+## mac: before vs after, every output file (only duplicate.py itself may differ)
+identical
+## mac: before vs after, console output (paths normalised)
+identical (120 logs)
+
+## win after vs mac after, every output file (the emulated Windows output should equal macOS's)
+identical
+
+## win: before vs after, files that differ, by kind (VS files must not appear)
+  90 <X>-ios.xcconfig
+ 100 <X>-mac.xcconfig
+  75 <X>-wasm.mk
+  80 <X>-web.mk
+  70 makedist-wasm.sh
+  70 makedist-web.sh
+  90 prepare_resources-ios.py
+  90 prepare_resources-mac.py
+  80 prepare_resources-win.py
+ 190 project.pbxproj
+
+## mac/iOS/web files holding a '\' path (count of files, out-of-tree duplicates)
+mac/after: 0
+win/before: 935
+win/after: 0
+## any file with a doubled root ('..\iPlug2\iPlug2' or '../iPlug2/iPlug2')
+mac/after: 0
+win/before: 374
+win/after: 0
+
+## VS files: '/' paths written into them (expect 0 everywhere)
+mac/after: 0
+win/before: 0
+win/after: 0
+
+## IPlugEffect: root lines per placement
+Dot win/before:
+    IPLUG2_ROOT = ..\..\..
+    IPLUG2_ROOT = ..\..\..
+    IPLUG2_ROOT=..\..\..
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "..\..\.."
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..</IPLUG2_ROOT>
+Dot win/after:
+    IPLUG2_ROOT = ../../..
+    IPLUG2_ROOT = ../../..
+    IPLUG2_ROOT=../../..
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../.."
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..</IPLUG2_ROOT>
+Dot mac/after:
+    IPLUG2_ROOT = ../../..
+    IPLUG2_ROOT = ../../..
+    IPLUG2_ROOT=../../..
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../.."
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..</IPLUG2_ROOT>
+Parent win/before:
+    IPLUG2_ROOT = ..\..\iPlug2
+    IPLUG2_ROOT = ..\..\iPlug2
+    IPLUG2_ROOT=..\..\iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "..\..\iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\iPlug2</IPLUG2_ROOT>
+Parent win/after:
+    IPLUG2_ROOT = ../../iPlug2
+    IPLUG2_ROOT = ../../iPlug2
+    IPLUG2_ROOT=../../iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\iPlug2</IPLUG2_ROOT>
+Parent mac/after:
+    IPLUG2_ROOT = ../../iPlug2
+    IPLUG2_ROOT = ../../iPlug2
+    IPLUG2_ROOT=../../iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\iPlug2</IPLUG2_ROOT>
+Sib win/before:
+    IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2
+    IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2
+    IPLUG2_ROOT=..\..\..\iPlug2\iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "..\..\..\iPlug2\iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+Sib win/after:
+    IPLUG2_ROOT = ../../../iPlug2
+    IPLUG2_ROOT = ../../../iPlug2
+    IPLUG2_ROOT=../../../iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../../iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+Sib mac/after:
+    IPLUG2_ROOT = ../../../iPlug2
+    IPLUG2_ROOT = ../../../iPlug2
+    IPLUG2_ROOT=../../../iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../../iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+Deep win/before:
+    IPLUG2_ROOT = ..\..\..\..\..\..\iPlug2\..\..\..\..\..\..\iPlug2\iPlug2
+    IPLUG2_ROOT = ..\..\..\..\..\..\iPlug2\..\..\..\..\..\..\iPlug2\iPlug2
+    IPLUG2_ROOT=..\..\..\..\..\..\iPlug2\..\..\..\..\..\..\iPlug2\iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "..\..\..\..\..\..\iPlug2\..\..\..\..\..\..\iPlug2\iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\..\..\iPlug2</IPLUG2_ROOT>
+Deep win/after:
+    IPLUG2_ROOT = ../../../../../../iPlug2
+    IPLUG2_ROOT = ../../../../../../iPlug2
+    IPLUG2_ROOT=../../../../../../iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../../../../../iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\..\..\iPlug2</IPLUG2_ROOT>
+Deep mac/after:
+    IPLUG2_ROOT = ../../../../../../iPlug2
+    IPLUG2_ROOT = ../../../../../../iPlug2
+    IPLUG2_ROOT=../../../../../../iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../../../../../iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\..\..\iPlug2</IPLUG2_ROOT>
+Space win/before:
+    IPLUG2_ROOT = ..\..\..\..\iPlug2\..\iPlug2
+    IPLUG2_ROOT = ..\..\..\..\iPlug2\..\iPlug2
+    IPLUG2_ROOT=..\..\..\..\iPlug2\..\iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "..\..\..\..\iPlug2\..\iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\iPlug2</IPLUG2_ROOT>
+Space win/after:
+    IPLUG2_ROOT = ../../../../iPlug2
+    IPLUG2_ROOT = ../../../../iPlug2
+    IPLUG2_ROOT=../../../../iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../../../iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\iPlug2</IPLUG2_ROOT>
+Space mac/after:
+    IPLUG2_ROOT = ../../../../iPlug2
+    IPLUG2_ROOT = ../../../../iPlug2
+    IPLUG2_ROOT=../../../../iPlug2
+    IPLUG2_ROOT=$SCRIPT_DIR/$IPLUG2_ROOT
+    IPLUG2_ROOT = "../../../../iPlug2"
+        <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\iPlug2</IPLUG2_ROOT>
+
+## win/after: every out-of-tree duplicate's roots resolve to <R>/iPlug2
+resolved: 190, wrong: 0
+
+## other drive (win, SIM_OTHER_DRIVE): target <R>/driveD/out
+before: exit=1; last error line: ValueError: path is on mount 'C:', start on mount 'D:'
+    left in the target: XEffectDrive 
+    XEffectDrive/config: IPlugEffect-ios.xcconfig IPlugEffect-mac.xcconfig IPlugEffect-wasm.mk ...
+after: exit=1; last error line: error: output path must be on the same drive as iPlug2 (<R>/iPlug2)
+    left in the target: 

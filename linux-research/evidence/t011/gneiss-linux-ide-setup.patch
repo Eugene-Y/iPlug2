@@ -1,0 +1,157 @@
+From c970af2f2cfa430f6a83273ac7e3fc860c457c22 Mon Sep 17 00:00:00 2001
+From: Eugene Yakshin <1eqinf@gmail.com>
+Date: Wed, 21 Oct 2026 16:04:28 +0200
+Subject: [PATCH] Linux: CMake presets (iPlug2's Linux presets), a VS Code
+ workspace (APP, CLAP/VST3 in REAPER) and .clangd
+
+The same files a duplicate of iPlug2's IPlugEffect gets: CMakePresets.json includes
+IPlug2/Scripts/cmake/Linux/CMakePresets-linux.json (linux-debug/linux-release, build-linux/<preset>),
+Gneiss-linux.code-workspace builds and debugs the APP and CLAP/VST3 in REAPER, .clangd works around
+clang's missing __FLOAT_WORD_ORDER__ under GCC compile commands.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .clangd                     |   4 ++
+ CMakePresets.json           |   6 +++
+ Gneiss-linux.code-workspace | 105 ++++++++++++++++++++++++++++++++++++
+ 3 files changed, 115 insertions(+)
+ create mode 100644 .clangd
+ create mode 100644 CMakePresets.json
+ create mode 100644 Gneiss-linux.code-workspace
+
+diff --git a/.clangd b/.clangd
+new file mode 100644
+index 0000000..dfdeefb
+--- /dev/null
++++ b/.clangd
+@@ -0,0 +1,4 @@
++# GCC defines __FLOAT_WORD_ORDER__ and clang does not, so with GCC compile commands clangd stops at
++# WDL/wdlendian.h's "#error Unsupported float endian" in every translation unit.
++CompileFlags:
++  Add: [-D__FLOAT_WORD_ORDER__=__BYTE_ORDER__]
+diff --git a/CMakePresets.json b/CMakePresets.json
+new file mode 100644
+index 0000000..9d3e3cd
+--- /dev/null
++++ b/CMakePresets.json
+@@ -0,0 +1,6 @@
++{
++  "version": 6,
++  "include": [
++    "../../IPlug2/Scripts/cmake/Linux/CMakePresets-linux.json"
++  ]
++}
+diff --git a/Gneiss-linux.code-workspace b/Gneiss-linux.code-workspace
+new file mode 100644
+index 0000000..8525e01
+--- /dev/null
++++ b/Gneiss-linux.code-workspace
+@@ -0,0 +1,105 @@
++{
++  "folders": [
++    {
++      "path": "."
++    }
++  ],
++  "settings": {
++    "cmake.useCMakePresets": "always",
++    "cmake.configureOnOpen": true,
++    "cmake.copyCompileCommands": "${workspaceFolder}/build-linux/compile_commands.json",
++    "clangd.arguments": ["--compile-commands-dir=${workspaceFolder}/build-linux"],
++    "C_Cpp.intelliSenseEngine": "disabled",
++    "iplug2.reaperPath": "/opt/REAPER/reaper"
++  },
++  "extensions": {
++    "recommendations": [
++      "ms-vscode.cmake-tools",
++      "llvm-vs-code-extensions.vscode-clangd",
++      "ms-vscode.cpptools"
++    ]
++  },
++  "tasks": {
++    "version": "2.0.0",
++    "tasks": [
++      {
++        "label": "Build APP",
++        "type": "cmake",
++        "command": "build",
++        "targets": ["Gneiss-app"],
++        "preset": "${command:cmake.activeBuildPresetName}",
++        "group": "build",
++        "problemMatcher": ["$gcc"]
++      },
++      {
++        "label": "Build and deploy CLAP",
++        "type": "cmake",
++        "command": "build",
++        "targets": ["Gneiss-clap"],
++        "preset": "${command:cmake.activeBuildPresetName}",
++        "group": "build",
++        "problemMatcher": ["$gcc"]
++      },
++      {
++        "label": "Build and deploy VST3",
++        "type": "cmake",
++        "command": "build",
++        "targets": ["Gneiss-vst3"],
++        "preset": "${command:cmake.activeBuildPresetName}",
++        "group": "build",
++        "problemMatcher": ["$gcc"]
++      }
++    ]
++  },
++  "launch": {
++    "version": "0.2.0",
++    "configurations": [
++      {
++        "name": "Debug standalone APP",
++        "type": "cppdbg",
++        "request": "launch",
++        "preLaunchTask": "Build APP",
++        "program": "${command:cmake.buildDirectory}/out/Gneiss",
++        "cwd": "${command:cmake.buildDirectory}/out",
++        "MIMode": "gdb",
++        "setupCommands": [
++          { "text": "-enable-pretty-printing", "ignoreFailures": true }
++        ]
++      },
++      {
++        "name": "Debug CLAP in REAPER",
++        "type": "cppdbg",
++        "request": "launch",
++        "preLaunchTask": "Build and deploy CLAP",
++        "program": "${config:iplug2.reaperPath}",
++        "args": ["-newinst", "-new", "${workspaceFolder}/../../IPlug2/Scripts/linux/reaper-open-fx.lua"],
++        "environment": [
++          { "name": "IPLUG2_REAPER_FX", "value": "CLAP: Gneiss" }
++        ],
++        "cwd": "${workspaceFolder}",
++        "MIMode": "gdb",
++        "setupCommands": [
++          { "text": "-enable-pretty-printing", "ignoreFailures": true },
++          { "text": "handle SIGPIPE nostop noprint", "ignoreFailures": true }
++        ]
++      },
++      {
++        "name": "Debug VST3 in REAPER",
++        "type": "cppdbg",
++        "request": "launch",
++        "preLaunchTask": "Build and deploy VST3",
++        "program": "${config:iplug2.reaperPath}",
++        "args": ["-newinst", "-new", "${workspaceFolder}/../../IPlug2/Scripts/linux/reaper-open-fx.lua"],
++        "environment": [
++          { "name": "IPLUG2_REAPER_FX", "value": "VST3: Gneiss" }
++        ],
++        "cwd": "${workspaceFolder}",
++        "MIMode": "gdb",
++        "setupCommands": [
++          { "text": "-enable-pretty-printing", "ignoreFailures": true },
++          { "text": "handle SIGPIPE nostop noprint", "ignoreFailures": true }
++        ]
++      }
++    ]
++  }
++}
+-- 
+2.50.1 (Apple Git-155)
+
