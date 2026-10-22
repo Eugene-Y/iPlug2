@@ -305,7 +305,7 @@ public:
   }
 
 private:
-  /** Lists the chosen file's folder and loads the file; an empty file name (cancelled) changes nothing */
+  /** A cancelled dialog passes two empty strings */
   void OnPresetFileChosen(const WDL_String& fileName, const WDL_String& folder)
   {
     if (folder.GetLength())
@@ -325,7 +325,7 @@ private:
   IRECT GetSubControlBounds(ESubControl control)
   {
     auto sections = mWidgetBounds;
-
+    
     std::array<IRECT, 4> rects = {
       sections.ReduceFromLeft(50),
       sections.ReduceFromLeft(50),

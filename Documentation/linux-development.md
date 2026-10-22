@@ -209,12 +209,12 @@ Host behaviour seen while testing on Linux; iPlug2 does not work around it.
   GetUI()->PromptForFile(fileName, path, EFileAction::Open, "fxp",
     [this](const WDL_String& chosenFile, const WDL_String& chosenFolder) {
       if (chosenFile.GetLength())
-        LoadPresetFile(chosenFile.Get());
+        LoadPresetFromFXP(chosenFile.Get());
     });
   ```
 
   The same code works on macOS and Windows: Windows still shows a modal dialog and calls the handler before
   `PromptForFile` returns; macOS shows the file and folder panels as sheets on the plug-in's window. A Linux dialog closes
   without calling its handler when the editor closes; on macOS a sheet can outlive the editor, so a handler that
-  captures a control should check that the control still exists. iPlug2's own controls (`IVDiskPresetManagerControl`)
-  use the handler form.
+  captures a control should check that the control still exists, e.g. through a `std::weak_ptr` to a token the control
+  owns. iPlug2's own controls use the handler form (`IVDiskPresetManagerControl` does both).

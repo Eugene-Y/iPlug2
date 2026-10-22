@@ -27,7 +27,7 @@ echo "view origin $OX $OY, REAPER pid $RPID"
 
 declare -A BUTTON=( [t-open]="759 628" [t-save]="889 628" [t-dir]="759 658" [t-ync]="889 658"
                     [t-ok]="759 688" [t-okc]="889 688" [t-color]="759 718" [t-sync]="889 718"
-                    [preset-next]="769 598" [preset-load]="929 598" )
+                    [preset-prev]="719 598" [preset-next]="769 598" [preset-load]="929 598" )
 lines_seen=0
 click() { read -r bx by <<<"${BUTTON[$1]}"; xdotool mousemove $((OX + bx)) $((OY + by)) click 1; }
 shot() { import -window root "$OUT/$1.png"; }
@@ -110,7 +110,8 @@ click preset-next
 expect preset-next-in-chosen-folder "preset .* first='$P/пресет Б\.fxp'"
 click preset-load; w=$(wait_window "Open File") && xdotool key Escape
 expect_none preset-load-cancel
-click preset-next
+# "<" from Б gives А only if the list and its selection survived; a re-listed folder would wrap to Б
+click preset-prev
 expect preset-cancel-kept-folder "preset .* first='$P/пресет А\.fxp'"
 
 # message boxes
