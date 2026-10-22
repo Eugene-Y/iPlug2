@@ -1,0 +1,19 @@
+# IPlugControls tooltip (the horizontal ISVGSliderControl's "ISVGSlider H"): shows below the pointer after a rest,
+# hides on leaving the editor, shows again. Renderer-independent; written for the Skia builds (T-018), whose tooltip
+# is drawn in software.
+move 577 -40
+wait 1
+shot t00-no-tooltip
+move 577 277
+wait 1.5
+shot t01-tooltip
+expect-change t00-no-tooltip t01-tooltip 570 292 110 30
+move 577 -40
+wait 0.5
+shot t02-gone
+expect-same t00-no-tooltip t02-gone 570 292 110 30
+move 577 277
+wait 1.5
+shot t03-tooltip-again
+expect-change t02-gone t03-tooltip-again 570 292 110 30
+alive __PROC__

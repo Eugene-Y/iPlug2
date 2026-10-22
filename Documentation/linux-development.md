@@ -1,6 +1,7 @@
 # Developing iPlug2 plug-ins on Linux
 
-Linux builds produce CLAP, VST3 and a standalone APP, with an IGraphics UI on X11 and NanoVG/OpenGL 2. This page
+Linux builds produce CLAP, VST3 and a standalone APP, with an IGraphics UI on X11, drawn with NanoVG/OpenGL 2 by
+default or with Skia. This page
 covers a native setup on Ubuntu 24.04 (x86_64 or arm64) with VS Code as the IDE. `Examples/IPlugEffect` and
 `Examples/IPlugControls` are ready to open, and new projects duplicated from them inherit the setup.
 
@@ -10,6 +11,23 @@ Stillwell Audio's Linux work, and was completed in this fork. Report Linux probl
 The renderer is NanoVG GL2 by default (`IGRAPHICS_RENDERER=GL2`, as on Windows), which runs on any GL 2.1 driver.
 `IGRAPHICS_RENDERER=GL3` asks for an OpenGL 3.2 core context; where the driver has none (old or virtual GPUs, e.g. a
 VM's virgl driver), the editor does not open and the plug-in prints `no OpenGL 3.2 core context` on stderr.
+
+Skia (`-DIGRAPHICS_BACKEND=SKIA`) renders with `GL3`, its default on Linux, or `CPU`; as on macOS, it has no GL2
+renderer. The presets set `IGRAPHICS_RENDERER=GL2`, so pass `-DIGRAPHICS_RENDERER=GL3` or `CPU` with them. `CPU`
+needs no GL driver: frames are drawn in memory and copied into the window, which suits drivers without GL 3.2.
+iPlug2 has no prebuilt Skia for Linux; build it once per architecture (needs `clang`, `ninja-build`, `python3`, `git`):
+
+```sh
+cd Dependencies/IGraphics
+./build-skia-linux.sh
+```
+
+It clones Skia's `chrome/m130` branch, the one the macOS and Windows libraries come from, into
+`Dependencies/Build/src/skia`, and writes the libraries to `Dependencies/Build/linux/<arch>/lib`. That takes a few
+minutes natively and about 20 under Rosetta. Like the plug-ins (§7), build it on the oldest distribution they must run
+on. Skia adds no runtime dependency: it gets GL functions and fonts from iPlug2, which loads libGL and fontconfig at
+run time. Skia text uses only the fonts the plug-in loads, as NanoVG does: no fallback to other system fonts for
+missing glyphs, also in `DrawMultiLineText`.
 
 ## 1. Install
 
