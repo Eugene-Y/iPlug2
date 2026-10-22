@@ -25,7 +25,7 @@ Update it at every merge or user decision.
 - Nothing else is mid-merge. Latest release archives (T-021 flow on the merged tree, smoke PASS): `linux-research/build/m021-dist/` (ignored, local only).
 
 ## Waiting on the user
-- **T-036 (being aligned with Gneiss, then merged; user 2026-10-22). Still open from it:** merge Sand `dist-scripts` (bcb22ec) into Sand `master`? Before the first real mac run: bump `config.h` (a default run replaces the hand-made `Sand_v1.1.10_mac/`). Decide: `PLUG_VERSION_HEX 0x00010110` reads as 1.1.16 (also in the shipped 1.1.10); ship docs?; Windows VST3 as a bundle (script) or bare DLL (hand-made zip)?; install by default?; Windows output folder `C:\code\Distributables\Sand`? First Windows run: check zip entry separators, the dirty check's iPlug2 path, `build-win\Sand.vst3` holds only `x86_64-win`.
+- **T-036 open (merged into Sand `master` 4669ede 2026-10-22):** version before the first default run (`config.h` 1.1.10, `PLUG_VERSION_HEX 0x00010110` reads as 1.1.16); Windows VST3 bundle or bare DLL; install by default; Windows output folder `C:\code\Distributables\Sand`; first real Windows run. Gneiss could take Sand's safety fixes (staged swap, iPlug2 dirty check, stale-file cleanup, `-LiteralPath`): say if wanted.
 - **T-031:** port to `hvoya`? All shared-file changes are behind `OS_LINUX` / `UNIX AND NOT APPLE` (CROSS_PLATFORM_FINDINGS T31-1); nothing to decide unless you want it on `hvoya` before the Linux port lands there.
 - **T-011 left:** port `duplicate.py` to `hvoya`? Is VS Code on one out-of-tree duplicate + gdb for the others enough for its first acceptance box?
 - **Decisions:** `RestorePreset` question (T-023 merged), T-029 (S-1 text entry, (a) and/or (b); typing check on mac).
