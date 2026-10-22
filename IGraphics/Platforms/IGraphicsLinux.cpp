@@ -674,7 +674,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     XStoreName(pDisplay, w.mWindow, pPlug ? pPlug->GetPluginName() : "");
   }
 
-#if defined IGRAPHICS_GL3
+#ifdef IGRAPHICS_GL3
   w.mGLContext = CreateCoreContext(w.mGLX, pDisplay, fbConfig);
   XFree(pVisual);
   if (!w.mGLContext)
@@ -713,7 +713,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mGLX->SwapBuffers(pDisplay, w.mWindow);
 
 #if defined IGRAPHICS_SKIA
-  // Skia assembles its GL interface from our loader: its own GLX interface would link libGL, which is dlopen'ed.
+  // Skia builds its GL interface from this loader (IGraphicsSkia::OnViewInitialized)
   OnViewInitialized(reinterpret_cast<void*>(&GLXFunctions::GetProc));
 #else
   OnViewInitialized(w.mGLContext);
