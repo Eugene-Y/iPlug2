@@ -1,0 +1,13 @@
+# Docker t013q, Qtractor 1.5.3 (CLAP session t013clap.qtr), 2026-10-22 ~15:06 UTC, after Gneiss' editor had been
+# opened once and closed (Qtractor's track menu > Edit), transport stopped. gdb (build/t013q/count.gdb, as
+# count-hits.sh does) attached for 10 s while "oversampling" was set to 1x in Qtractor's plug-in form.
+# bp 1 Gneiss::OnIdle, bp 2/3 IPlugCLAP::process (thunk/plain, all three plug-ins), bp 4 paramsFlush thunk,
+# bp 5 IPlugCLAP::SetLatency. Output as gdb printed it:
+1       breakpoint     keep y   0x0000eb261d0ddbd0 <Gneiss::OnIdle()+32>
+2       breakpoint     keep y   <MULTIPLE>
+	breakpoint already hit 8429 times
+3       breakpoint     keep y   <MULTIPLE>
+	breakpoint already hit 8428 times
+4       breakpoint     keep y   <MULTIPLE>
+5       breakpoint     keep y   <MULTIPLE>
+# => the audio side runs (process), but OnIdle and SetLatency never do while no editor is open.

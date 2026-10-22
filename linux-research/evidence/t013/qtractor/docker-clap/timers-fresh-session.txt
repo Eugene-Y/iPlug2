@@ -1,0 +1,75 @@
+# Docker t013q, Qtractor 1.5.3, CLAP session just opened (times UTC). call-trace.sh on clapOnTimer (all three
+# plug-ins, main thread lwp=pid) while the actions ran. Only the first menu action took effect: it opened Gneiss'
+# editor at ~15:12:27; the editor then covered the track list, so the later menu clicks landed in the editor and it
+# stayed open. So this shows: timers run before any editor was opened, and while one is open. Hits per second:
+ACTION 15:12:20.030 sh:echo never opened
+ACTION 15:12:25.035 sh:xdotool mousemove 470 302 mousedown 3; sleep 0.1; xdotool
+ACTION 15:12:32.267 sh:echo editor open
+ACTION 15:12:37.273 sh:xdotool mousemove 470 302 mousedown 3; sleep 0.1; xdotool
+ACTION 15:12:44.480 sh:echo editor closed
+ACTION 15:12:49.490 sh:xdotool mousemove 470 302 mousedown 3; sleep 0.1; xdotool
+ACTION 15:12:57.935 sh:echo os 8x set
+ACTION 15:13:02.941 sh:xdotool mousemove 470 302 mousedown 3; sleep 0.1; xdotool
+ACTION 15:13:10.140 sh:echo editor open again
+# lwps: lwp=1967 
+15:12:17 94
+15:12:18 152
+15:12:19 150
+15:12:20 150
+15:12:21 150
+15:12:22 150
+15:12:23 150
+15:12:24 150
+15:12:25 150
+15:12:26 95
+15:12:27 155
+15:12:28 155
+15:12:29 155
+15:12:30 155
+15:12:31 158
+15:12:32 155
+15:12:33 157
+15:12:34 155
+15:12:35 158
+15:12:36 155
+15:12:37 157
+15:12:38 155
+15:12:39 158
+15:12:40 155
+15:12:41 157
+15:12:42 156
+15:12:43 157
+15:12:44 155
+15:12:45 157
+15:12:46 155
+15:12:47 158
+15:12:48 155
+15:12:49 157
+15:12:50 155
+15:12:51 158
+15:12:52 155
+15:12:53 157
+15:12:54 155
+15:12:55 158
+15:12:56 155
+15:12:57 157
+15:12:58 155
+15:12:59 158
+15:13:00 155
+15:13:01 157
+15:13:02 156
+15:13:03 157
+15:13:04 156
+15:13:05 156
+15:13:06 156
+15:13:07 157
+15:13:08 156
+15:13:09 156
+15:13:10 156
+15:13:11 157
+15:13:12 155
+15:13:13 157
+15:13:14 155
+15:13:15 158
+15:13:16 155
+15:13:17 5
