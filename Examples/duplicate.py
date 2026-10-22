@@ -242,25 +242,28 @@ def main():
     sys.exit(1)
   # rmtree(output)
 
-  print("copying " + inputprojectname + " folder to " + outputpath)
-  copytree(inputprojectname, outputpath, ignore=ignore_patterns(*DONT_COPY))
-
   oldroot = ""
   newroot = ""
-  
+
   if numargs == 4:
     configpath = os.path.join(inputprojectname, "config")
     xcconfig = parse_xcconfig(configpath + "/" + inputprojectname + "-mac.xcconfig")
     oldroot = xcconfig["IPLUG2_ROOT"]
     iplug2folder = os.path.realpath(os.path.join(configpath, oldroot))
-    newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config"))
-    # These land in CMake and JSON files, which take '/' on every platform and read '\' as an escape.
-    # Lexical, like inputprojectname, which is relative to the unresolved cwd (on Windows a subst or mapped drive or a
-    # junction would make a resolved path disagree with it).
-    oldprojectroot = os.path.relpath(os.path.join(configpath, oldroot), inputprojectname).replace(os.sep, '/')
-    newprojectroot = os.path.relpath(iplug2folder, outputpath).replace(os.sep, '/')
-  else:
-    newroot = ""
+    try:
+      # '/' on every platform: all files but the VS ones need it (CMake and JSON read '\' as an escape), and dirwalk()
+      # makes the VS files' '\' form itself, in a later pass that would match a '\' newroot again and double the path.
+      newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config")).replace(os.sep, '/')
+      # Lexical, like inputprojectname, which is relative to the unresolved cwd (on Windows a subst or mapped drive or a
+      # junction would make a resolved path disagree with it).
+      oldprojectroot = os.path.relpath(os.path.join(configpath, oldroot), inputprojectname).replace(os.sep, '/')
+      newprojectroot = os.path.relpath(iplug2folder, outputpath).replace(os.sep, '/')
+    except ValueError:
+      print("error: output path must be on the same drive as iPlug2 (" + iplug2folder + ")")
+      sys.exit(1)
+
+  print("copying " + inputprojectname + " folder to " + outputpath)
+  copytree(inputprojectname, outputpath, ignore=ignore_patterns(*DONT_COPY))
 
   #replace manufacturer name strings
   for dir in dirwalk(outputpath, inputprojectname, outputprojectname, "AcmeInc", manufacturer, oldroot, newroot):
