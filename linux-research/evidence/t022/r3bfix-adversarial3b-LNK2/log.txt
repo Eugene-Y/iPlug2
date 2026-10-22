@@ -1,0 +1,20 @@
+=== K2: saved output missing while notes are echoed; it appears; Apply; the source comes back; OK
+K2: at start (no monitor yet): in-connected out-NOT-connected
+K2: after Apply: in-NOT-connected out-connected; events with the source stopped: 0
+K2: source back, after OK: in-connected out-connected; 8 events in 3.5 s (expect 3-4 note-ons+offs)
+K2: APP alive
+K2: File > Quit exit 0
+=== L: a connection made outside the APP; Apply and OK
+L: patchbay connection seq2:out -> IPlugInstrument MIDI in made
+L: after Apply: seq2:out still connected
+L: after OK: seq2:out still connected
+L: APP alive
+L: File > Quit exit 0
+=== N: ports connected; JACK -> PulseAudio -> JACK, Cancel
+N: at start: in-connected out-connected, audio ports 2
+N: boxes after PulseAudio: 0
+N: boxes after JACK: 0
+N: boxes after Cancel: 0
+N: after Cancel: in-connected out-connected, audio ports 2; settings.ini driver=1 indev=seq:out outdev=midi-monitor:input
+N: APP alive
+N: File > Quit exit 0

@@ -186,8 +186,15 @@ jack_midiseq seq 48000 0 60 2400 > /dev/null 2>&1 &
 SEQPID=$!
 sleep 2
 connected "$SRC" "$NAME MIDI in:" && fail "source restarted: connected without OK?" || pass "source restarted: $SRC no longer connected"
+# A second source connected in a patchbay: OK must not drop it
+jack_midiseq seq2 48000 24000 64 2400 > /dev/null 2>&1 &
+SEQ2PID=$!
+sleep 1
+jack_connect seq2:out "$NAME MIDI in:RtMidi Input"
 prefs_open; prefs_button $OK
 connected "$SRC" "$NAME MIDI in:" && pass "source restarted, OK: $SRC -> $NAME MIDI in again" || fail "source restarted, OK: not reconnected"
+connected seq2:out "$NAME MIDI in:" && pass "OK keeps the patchbay connection seq2:out -> $NAME MIDI in" || fail "OK dropped the patchbay connection from seq2:out"
+kill "$SEQ2PID"
 
 # The JACK server restarts while the APP runs: the old MIDI clients died with it; OK brings back audio and MIDI
 kill "$SEQPID" "$DUMPPID" 2> /dev/null; jack_down

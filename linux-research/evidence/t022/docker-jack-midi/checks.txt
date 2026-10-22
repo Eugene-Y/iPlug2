@@ -17,12 +17,12 @@ ok: "off" picked from the list: seq:out disconnected
 ok: picked from the list: seq:out -> IPlugInstrument MIDI in
 ok: after JACK -> PulseAudio -> JACK and OK the audio runs again
 ok: settings.ini after OK: driver=1 indev=seq:out
-ok: note after the switches moves the meter (#24249D9D1010 -> #7F7F7F7F7F7F)
+ok: note after the switches moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
 ok: File > Quit with JACK MIDI connected, exit 0
 ok: no IPlugInstrument MIDI ports after quit
 ok: under gdb: seq:out -> IPlugInstrument MIDI in
-  * 1    Thread 0xfffff7e4eac0 (LWP 1948) "IPlugInstrument" 0x0000fffff706f2f4 in exit () from /lib/aarch64-linux-gnu/libc.so.6
-    9    Thread 0xfffff4e24de0 (LWP 1957) "gmain"           0x0000fffff7110bdc in poll () from /lib/aarch64-linux-gnu/libc.so.6
+  * 1    Thread 0xfffff7e4eac0 (LWP 634) "IPlugInstrument" 0x0000fffff706f2f4 in exit () from /lib/aarch64-linux-gnu/libc.so.6
+    9    Thread 0xfffff4e24de0 (LWP 643) "gmain"           0x0000fffff7110bdc in poll () from /lib/aarch64-linux-gnu/libc.so.6
 ok: 2 thread(s) at exit()
 ok: only main and gmain at exit()
 ok: no JACK server: Audio box (IPlugInstrument: Audio is off (JACK): no device found.)
@@ -31,6 +31,7 @@ ok: server up, Apply: the saved MIDI ports reconnect
 ok: server up: the note moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
 ok: source restarted: seq:out no longer connected
 ok: source restarted, OK: seq:out -> IPlugInstrument MIDI in again
+ok: OK keeps the patchbay connection seq2:out -> IPlugInstrument MIDI in
 ok: server restarted, OK: audio runs
 ok: server restarted, OK: both MIDI ports reconnect
 ok: server restarted: the note moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)

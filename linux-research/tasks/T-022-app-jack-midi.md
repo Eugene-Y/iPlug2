@@ -1,6 +1,6 @@
 # T-022 — Standalone APP: JACK MIDI when the audio driver is JACK
 
-- **Status:** in progress (R1-2 per the user's decision, 2026-10-22; the rest was approved in review round 2, `notes/29-review-T-022.md`)
+- **Status:** review-done (R1-2 done per the user's decision; review rounds 1–3 approved, `notes/29-review-T-022.md`; R3-3 optional)
 - **Owner:** T-022 worker (chat 6db96ccf)
 - **Branch/worktree:** `linux/T-022` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-022`.
 - **Depends on:** T-004 (merged).
@@ -204,3 +204,17 @@ plain jackd without the a2jmidid bridge.
       now starts the process directly.
   - **macOS:** CMake `IPlugInstrument-app` links, no warnings in the APP files.
   - **Next:** the reviewer re-checks the R3 fixes.
+- 2026-10-22 — review round 3 re-check (`notes/29-review-T-022.md`, dd4805276): **approve**. The R3 fixes hold. The
+  reviewer's new scenarios N (JACK → PulseAudio → JACK, then Cancel) and K2 (the source comes back, then OK) pass. The
+  reviewer agrees with the Log on K and on G's exit code.
+  - **R3b-1, minor, new, fixed** in the commit after dd4805276. Every OK/Apply dropped MIDI connections made in a
+    patchbay, because `ReselectSavedMidiPorts` closed the JACK port, and closing unregisters it.
+    - Now `ReselectSavedMidiPort` checks for an open port on JACK. It only calls `openPort` again: RtMidi reuses the
+      registered port and connects the saved source. A missing saved source leaves the port as it is. ALSA keeps
+      close + reopen.
+    - Docker harness: a second source `seq2` connected by hand survives OK.
+    - The reviewer's L (Apply and OK keep `seq2:out`), N and K2 pass → `evidence/t022/r3bfix-adversarial3b-LNK2`.
+    - The other scenarios pass → `evidence/t022/r3bfix-adversarial3b`. K now gets 6 events after the source restart,
+      because the input stays open.
+    - VM PASS, no orphan processes. macOS links, no warnings in the APP files.
+  - **Open, optional:** R3-3 (show a kept missing port as "<name> (not found)" instead of "off").
