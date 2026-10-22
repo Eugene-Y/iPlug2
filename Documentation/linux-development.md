@@ -194,3 +194,27 @@ Host behaviour seen while testing on Linux; iPlug2 does not work around it.
   drop itself; Carla main (CLAP) and Renoise don't. A source that targets the deepest drop-aware window, as Qt's do
   (tested with a scripted source), reached the editor in every host tried. Dragging files *out* of the editor works
   in every host tried.
+
+## 9. Plug-in code: differences from macOS and Windows
+
+- **Dialogs are asynchronous only.** `PromptForFile`, `PromptForDirectory`, `PromptForColor` and `ShowMessageBox`
+  return at once on Linux, as on iOS, and the answer arrives later in the completion handler, on the host's main
+  thread. A plug-in cannot block there: a nested event loop would pump only the plug-in's own window and freeze the
+  host's. Without a handler the file, folder and colour prompts show nothing, return an empty name or `false` and print
+  one warning on stderr; `ShowMessageBox` shows the message and returns `kNoResult`. Pass a handler everywhere and do
+  the work that needs the answer inside it:
+
+  ```cpp
+  WDL_String fileName, path;
+  GetUI()->PromptForFile(fileName, path, EFileAction::Open, "fxp",
+    [this](const WDL_String& chosenFile, const WDL_String& chosenFolder) {
+      if (chosenFile.GetLength())
+        LoadPresetFile(chosenFile.Get());
+    });
+  ```
+
+  The same code works on macOS and Windows: Windows still shows a modal dialog and calls the handler before
+  `PromptForFile` returns; macOS shows the file and folder panels as sheets on the plug-in's window. A Linux dialog closes
+  without calling its handler when the editor closes; on macOS a sheet can outlive the editor, so a handler that
+  captures a control should check that the control still exists. iPlug2's own controls (`IVDiskPresetManagerControl`)
+  use the handler form.
