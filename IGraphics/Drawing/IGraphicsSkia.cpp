@@ -1,5 +1,6 @@
 #include <cmath>
 #include <map>
+#include <mutex>
 
 #include "IGraphicsSkia.h"
 
@@ -27,6 +28,9 @@
 #include "modules/skparagraph/include/TextStyle.h"
 #include "modules/skshaper/include/SkShaper.h"
 #include "modules/skunicode/include/SkUnicode_icu.h"
+#if defined OS_LINUX
+#include "modules/skparagraph/include/TypefaceFontProvider.h"
+#endif
 #endif
 #pragma warning( pop )
 #include "include/gpu/ganesh/SkSurfaceGanesh.h"
@@ -63,7 +67,11 @@
     #pragma comment(lib, "skunicode_icu.lib")
   #endif
 
-
+#elif defined OS_LINUX
+  #if defined IGRAPHICS_GL2
+    #error IGRAPHICS_SKIA on Linux renders with IGRAPHICS_GL3 or IGRAPHICS_CPU
+  #endif
+  #include "include/ports/SkFontMgr_empty.h"
 #endif
 
 #if defined IGRAPHICS_GL
@@ -76,6 +84,8 @@
   #elif defined OS_WIN
     #include "include/gpu/ganesh/gl/win/GrGLMakeWinInterface.h"
     #pragma comment(lib, "opengl32.lib")
+  #elif defined OS_LINUX
+    #include "include/gpu/ganesh/gl/GrGLAssembleInterface.h"
   #endif
 
 #endif
@@ -301,6 +311,10 @@ static sk_sp<SkFontMgr> SFontMgrFactory()
   return SkFontMgr_New_CoreText(nullptr);
 #elif defined OS_WIN
   return SkFontMgr_New_DirectWrite();
+#elif defined OS_LINUX
+  // Fonts come as data from IGraphicsLinux (resources, or its fontconfig lookup); Skia's own fontconfig manager
+  // would link libfontconfig, which the platform only dlopens.
+  return SkFontMgr_New_Custom_Empty();
 #else
   #error "Not supported"
 #endif
@@ -361,6 +375,10 @@ IGraphicsSkia::IGraphicsSkia(IGEditorDelegate& dlg, int w, int h, int fps, float
   mFontCollection = sk_make_sp<skia::textlayout::FontCollection>();
   mFontCollection->enableFontFallback();
   mFontCollection->setDefaultFontManager(SkFontMgrRefDefault());
+#if defined OS_LINUX
+  mLoadedFontFamilies = sk_make_sp<skia::textlayout::TypefaceFontProvider>();
+  mFontCollection->setAssetFontManager(mLoadedFontFamilies);
+#endif
 #endif
 }
 
@@ -420,6 +438,12 @@ void IGraphicsSkia::OnViewInitialized(void* pContext)
   auto glInterface = GrGLInterfaces::MakeMac();
 #elif defined OS_WIN
   auto glInterface = GrGLInterfaces::MakeWin();
+#elif defined OS_LINUX
+  // pContext is IGraphicsLinux's GL loader: Skia's own GLX interface would link libGL, which the platform dlopens.
+  using GetProcFunc = void* (*)(const char*);
+  auto glInterface = GrGLMakeAssembledInterface(pContext, [](void* pGetProc, const char name[]) {
+    return reinterpret_cast<GrGLFuncPtr>(reinterpret_cast<GetProcFunc>(pGetProc)(name));
+  });
 #endif
   mGrContext = GrDirectContexts::MakeGL(glInterface);
 #elif defined IGRAPHICS_METAL
@@ -567,6 +591,8 @@ void IGraphicsSkia::EndFrame()
     StretchDIBits(hdc, 0, 0, w, h, 0, 0, w, h, bmpInfo->bmiColors, bmpInfo, DIB_RGB_COLORS, SRCCOPY);
     ReleaseDC(hWnd, hdc);
     EndPaint(hWnd, &ps);
+  #elif defined OS_LINUX
+    // IGraphicsLinux copies the drawn part of the raster surface into its window after the frame.
   #else
     #error NOT IMPLEMENTED
   #endif
@@ -666,16 +692,28 @@ bool IGraphicsSkia::LoadAPIFont(const char* fontID, const PlatformFontPtr& font)
   Font* cached = storage.Find(fontID);
   
   if (cached)
+  {
+#if defined OS_LINUX && !defined IGRAPHICS_NO_SKIA_SKPARAGRAPH
+    AddLoadedFontFamily(fontID, cached->mTypeface);
+#endif
     return true;
+  }
   
   IFontDataPtr data = font->GetFontData();
   
   if (data->IsValid())
   {
     auto wrappedData = SkData::MakeWithoutCopy(data->Get(), data->GetSize());
+#if defined OS_LINUX
+    auto typeFace = SkFontMgrRefDefault()->makeFromData(wrappedData, data->GetFaceIdx());
+#else
     auto typeFace = SkFontMgrRefDefault()->makeFromData(wrappedData);
+#endif
     if (typeFace)
     {
+#if defined OS_LINUX && !defined IGRAPHICS_NO_SKIA_SKPARAGRAPH
+      AddLoadedFontFamily(fontID, typeFace);
+#endif
       storage.Add(new Font(std::move(data), typeFace), fontID);
       return true;
     }
@@ -683,6 +721,19 @@ bool IGraphicsSkia::LoadAPIFont(const char* fontID, const PlatformFontPtr& font)
   
   return false;
 }
+
+#if defined OS_LINUX && !defined IGRAPHICS_NO_SKIA_SKPARAGRAPH
+// Per instance, not with the static font cache: the typefaces read the cache's font data, which lives as long as
+// some instance does.
+void IGraphicsSkia::AddLoadedFontFamily(const char* fontID, sk_sp<SkTypeface> typeface)
+{
+  // DrawMultiLineText asks for the font ID up to its first '-'
+  const char* pDash = strchr(fontID, '-');
+  const SkString family(fontID, pDash ? static_cast<size_t>(pDash - fontID) : strlen(fontID));
+  mLoadedFontFamilies->registerTypeface(std::move(typeface), family);
+  mFontCollection->clearCaches();
+}
+#endif
 
 void IGraphicsSkia::PrepareAndMeasureText(const IText& text, const char* str, IRECT& r, double& x, double & y, SkFont& font) const
 {
