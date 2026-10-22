@@ -1,6 +1,6 @@
 # T-022 — Standalone APP: JACK MIDI when the audio driver is JACK
 
-- **Status:** review-done (independent review approved in round 2, `notes/29-review-T-022.md`; one open user decision, R1-2)
+- **Status:** in progress (R1-2 per the user's decision, 2026-10-22; the rest was approved in review round 2, `notes/29-review-T-022.md`)
 - **Owner:** T-022 worker (chat 6db96ccf)
 - **Branch/worktree:** `linux/T-022` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-022`.
 - **Depends on:** T-004 (merged).
@@ -131,3 +131,39 @@ plain jackd without the a2jmidid bridge.
     - Commits: 6e8995437, 8a21c9ce9, 55979e325, 47951f3a0, df033f7a7, 67e04f9f1.
     - Evidence: `evidence/t022/{docker-jack-midi,vm-jack-midi,macos,fix-adversarial,review-*}`.
     - Open: R1-2 (user decision) and the two cross-platform findings above.
+- 2026-10-22 — **R1-2 per the user's decision:** keep a saved MIDI port the current API can't see, Linux-only. Code
+  in 509dbe71a.
+  - **`TurnOffMissingMidiPort`** now holds the four places that turned a missing port into "off" and saved the
+    settings. On Linux it keeps the name; on mac/win it does what it did before. The port stays closed, and the combo
+    shows "off" until the port is back.
+  - **`ReopenSavedMidiPorts()`** runs on Apply and OK on Linux. It opens saved ports that weren't open and refreshes
+    the MIDI combos on Apply. Typical case: the APP started before jackd, then the user starts the server and presses
+    Apply.
+  - **The Cancel `UpdateINI()` added in round 0 is removed.** Nothing writes settings.ini mid-dialog on Linux any
+    more.
+  - **This exposed bug E** (it predates T-022): after JACK → PulseAudio → JACK the settings equal the running ones,
+    so OK didn't restart the audio. With the ports turned off, the settings used to differ, which hid it. On Linux,
+    OK and Cancel now also restart the audio when `!IsAudioRunning()`. When the audio is off for lack of a device,
+    OK/Cancel retry it, and the "Audio is off" box may show again.
+  - **Docker** `docker-jack-midi` PASS. New checks:
+    - Selecting ALSA leaves settings.ini untouched.
+    - Back on JACK the saved ports reconnect by themselves.
+    - Picking "off" and then the port from the list still works.
+    - The audio runs after the round trip and OK.
+    - Started with no JACK server: the ports stay in settings.ini; after the server starts, Apply brings back the
+      audio and both MIDI ports (`11-server-up-apply.png`), and the note plays.
+  - **Reviewer's `adversarial.sh` A–E** → `evidence/t022/r12-adversarial`:
+    - A: the ports are kept at start without a server.
+    - B (`--no-io`): settings.ini keeps the ports.
+    - C: no backlog.
+    - D: the input reconnects after 10 toggles.
+    - E: 2 audio ports after Cancel (was 0).
+  - **VM** `vm-jack-midi` PASS. **macOS:** CMake `IPlugInstrument-app` links, no warnings in the APP files.
+  - **Seen, not changed** (audio, T-004 territory, minor): Apply on the same driver doesn't re-list the audio devices.
+    After the server starts, the audio device combos stay empty though the audio runs (`11-server-up-apply.png`). They
+    fill after a driver switch or on reopening Preferences.
+  - **Cross-platform findings, updated:**
+    - Bug E and the `--no-io` port erasing are fixed on Linux by this change.
+    - They remain on Windows: DirectSound ↔ ASIO round trip, then OK/Cancel.
+    - On mac/win, `--no-io` still writes `indev=off`.
+  - **Next:** an independent review of 509dbe71a.

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # T-022: the APP's MIDI follows its audio driver. Runs INSIDE the GUI container with a JACK server running
 # (jackd -d dummy) and no ALSA sequencer. jack_midiseq loops a note into the APP's MIDI input; jack_midi_dump receives
-# what IPlugInstrument echoes to its MIDI output. In Preferences: JACK -> ALSA -> Cancel, then PulseAudio -> JACK and a
-# port picked from the MIDI input list; File > Quit; the threads left at exit().
+# what IPlugInstrument echoes to its MIDI output. In Preferences: JACK -> ALSA -> Cancel, then PulseAudio -> JACK (the
+# saved ports reconnect) and "off" and the port picked from the MIDI input list; File > Quit; the threads left at
+# exit(); last, a start with the JACK server stopped keeps the saved ports, and Apply after the server is up reconnects
+# them.
 # Usage: app-jack-midi-test.sh <outdir> <IPlugInstrument APP>
 set -uo pipefail
 OUT="$1"; APP="$2"; NAME=$(basename "$APP")
@@ -93,7 +95,8 @@ midi_list $MIDI_OUT "$OUT/03-jack-midi-outputs.png"
 prefs_driver 0
 import -window root "$OUT/04-alsa-selected.png"
 [ -z "$(app_midi_ports)" ] && pass "ALSA selected: no JACK MIDI ports left" || fail "JACK MIDI ports left on ALSA: $(app_midi_ports)"
-info "settings.ini while ALSA is selected: $(ini audio driver) $(ini midi indev)"
+[ "$(ini audio driver)" = driver=1 ] && [ "$(ini midi indev)" = "indev=$SRC" ] && [ "$(ini midi outdev)" = "outdev=$DUMP" ] \
+  && pass "ALSA only selected: settings.ini untouched, the saved ports kept" || fail "settings.ini while ALSA is selected: $(ini audio driver) $(ini midi indev) $(ini midi outdev)"
 prefs_button $CANCEL
 dismiss_audio_box && fail "Audio box after Cancel: $(grep -a 'Audio is off' "$OUT/stderr.txt" | tail -1)"
 [ -z "$(win 'Preferences.*')" ] && pass "Cancel closes Preferences" || fail "Preferences still open"
@@ -107,13 +110,17 @@ prefs_driver 2
 [ -z "$(app_midi_ports)" ] && pass "PulseAudio selected: no JACK MIDI ports left" || fail "JACK MIDI ports left on PulseAudio: $(app_midi_ports)"
 prefs_driver 1
 import -window root "$OUT/05-jack-again.png"
-info "back on JACK, the saved ports: $(ini midi indev) $(ini midi outdev)"
+connected "$SRC" "$NAME MIDI in:" && connected "$DUMP" "$NAME MIDI out:" \
+  && pass "back on JACK the saved ports reconnect: $SRC -> $NAME MIDI in, $NAME MIDI out -> $DUMP" || fail "saved ports not reconnected: $(jack_lsp -c | tr '\n' ' ')"
 midi_list $MIDI_OUT "$OUT/06-jack-again-midi-outputs.png"
-midi_list $MIDI_IN "$OUT/07-jack-again-midi-inputs.png" 1
+midi_list $MIDI_IN "$OUT/07-jack-again-midi-inputs.png" 0
+connected "$SRC" "$NAME MIDI in:" && fail "\"off\" picked, $SRC still connected" || pass "\"off\" picked from the list: $SRC disconnected"
+midi_list $MIDI_IN "$OUT/08-jack-again-midi-inputs-off.png" 1
 import -window root "$OUT/08-input-picked.png"
 connected "$SRC" "$NAME MIDI in:" && pass "picked from the list: $SRC -> $NAME MIDI in" || fail "picking $SRC did not connect it: $(jack_lsp -c | tr '\n' ' ')"
 prefs_button $OK
 dismiss_audio_box && fail "Audio box after OK: $(grep -a 'Audio is off' "$OUT/stderr.txt" | tail -1)"
+[ "$(jack_lsp | grep -c "^$NAME:outport ")" -ge 2 ] && pass "after JACK -> PulseAudio -> JACK and OK the audio runs again" || fail "no audio ports after OK: $(jack_lsp | tr '\n' ' ')"
 [ "$(ini audio driver)" = driver=1 ] && [ "$(ini midi indev)" = "indev=$SRC" ] && pass "settings.ini after OK: $(ini audio driver) $(ini midi indev)" || fail "settings.ini after OK: $(ini audio driver) $(ini midi indev)"
 M=$(meter_moves "$OUT/09-note-after-switch.png") && pass "note after the switches moves the meter ($M)" || fail "meter unchanged after the switches ($M)"
 
@@ -146,5 +153,36 @@ awk '/^  Id +Target Id/{f=1} f&&/^[* ] +[0-9]+ +Thread/' "$OUT/exit-threads.txt"
 [ "$N" -ge 1 ] && pass "$N thread(s) at exit()" || fail "no thread list at exit() (see exit-threads.txt)"
 awk '/^  Id +Target Id/{f=1} f&&/^[* ] +[0-9]+ +Thread/' "$OUT/exit-threads.txt" | grep -v '"gmain"' | grep -qv '^\* *1 '  \
   && fail "a thread besides main and gmain at exit() (exit-threads.txt)" || pass "only main and gmain at exit()"
+
+# Started before the JACK server: the Audio box, and the saved MIDI ports stay in settings.ini
+kill "$SEQPID" "$DUMPPID" 2> /dev/null; pkill -x jackd; sleep 1.5
+"$APP" > "$OUT/stderr-no-server.txt" 2>&1 &
+APID=$!
+sleep 5
+dismiss_audio_box && pass "no JACK server: Audio box ($(grep -a 'Audio is off' "$OUT/stderr-no-server.txt" | tail -1))" || fail "no JACK server: no Audio box"
+import -window root "$OUT/10-no-server.png"
+# The server comes up later; Apply in Preferences brings back the audio and the saved MIDI ports
+(jackd --no-realtime -d dummy -r 48000 -p 256 > "$OUT/jackd-late.log" 2>&1 &); sleep 1.5
+jack_midiseq seq 48000 0 60 2400 > /dev/null 2>&1 &
+SEQPID=$!
+jack_midi_dump > /dev/null 2>&1 &
+DUMPPID=$!
+sleep 1
+prefs_open
+prefs_button $APPLY
+dismiss_audio_box && fail "server up, Apply: Audio box: $(grep -a 'Audio is off' "$OUT/stderr-no-server.txt" | tail -1)"
+import -window root "$OUT/11-server-up-apply.png"
+[ "$(jack_lsp | grep -c "^$NAME:outport ")" -ge 2 ] && pass "server up, Apply: audio runs" || fail "server up, Apply: no audio ports"
+connected "$SRC" "$NAME MIDI in:" && connected "$DUMP" "$NAME MIDI out:" \
+  && pass "server up, Apply: the saved MIDI ports reconnect" || fail "server up, Apply: MIDI not reconnected: $(jack_lsp -c | tr '\n' ' ')"
+prefs_button $OK
+M=$(meter_moves "$OUT/12-server-up-note.png") && pass "server up: the note moves the meter ($M)" || fail "server up: meter unchanged ($M)"
+read -r X Y < <(origin "$(win "$NAME")")
+slow_click $((X + 16)) $((Y + 6)); slow_click $((X + 41)) $((Y + 49))
+for _ in $(seq 50); do kill -0 "$APID" 2>/dev/null || break; sleep 0.1; done
+if kill -0 "$APID" 2>/dev/null; then fail "no JACK server: APP still running 5 s after File > Quit"; kill -9 "$APID"
+else wait "$APID"; RC=$?; [ "$RC" = 0 ] && pass "no JACK server: File > Quit, exit 0" || fail "no JACK server: File > Quit, exit $RC"; fi
+[ "$(ini midi indev)" = "indev=$SRC" ] && [ "$(ini midi outdev)" = "outdev=$DUMP" ] \
+  && pass "no JACK server: settings.ini keeps $(ini midi indev) $(ini midi outdev)" || fail "no JACK server: settings.ini $(ini midi indev) $(ini midi outdev)"
 
 if [ "$FAILS" = 0 ]; then echo "RESULT: PASS" | tee "$OUT/RESULT.txt"; else echo "RESULT: FAIL ($FAILS)" | tee "$OUT/RESULT.txt"; fi
