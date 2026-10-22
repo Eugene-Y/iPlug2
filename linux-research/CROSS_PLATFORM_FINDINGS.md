@@ -138,3 +138,12 @@ Gneiss на mac/win использует нативные меню — его н
 | ID | Серьёзность | Суть | Статус |
 |---|---|---|---|
 | T31-1 | — | Все изменения в общих файлах под `OS_LINUX` / `UNIX AND NOT APPLE`; на mac/win поведение не меняется. Единственное общее изменение без гарда: `iplug_add_plugin_resources(target format)` в `Examples/IPlugReaperPlugin/CMakeLists.txt` получила аргумент формата (на mac тот же результат) | hvoya-linux cbb4d7105; в `hvoya` — вместе с Linux-портом |
+
+## Из T-032 (общий код `IGraphics/Controls/IVPresetManagerControls.h`, `IGraphics.h`; касается mac/win) — по решению автора 2026-10-22 («асинхронно, если нет весомых причин»)
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T32-0 | — | **Изменение поведения:** кнопка Load у `IVDiskPresetManagerControl` вызывает `PromptForFile` с completion handler. На маке панель — sheet на окне плагина (была app-modal); Windows без изменений (handler вызывается до возврата); iOS больше не падает на ассерте (не собиралось). Доки: `linux-development.md` §9, комментарии к диалогам в `IGraphics.h` | hvoya-linux; в `hvoya` не перенесено |
+| XP-1 | Низкая | Мак: `PromptForColor` без handler бросает `bad_function_call`, когда пользователь выбирает цвет (`IGraphicsMac_view.mm:1300`) | Отчёт (`tasks/T-032-sync-dialogs.md`, Log) |
+| XP-2 | Средняя | `IVDiskPresetManagerControl` с `showFileExtensions=false` передаёт в `OnLoadFunc` путь без расширения — плагин просят загрузить несуществующий файл | Отчёт |
+| XP-3 | Тривиальная | В двух тестовых контролах `SetDirty(false)` вне `if` (нет фигурных скобок) | Отчёт |
+| XP-4 | Низкая (web) | `ShowMessageBox`: ветка Yes-No/OK-Cancel проваливается, возвращает `kNoResult` и не зовёт handler | Отчёт |
