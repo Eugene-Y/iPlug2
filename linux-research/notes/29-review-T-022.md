@@ -377,3 +377,81 @@ reaches it with a plain OK.
   nothing is lost.
 - **Apply on the same driver leaves the audio device combos empty** (`11`). The author already noted it as T-004
   territory.
+
+## Round 3, re-check
+
+Range `84ca1d167..a5a937370`: f48e2803f (code), a5a937370 (harness, VM probe, re-runs, Log).
+
+**Final verdict: approve.** R3-1, R3-2, R3-4 and R3-5 are fixed and verified. R3-3 is left as an option, which is
+acceptable. One new minor finding (R3b-1) comes from the R3-2 fix. It is JACK-only and doesn't block; fix it or record
+it as accepted, whichever the user prefers.
+
+### The fix, by path
+- **The "audio stopped" condition** is `mDAC && isStreamRunning()`. It is false only after `CloseAudio`'s `abortStream`
+  or RtAudio's JACK shutdown `closeStream`. Either way no audio callback is running, so `RecreateMidi` can't race
+  `SendMidiMsg`.
+- **OK:** the recreate is inside the restart branch. Audio stopped → recreate, then `TryToChangeAudio`. Audio running
+  → nothing is recreated, even when the settings differ and the stream restarts.
+- **Apply:** called every time. While audio runs it is a no-op (F: Apply with audio running → the input reconnects,
+  nothing is recreated). After a driver-combo switch the audio is stopped, so Apply recreates the JACK MIDI objects
+  `TryToChangeMidiApi` has just made. That is redundant but harmless; the saved ports reconnect.
+- **Cancel:** the recreate runs after `mState = mTempState`, so it follows the restored driver, and before
+  `TryToChangeAudioDriverType`/`TryToChangeAudio`, so the dead clients are gone before a new audio client opens.
+  `TryToChangeMidiApi` is then a no-op on JACK.
+  - JACK → ALSA → Cancel: harness PASS.
+  - JACK → PulseAudio → JACK → Cancel (my scenario N): both ports connected, 2 audio ports, settings.ini restored,
+    Quit exits 0.
+- **No JACK server:** every OK and Apply recreates objects that can't connect. This only adds the RtMidi warnings and
+  leaks of R1-5. It is bounded to one recreate per press.
+- **Cost of reselecting the ports on every OK/Apply:**
+  - On ALSA the APP's sequencer port is kept across `closePort`/`openPort` (`RtMidi.cpp:2037-2063`). External `aconnect`
+    subscriptions survive, and only the input thread restarts.
+  - On JACK `closePort` unregisters the port (`RtMidi.cpp:3183-3192`). See R3b-1.
+  - RtMidi's JACK `closePort` clears `data->port` without synchronising with its process thread. Before, only a combo
+    pick ran into that; now every OK/Apply does. No failure was seen in any run; noting it for completeness.
+
+### Re-runs (fresh Debug build `build/t022r3b-debug`, 0 warnings; container `t022r3b` removed)
+- **`app-jack-midi-test.sh`** → `evidence/t022/review3b-docker-jack-midi`: **PASS**. The same 35 `ok:` lines as the
+  author's run, with the new source-restart and server-restart phases.
+- **`evidence/t022/review3b-adversarial`** (`adversarial3b.sh` = the round 3 script plus K2, L, N):
+  - **F:** the source restarts; Apply → reconnected; OK → still connected; Quit exits 0.
+  - **G** (2 runs) and **Go** (2 runs): after a server restart, OK or Apply brings back the audio and **both MIDI
+    ports**, and Quit exits 0. Before the fix this crashed with 139. **Gq** and **Gs** also exit 0.
+  - **Ggdb:** `[Inferior 1 … exited normally]`, then "No threads" / "No stack". The script's "exit 1" is gdb's status
+    for the failing `bt`, not the APP's. **I agree with the Log.**
+  - **K:** 0 events, and the manual `jack_connect` fails with "not a valid port". **I agree with the Log:** the source
+    was stopped at Apply, so the reselect closed the input. I added **K2** for the positive case: with the source back,
+    OK reconnects it and 8 events arrive in 3.5 s. Both K and K2 show 0 stale events after 20 s of echoed notes with
+    the output missing.
+  - **L:** see R3b-1.
+- **Evidence opened:**
+  - `docker-jack-midi/14-server-restarted-note.png`: the meter is up after the server restart and OK.
+  - `12`/`13`: the same content as round 3's `11`/`12`, renumbered.
+  - `r3fix-adversarial3/log.txt` and `G-gdb.txt` match the Log.
+  - `r3fix-adversarial` A–E: as before.
+  - `vm-jack-midi/checks.txt`: PASS, with the new bridge name, and main + `gmain` at `exit()`.
+- **mac/win:**
+  - `HandleMissingMidiPort` is a rename, and its non-Linux branch is unchanged.
+  - Every new call is inside `#ifdef OS_LINUX`, and `RecreateMidi`, `RecreateJackMidiIfAudioStopped` and
+    `ReselectSavedMidiPorts` are Linux-only.
+  - IDOK's braces around `TryToChangeAudio()` don't change the mac/win branch.
+  - My macOS CMake rebuild of `IPlugInstrument-app` links, with 0 warnings in the APP files.
+- **Comments:** they are the WHY only now. The IDOK comment covers Cancel once, and the R3-4 docs are corrected.
+
+### R3b-1 — minor — on JACK, every Apply/OK drops connections made outside the APP
+- **Where:** `IPlugAPP_host.cpp` `ReselectSavedMidiPorts` → `SelectMIDIDevice` → `closePort()`. On JACK that
+  unregisters the APP's MIDI port.
+- **Scenario L:**
+  1. A second source is connected in a patchbay: `jack_connect seq2:out "IPlugInstrument MIDI in:RtMidi Input"`.
+  2. Apply: seq2 is **dropped**, while the saved `seq:out` comes back.
+  3. Connect seq2 again, then OK: dropped again.
+
+  The output's extra connections go the same way. This is new with the R3-2 fix: before it, OK/Apply didn't touch an
+  open port.
+- **Suggested fix (JACK-only):** for a saved port that is found and already open, call `openPort(n)` without
+  `closePort()`. RtMidi's JACK `openPort` reuses the registered port when `data->port != NULL` and only
+  `jack_connect`s the source again (`RtMidi.cpp`, `MidiInJack::openPort` and `MidiOutJack::openPort`). So the source
+  comes back and patchbay connections stay. Keep close + open on ALSA, whose `openPort` refuses an open port and
+  whose close keeps subscriptions anyway.
+- **Alternative:** record it as accepted. QjackCtl/Carla users then lose their extra MIDI connections on each
+  Preferences OK.
