@@ -8,7 +8,7 @@ set -u
 WT=$1; BEFORE=$2; AFTER=$3; OUT=$4
 EV=$(cd "$(dirname "$0")" && pwd)
 rm -rf "$OUT"; mkdir -p "$OUT"
-EXAMPLES=$(cd "$WT/Examples" && for d in */; do echo "${d%/}"; done)
+EXAMPLES=$(git -C "$WT" ls-tree -d --name-only "$AFTER" Examples/ | sed 's|^Examples/||')
 
 for mode in mac win; do
   for side in before after; do
