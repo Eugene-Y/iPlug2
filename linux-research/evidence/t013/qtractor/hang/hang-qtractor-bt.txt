@@ -1,0 +1,128 @@
+Thread 14 (Thread 0xf9b80b93e680 (LWP 102677) "QXcbEventQueue"):
+#0  0x0000f9b818040bdc in __GI___poll (fds=0xf9b80b93dbb8, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000f9b8197ec338 in ??? () at /lib/aarch64-linux-gnu/libxcb.so.1
+#2  0x0000f9b8197ede08 [PAC] in xcb_wait_for_event () at /lib/aarch64-linux-gnu/libxcb.so.1
+#3  0x0000f9b80c1ef9b8 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6XcbQpa.so.6
+#4  0x0000f9b818e103b0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#6  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 13 (Thread 0xf9b80af5e680 (LWP 102678) "QDBusConnection"):
+#0  0x0000f9b818040bdc in __GI___poll (fds=0xc30aa4e900f0, nfds=3, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000f9b817c21b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000f9b817bbebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000f9b818ecead8 [PAC] in QEventDispatcherGlib::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#4  0x0000f9b818ccfdac [PAC] in QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000f9b818db17e0 [PAC] in QThread::exec() () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000f9b817aae108 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6DBus.so.6
+#7  0x0000f9b818e103b0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#8  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#9  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 12 (Thread 0xf9b80a5fd680 (LWP 102679) "QFileInfoGather"):
+#0  0x0000f9b817fe1d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xc30aa4f51e6c) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0xc30aa4f51e6c) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0xc30aa4f51e6c, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f9b817fe49f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0xc30aa4f51e10, cond=0xc30aa4f51e40) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0xc30aa4f51e40, mutex=0xc30aa4f51e10) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000f9b818e0a2c8 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000f9b819539f68 [PAC] in QFileInfoGatherer::run() () at /lib/aarch64-linux-gnu/libQt6Gui.so.6
+#7  0x0000f9b818e103b0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#8  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#9  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 11 (Thread 0xf9b8083a6680 (LWP 102684) "qtractor"):
+#0  0x0000f9b817fe1d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xc30aa51432b0) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0xc30aa51432b0) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0xc30aa51432b0, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f9b817fe49f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0xc30aa5143250, cond=0xc30aa5143288) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0xc30aa5143288, mutex=0xc30aa5143250) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000f9b818b64f78 in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#6  0x0000f9b818b59240 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#7  0x0000f9b818b642d8 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#8  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#9  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 10 (Thread 0xf9b7f37ee680 (LWP 102686) "QThread"):
+#0  0x0000f9b817fe1d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xc30aa514b6a8) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0xc30aa514b6a8) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0xc30aa514b6a8, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f9b817fe49f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0xc30aa514b650, cond=0xc30aa514b680) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0xc30aa514b680, mutex=0xc30aa514b650) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000f9b818e0a2c8 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000c30a6ca51b8c [PAC] in ??? ()
+#7  0x0000f9b818e103b0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#8  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#9  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 9 (Thread 0xf9b7d968e680 (LWP 102689) "qtractor"):
+#0  0x0000f9b818040bdc in __GI___poll (fds=0xf9b7d0000b70, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000f9b7d9757620 in (anonymous namespace)::FallbackHostLoopBackend::ThreadProc(void*) () at /home/gene/.vst3/IPlugControls.vst3/Contents/aarch64-linux/IPlugControls.so
+#2  0x0000f9b817fe582c in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#3  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 8 (Thread 0xf9b7f01bb680 (LWP 102690) "qtractor"):
+#0  syscall () at ../sysdeps/unix/sysv/linux/aarch64/syscall.S:38
+#1  0x0000f9b818b6670c in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#2  0x0000f9b818b45030 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#3  0x0000f9b818b43ef0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#4  0x0000f9b818b43c70 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#5  0x0000f9b818b642d8 [PAC] in ??? () at /lib/aarch64-linux-gnu/libjack.so.0
+#6  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#7  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 7 (Thread 0xf9b7d8e7e680 (LWP 102691) "QThread"):
+#0  0x0000f9b817fe1d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xc30aa4da4e38) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0xc30aa4da4e38) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0xc30aa4da4e38, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f9b817fe49f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0xc30aa4da4de0, cond=0xc30aa4da4e10) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0xc30aa4da4e10, mutex=0xc30aa4da4de0) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000f9b818e0a2c8 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000c30a6cb44b5c [PAC] in ??? ()
+#7  0x0000f9b818e103b0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#8  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#9  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 6 (Thread 0xf9b7cbffe680 (LWP 102692) "QThread"):
+#0  0x0000f9b818040bdc in __GI___poll (fds=0xf9b7cbffdc80, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000c30a6cb302f4 in ??? ()
+#2  0x0000f9b818e103b0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#3  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#4  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 5 (Thread 0xf9b7cb7ee680 (LWP 102693) "QThread"):
+#0  0x0000f9b817fe1d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xc30aa5270938) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0xc30aa5270938) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0xc30aa5270938, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f9b817fe49f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0xc30aa52708e0, cond=0xc30aa5270910) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0xc30aa5270910, mutex=0xc30aa52708e0) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000f9b818e0a2c8 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000c30a6cb2dd60 [PAC] in ??? ()
+#7  0x0000f9b818e103b0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#8  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#9  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 4 (Thread 0xf9b7f09cb680 (LWP 106315) "qtractor"):
+#0  0x0000f9b818040bdc in __GI___poll (fds=0xf9b7cc000b70, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000f9b7f1db39f0 in (anonymous namespace)::FallbackHostLoopBackend::ThreadProc(void*) () at /home/gene/.vst3/Sand.vst3/Contents/aarch64-linux/Sand.so
+#2  0x0000f9b817fe582c in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#3  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 3 (Thread 0xf9b7aface680 (LWP 107693) "qtracto:disk$0"):
+#0  0x0000f9b817fe1d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xc30aa67bd960) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0xc30aa67bd960) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0xc30aa67bd960, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f9b817fe49f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0xc30aa67bd900, cond=0xc30aa67bd938) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0xc30aa67bd938, mutex=0xc30aa67bd900) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000f9b7c86ced20 in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#6  0x0000f9b7c86a8cdc [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#7  0x0000f9b7c86cebe0 [PAC] in ??? () at /lib/aarch64-linux-gnu/libgallium-25.2.8-0ubuntu0.24.04.4.so
+#8  0x0000f9b817fe582c [PAC] in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#9  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 2 (Thread 0xf9b7f285e680 (LWP 107962) "qtractor"):
+#0  0x0000f9b818040bdc in __GI___poll (fds=0xf9b7d4001d20, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+#1  0x0000f9b7f2a0c980 in (anonymous namespace)::FallbackHostLoopBackend::ThreadProc(void*) () at /home/gene/.vst3/Gneiss.vst3/Contents/aarch64-linux/Gneiss.so
+#2  0x0000f9b817fe582c in start_thread (arg=0xf9b818ba1760) at ./nptl/pthread_create.c:447
+#3  0x0000f9b81804bb4c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone3.S:76
+Thread 1 (Thread 0xf9b818ba1020 (LWP 102674) "qtractor"):
+#0  0x0000f9b817fe1d6c in __futex_abstimed_wait_common64 (private=0, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0xffffff51ce40) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=0, abstime=0x0, clockid=0, expected=0, futex_word=0xffffff51ce40) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0xffffff51ce40, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x0000f9b817fe49f0 in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0xc30aa4d6de58, cond=0xffffff51ce18) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0xffffff51ce18, mutex=0xc30aa4d6de58) at ./nptl/pthread_cond_wait.c:627
+#5  0x0000f9b8197eca24 in ??? () at /lib/aarch64-linux-gnu/libxcb.so.1
+#6  0x0000f9b8197ed9a0 [PAC] in xcb_wait_for_reply () at /lib/aarch64-linux-gnu/libxcb.so.1
+#7  0x0000f9b80c1d7e2c [PAC] in QXcbConnection::sync() () at /lib/aarch64-linux-gnu/libQt6XcbQpa.so.6
+#8  0x0000f9b80c1cec78 [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6XcbQpa.so.6
+#9  0x0000f9b80c1cedbc [PAC] in ??? () at /lib/aarch64-linux-gnu/libQt6XcbQpa.so.6
+#10 0x0000f9b8192b26d0 [PAC] in QBackingStore::beginPaint(QRegion const&) () at /lib/aarch64-linux-gnu/libQt6Gui.so.6
+#11 0x0000f9b819a57ef8 [PAC] in QWidgetRepaintManager::paintAndFlush() () at /lib/aarch64-linux-gnu/libQt6Widgets.so.6

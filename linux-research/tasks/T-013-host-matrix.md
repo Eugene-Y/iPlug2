@@ -1,6 +1,8 @@
 # T-013 — Host matrix (P10)
 
-- **Status:** in progress (Carla, Ardour, Renoise, drops (case 8) and item 9 done; PC checklist written; Qtractor, Zrythm, Wayland and the final review next)
+- **Status:** in progress — all hosts done except the GNOME Wayland session: Carla, Ardour, Renoise, Qtractor
+  (VST3 on the VM, CLAP in Docker), drops (case 8), item 9, PC checklist; Zrythm N/A (no arm64 package). The VM's
+  virgl GPU hung again on 2026-10-22; the Wayland check waits for its restart (the user), steps in the Log.
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-013`
 - **Branch/worktree:** `linux/T-013` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-013` — for harness/docs and any host-compat fix.
 - **Depends on:** T-002, T-007 (merged). Products: Gneiss (T-003), Sand (T-012).
@@ -38,10 +40,12 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
 
 ## Acceptance
 - [ ] Matrix table (host × product × format × case) in the Log with evidence paths (`evidence/t013/`). *Done for Carla,
-  Ardour, Renoise (cases 1–8) and item 9; Qtractor, Zrythm and a Wayland session are not yet.*
-- [ ] Every failure: fixed (Linux-only code, own commit) or ticketed with a minimal repro; host bugs documented as such.
-  *So far: the XEmbed text-entry fix (c86d82e5d); Carla main's VST3 IRunLoop threading is documented as Carla's.
-  The hosts that drop no files on plug-ins are documented, below.*
+  Ardour, Renoise, Qtractor (cases 1–8), item 9; Zrythm N/A. Missing: the GNOME Wayland session (the VM hung; steps
+  in the Log, "Wayland").*
+- [x] Every failure: fixed (Linux-only code, own commit) or ticketed with a minimal repro; host bugs documented as such.
+  *The XEmbed text-entry fix (c86d82e5d). Host bugs, documented with repros: Carla main's VST3 IRunLoop threading;
+  Qtractor's CLAP timers stopping when the last CLAP editor closes; Qtractor 1.5.3's synchronous VST3 restart on the
+  calling thread. The hosts that drop no files on plug-ins are documented.*
 - [x] PC checklist for Bitwig/x86_64 written (section below; review approved, notes/28).
 - [ ] Independent review (AGENTS §4); Log complete.
 
@@ -143,6 +147,31 @@ reopen, oversampling, two at once, closing), using the trace archives. Then:
 
 ## Log
 (append: date — what was done — commits — next)
+
+### Summary matrix (2026-10-22)
+PASS = the cases the host supports work (details and exceptions in the section); n.a. = the host has no such format.
+Case 7 = which event loop the host gives iPlug (all callbacks on the main thread unless said).
+
+| Host (where) | Format | Gneiss | Sand | IPlugControls | Case 7 | Section |
+|---|---|---|---|---|---|---|
+| REAPER 7.82 (Docker, VM) | CLAP | PASS | PASS | PASS | timer + posix-fd support | notes/09; drops: T-019 |
+| REAPER 7.82 (Docker, VM) | VST3 | PASS | PASS | PASS | factory host-context `IRunLoop`, editor open or closed | notes/09 |
+| Carla 2.5.10 (VM) | VST3 | PASS | PASS | PASS | frame `IRunLoop` with the editor open; fallback thread when closed | 2026-10-19 |
+| Carla 2.5.10 (VM) | CLAP | n.a. | n.a. | n.a. | — | 2026-10-19 |
+| Carla main 97a9e07 (VM) | CLAP | PASS | PASS | PASS | timer + posix-fd support | 2026-10-19 |
+| Carla main 97a9e07 (VM) | VST3 | **FAIL (host bug)** | not run | not run | frame `IRunLoop` called from Carla's engine thread | 2026-10-19, 2026-10-21 (2) |
+| Ardour 8.4 (VM) | VST3 | PASS | PASS | PASS | frame `IRunLoop` open; fallback closed | 2026-10-20 |
+| Ardour 8.4 (VM) | CLAP | n.a. | n.a. | n.a. | — | 2026-10-20 |
+| Renoise 3.5.4 (VM) | VST3 | PASS | PASS (after c86d82e5d) | PASS (after c86d82e5d) | frame `IRunLoop` open; fallback closed | 2026-10-21 |
+| Renoise 3.5.4 (VM) | CLAP | n.a. | n.a. | n.a. | — | 2026-10-21 |
+| Qtractor 1.5.3 (VM) | VST3 | PASS | PASS | PASS | frame `IRunLoop` open; fallback closed | 2026-10-22 |
+| Qtractor 1.5.3 (Docker) | CLAP | PASS, but host bug | PASS | PASS (case 7 only) | timer + posix-fd support; **all CLAP timers stop once the last CLAP editor closes (host bug)** | 2026-10-22 |
+| Zrythm | — | n.a. | n.a. | n.a. | not packaged for arm64 | 2026-10-22 |
+| GNOME Wayland (XWayland), one host | — | **not run** | | | — | 2026-10-22, "Wayland" |
+| Bitwig 5 (x86_64) | CLAP, VST3 | PC checklist | | | | PC checklist |
+
+Item 9 (T-020's VM checks): all PASS except the GL3 build, which virgl cannot render (OpenGL 2.1 only), section
+2026-10-21 (2).
 
 ### 2026-10-19 — hosts installed; Carla
 **Hosts on the VM** (aarch64, Ubuntu 24.04, GNOME X11; sudo is passwordless for the key user):
@@ -416,3 +445,172 @@ trace and Files' XDND lines; PNGs local).
 - Clean-up: Renoise quit without saving and its OSC server is off again. Ardour quit with "Just quit" (the session
   file is unchanged). Nautilus and jackd are stopped, apport's dialog is answered "Don't send", and the GNOME
   appearance is back to `prefer-dark`. The VM lock is released.
+
+### 2026-10-22 — Qtractor 1.5.3 (VST3 on the VM, CLAP in Docker), Zrythm; the VM's virgl hung again; Wayland not run
+**Branch:** merged hvoya-linux e3709bd89 into linux/T-013 (29d9410c0). No framework code changed in this session.
+
+**Hosts.**
+- Qtractor: Ubuntu 24.04 has 0.9.39 (noble) and **1.5.3** (noble-backports). Installed 1.5.3 on the VM (approved
+  host install): `sudo apt-get install -t noble-backports qtractor`. It hosts CLAP, VST3, LV2, VST2, LADSPA, DSSI.
+- **Zrythm: N/A.** Neither apt (noble, backports) nor snap has an arm64 package; nothing else was installed.
+
+**Builds.**
+- Trace builds (Release, `-DIPLUG_TRACE_HOST_LOOP -DIGRAPHICS_TRACE_LINUX_INPUT`, `build/t013-rn-*`): this branch at
+  29d9410c0, Gneiss linux-experiment 6246fb7, Sand 95be3b0. Deployed to the VM's `~/.clap`, `~/.vst3`, replacing a
+  Debug Gneiss left by another task.
+- **Left on the VM at the end: Release builds without traces** (`build/t013-rel-*`, same commits:
+  iPlug2 29d9410c0, Gneiss 6246fb7, Sand 95be3b0) of Gneiss, Sand and IPlugControls in `~/.clap` and `~/.vst3`. They
+  were deployed over ssh after the hang (no X needed). Ardour's VST3 cache still describes the trace builds; rescan
+  there if it complains.
+
+**Probes** (`scripts/vm/probe/qtractor/`):
+- `launch.sh [log] [session]`: a dummy `jackd` and Qtractor, with stderr in the log.
+  - Qtractor sends stdout/stderr to its Messages window by default. On the VM its `Display\StdoutCapture` is now `false`
+    in `~/.config/rncbc.org/Qtractor.conf` (first config Qtractor wrote kept as `Qtractor.conf.t013-orig`).
+- `make-session.py`: builds a `.qtr` with one track per plug-in from the session Qtractor saved
+  (`evidence/t013/qtractor/t013vst3.qtr`).
+- `latency.syms` (VST3) and `latency-clap.syms` (CLAP), for `renoise/call-trace.sh`. That script now takes `PROC=`
+  (the process name), stamps every hit with the time, and line-buffers its output.
+- `latency-closed-seq.sh` and `restart-seq.sh`: the case-5 sequences used on the VM.
+- `count-hits.sh`: counts the calls of given functions over N seconds.
+- Harness: `dock.sh` passes `DOCK_ARGS` to `docker run`. The Docker Qtractor needs the ALSA sequencer:
+  `DOCK_ARGS="--device /dev/snd" scripts/gui-up.sh t013q`, then `apt-get install -t noble-backports qtractor` in it.
+
+**Qtractor on the VM, VST3** (GNOME X11, virgl). Evidence: `evidence/t013/qtractor/` (PNGs local); traces in
+`traces/vst3-s1.log`, `vst3-s2.log`.
+
+How Qtractor shows an editor: a Qtractor top-level ("Gneiss - Track 1 — Qtractor") with the plug-in's view embedded.
+It opens the editor when a plug-in is added, and on a double click on the plug-in in the track list. It does not
+reopen editors when a session loads.
+
+| Case (VST3) | Gneiss | Sand | IPlugControls |
+|---|---|---|---|
+| 1 scan, editor opens, renders | PASS (`01`, `06`), logo fine | PASS (`02`) | PASS (`03`) |
+| 1 resize, plug-in-initiated | PASS: MORPH off, 940×620 → 940×200, Qtractor's window follows (`08`) | — | — |
+| 1 host-initiated resize, HiDPI | N/A (`PLUG_HOST_RESIZE 0`; VM at scale 1) | | |
+| 2 mouse | knob drag 171 Hz → 15.7 kHz, wheel 51.2 → 113.4 Hz (`09`; with MORPH on a drag changes nothing, Gneiss' UX, as in Renoise) | tooltip PASS (`17`) | IVMenuButton menu PASS (`04`) |
+| 2 text entry | — (none in Gneiss) | PASS: 10 kHz → `2000` → 2.00 kHz (`15`, `16`, input trace `15-…txt`) | |
+| 2 host shortcut (Space) with the editor focused | no: iPlug passes the key on to Qtractor's window ("to host" in the trace), Qtractor does nothing with it (`10`). With Qtractor's main window focused Space plays (`11`) | | |
+| 2 right-click on a control | | no menu (`18`): Qtractor's VST3 host has no `IComponentHandler3` | |
+| 3 names, values in the host | PASS: Qtractor's plug-in form lists them with iPlug's value text (`14`) | | |
+| 3 host sets a value, editor open | PASS: the form sets oversampling 8x → 1x and the editor shows `os 1x` (`latency/editor-open-os1x.png`) | | |
+| 4 save with the editor open, quit, reopen | PASS: values and the MORPH-off layout restored (`12`, `13`) | | |
+| 5 latency, editor closed | see below | | |
+| 6 two instances | PASS, both editors draw (`19`, `20`) | | |
+| 6 close the editor with a menu open | | | PASS: one click on Qtractor's close button, Qtractor lives (`04` → `05`) |
+| 6 remove while playing, editor open | **not run**: the VM hung on the way (below) | | |
+| 7 host loop | see below | same | same |
+| 8 drop from GNOME Files | see below | | |
+
+**Case 7, VST3.**
+- At factory `setHostContext` and at `initialize`, Qtractor 1.5.3 gives no `IRunLoop`, so iPlug uses its fallback
+  thread.
+- With the editor open, the plug frame's `IRunLoop` is used: timers and the X connection fd are called on the main
+  thread.
+- With the editor closed, iPlug is back on the fallback thread.
+- Same for all three plug-ins (`vst3-s*.log`: `first … backend=vst3-irunloop(frame) on main`). Off-main lines come
+  only from the fallback thread.
+- Qtractor's current source (v1.6.4) also answers `IRunLoop` on the host context; 1.5.3 does it only on the plug frame.
+  With 1.6.x iPlug would never need the fallback. Not tested: no arm64 package.
+
+**Case 5, VST3: Qtractor re-reads latency when playback starts; its restart runs on the caller's thread.**
+Setup: Gneiss' oversampling changed with Qtractor's plug-in form (Track 1 > Gneiss > Properties, Page 2), under
+`call-trace.sh` (`latency/`).
+- With the editor closed, `SetLatency` runs on the fallback thread (`latency-editor-closed.txt`, lwp ≠ pid). With the
+  editor open, it runs on the main thread (`latency-editor-open.txt`).
+- Qtractor 1.5.3's `restartComponent` ignores what the flags ask for. It always does a state round trip
+  (`getState` + `setState`, plus its parameter refresh), synchronously on the calling thread. With the editor closed,
+  that is iPlug's fallback thread: `restart-editor-closed.txt` shows `getState`/`setState` with the fallback lwp
+  right after each `SetLatency`. The state round trip and Qtractor's own parameter objects are then touched off its
+  main thread. That is the host's design: it trusts the caller's thread. iPlug only calls `restartComponent` from its
+  idle timer, which runs on the fallback thread when the host gives no loop.
+- Qtractor reads the latency (`getLatencySamples`, main thread) when playback starts (`resetAllMonitors` →
+  `resetLatency`) and when the Track dialog shows it. It shows "(no latency)" at 1x and "0.2 ms (8 frames)" at 8x,
+  editor closed both times (`lat-1x.png`, `lat-8x.png`). So the compensation follows at the next transport start,
+  whichever thread the change came from. **For T-010:** Qtractor drops nothing. The off-main restart is a
+  Qtractor-side hazard, reported and not fixed (the user's rule: no framework guard for single hosts).
+
+**Case 8, VST3** (`drop-vst3/`). The drop target was Gneiss' USER tab.
+- **A drag from GNOME Files does not reach the editor.** GTK addresses Qtractor's top-level, which is XdndAware (v5,
+  Qt). Qtractor answers `XdndStatus` "refuse" and does not forward the drop (`RESULT.txt`: chain, Files' XDND log, no
+  `iPlug2 drop:` line).
+- **A Qt-like source (`xdnd-source deep`) reaches the editor**: `enter v5 / drop … over editor 1 / finished 1`. The
+  layout loads when the drop lands in a gap of the USER panel (editor 360,100, `after-qt-like-deep-gap.png`).
+- On a knob, or at 251,71 or 360,74, the drop is accepted but Gneiss ignores it. T-019 described this:
+  `UserTabPanel::OnDrop` runs only where the panel is the topmost control, and the knobs sit in other places when
+  MORPH is off.
+- `scripted-source.txt` has every attempt. A GTK-like source (`top`) is refused, like Files.
+
+**Qtractor CLAP, in Docker** (Xvfb + openbox + llvmpipe, Qtractor 1.5.3 from backports). It was not run on the VM,
+which had hung. Same trace builds; session from `make-session.py`. Evidence: `evidence/t013/qtractor/docker-clap/`.
+
+| Case (CLAP) | Gneiss | Sand | IPlugControls |
+|---|---|---|---|
+| 1 editor opens, renders | PASS (`01`), logo fine | PASS | — |
+| 1 resize, plug-in-initiated | PASS: MORPH off → 940×200 (`02`). Qtractor warns "could not get the resize hints of the plugin GUI": iPlug's CLAP editor is not host-resizable | | |
+| 2 text entry, tooltip | | PASS: `2000` → 2.00 kHz, tooltip (`sheet-sand-clap-text-tooltip.png`) | |
+| 3 names, values in the host | PASS (`03`) | | |
+| 7 host loop | timer + posix-fd support, all on main (`stderr-run*.txt`, no `OFF-MAIN`) | same | same |
+
+- Before it creates the real instance, Qtractor creates and destroys one with a host that offers no timer or fd
+  support. iPlug briefly starts its fallback thread for it and stops it again.
+- **Qtractor bug: CLAP plug-ins' timers stop when the last CLAP editor closes.**
+  - Cause: one shared `QTimer` drives every plug-in's registered timers. Opening an editor does `startTimer(200)`
+    (a reference count); closing it does `stopTimer()`, which stops that shared `QTimer` at count 0, although the
+    plug-ins' timers are still registered (`qtractorClapPlugin.cpp`, 1.5.3 and v1.6.4 alike).
+  - Measured (`clap-timer-counts.txt`, `timers-fresh-session.txt`, `onidle-count-editor-closed.txt`):
+    - before any editor was opened: about 150 `clapOnTimer` calls/s for the three plug-ins;
+    - with an editor open: the same rate;
+    - after it closed: **0** `clapOnTimer` and 0 `Gneiss::OnIdle` calls for every plug-in, while `process` keeps
+      running.
+  - Effect for iPlug: everything that runs from the idle timer stops until some CLAP editor opens again: `OnIdle`
+    (Gneiss reports its latency there), and parameter and MIDI messages from the processor to the host.
+  - Case 5 for CLAP is not observable in Qtractor for this reason, and also because Qtractor ignores `latency.changed`
+    and skips `request_restart` while its engine runs. Qtractor reads `latency.get` on the main thread when playback
+    starts (`latency-clap.txt`), as it does for VST3.
+  - Report it upstream to Qtractor (the user decides). An iPlug workaround would need a guard for a single host,
+    which the user ruled out.
+- Not run in Docker: IPlugControls' editor, drops, two instances.
+
+**The VM's virgl GPU hung again.** At 16:53, during a right-click into Qtractor's track list:
+- Before it: about 10 editor opens over 20 minutes, the last a second Gneiss instance (940×620) with two Gneiss
+  editors open.
+- X stopped answering (`xdpyinfo` timed out). Xorg sits in `drm_atomic_helper_swap_state`, and a kworker is in D state
+  in `dma_fence_wait_timeout` ← `drm_atomic_helper_wait_for_fences` (`hang/dmesg-hung-task.txt`, `vm-state.txt`).
+- Qtractor's main thread waits in `xcb_wait_for_reply` (`QBackingStore::beginPaint`, `hang/hang-qtractor-bt.txt`).
+- Same signature as 2026-10-19. Killed what I started (xdotool, Qtractor, the dummy jackd) and released the lock.
+- **The VM needs Force Stop + Start in UTM (the user).** It still answers ssh.
+
+**Wayland: not run** (the VM hung first). Two ways need no password and no user (ssh key, passwordless sudo, GDM
+autologin). Both start after the user's VM restart; take the VM lock.
+1. **Nested, preferred** (the X11 session stays): `vm-x.sh bash -c 'dbus-run-session -- gnome-shell --nested --wayland
+   > ~/t013-nested.log 2>&1 &'`.
+   - GNOME Shell 46 has `--nested` and starts Xwayland on demand (`xwayland` is installed).
+   - Read `~/t013-nested.log` for the Xwayland display (`:1` …).
+   - Start REAPER with `DISPLAY=:1` (`reaper-open.sh` with that `DISPLAY`) and check: the editor opens and draws;
+     mouse; text entry in Sand; the trace's `iPlug2 input:` lines.
+   - Close the nested window with its close button. This is XWayland under Mutter, not a real Wayland login.
+2. **A real Wayland session.**
+   - Back up `/etc/gdm3/custom.conf`, set `WaylandEnable=true`.
+   - Set `Session=ubuntu` in `/var/lib/AccountsService/users/gene` (it is empty now, and `ubuntu.desktop` is the
+     Wayland session).
+   - `sudo systemctl restart gdm3`: autologin brings up GNOME on Wayland. That ends the X11 session and every app in
+     it.
+   - `vm-display-env` then needs Xwayland's `XAUTHORITY` (`/run/user/1000/.mutter-Xwaylandauth.*`) and its `DISPLAY`.
+   - Run the same checks with REAPER.
+   - **Restore:** put back `custom.conf` (`WaylandEnable=false`), clear `Session=`, restart `gdm3`, and check
+     `timeout 8 xdpyinfo` on `:0` under X11.
+   - Both ways load virgl like any GL test: keep it to a few opens.
+   - If the user prefers to do it by hand: log out, pick "Ubuntu" (not "Ubuntu on Xorg") under the gear on the login
+     screen, start REAPER from a terminal, open Gneiss and Sand, click, type a value, then log back into "Ubuntu on
+     Xorg".
+
+**VM state left:**
+- X11 session hung (needs Force Stop + Start).
+- Qtractor 1.5.3 installed, with `StdoutCapture=false`.
+- Release builds in `~/.clap` and `~/.vst3`.
+- Sessions and logs in `~/t013-qtractor/`.
+- No process of mine running; VM lock released.
+- Not changed: GDM (X11, autologin), Renoise and Ardour configs, the GNOME appearance.
+
+**Cross-platform findings:** none new.
