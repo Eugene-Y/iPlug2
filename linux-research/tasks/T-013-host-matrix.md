@@ -44,8 +44,10 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
   in the Log, "Wayland").*
 - [x] Every failure: fixed (Linux-only code, own commit) or ticketed with a minimal repro; host bugs documented as such.
   *The XEmbed text-entry fix (c86d82e5d). Host bugs, documented with repros: Carla main's VST3 IRunLoop threading;
-  Qtractor's CLAP timers stopping when the last CLAP editor closes; Qtractor 1.5.3's synchronous VST3 restart on the
-  calling thread. The hosts that drop no files on plug-ins are documented.*
+  Qtractor's CLAP timers stopping when the last CLAP editor closes. The hosts that drop no files on plug-ins are
+  documented. **Open framework point, for the user (T-010 item 1):** with the editor closed, iPlug calls VST3
+  `restartComponent` from its fallback thread, which the VST3 contract does not allow; Qtractor 1.5.3 then runs a
+  state round trip on that thread (Log 2026-10-22, case 5).*
 - [x] PC checklist for Bitwig/x86_64 written (section below; review approved, notes/28).
 - [ ] Independent review (AGENTS §4); Log complete.
 
@@ -149,7 +151,8 @@ reopen, oversampling, two at once, closing), using the trace archives. Then:
 (append: date — what was done — commits — next)
 
 ### Summary matrix (2026-10-22)
-PASS = the cases the host supports work (details and exceptions in the section); n.a. = the host has no such format.
+PASS = every case that was run passed; the cases not run are listed in the section. n.a. = the host has no such
+format.
 Case 7 = which event loop the host gives iPlug (all callbacks on the main thread unless said).
 
 | Host (where) | Format | Gneiss | Sand | IPlugControls | Case 7 | Section |
@@ -170,8 +173,8 @@ Case 7 = which event loop the host gives iPlug (all callbacks on the main thread
 | GNOME Wayland (XWayland), one host | — | **not run** | | | — | 2026-10-22, "Wayland" |
 | Bitwig 5 (x86_64) | CLAP, VST3 | PC checklist | | | | PC checklist |
 
-Item 9 (T-020's VM checks): all PASS except the GL3 build, which virgl cannot render (OpenGL 2.1 only), section
-2026-10-21 (2).
+Item 9 (T-020's VM checks), section 2026-10-21 (2): all PASS except the GL3 build, which virgl cannot render
+(OpenGL 2.1 only); Renoise received a dragged-out file without making an instrument of it; drag-out to Carla N/A.
 
 ### 2026-10-19 — hosts installed; Carla
 **Hosts on the VM** (aarch64, Ubuntu 24.04, GNOME X11; sudo is passwordless for the key user):
@@ -499,6 +502,7 @@ reopen editors when a session loads.
 | 6 two instances | PASS, both editors draw (`19`, `20`) | | |
 | 6 close the editor with a menu open | | | PASS: one click on Qtractor's close button, Qtractor lives (`04` → `05`) |
 | 6 remove while playing, editor open | **not run**: the VM hung on the way (below) | | |
+| not run | case 3 automation write/read; case 4 with the editor closed, presets | | |
 | 7 host loop | see below | same | same |
 | 8 drop from GNOME Files | see below | | |
 
@@ -508,27 +512,38 @@ reopen editors when a session loads.
 - With the editor open, the plug frame's `IRunLoop` is used: timers and the X connection fd are called on the main
   thread.
 - With the editor closed, iPlug is back on the fallback thread.
-- Same for all three plug-ins (`vst3-s*.log`: `first … backend=vst3-irunloop(frame) on main`). Off-main lines come
-  only from the fallback thread.
-- Qtractor's current source (v1.6.4) also answers `IRunLoop` on the host context; 1.5.3 does it only on the plug frame.
-  With 1.6.x iPlug would never need the fallback. Not tested: no arm64 package.
+- Gneiss and Sand: `vst3-s*.log` (`first … backend=vst3-irunloop(frame) on main`). IPlugControls: its editor ran in
+  the first session, whose trace went to Qtractor's Messages window and was not kept; `05` shows its "VST3 view
+  removed … vst3-irunloop(frame) -> fallback-thread" on the main tid. Off-main lines come only from fallback threads.
+- Qtractor 1.6.4's source also answers `IRunLoop` on the host context, which iPlug would prefer. But that loop is
+  driven by the same shared `QTimer` that closing the last VST3 editor stops (`startTimer(200)`/`stopTimer()` around
+  editors, as in the CLAP bug below; 1.5.3's frame loop has it too, unnoticed because iPlug leaves the frame loop when
+  the editor closes). By that reading, in 1.6.x with every VST3 editor closed `OnIdle` would not run at all. Untested:
+  no arm64 package.
 
-**Case 5, VST3: Qtractor re-reads latency when playback starts; its restart runs on the caller's thread.**
+**Case 5, VST3: Qtractor re-reads latency when playback starts; iPlug's restart request comes off the UI thread.**
 Setup: Gneiss' oversampling changed with Qtractor's plug-in form (Track 1 > Gneiss > Properties, Page 2), under
-`call-trace.sh` (`latency/`).
+`call-trace.sh` (`latency/`). `latency-editor-{closed,open}.txt` come from the earlier `call-trace.sh` (no time
+stamps, hits printed after all actions) and the `latency.syms` without `getState`/`setState`;
+`restart-editor-closed.txt` from the committed versions. Which `getLatencySamples` hit belongs to the Track dialog
+or to playback start follows from Qtractor's source and the dialog screenshots, not from the traces.
 - With the editor closed, `SetLatency` runs on the fallback thread (`latency-editor-closed.txt`, lwp ≠ pid). With the
   editor open, it runs on the main thread (`latency-editor-open.txt`).
-- Qtractor 1.5.3's `restartComponent` ignores what the flags ask for. It always does a state round trip
-  (`getState` + `setState`, plus its parameter refresh), synchronously on the calling thread. With the editor closed,
-  that is iPlug's fallback thread: `restart-editor-closed.txt` shows `getState`/`setState` with the fallback lwp
-  right after each `SetLatency`. The state round trip and Qtractor's own parameter objects are then touched off its
-  main thread. That is the host's design: it trusts the caller's thread. iPlug only calls `restartComponent` from its
-  idle timer, which runs on the fallback thread when the host gives no loop.
+- **iPlug breaks the VST3 contract here (T-010 item 1):** `IComponentHandler::restartComponent` is `[UI-thread]`
+  (`ivsteditcontroller.h`), and `IPlugVST3::SetLatency` calls it from `OnIdle`, which runs on the fallback thread when
+  the host gives no loop.
+- Qtractor 1.5.3's `restartComponent` does the same state round trip for every flag (`getState` + `setState`, plus its
+  parameter refresh; `kReloadComponent` adds deactivate/activate), synchronously on the calling thread, as the
+  contract lets it. With the editor closed that is iPlug's fallback thread: `restart-editor-closed.txt` shows
+  `getState`/`setState` with the fallback lwp right after each `SetLatency`, while Qtractor's main thread runs on.
+- How the hosts here take the off-thread request: Renoise moves it to its main thread (2026-10-21); Qtractor runs it
+  in place; Carla ignores latency restarts; Ardour honours the change (2026-10-20), on which thread is not known.
 - Qtractor reads the latency (`getLatencySamples`, main thread) when playback starts (`resetAllMonitors` →
   `resetLatency`) and when the Track dialog shows it. It shows "(no latency)" at 1x and "0.2 ms (8 frames)" at 8x,
   editor closed both times (`lat-1x.png`, `lat-8x.png`). So the compensation follows at the next transport start,
-  whichever thread the change came from. **For T-010:** Qtractor drops nothing. The off-main restart is a
-  Qtractor-side hazard, reported and not fixed (the user's rule: no framework guard for single hosts).
+  whichever thread the change came from. **For T-010 (the user decides):** Qtractor 1.5.3 drops no latency change,
+  but it runs the plug-in's state round trip on iPlug's fallback thread. That is iPlug's own contract breach, not a
+  host bug, so the "no guard for single hosts" rule does not settle it. Not fixed here: a framework change.
 
 **Case 8, VST3** (`drop-vst3/`). The drop target was Gneiss' USER tab.
 - **A drag from GNOME Files does not reach the editor.** GTK addresses Qtractor's top-level, which is XdndAware (v5,
@@ -539,7 +554,8 @@ Setup: Gneiss' oversampling changed with Qtractor's plug-in form (Track 1 > Gnei
 - On a knob, or at 251,71 or 360,74, the drop is accepted but Gneiss ignores it. T-019 described this:
   `UserTabPanel::OnDrop` runs only where the panel is the topmost control, and the knobs sit in other places when
   MORPH is off.
-- `scripted-source.txt` has every attempt. A GTK-like source (`top`) is refused, like Files.
+- `scripted-source.txt` has every scripted run: `top` (a GTK-like source, refused like Files), and `deep` at 251,71,
+  360,74 (twice), then 360,100, 444,21 and 251,131 (the last three from the console).
 
 **Qtractor CLAP, in Docker** (Xvfb + openbox + llvmpipe, Qtractor 1.5.3 from backports). It was not run on the VM,
 which had hung. Same trace builds; session from `make-session.py`. Evidence: `evidence/t013/qtractor/docker-clap/`.
@@ -563,14 +579,15 @@ which had hung. Same trace builds; session from `make-session.py`. Evidence: `ev
     - with an editor open: the same rate;
     - after it closed: **0** `clapOnTimer` and 0 `Gneiss::OnIdle` calls for every plug-in, while `process` keeps
       running.
-  - Effect for iPlug: everything that runs from the idle timer stops until some CLAP editor opens again: `OnIdle`
-    (Gneiss reports its latency there), and parameter and MIDI messages from the processor to the host.
+  - Effect for iPlug: everything that runs from the idle timer stops until a CLAP editor opens or a plug-in
+    registers a new timer (which restarts the shared `QTimer`): `OnIdle` (Gneiss reports its latency there) and the
+    processor-to-editor queues. Output to the host is unaffected: it goes through `process`.
   - Case 5 for CLAP is not observable in Qtractor for this reason, and also because Qtractor ignores `latency.changed`
     and skips `request_restart` while its engine runs. Qtractor reads `latency.get` on the main thread when playback
     starts (`latency-clap.txt`), as it does for VST3.
   - Report it upstream to Qtractor (the user decides). An iPlug workaround would need a guard for a single host,
     which the user ruled out.
-- Not run in Docker: IPlugControls' editor, drops, two instances.
+- Not run in Docker: IPlugControls' editor; case 3 automation; cases 4 and 6; drops.
 
 **The VM's virgl GPU hung again.** At 16:53, during a right-click into Qtractor's track list:
 - Before it: about 10 editor opens over 20 minutes, the last a second Gneiss instance (940×620) with two Gneiss

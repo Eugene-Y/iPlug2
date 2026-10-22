@@ -191,16 +191,19 @@ Host behaviour seen while testing on Linux; iPlug2 does not work around it.
   leaves the editor.
 - **Qtractor (1.5.3, and the same code in 1.6.4), CLAP:** one shared timer drives every CLAP plug-in's timers, and
   closing the last CLAP editor stops it. From then on no plug-in gets timer callbacks, so `OnIdle` (and anything a
-  plug-in reports from it, such as a latency change) waits until some CLAP editor is opened again.
+  plug-in reports from it, such as a latency change) waits until a CLAP editor opens or a plug-in registers a new
+  timer.
 - **Qtractor 1.5.3, VST3:** gives `IRunLoop` only through the plug frame, so with the editor closed `OnIdle` runs on
-  iPlug2's own thread. Its `restartComponent` does a state round trip (`getState`/`setState`) synchronously on the
-  calling thread, i.e. on that thread when a latency change is reported with the editor closed. It reads the latency
-  when playback starts. (Qtractor 1.6.4's source also offers `IRunLoop` on the host context.)
+  iPlug2's own thread. A latency change made then reaches the host's `restartComponent` from that thread, which VST3
+  does not allow (an iPlug2 limitation); Qtractor answers it with a state round trip (`getState`/`setState`) on that
+  thread. It reads the latency when playback starts. Qtractor 1.6.4's source also offers `IRunLoop` on the host
+  context, but drives it from the same kind of shared timer, stopped when the last VST3 editor closes (untested).
 - **Files dropped from a GTK file manager (GNOME Files):** it drops on the top-level window under the pointer, so a file
   reaches the editor only if the host forwards XDND to its plug-in window: Ardour and REAPER do; Carla 2.5.10 takes the
-  drop itself; Qtractor's plug-in window is drop-aware and refuses it; Carla main (CLAP) and Renoise don't. A source that targets the deepest drop-aware window, as Qt's do
-  (tested with a scripted source), reached the editor in every host tried. Dragging files *out* of the editor works
-  in every host tried.
+  drop itself; Qtractor's plug-in window is drop-aware and refuses it; Carla main (CLAP) and Renoise don't. A source
+  that targets the deepest drop-aware window, as Qt's do (tested with a scripted source), reached the editor in every
+  host tried. Dragging files *out* of the editor works in every host where it was tried (REAPER, Ardour, Renoise, and
+  GNOME Files as the target).
 
 ## 9. Plug-in code: differences from macOS and Windows
 
