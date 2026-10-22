@@ -229,3 +229,151 @@ Acceptable for handing over.
   audio off, and `--no-io` erases the saved MIDI ports.
 - `~/Applications/IPlugInstrument.app` from my round-1 mac build is still there (unchanged since 15:52). The user can
   delete it.
+
+# Round 3 (R1-2 follow-up)
+
+Range `21ce3ddc0..607bb7250`: 509dbe71a (code: `IPlugAPP_host.cpp/.h`, `IPlugAPP_dialog.cpp`), 607bb7250 (harness,
+evidence, Log). Reviewer with fresh context.
+
+**Verdict: approve with fixes.** The R1-2 change does what the user decided: a saved port the current API can't see
+stays in `mState` and settings.ini on every path, and Apply/OK bring it back. mac/win are unchanged. One major
+finding (R3-1) must be fixed before the merge. It is a T-022 crash that R1-2 didn't create, but its OK restart now
+reaches it with a plain OK.
+
+## What was checked
+
+- **Every read/write of `mMidiInDev`/`mMidiOutDev` and settings.ini on Linux:**
+  - **Startup:** `Init` → `SelectMIDIDevice`. A missing port keeps its name and stays closed, with no INI write.
+  - **`--no-io` and screenshot mode:** `InitMidi` returns early, so `GetMIDIPortNumber` returns -1 for every name but
+    "off" and the name is kept. OK with `--no-io` doesn't open a box, because `TryToChangeAudio` returns at once.
+    `ReopenSavedMidiPorts` skips the null objects.
+  - **Driver combo:** `TryToChangeMidiApi` reselects and keeps.
+  - **Apply/OK:** `ReopenSavedMidiPorts`. The MIDI combos: picking writes `mState`.
+  - **Cancel:** `mState = mTempState`, then recreate and keep.
+  - Nothing writes settings.ini mid-dialog any more. The only writer left is `TryToChangeAudio`'s reset-to-default,
+    and that one predates T-022. The OK write is `MainDlgProc` → `UpdateINI`.
+- **Clearing a kept port:** SWELL sends `CBN_SELCHANGE` even when the item already selected is picked again
+  (`swell-wnd-generic.cpp:3656-3663`). So "off" picked from a list that holds only "off" clears the name. Scenario H
+  below confirms it.
+- **Thread safety of `ReopenSavedMidiPorts` while audio runs:**
+  - It opens only ports that are closed, which is the same as a pick in the combo while audio runs.
+  - The output goes through `SelectMIDIDevice`, so `mMidiOutPortOpen` is set only after `openPort`. The audio
+    thread's `SendMidiMsg` cannot reach a closed port.
+  - The input has no callback while it is closed, so the single-producer rule holds.
+  - Scenario K: 20 s of echoed notes with the saved output missing, then the monitor appears and Apply runs while the
+    audio runs. Result: 0 stale events, then 6 in 3.5 s, and no crash.
+- **The `IsAudioRunning` restart on OK/Cancel:**
+  - One `TryToChangeAudio` per press, with no loop.
+  - Apply then OK doesn't restart twice: the audio runs and the states are equal.
+  - With the audio off for lack of a device, scenario I counted exactly one "Audio is off" box per OK, Cancel or
+    Apply, and Preferences closes after OK/Cancel. This is documented in the Log.
+- **mac/win:**
+  - `TurnOffMissingMidiPort`'s non-Linux branch is byte-for-byte the old code (`OFF_TEXT` is `"off"`, then
+    `UpdateINI()`), and it is called from the same four places.
+  - Every dialog change is inside `#ifdef OS_LINUX`. `IsAudioRunning` and `ReopenSavedMidiPorts` are Linux-only.
+  - `[[maybe_unused]]` is C++17.
+  - My own macOS CMake/Ninja Debug build of `IPlugInstrument-app` (scratchpad, `IPLUG_DEPLOY_PLUGINS=OFF`) links. The
+    APP files compile with 0 warnings; the 4 warnings are in RtMidi, RtAudio and swell.
+- **Evidence:**
+  - I opened `docker-jack-midi/07`, both `08`s, `10`, `11` and `12`, and `r12-adversarial/A2`. They show what the
+    Log says: the lists after the round trip, "off" picked, the port picked again, the Audio box state, the MIDI combos
+    back after Apply with the audio combos empty (noted in the Log), and the meter up.
+  - `checks.txt` (Docker and VM) and `r12-adversarial/log.txt` match the Log, except the A note under R3-5.
+- **Re-run:**
+  - Fresh Debug build in Docker (`build/t022r3-debug`, 0 warnings).
+  - `app-jack-midi-test.sh` → `evidence/t022/review3-docker-jack-midi`: **PASS**, the same 30 `ok:` lines as the
+    author's run.
+  - Container `t022r3` removed.
+- **Adversarial:**
+  - `evidence/t022/review3-adversarial/adversarial3.sh` (scenarios F, G, Gq, Gs, Go, H, I, J, K).
+  - Its `log.txt` holds F–K; the G variants are in subdirectories.
+  - For the comparisons I built `21ce3ddc0` (before R1-2) and `hvoya-linux` (before T-022) in a scratch worktree;
+    both are removed now.
+- VM: not used.
+
+## Findings
+
+### R3-1 — major — after a JACK server restart, OK or Apply brings the audio back, but MIDI stays dead and File > Quit segfaults
+- **Where:**
+  - `IPlugAPP_dialog.cpp:383-391` (IDOK, the new `|| !IsAudioRunning()`) and `:395-401` (IDAPPLY);
+  - `IPlugAPP_host.cpp:829-838` (`ReopenSavedMidiPorts`).
+- **Scenario G** (`review3-adversarial/log.txt`, `pre-G-*`, `base-G-*`, `gdb-G`):
+  1. JACK, with both MIDI ports connected.
+  2. Stop jackd and start it again, as with QjackCtl Stop/Start. The sources come back.
+  3. Preferences → Apply → OK.
+
+  Result:
+  - The audio comes back (2 ports).
+  - Both MIDI ports stay disconnected. The RtMidi JACK clients belong to the dead server, `isPortOpen()` is still
+    true, so `ReopenSavedMidiPorts` skips them.
+  - Then File > Quit → **exit 139**.
+- **Scenario Go:** the same with OK only. On 607bb7250 it crashes (139). On 21ce3ddc0 it exits 0, because OK didn't
+  restart the audio there; it left the audio silently off.
+- **Isolation:**
+  - **Gq** (server restart, no Preferences, then Quit): exit 0, 2 of 2 runs.
+  - **G on `hvoya-linux`** (no JACK MIDI clients): exit 0, 2 of 2 runs.
+  - **G on 21ce3ddc0:** exit 139, 2 of 2 runs.
+  - **Gs** (server restart, then JACK → ALSA → JACK in the driver combo before OK): **MIDI reconnects to both saved
+    ports**, thanks to R1-2, and Quit exits 0, 2 of 2 runs.
+
+  So the crash needs JACK MIDI clients from the dead server that are still alive when a new JACK audio client opens
+  in the process. It shows when they are destroyed at exit. gdb (`gdb-G/G-gdb.txt`) has the PC in heap memory under
+  `sInstance.reset()` → `~IPlugAPPHost`, which looks like libjack state that is stale once the server is gone.
+- **Why it matters:**
+  - A JACK server restart is a normal action.
+  - The user asked for the most reliable behaviour.
+  - With R1-2, a plain OK now reaches the crash, and MIDI stays dead until a driver round trip.
+- **Fix (Linux-only):**
+  - When the driver is JACK and `!IsAudioRunning()`, recreate the JACK MIDI objects **before** `TryToChangeAudio`
+    opens the new audio client, on OK, Apply and Cancel. For example, give `TryToChangeMidiApi` a force flag, or
+    call a small `RecreateMidi()` there.
+  - The kept names then reconnect the ports, as Gs shows.
+  - This also respects the "audio stopped" rule for recreating.
+  - Re-run: `adversarial3.sh <out> <app> "G Go Gs"`. Expect MIDI connected after OK and Quit exit 0.
+
+### R3-2 — minor — a port that vanishes while open and comes back is not reopened; the comment promises it is
+- **Where:**
+  - `IPlugAPP_host.cpp:829-838`: `ReopenSavedMidiPorts` reopens only ports that are closed.
+  - `IPlugAPP_host.cpp:606-607`: the comment says the port "reconnects when it is back".
+- **Scenario F:** the input is connected to `seq:out`; the source client restarts under the same port name (the same
+  happens with a USB re-plug on ALSA). The APP's port is still open, so the input stays disconnected after Apply and
+  after OK. The combo shows `seq:out` as selected all the while.
+- This is old behaviour on every API, not a regression. But the comment and R1-2's goal suggest more.
+- **Fix:** either
+  - on Apply, an explicit user action, reselect the saved ports even when they are open. Closing and reopening the
+    output is safe under the flag. Or
+  - narrow the comment to what happens: "reopened on Apply/OK or a driver change while it was missing".
+
+### R3-3 — minor (UX) — the combo shows "off" while a port name is kept
+- **Where:** `IPlugAPP_dialog.cpp:233-239`, `:248-254` → index 0.
+- With JACK down (`review3-adversarial/H1-kept-input-list.png`), the combos read "off". But settings.ini still holds
+  `seq:out`, and the port connects by itself at the next Apply, OK or start.
+- Clearing works if the user picks "off" explicitly. Scenario H: `indev=off outdev=off` after OK, and no reconnect
+  once the server is up. The user can't tell, though, that this is needed.
+- **Suggestion, optional and Linux-only:** list the kept name as an extra entry, e.g. `seq:out (not found)`, and
+  select it, so the combo shows the setting.
+
+### R3-4 — nit — stale wording
+- `IPlugAPP_host.h:252-254`: `TryToChangeMidiApi`'s doc says "(unknown ones turn off)". They now stay saved and
+  closed.
+- `TurnOffMissingMidiPort` sets nothing on Linux, so the name reads as if it did. A name like `OnMidiPortMissing`, or
+  a doc line, would read truer.
+- `IPlugAPP_host.h:264-265`: the doc on `IsAudioRunning` describes what OK/Cancel do with it. That WHY belongs at
+  the IDOK/IDCANCEL condition, said once.
+
+### R3-5 — nit — evidence notes
+- `r12-adversarial/log.txt` A: "APP MIDI ports now:" is empty after Apply with the server up. That reads as Apply
+  failing. The cause is the old script's race: Apply comes about 1 s after `jack_midiseq` starts, and `A2` shows a
+  list with only "off".
+- My scenario J does the same with a 2 s wait. Both ports reconnect (`J1-inputs-after-apply.png`). Worth one line in
+  the Log.
+- `docker-jack-midi` has two `08-*.png` files.
+
+## Not findings
+- **Audio boxes:** OK, Cancel and Apply each show one "Audio is off" box while there is no device (I: 1 per press, no
+  loop). This is accepted in the Log.
+- **ALSA port names with client numbers** (`… 20:0`) change when a USB device comes back on another client number. A
+  kept name then never matches, and the user picks the port again. Before R1-2 the name turned "off" instead, so
+  nothing is lost.
+- **Apply on the same driver leaves the audio device combos empty** (`11`). The author already noted it as T-004
+  territory.
