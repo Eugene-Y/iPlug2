@@ -251,9 +251,10 @@ def main():
     oldroot = xcconfig["IPLUG2_ROOT"]
     iplug2folder = os.path.realpath(os.path.join(configpath, oldroot))
     try:
-      # '/' on every platform: all files but the VS ones need it (CMake and JSON read '\' as an escape), and dirwalk()
-      # makes the VS files' '\' form itself, in a later pass that would match a '\' newroot again and double the path.
+      # '/' on every platform: the files outside the VS projects need it, and dirwalk() derives the VS files' '\' form
+      # in a later pass, which would match a '\' newroot again and double the path.
       newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config")).replace(os.sep, '/')
+      # These land in CMake and JSON files, which read '\' as an escape.
       # Lexical, like inputprojectname, which is relative to the unresolved cwd (on Windows a subst or mapped drive or a
       # junction would make a resolved path disagree with it).
       oldprojectroot = os.path.relpath(os.path.join(configpath, oldroot), inputprojectname).replace(os.sep, '/')

@@ -83,10 +83,20 @@ Normalise `newroot` to `/` before `dirwalk()` (as T-011 does for the project-fol
     pbxproj path `../../../../WDL/jnetlib/netinc.h` gets the same treatment. Repro: `duplicate.py IPlugConvoEngine X
     Mfr ../..`, then grep `executable_path` in the macOS pbxproj. A fix would reuse T-011's `replacepathruns()`.
   - (low, Windows, not run on a PC) `replacestrs()` rewrites each file through `fileinput` in text mode, so on
-    Windows every file it touches is written with CRLF line endings, `makedist-*.sh` included; bash rejects those
-    (`$'\r': command not found`) unless git's `autocrlf` converts them back on commit. T-011's
-    `replaceprojectroot()` uses `newline=''` and is not affected.
+    Windows every file it touches is written with CRLF line endings, `makedist-*.sh` included. T-011's
+    `replaceprojectroot()` uses `newline=''` and is not affected. What reaches a mac depends on how the project
+    travels: inside an iPlug2 checkout the root `.gitattributes` normalises `*.sh`/`*.xcconfig`/`*.pbxproj` (`eol=lf`)
+    and `*.py` (`text=auto`) on commit; a project in its own repo depends on `core.autocrlf`; a copy made without git
+    (zip, shared drive) keeps CRLF, and bash then fails with `$'\r': command not found` (review R1-2).
+  - (low, all platforms) `.gitattributes:34` says `.mk` without the `*`, so it matches no file: `git check-attr`
+    reports `text: unset` for `Examples/IPlugEffect/config/IPlugEffect-web.mk` (under `* -text`), and CRLF there survives a
+    commit. Mostly cosmetic, since GNU make drops a CR before LF (review R1-2).
+
+### Review round 1 (2026-10-22)
+- `notes/32-review-T-037.md`: approve; R1-1 (minor) the `newroot` comment cited CMake/JSON, which that pass never
+  reaches, and the CMake/JSON reason for the project-folder roots had been dropped: each reason now sits on its own
+  line (comment-only). R1-2 (nit): the CRLF note above refined, `.gitattributes`'s `.mk` line reported. R1-3: status.
 
 ### Open
-- Independent review.
+- Re-check of R1-1 by the reviewer.
 - User: a real Windows run, if wanted.
