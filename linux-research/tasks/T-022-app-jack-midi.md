@@ -1,6 +1,6 @@
 # T-022 — Standalone APP: JACK MIDI when the audio driver is JACK
 
-- **Status:** in progress (the user asked for it on 2026-10-21; earlier: low priority, after the Gneiss/Sand work)
+- **Status:** review-done (independent review approved in round 2, `notes/29-review-T-022.md`; one open user decision, R1-2)
 - **Owner:** T-022 worker (chat 6db96ccf)
 - **Branch/worktree:** `linux/T-022` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-022`.
 - **Depends on:** T-004 (merged).
@@ -114,8 +114,8 @@ plain jackd without the a2jmidid bridge.
   - **R1-5, not done:** in RtMidi (third-party, not modified).
   - **R1-2, open, for the user to decide:** the saved MIDI ports are lost when the API cannot see them. The cases are a
     driver round trip through the other API, and a start on JACK while no JACK server is running: settings.ini gets
-    `indev=off`. This is the task's "unknown → off" rule. Keeping a saved name the current API doesn't list would mean
-    changing `SelectMIDIDevice`/`PopulateMidiDialogs` (shared code).
+    `indev=off`. This is the task's "unknown → off" rule. Keeping a saved name the current API doesn't list can stay
+    Linux-only (reviewer, round 2).
   - Re-runs after the fix: Docker `evidence/t022/docker-jack-midi` PASS, VM `evidence/t022/vm-jack-midi` PASS,
     macOS CMake `IPlugInstrument-app` links with no warnings in the APP files.
   - **Cross-platform findings from the review** (bugs that predate T-022; reported, not fixed):
@@ -124,3 +124,10 @@ plain jackd without the a2jmidid bridge.
       Cancel.
     - **minor:** `--no-io` writes `indev=off outdev=off` over the saved MIDI ports at start
       (`IPlugAPP_host.cpp`: `Init` → `SelectMIDIDevice` with no RtMidi objects).
+- 2026-10-22 — review round 2: **approve** (`notes/29-review-T-022.md`, 67e04f9f1). The R1-1 fix holds on every
+  open/close path. Re-run of scenario C, plus the reviewer's new C2 (output on → off for 30 s → on): no backlog, and the
+  output works again afterwards (`evidence/t022/review2-adversarial`). mac/win unchanged.
+  - **Hand-over:**
+    - Commits: 6e8995437, 8a21c9ce9, 55979e325, 47951f3a0, df033f7a7, 67e04f9f1.
+    - Evidence: `evidence/t022/{docker-jack-midi,vm-jack-midi,macos,fix-adversarial,review-*}`.
+    - Open: R1-2 (user decision) and the two cross-platform findings above.
