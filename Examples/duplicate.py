@@ -255,7 +255,8 @@ def main():
     iplug2folder = os.path.realpath(os.path.join(configpath, oldroot))
     newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config"))
     # These land in CMake and JSON files, which take '/' on every platform and read '\' as an escape.
-    # Lexical, like inputprojectname, which is relative to the unresolved cwd (on Windows: a subst or mapped drive).
+    # Lexical, like inputprojectname, which is relative to the unresolved cwd (on Windows a subst or mapped drive or a
+    # junction would make a resolved path disagree with it).
     oldprojectroot = os.path.relpath(os.path.join(configpath, oldroot), inputprojectname).replace(os.sep, '/')
     newprojectroot = os.path.relpath(iplug2folder, outputpath).replace(os.sep, '/')
   else:

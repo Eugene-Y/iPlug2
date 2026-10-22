@@ -13,6 +13,10 @@ into every file that held `../../..`: mac/iOS xcconfig and pbxproj, the web/wasm
 own output and the path doubles (`IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2`). Windows builds are fine (`.props`,
 `.vcxproj`); a project duplicated on Windows does not build on mac, iOS or web.
 
+## Also (review notes/30 B1, pre-existing)
+A target on a different drive from iPlug2 raises `ValueError` in `relpath` after `copytree`, leaving a half-renamed
+project. Compute the roots before the copy and print a clear error.
+
 ## Fix
 Normalise `newroot` to `/` before `dirwalk()` (as T-011 does for the project-folder roots); check that `.props` and
 `.vcxproj` still get the form VS expects; check the doubling case.
