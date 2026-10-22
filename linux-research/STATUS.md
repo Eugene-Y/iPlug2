@@ -21,7 +21,7 @@ Update it at every merge or user decision.
 - **T-028 merged 2026-10-18** (Gneiss master c6f4442, linux-experiment f799cb3, hvoya-linux 9f9afa0e9). **T-025 merged 2026-10-19** (1e0e4be70; `hvoya` 8ca9f3324). Also merged 2026-10-19: T-027 (b9c864d91), T-020 (aa42322c2), T-016 (8a0d19093; new T-031/T-032/T-033). Waiting: T-023, T-029 (proposals for the user); T-013 and T-009's VM part wait for the VM (virgl hang 2026-10-19 ~10:20, needs Force Stop + Start in UTM). **T-010 merged 2026-10-18** (11ca71243): no Gneiss code change; VST3 latency from the fallback thread left as is (user), T-013 item 7 checks Bitwig/Renoise.
 - **T-019 merged 2026-10-18** (tooltips + XDND). Drops in other hosts are T-013's item 8.
 - **T-013 progress merged 2026-10-21:** Renoise (d6a361df0; XEmbed FOCUS_OUT/FOCUS_IN pairing fixes text entry in Renoise), drops + T-020's VM checks + PC checklist (c62128b28). Left in T-013: Qtractor, Zrythm, a Wayland session, final review.
-- **Merged 2026-10-21:** T-011 (839e1b51d, `duplicate.py` out-of-tree paths), T-031 (cbb4d7105, REAPER extensions on Linux; done in another chat). **T-022** (APP JACK MIDI) is in progress in another chat (its lock).
+- **Merged 2026-10-21:** T-011 (839e1b51d, `duplicate.py` out-of-tree paths), T-031 (cbb4d7105, REAPER extensions on Linux; done in another chat). **T-022** (APP JACK MIDI, another chat) merged 2026-10-22.
 - Nothing else is mid-merge. Latest release archives (T-021 flow on the merged tree, smoke PASS): `linux-research/build/m021-dist/` (ignored, local only).
 
 ## Waiting on the user
