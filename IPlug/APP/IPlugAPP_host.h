@@ -253,14 +253,22 @@ public:
    * API differs from the current one, closes the MIDI ports, reopens them on the other API and reselects the saved
    * ports (unknown ones turn off). Call while audio is stopped: the audio thread sends to mMidiOut. */
   void TryToChangeMidiApi();
+  /** Opens saved MIDI ports that weren't there before, e.g. JACK's once its server has started */
+  void ReopenSavedMidiPorts();
   void RefreshMidiControls(HWND hwndDlg);
 
   /** RtMidi's JACK output queues what it is sent while no port is open, and writes the whole backlog into one
    * cycle's buffer when a port opens: past the buffer's end once there is enough of it. */
   bool IsMidiOutPortOpen() const { return mMidiOutPortOpen; }
+
+  /** Picking a driver in Preferences stops the audio, also when the user then picks the old one again: OK and Cancel
+   * restart it when this is false, not only when the settings differ. */
+  bool IsAudioRunning() const { return mDAC && mDAC->isStreamRunning(); }
 #endif
 
 private:
+  void TurnOffMissingMidiPort(WDL_String& portName);
+
 #ifdef OS_LINUX
   void UseSampleRateTheDeviceSupports(uint32_t outputID);
   void ReportAudioOff(const char* reason);

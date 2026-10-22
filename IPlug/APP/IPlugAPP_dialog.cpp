@@ -232,11 +232,9 @@ bool IPlugAPPHost::PopulateMidiDialogs(HWND hwndDlg)
 
     LRESULT indevidx = SendDlgItemMessage(hwndDlg,IDC_COMBO_MIDI_IN_DEV,CB_FINDSTRINGEXACT, -1, (LPARAM)mState.mMidiInDev.Get());
 
-    // if the midi port name wasn't found update the ini file, and set to off
     if (indevidx == -1)
     {
-      mState.mMidiInDev.Set("off");
-      UpdateINI();
+      TurnOffMissingMidiPort(mState.mMidiInDev);
       indevidx = 0;
     }
 
@@ -249,11 +247,9 @@ bool IPlugAPPHost::PopulateMidiDialogs(HWND hwndDlg)
 
     LRESULT outdevidx = SendDlgItemMessage(hwndDlg,IDC_COMBO_MIDI_OUT_DEV,CB_FINDSTRINGEXACT, -1, (LPARAM)mState.mMidiOutDev.Get());
 
-    // if the midi port name wasn't found update the ini file, and set to off
     if (outdevidx == -1)
     {
-      mState.mMidiOutDev.Set("off");
-      UpdateINI();
+      TurnOffMissingMidiPort(mState.mMidiOutDev);
       outdevidx = 0;
     }
 
@@ -384,8 +380,15 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
       switch (LOWORD(wParam))
       {
         case IDOK:
-          if (mActiveState != mState)
+          if (mActiveState != mState
+#ifdef OS_LINUX
+              || !_this->IsAudioRunning()
+#endif
+             )
             _this->TryToChangeAudio();
+#ifdef OS_LINUX
+          _this->ReopenSavedMidiPorts();
+#endif
 
           EndDialog(hwndDlg, IDOK); // INI file will be changed see MainDialogProc
           break;
@@ -393,6 +396,8 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
           _this->TryToChangeAudio();
 #ifdef OS_LINUX
           _this->PopulateDriverSpecificControls(hwndDlg); // the sample rate may have followed the device
+          _this->ReopenSavedMidiPorts();
+          _this->RefreshMidiControls(hwndDlg);
           ShowAudioStateInTitle(hwndDlg, *_this);
 #endif
           break;
@@ -401,15 +406,17 @@ WDL_DLGRET IPlugAPPHost::PreferencesDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wPar
 
           // if state has been changed reset to previous state, INI file won't be changed
           if (!_this->AudioSettingsInStateAreEqual(mState, mTempState)
-              || !_this->MIDISettingsInStateAreEqual(mState, mTempState))
+              || !_this->MIDISettingsInStateAreEqual(mState, mTempState)
+#ifdef OS_LINUX
+              || !_this->IsAudioRunning()
+#endif
+             )
           {
             mState = mTempState;
 
             _this->TryToChangeAudioDriverType();
 #ifdef OS_LINUX
             _this->TryToChangeMidiApi();
-            // Switching the MIDI API turns off a saved port the other API doesn't have, and saves the cancelled driver with it
-            _this->UpdateINI();
 #endif
             _this->ProbeAudioIO();
             _this->TryToChangeAudio();

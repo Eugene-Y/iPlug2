@@ -600,6 +600,17 @@ void IPlugAPPHost::ReportAudioOff(const char* reason)
 }
 #endif
 
+void IPlugAPPHost::TurnOffMissingMidiPort([[maybe_unused]] WDL_String& portName)
+{
+#ifdef OS_LINUX
+  // The MIDI API follows the audio driver, and JACK's ports exist only while its server runs, so a saved port is
+  // often missing just for now; it stays saved and reconnects when it is back.
+#else
+  portName.Set(OFF_TEXT);
+  UpdateINI();
+#endif
+}
+
 bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
 {
   int port = GetMIDIPortNumber(direction, pPortName);
@@ -608,8 +619,7 @@ bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
   {
     if (port == -1)
     {
-      mState.mMidiInDev.Set(OFF_TEXT);
-      UpdateINI();
+      TurnOffMissingMidiPort(mState.mMidiInDev);
       port = 0;
     }
 
@@ -654,8 +664,7 @@ bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
   {
     if (port == -1)
     {
-      mState.mMidiOutDev.Set(OFF_TEXT);
-      UpdateINI();
+      TurnOffMissingMidiPort(mState.mMidiOutDev);
       port = 0;
     }
     
@@ -815,6 +824,17 @@ void IPlugAPPHost::TryToChangeMidiApi()
   ProbeMidiIO();
   SelectMIDIDevice(ERoute::kInput, mState.mMidiInDev.Get());
   SelectMIDIDevice(ERoute::kOutput, mState.mMidiOutDev.Get());
+}
+
+void IPlugAPPHost::ReopenSavedMidiPorts()
+{
+  ProbeMidiIO();
+
+  if (mMidiIn && !mMidiIn->isPortOpen())
+    SelectMIDIDevice(ERoute::kInput, mState.mMidiInDev.Get());
+
+  if (mMidiOut && !IsMidiOutPortOpen())
+    SelectMIDIDevice(ERoute::kOutput, mState.mMidiOutDev.Get());
 }
 #endif
 
