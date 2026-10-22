@@ -1,7 +1,7 @@
 # T-018 — Skia backend on Linux
 
-- **Status:** ready
-- **Owner:** —
+- **Status:** in progress
+- **Owner:** T-018 worker (subagent of the coordinator chat f91df715), 2026-10-22
 - **Branch/worktree:** `linux/T-018` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-018`.
 - **Depends on:** nothing. The GL-context part touches IGraphicsLinux — coordinate (T-019/T-009/T-020 use it too).
 - **Conflicts:** `IGraphics/Platforms/IGraphicsLinux*` (context/surface setup), `IGraphics/Drawing/IGraphicsSkia*` (Linux paths only), `Dependencies/IGraphics` Skia fetch/build scripts, CMake.
