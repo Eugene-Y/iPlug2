@@ -49,7 +49,8 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
   `restartComponent` from its fallback thread, which the VST3 contract does not allow; Qtractor 1.5.3 then runs a
   state round trip on that thread (Log 2026-10-22, case 5).*
 - [x] PC checklist for Bitwig/x86_64 written (section below; review approved, notes/28).
-- [ ] Independent review (AGENTS §4); Log complete.
+- [x] Independent review (AGENTS §4): approved in round 2, `notes/33-review-T-013-final.md` (R2-1, R2-2 fixed). Log
+  complete except the Wayland run.
 
 ## PC checklist (Bitwig, x86_64)
 For a tester with an x86_64 PC running Linux, Bitwig Studio 5 and, if possible, REAPER. It covers what our test VM

@@ -197,7 +197,8 @@ Host behaviour seen while testing on Linux; iPlug2 does not work around it.
   iPlug2's own thread. A latency change made then reaches the host's `restartComponent` from that thread, which VST3
   does not allow (an iPlug2 limitation); Qtractor answers it with a state round trip (`getState`/`setState`) on that
   thread. It reads the latency when playback starts. Qtractor 1.6.4's source also offers `IRunLoop` on the host
-  context, but drives it from the same kind of shared timer, stopped when the last VST3 editor closes (untested).
+  context, but drives it from the same kind of shared timer, stopped when the last VST3 editor closes, so with every
+  VST3 editor closed `OnIdle` would not run at all (read from the source; untested).
 - **Files dropped from a GTK file manager (GNOME Files):** it drops on the top-level window under the pointer, so a file
   reaches the editor only if the host forwards XDND to its plug-in window: Ardour and REAPER do; Carla 2.5.10 takes the
   drop itself; Qtractor's plug-in window is drop-aware and refuses it; Carla main (CLAP) and Renoise don't. A source

@@ -184,3 +184,56 @@ Verdict: changes requested
 - R1-10: the `latency.syms` header is one line pointing to `renoise/`; `latency-clap.syms` says "the plug-in's
   activate/deactivate".
 - R1-11: `make-session.py` is executable.
+
+## Round 2
+
+Checked `git diff 894a08707..0aa2fef74` and the files themselves: the task file (Acceptance, legend, item 9 line,
+Qtractor case 7/5/8, the CLAP section, the not-run rows), `Documentation/linux-development.md` §8, the evidence edits
+(`clap-timer-counts.txt`, `onidle-count-editor-closed.txt`, `drop-vst3/scripted-source.txt`) and the two `.syms`
+headers. Nothing to re-run in Docker: no script logic changed (only comments and `make-session.py`'s mode), and the
+round-1 Docker re-run still stands. VM not touched.
+
+R1 findings:
+- R1-1 **resolved.** Case 5 now says iPlug breaks the `[UI-thread]` contract (T-010 item 1). It lists how each host
+  takes the request (Ardour's thread marked unknown) and leaves the call to the user. The Acceptance moves it from
+  host bugs to "open framework point". §8 calls it an iPlug2 limitation.
+- R1-2 **resolved** in the Log, which matches my reading of v1.6.4, including the note that 1.5.3's frame loop has the
+  same timer but iPlug leaves it on close. The T-010 conclusion is limited to 1.5.3. §8: see R2-2 (nit).
+- R1-3 **resolved.** IPlugControls cites `05`, and the Log says the trace of that session was not kept.
+- R1-4 **resolved.** The effect now names the processor-to-editor queues and says output to the host goes through
+  `process`. Matches `IPlugAPIBase::OnTimer`.
+- R1-5 **resolved.** The legend says "every case that was run passed". Both Qtractor tables list what was not run.
+  The item 9 line names Renoise "delivered" and Carla N/A.
+- R1-6 **resolved, one new inconsistency (R2-1).** The provenance of the latency traces and the source of the
+  attribution are now stated. The window-count line moved under "editor closed".
+- R1-7 **resolved.** `scripted-source.txt` has every run: `top`, `deep` at 251,71, 360,74 twice, and the three-point
+  loop from the console. The Log names them and the gap drop's screenshot.
+- R1-8 **resolved.** §8 reflowed (no line over 120 in §8). Drag-out names where it was tried. The CLAP bullet adds the
+  new-timer restart.
+- R1-9, R1-10, R1-11 **resolved** (`latency.syms` header is one line pointing to `renoise/`; `latency-clap.syms` says
+  "the plug-in's activate/deactivate"; `make-session.py` is 100755).
+
+New findings:
+
+**R2-1 minor — the new header of `clap-timer-counts.txt` gives a window that contradicts the Log's "same rate".**
+`evidence/t013/qtractor/docker-clap/clap-timer-counts.txt:1-3` says the counts are "calls in ~5 s (8 s minus gdb's
+attach)". The open-editor count of 1188 over ~5 s would be ≈ 240 clapOnTimer/s. But `timers-fresh-session.txt`
+shows ≈ 155/s with the editor open, and the Log says the open-editor rate is "the same" as before. My round-1
+re-run of the same `count-hits.sh` showed that the attach takes almost none of the window: 739 calls in a 5 s run
+with the editor open, ≈ 148/s. So 1188 calls fit the whole 8 s (≈ 148/s). Fix: "calls in ~8 s (count-hits.sh
+qtractor 8 …)", or drop the duration from the header and keep only the per-second rate from
+`timers-fresh-session.txt`.
+
+**R2-2 nit — the §8 Qtractor VST3 bullet stops short of the consequence.** `Documentation/linux-development.md:197-198`:
+"…drives it from the same kind of shared timer, stopped when the last VST3 editor closes (untested)". Add the
+effect, as the Log does: "…so with every VST3 editor closed `OnIdle` would not run at all (from the source;
+untested)".
+
+Verdict: approve
+
+### Worker's fixes for round 2
+- R2-1: the header of `clap-timer-counts.txt` now says ~8 s.
+- R2-2: the §8 sentence on Qtractor 1.6.4 now says that, with every VST3 editor closed, `OnIdle` would not run at all
+  (read from the source; untested).
+- On R1-7, for the coordinator: `scripted-source.txt` was pulled from the hung VM with `scp` under the VM lock. ssh
+  still worked, and nothing touched X.
