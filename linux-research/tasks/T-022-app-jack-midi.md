@@ -45,10 +45,10 @@ plain jackd without the a2jmidid bridge.
 4. No MIDI thread left at `exit()` (gdb, as in `app-switch-test.sh`).
 
 ## Acceptance
-- [ ] On JACK, the MIDI combos list JACK MIDI ports; a note from a JACK MIDI source plays IPlugInstrument.
-- [ ] ALSA ↔ JACK ↔ PulseAudio in Preferences switches the MIDI port lists without a restart; no duplicate entries.
-- [ ] Clean quit on every driver; no leaked threads.
-- [ ] mac/win unchanged (Linux-only code, or a mac build proof as in T-004). Evidence in `evidence/t022/`.
+- [x] On JACK, the MIDI combos list JACK MIDI ports; a note from a JACK MIDI source plays IPlugInstrument.
+- [x] ALSA ↔ JACK ↔ PulseAudio in Preferences switches the MIDI port lists without a restart; no duplicate entries.
+- [x] Clean quit on every driver; no leaked threads.
+- [x] mac/win unchanged (Linux-only code, or a mac build proof as in T-004). Evidence in `evidence/t022/`.
 
 ## Log
 - 2026-10-21 — implementation and tests (commit 6e8995437, then the harness/evidence commit).
