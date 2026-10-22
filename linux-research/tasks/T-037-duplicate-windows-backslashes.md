@@ -1,6 +1,6 @@
 # T-037 — `duplicate.py` on Windows writes backslash paths into mac/iOS/web project files
 
-- **Status:** review-done (low; ticket from the T-011 review, user 2026-10-22)
+- **Status:** merged dc753df33 (review round 2 approve; real Windows run open)
 - **Owner:** worker subagent (lock `.linux-port-locks/T-037`)
 - **Branch/worktree:** `linux/T-037` from `hvoya-linux`.
 - **Depends on:** T-011 (merged 839e1b51d).
