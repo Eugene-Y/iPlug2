@@ -874,15 +874,19 @@ public:
   /** Call this if you modify control tool tips at runtime to refresh the platform tooltip state */
   virtual void UpdateTooltips() = 0;
 
-  /** Pop up a modal platform message box dialog.
+  /** Pop up a platform message box dialog. It is modal on macOS and Windows, which also call the completionHandler
+   * before returning. On iOS and Linux it returns kNoResult at once and only the completionHandler gets the answer.
    * @param str The text message to display in the dialog
    * @param title The title of the message box window
    * @param type EMsgBoxType describing the button options available \see EMsgBoxType
-   * @param completionHanlder an IMsgBoxCompletionHandlerFunc that will be called when a button is pressed
-   * @return EMsgBoxResult signifying which button was pressed */
+   * @param completionHandler an IMsgBoxCompletionHandlerFunc that will be called when a button is pressed
+   * @return EMsgBoxResult signifying which button was pressed, or kNoResult if the answer only reaches the completionHandler */
   virtual EMsgBoxResult ShowMessageBox(const char* str, const char* title, EMsgBoxType type, IMsgBoxCompletionHandlerFunc completionHandler = nullptr) = 0;
 
-  /** Create a platform file prompt dialog to choose a path for opening/saving a single file. NOTE: this method will block the main thread on macOS, unless you speficy the completionHander, which will be called asynchronously when the dialog button is pressed. On iOS, you must supply a completionHander.
+  /** Create a platform file prompt dialog to choose a path for opening/saving a single file. Without a completionHandler it
+   * blocks until the dialog closes (macOS, Windows). With one, macOS shows a sheet on the plug-in's window and returns at
+   * once; Windows still blocks and calls the handler before returning. iOS and Linux require the completionHandler: their
+   * dialogs are asynchronous only. The web build does not implement this dialog.
    * @param fileName Non const WDL_String reference specifying the file name. Set this prior to calling the method for save dialogs, to provide a default file name. For file-open dialogs, on successful selection of a file this will get set to the file’s name.
    * @param path WDL_String reference where the path will be put on success or empty string on failure/user cancelled
    * @param action Determines whether this is an file-open dialog or a file-save dialog
@@ -890,16 +894,18 @@ public:
    * @param completionHandler an IFileDialogCompletionHandlerFunc that will be called when a file is selected or the dialog is cancelled */
   virtual void PromptForFile(WDL_String& fileName, WDL_String& path, EFileAction action = EFileAction::Open, const char* ext = "", IFileDialogCompletionHandlerFunc completionHandler = nullptr) = 0;
 
-  /** Create a platform file prompt dialog to choose a directory path for opening/saving a directory. NOTE: this method will block the main thread
+  /** Create a platform file prompt dialog to choose a directory path for opening/saving a directory. Blocking and the
+   * completionHandler work as in PromptForFile.
    * @param dir Non const WDL_String reference specifying the directory path. Set this prior to calling the method for save dialogs, to provide a default path. For load dialogs, on successful selection of a directory this will get set to the full path.
    * @param completionHandler an IFileDialogCompletionHandlerFunc that will be called when a file is selected or the dialog is cancelled. Only the path argument will be populated. */
   virtual void PromptForDirectory(WDL_String& dir, IFileDialogCompletionHandlerFunc completionHandler = nullptr) = 0;
 
-  /** Create a platform color chooser dialog. NOTE: this method will block the main thread
-   * @param color When a color is chosen the IColor referenced will be updated with the new color
-   * @param str The text to display in the dialog box e.g. "Please choose a color... (Windows only)"
-   * @param IColorPickerHandlerFunc func callback for asynchronous color pickers
-   * @return /c true if prompt completed successfully */
+  /** Create a platform color chooser dialog. Only Windows blocks; macOS, iOS, Linux and the web return at once and
+   * deliver the colour through func, which they require.
+   * @param color The initial colour; Windows also writes the chosen colour back into it
+   * @param str The dialog's prompt or title, on platforms that show one (Windows, Linux)
+   * @param func Called with the chosen colour
+   * @return Windows: \c true if a colour was chosen. macOS: \c true if the panel opened. iOS, Linux, web: \c false */
   virtual bool PromptForColor(IColor& color, const char* str = "", IColorPickerHandlerFunc func = nullptr) = 0;
 
   /** Open a URL in the platform's default browser
