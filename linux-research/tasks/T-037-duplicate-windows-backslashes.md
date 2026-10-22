@@ -1,6 +1,6 @@
 # T-037 — `duplicate.py` on Windows writes backslash paths into mac/iOS/web project files
 
-- **Status:** in-progress (low; ticket from the T-011 review, user 2026-10-22)
+- **Status:** review-done (low; ticket from the T-011 review, user 2026-10-22)
 - **Owner:** worker subagent (lock `.linux-port-locks/T-037`)
 - **Branch/worktree:** `linux/T-037` from `hvoya-linux`.
 - **Depends on:** T-011 (merged 839e1b51d).
@@ -26,7 +26,8 @@ Normalise `newroot` to `/` before `dirwalk()` (as T-011 does for the project-fol
   gets `/` paths; no doubling with iPlug2 not a direct child of the target.
 - [x] mac before/after for all examples in- and out-of-tree: no change.
 - [ ] Ideally a real Windows run (the user's PC).
-- [ ] Independent review; CROSS_PLATFORM_FINDINGS T11-4 updated.
+- [x] Independent review (notes/32, approved in round 2). CROSS_PLATFORM_FINDINGS T11-4: for the coordinator (see the
+  cross-platform notes in the Log).
 
 ## Log
 
@@ -97,6 +98,13 @@ Normalise `newroot` to `/` before `dirwalk()` (as T-011 does for the project-fol
   reaches, and the CMake/JSON reason for the project-folder roots had been dropped: each reason now sits on its own
   line (comment-only). R1-2 (nit): the CRLF note above refined, `.gitattributes`'s `.mk` line reported. R1-3: status.
 
+### Review round 2 (2026-10-22)
+- `notes/32-review-T-037.md` round 2: **approve**, R1-1..R1-3 resolved, no major or minor finding. R2-1 (nit): the
+  replay command in `compare-summary.txt` named the moving `hvoya-linux`; now pinned to 8f7b9f613 (after the T-032
+  merge, `hvoya-linux` changes `IPlugControls.cpp`, which would show as an unrelated mac difference). A merge smoke
+  test should pin the base the same way (`git merge-base hvoya-linux linux/T-037`).
+- **Final verdict: approved** (2 rounds). Commits: a15efea90 (fix), 3b8fc76de (review comment fix), a73b8a285 /
+  3d1b003e4 (evidence), task log and review notes.
+
 ### Open
-- Re-check of R1-1 by the reviewer.
 - User: a real Windows run, if wanted.
