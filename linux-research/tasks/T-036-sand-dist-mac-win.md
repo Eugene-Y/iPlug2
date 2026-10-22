@@ -165,3 +165,60 @@ A follow-up normal run → exit 0, `.partial` gone. `~/Library/Audio/Plug-Ins` i
 Windows still not run (r2-n2 by reading only).
 
 Final commits on `dist-scripts`: `54093bb`, `3d25440`, `8ceca9d`, `bcb22ec`. Lock released; worktree left in place.
+
+### 2026-10-22 — aligned with Gneiss; docs in the archives
+The user's decisions (2026-10-22): `dist-scripts` will be merged into Sand master by the coordinator after review; the
+archives carry the docs the way Gneiss' do (placeholder manual for now); Sand's scripts work like Gneiss' unless there is a
+Sand-specific reason; the Linux archive change goes on `linux-experiment`.
+
+**What Gneiss ships and from where.** mac/win: `Installation instructions.txt` and `MANUAL.md`, both at the Gneiss repo root
+(`DOCS=(…)` in `makedist-mac.sh`, `$Docs` in `makedist-win.ps1`), copied into the release folder's root. Linux: `MANUAL.md`
+only, via `package.sh --doc MANUAL.md`; `package.sh` itself adds `README-Linux.txt` and `install.sh`. No license or readme file.
+
+**Commits (Sand repo):**
+- `92aeb3f` (parent: master `d2294da`, no branch of its own) — `MANUAL.md` (placeholder: title, "The Sand manual is coming
+  soon.", the installation link Gneiss' manual has) and `Installation instructions.txt` (Gneiss' text adapted: Sand.vst3 +
+  Sand.clap on Windows, VST3/Components/CLAP + three `xattr` lines on mac; Gneiss' VST2 `.dll` paragraph dropped).
+- `dist-scripts` (Sand-dist): `bd3e8dd` merge of `92aeb3f`; `411bdb8` mac/win scripts ship both docs (same list and copy as Gneiss').
+- `linux-experiment` (Sand-linux): `f7810b3` merge of `92aeb3f`; `fc4b9e0` `makedist-linux.sh` passes `--doc MANUAL.md`.
+- One docs commit merged into both branches, so a later edit of the docs on master cannot meet an add/add conflict when
+  `linux-experiment` comes in. `git merge-tree --write-tree dist-scripts linux-experiment` → clean.
+
+**Sand vs Gneiss, option by option**
+
+| Item | Gneiss | Sand | Verdict |
+|---|---|---|---|
+| Output folder / names | `distr/Gneiss/Gneiss_v<ver>_{mac,win}_<ed>/` (+`.zip`), win `C:\code\Distributables\Gneiss`; Linux `…_linux_<arch>_<ed>.tar.gz` | same without `_<ed>` | aligned (no editions in Sand) |
+| Archive layout | bundles + 2 docs at the folder root; Linux: CLAP/ VST3/ Standalone/ MANUAL.md README-Linux.txt install.sh | same | aligned (this round) |
+| Docs | `Installation instructions.txt`, `MANUAL.md` (Linux: MANUAL.md) | same | aligned (this round) |
+| Editions, `--only`, edition stamp check | yes | none | kept: Sand has no editions |
+| Debug symbols | mac/win: none kept; Linux: `debug-symbols/` | same | aligned |
+| Install | by default into the project's install paths, `--no-install` / `-NoInstall` | same | aligned |
+| Win install path when the project has none | Gneiss props set `VST3_64_PATH`/`CLAP_PATH`; build blanks them | stock postbuild: blank `CLAP_PATH` copies to the drive root → redirect into `build-win\makedist-no-install`; install falls back to `%LOCALAPPDATA%\Programs\Common\…` | kept: Sand-specific |
+| `--out` / `-Out` | Linux only | mac, win, Linux | kept (Sand better); Gneiss mac/win could take it |
+| Dirty check | mac/win none; Linux project tree only | mac/win: Sand + iPlug2 trees, git failure fails closed, `--allow-dirty` needs `--out`; Linux: project tree only (like Gneiss) | kept (Sand better); recommend for Gneiss mac/win and both Linux scripts |
+| Staging | straight into the release folder, never emptied | empty `.partial`, swapped in at the end | kept (Sand better, m2/r2-n1); recommend for Gneiss |
+| Stale bundle content | mac `dst/` and win `build-win\X.vst3` reused | both emptied before the build | kept (m1/m5); recommend for Gneiss |
+| `-showBuildSettings` empty-field guard | none | awk exits 1 | kept (n2); recommend for Gneiss |
+| `--out` without a value | Linux: `$2: unbound variable` | mac: exit 2; Linux: as Gneiss | kept on mac; trivial for both Linux scripts |
+| Win zip separators | no switch | `UseBackslash=false` | kept (m6, unverified on Windows); recommend for Gneiss |
+| Linux: all archives checked before any is published | yes (separate verify and publish loops) | yes | aligned; Sand's SIGPIPE fix is not needed in Gneiss (its `grep -x` reads all input) |
+
+**Verification (2026-10-22):**
+- mac: `scripts/makedist-mac.sh --no-install --zip --out <scratch>/t036a/distr` → exit 0, 3× BUILD SUCCEEDED, ~30 s. Zip: 76
+  entries (round 2's 74 + the two docs), top level `Sand.{clap,vst3,component}/`, `MANUAL.md`, `Installation instructions.txt` —
+  Gneiss' layout; no `.DS_Store`/`__MACOSX`/`._*`. Docs byte-identical to the repo's; `codesign --verify --deep --strict` OK on all
+  three. `~/Library/Audio/Plug-Ins` listing identical, `find -newer` empty; `distr/Sand` unchanged; Sand-dist `git status --ignored`
+  = `!! build-mac/`, `!! plug_build_info.hpp`; IPlug2 main checkout clean.
+- Linux: `scripts/makedist-linux.sh --out <scratch>/t036a/distr-linux` (clean tree, Docker, both arches) → exit 0, 2 min 43 s.
+  Both archives: `CLAP/ VST3/ Standalone/ MANUAL.md README-Linux.txt install.sh` — Gneiss' Linux layout; MANUAL.md identical to the
+  repo's; `debug-symbols/` holds the symbols and reports.
+- Windows: not run, no Windows and no `pwsh` here. Diff read: `$Docs` and the copy are now Gneiss' lines with `$stage` for
+  `$dest`; the file is still pure ASCII.
+
+Scratch: `/private/tmp/claude-501/-Volumes-Storage-code-IPlug2-linux/f91df715-d8e2-4a5b-b1d6-6e68afefbe6a/scratchpad/t036a/`.
+
+**Open:** the `hvoya.audio/installation/` link in the placeholder manual is Gneiss'; check that it suits Sand. Gneiss'
+`Installation instructions.txt` names a VST2 `.dll` it does not ship and does not mention CLAP (Gneiss not changed).
+Still open from before: version hex (bundles report 1.1.16), Windows VST3 bundle vs bare DLL, install by default, Windows root,
+first real Windows run, and a version bump before the first default (non-`--out`) run.
