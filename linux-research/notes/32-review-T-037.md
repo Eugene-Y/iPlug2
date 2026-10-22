@@ -119,3 +119,43 @@ The substring-replace mangling is real and pre-existing, and identical in mac/be
 `XConvoEngineParent`'s macOS pbxproj, 3 lines read `"@executable_path/../../iPlug2/../Frameworks"`. The source reads
 `../../../../Frameworks`. `XOSCEditorParent`'s iOS pbxproj has `path = ../../iPlug2/../WDL/jnetlib/netinc.h`. The
 description, the repro and the suggested `replacepathruns()` reuse are accurate.
+
+# Round 2
+
+Re-check of 3b8fc76de (R1-1, R1-2, R1-3) and 3d1b003e4 (`compare.sh` example list).
+
+## Verdict
+
+**Approve.** All round-1 findings are resolved. No major or minor finding is left; R2-1 is an optional nit.
+
+## What I re-checked myself
+
+- **R1-1, resolved.** The diff `a15efea90..3b8fc76de -- Examples/duplicate.py` touches only comment lines. At
+  `duplicate.py:254-260`:
+  - the `newroot` comment now names the files outside the VS projects and the doubling reason, with no mention of
+    CMake/JSON;
+  - "These land in CMake and JSON files, which read '\' as an escape." is back above the project-root lines, ahead
+    of the lexical note.
+  - Each reason sits once, on the line it explains. Both comments are short and accurate.
+- **R1-2, resolved.** The task Log's CRLF note now separates three cases: a project inside an iPlug2 checkout
+  (`.gitattributes` normalises on commit), a project in its own repo (`core.autocrlf`), and a copy made without git.
+  The `.mk` item is reported separately. `.gitattributes:34` is indeed `.mk                 text eol=lf`.
+- **R1-3, resolved.** The Log has a "Review round 1" entry. The worker sets Status to `review-done` after this
+  approval.
+- **3d1b003e4.** `compare.sh` now takes the examples from `git ls-tree -d` of the after-ref. That gives 20 entries,
+  the same 20 example directories, so an untracked or ignored folder in the worktree can no longer slip in.
+- **Re-run.** I ran `compare.sh <wt> 8f7b9f613 3b8fc76de <scratch>` and then `analyse.sh`. The output is identical to
+  the committed `compare-summary.txt`, header line aside. `python3 ntsim.py` is identical to `ntsim.txt`.
+
+## Finding
+
+### R2-1 — nit — `evidence/t037/compare-summary.txt:1` — the replay command names a moving ref
+
+**Problem.** `hvoya-linux` has moved since the worker's run: it is now 4c52a5261, after the T-032 merge, which
+changed `Examples/IPlugControls/IPlugControls.cpp`. My first re-run used `compare.sh <wt> hvoya-linux 3b8fc76de`
+literally. It showed mac before≠after for the 7 `IPlugControls`/`XControls*` `.cpp` files, which comes from T-032,
+not from T-037. With the base pinned to 8f7b9f613 the summary matches exactly.
+
+**Fix (optional).** In the header's command, write `8f7b9f613` (or `$(git merge-base hvoya-linux linux/T-037)`)
+instead of `hvoya-linux`, so that a later replay compares like with like. The coordinator's merge smoke test should
+do the same.
