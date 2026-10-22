@@ -3,8 +3,8 @@
 # (jackd -d dummy) and no ALSA sequencer. jack_midiseq loops a note into the APP's MIDI input; jack_midi_dump receives
 # what IPlugInstrument echoes to its MIDI output. In Preferences: JACK -> ALSA -> Cancel, then PulseAudio -> JACK (the
 # saved ports reconnect) and "off" and the port picked from the MIDI input list; File > Quit; the threads left at
-# exit(); last, a start with the JACK server stopped keeps the saved ports, and Apply after the server is up reconnects
-# them.
+# exit(); last, a start with the JACK server stopped keeps the saved ports, Apply after the server is up reconnects
+# them, and OK reconnects them after the source client and then the JACK server restart.
 # Usage: app-jack-midi-test.sh <outdir> <IPlugInstrument APP>
 set -uo pipefail
 OUT="$1"; APP="$2"; NAME=$(basename "$APP")
@@ -74,6 +74,8 @@ midi_list() { # <combo y> <png> [row]
   slow_click $((X + 121)) $((Y + $1)); import -window root "$2"
   if [ -n "${3:-}" ]; then slow_click $((X + 60)) $((Y + $1 + 21 + 16 * $3)); else xdotool key Escape; sleep 0.5; fi
 }
+# jackd takes a while to exit with clients attached, and a new one fails while the old one is still there
+jack_down() { pkill -x jackd; for _ in $(seq 150); do pgrep -x jackd > /dev/null || return 0; sleep 0.1; done; pkill -9 -x jackd; sleep 0.5; }
 ini() { awk -F= -v s="[$1]" -v k="$2" '$0==s{f=1;next} /^\[/{f=0} f&&$1==k{print; exit}' "$INI"; }
 
 env "$APP" > "$OUT/stderr.txt" 2>&1 &
@@ -116,13 +118,13 @@ midi_list $MIDI_OUT "$OUT/06-jack-again-midi-outputs.png"
 midi_list $MIDI_IN "$OUT/07-jack-again-midi-inputs.png" 0
 connected "$SRC" "$NAME MIDI in:" && fail "\"off\" picked, $SRC still connected" || pass "\"off\" picked from the list: $SRC disconnected"
 midi_list $MIDI_IN "$OUT/08-jack-again-midi-inputs-off.png" 1
-import -window root "$OUT/08-input-picked.png"
+import -window root "$OUT/09-input-picked.png"
 connected "$SRC" "$NAME MIDI in:" && pass "picked from the list: $SRC -> $NAME MIDI in" || fail "picking $SRC did not connect it: $(jack_lsp -c | tr '\n' ' ')"
 prefs_button $OK
 dismiss_audio_box && fail "Audio box after OK: $(grep -a 'Audio is off' "$OUT/stderr.txt" | tail -1)"
 [ "$(jack_lsp | grep -c "^$NAME:outport ")" -ge 2 ] && pass "after JACK -> PulseAudio -> JACK and OK the audio runs again" || fail "no audio ports after OK: $(jack_lsp | tr '\n' ' ')"
 [ "$(ini audio driver)" = driver=1 ] && [ "$(ini midi indev)" = "indev=$SRC" ] && pass "settings.ini after OK: $(ini audio driver) $(ini midi indev)" || fail "settings.ini after OK: $(ini audio driver) $(ini midi indev)"
-M=$(meter_moves "$OUT/09-note-after-switch.png") && pass "note after the switches moves the meter ($M)" || fail "meter unchanged after the switches ($M)"
+M=$(meter_moves "$OUT/10-note-after-switch.png") && pass "note after the switches moves the meter ($M)" || fail "meter unchanged after the switches ($M)"
 
 read -r X Y < <(origin "$(win "$NAME")")
 slow_click $((X + 16)) $((Y + 6)); slow_click $((X + 41)) $((Y + 49))
@@ -155,12 +157,12 @@ awk '/^  Id +Target Id/{f=1} f&&/^[* ] +[0-9]+ +Thread/' "$OUT/exit-threads.txt"
   && fail "a thread besides main and gmain at exit() (exit-threads.txt)" || pass "only main and gmain at exit()"
 
 # Started before the JACK server: the Audio box, and the saved MIDI ports stay in settings.ini
-kill "$SEQPID" "$DUMPPID" 2> /dev/null; pkill -x jackd; sleep 1.5
+kill "$SEQPID" "$DUMPPID" 2> /dev/null; jack_down
 "$APP" > "$OUT/stderr-no-server.txt" 2>&1 &
 APID=$!
 sleep 5
 dismiss_audio_box && pass "no JACK server: Audio box ($(grep -a 'Audio is off' "$OUT/stderr-no-server.txt" | tail -1))" || fail "no JACK server: no Audio box"
-import -window root "$OUT/10-no-server.png"
+import -window root "$OUT/11-no-server.png"
 # The server comes up later; Apply in Preferences brings back the audio and the saved MIDI ports
 (jackd --no-realtime -d dummy -r 48000 -p 256 > "$OUT/jackd-late.log" 2>&1 &); sleep 1.5
 jack_midiseq seq 48000 0 60 2400 > /dev/null 2>&1 &
@@ -171,17 +173,42 @@ sleep 1
 prefs_open
 prefs_button $APPLY
 dismiss_audio_box && fail "server up, Apply: Audio box: $(grep -a 'Audio is off' "$OUT/stderr-no-server.txt" | tail -1)"
-import -window root "$OUT/11-server-up-apply.png"
+import -window root "$OUT/12-server-up-apply.png"
 [ "$(jack_lsp | grep -c "^$NAME:outport ")" -ge 2 ] && pass "server up, Apply: audio runs" || fail "server up, Apply: no audio ports"
 connected "$SRC" "$NAME MIDI in:" && connected "$DUMP" "$NAME MIDI out:" \
   && pass "server up, Apply: the saved MIDI ports reconnect" || fail "server up, Apply: MIDI not reconnected: $(jack_lsp -c | tr '\n' ' ')"
 prefs_button $OK
-M=$(meter_moves "$OUT/12-server-up-note.png") && pass "server up: the note moves the meter ($M)" || fail "server up: meter unchanged ($M)"
+M=$(meter_moves "$OUT/13-server-up-note.png") && pass "server up: the note moves the meter ($M)" || fail "server up: meter unchanged ($M)"
+
+# The source client restarts while the APP's input is open: OK reconnects it
+kill "$SEQPID"; sleep 1
+jack_midiseq seq 48000 0 60 2400 > /dev/null 2>&1 &
+SEQPID=$!
+sleep 2
+connected "$SRC" "$NAME MIDI in:" && fail "source restarted: connected without OK?" || pass "source restarted: $SRC no longer connected"
+prefs_open; prefs_button $OK
+connected "$SRC" "$NAME MIDI in:" && pass "source restarted, OK: $SRC -> $NAME MIDI in again" || fail "source restarted, OK: not reconnected"
+
+# The JACK server restarts while the APP runs: the old MIDI clients died with it; OK brings back audio and MIDI
+kill "$SEQPID" "$DUMPPID" 2> /dev/null; jack_down
+(jackd --no-realtime -d dummy -r 48000 -p 256 > "$OUT/jackd-restart.log" 2>&1 &); sleep 1.5
+jack_midiseq seq 48000 0 60 2400 > /dev/null 2>&1 &
+SEQPID=$!
+jack_midi_dump > /dev/null 2>&1 &
+DUMPPID=$!
+sleep 2
+dismiss_audio_box && info "server restart: Audio box ($(grep -a 'Audio is off' "$OUT/stderr-no-server.txt" | tail -1))"
+prefs_open; prefs_button $OK
+dismiss_audio_box && fail "server restarted, OK: Audio box: $(grep -a 'Audio is off' "$OUT/stderr-no-server.txt" | tail -1)"
+[ "$(jack_lsp | grep -c "^$NAME:outport ")" -ge 2 ] && pass "server restarted, OK: audio runs" || fail "server restarted, OK: no audio ports"
+connected "$SRC" "$NAME MIDI in:" && connected "$DUMP" "$NAME MIDI out:" \
+  && pass "server restarted, OK: both MIDI ports reconnect" || fail "server restarted, OK: MIDI not reconnected: $(jack_lsp -c | tr '\n' ' ')"
+M=$(meter_moves "$OUT/14-server-restarted-note.png") && pass "server restarted: the note moves the meter ($M)" || fail "server restarted: meter unchanged ($M)"
 read -r X Y < <(origin "$(win "$NAME")")
 slow_click $((X + 16)) $((Y + 6)); slow_click $((X + 41)) $((Y + 49))
 for _ in $(seq 50); do kill -0 "$APID" 2>/dev/null || break; sleep 0.1; done
 if kill -0 "$APID" 2>/dev/null; then fail "no JACK server: APP still running 5 s after File > Quit"; kill -9 "$APID"
-else wait "$APID"; RC=$?; [ "$RC" = 0 ] && pass "no JACK server: File > Quit, exit 0" || fail "no JACK server: File > Quit, exit $RC"; fi
+else wait "$APID"; RC=$?; [ "$RC" = 0 ] && pass "after the restarts: File > Quit, exit 0" || fail "after the restarts: File > Quit, exit $RC"; fi
 [ "$(ini midi indev)" = "indev=$SRC" ] && [ "$(ini midi outdev)" = "outdev=$DUMP" ] \
   && pass "no JACK server: settings.ini keeps $(ini midi indev) $(ini midi outdev)" || fail "no JACK server: settings.ini $(ini midi indev) $(ini midi outdev)"
 

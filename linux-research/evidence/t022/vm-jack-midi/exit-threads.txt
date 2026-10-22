@@ -1,31 +1,31 @@
 Breakpoint 1 at 0xa6c70
 [Thread debugging using libthread_db enabled]
 Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
-[New Thread 0xfffff525ede0 (LWP 86341)]
-[New Thread 0xfffff4a4ede0 (LWP 86342)]
-[New Thread 0xffffe7ffede0 (LWP 86343)]
-[New Thread 0xffffe77eede0 (LWP 86344)]
-[New Thread 0xffffddc3dde0 (LWP 86345)]
-[Thread 0xffffddc3dde0 (LWP 86345) exited]
-[Thread 0xffffe77eede0 (LWP 86344) exited]
-[Thread 0xffffe7ffede0 (LWP 86343) exited]
-[Thread 0xfffff525ede0 (LWP 86341) exited]
+[New Thread 0xfffff525ede0 (LWP 94795)]
+[New Thread 0xfffff4a4ede0 (LWP 94796)]
+[New Thread 0xffffe7ffede0 (LWP 94797)]
+[New Thread 0xffffe77eede0 (LWP 94798)]
+[New Thread 0xffffddc3dde0 (LWP 94799)]
+[Thread 0xffffddc3dde0 (LWP 94799) exited]
+[Thread 0xffffe77eede0 (LWP 94798) exited]
+[Thread 0xffffe7ffede0 (LWP 94797) exited]
+[Thread 0xfffff525ede0 (LWP 94795) exited]
 
 Thread 1 "IPlugInstrument" hit Breakpoint 1, __GI_exit (status=0) at ./stdlib/exit.c:138
 warning: 138	./stdlib/exit.c: No such file or directory
   Id   Target Id                                           Frame 
-* 1    Thread 0xfffff7e3eac0 (LWP 86339) "IPlugInstrument" __GI_exit (status=0) at ./stdlib/exit.c:138
-  3    Thread 0xfffff4a4ede0 (LWP 86342) "gmain"           0x0000fffff70f0bdc in __GI___poll (fds=0xaaaaab0a1f10, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+* 1    Thread 0xfffff7e3eac0 (LWP 94793) "IPlugInstrument" __GI_exit (status=0) at ./stdlib/exit.c:138
+  3    Thread 0xfffff4a4ede0 (LWP 94796) "gmain"           0x0000fffff70f0bdc in __GI___poll (fds=0xaaaaab08d270, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
 
-Thread 3 (Thread 0xfffff4a4ede0 (LWP 86342) "gmain"):
-#0  0x0000fffff70f0bdc in __GI___poll (fds=0xaaaaab0a1f10, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+Thread 3 (Thread 0xfffff4a4ede0 (LWP 94796) "gmain"):
+#0  0x0000fffff70f0bdc in __GI___poll (fds=0xaaaaab08d270, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
 #1  0x0000fffff7b91b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
 #2  0x0000fffff7b2ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
 
-Thread 1 (Thread 0xfffff7e3eac0 (LWP 86339) "IPlugInstrument"):
+Thread 1 (Thread 0xfffff7e3eac0 (LWP 94793) "IPlugInstrument"):
 #0  __GI_exit (status=0) at ./stdlib/exit.c:138
-#1  0x0000fffff70384c8 in __libc_start_call_main (main=main@entry=0xaaaaaab960d8 <main(int, char**)>, argc=argc@entry=1, argv=argv@entry=0xfffffffff978) at ../sysdeps/nptl/libc_start_call_main.h:74
-#2  0x0000fffff7038598 in __libc_start_main_impl (main=0xaaaaaab960d8 <main(int, char**)>, argc=1, argv=0xfffffffff978, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=<optimized out>) at ../csu/libc-start.c:360
+#1  0x0000fffff70384c8 in __libc_start_call_main (main=main@entry=0xaaaaaab960c0 <main(int, char**)>, argc=argc@entry=1, argv=argv@entry=0xfffffffff978) at ../sysdeps/nptl/libc_start_call_main.h:74
+#2  0x0000fffff7038598 in __libc_start_main_impl (main=0xaaaaaab960c0 <main(int, char**)>, argc=1, argv=0xfffffffff978, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=<optimized out>) at ../csu/libc-start.c:360
 applied rlimit 16384/1048576
 
 BEGIN IPLUG CHANNEL IO PARSER --------------------------------------------------
@@ -42,12 +42,12 @@ Reading ini file from /home/gene/iplug-harness/linux-research/evidence/t022/vm-j
 
 RtAudio Version 6.0.1Couldn't find previous audio device, reseting to default
 trying to start audio stream @ 48000 sr, buffer size 256
-indev = Dummy Output
-outdev = Dummy Output
+indev = Built-in Audio
+outdev = Built-in Audio
 inputs = 0
 outputs = 2
 IGraphics NanoVG @ 60 FPS
-[Thread 0xfffff7e3eac0 (LWP 86339) exited]
-[Thread 0xfffff4a4ede0 (LWP 86342) exited]
-[New process 86339]
-[Inferior 1 (process 86339) exited normally]
+[Thread 0xfffff7e3eac0 (LWP 94793) exited]
+[Thread 0xfffff4a4ede0 (LWP 94796) exited]
+[New process 94793]
+[Inferior 1 (process 94793) exited normally]

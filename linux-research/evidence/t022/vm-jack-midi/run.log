@@ -1,27 +1,29 @@
 ok: virmidi: client 20: 'Virtual Raw MIDI 1-0' [type=kernel,card=1], rawmidi hw:1,0
-ok: JACK port of the virmidi card: 'Midi-Bridge:Virtual Raw MIDI 1-0 1:(capture_0) VirMIDI 1-0'
+ok: JACK port of the virmidi card: 'Midi-Bridge:Virtual MIDI Card 1:(capture_0) VirMIDI 1-0'
 info: the APP's JACK MIDI ports: IPlugInstrument MIDI out:RtMidi Output IPlugInstrument MIDI in:RtMidi Input 
-ok: JACK: 'Midi-Bridge:Virtual Raw MIDI 1-0 1:(capture_0) VirMIDI 1-0' -> IPlugInstrument MIDI in
+ok: JACK: 'Midi-Bridge:Virtual MIDI Card 1:(capture_0) VirMIDI 1-0' -> IPlugInstrument MIDI in
 ok: JACK: IPlugInstrument MIDI out -> midi-monitor:input
 ok: no ALSA sequencer client on JACK
-ok: JACK: amidi note moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
+ok: JACK: amidi note moves the meter (#7F7F7F7F7F7F -> #24249D9D1010, note 1)
 ok: JACK: the note echoed to midi-monitor:input:    0: 90 3c 7f note on  (channel  0): pitch  60, velocity 127
 ok: Preferences 'Preferences'
 ok: PulseAudio: no JACK MIDI ports left
 ok: PulseAudio: picked from the list, virmidi -> sequencer client 128 'IPlugInstrument'
 info: settings.ini on PulseAudio: driver=2 indev=Virtual Raw MIDI 1-0:VirMIDI 1-0 20:0
-ok: PulseAudio: amidi note through the sequencer moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
+ok: PulseAudio: amidi note through the sequencer moves the meter (#7F7F7F7F7F7F -> #24249D9D1010, note 1)
 ok: JACK again: no sequencer client left
-info: JACK again: 'Midi-Bridge:Virtual Raw MIDI 1-0 1:(capture_0) VirMIDI 1-0' is row 2 of the MIDI input list
-ok: JACK again: picked from the list, 'Midi-Bridge:Virtual Raw MIDI 1-0 1:(capture_0) VirMIDI 1-0' -> IPlugInstrument MIDI in
-ok: settings.ini: driver=1 indev=Midi-Bridge:Virtual Raw MIDI 1-0 1:(capture_0) VirMIDI 1-0
-ok: JACK again: amidi note moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
+info: JACK again: 'Midi-Bridge:Virtual MIDI Card 1:(capture_0) VirMIDI 1-0' is row 2 of the MIDI input list
+ok: JACK again: picked from the list, 'Midi-Bridge:Virtual MIDI Card 1:(capture_0) VirMIDI 1-0' -> IPlugInstrument MIDI in
+ok: settings.ini: driver=1 indev=Midi-Bridge:Virtual MIDI Card 1:(capture_0) VirMIDI 1-0
+ok: JACK again, after OK: 'Midi-Bridge:Virtual MIDI Card 1:(capture_0) VirMIDI 1-0' -> IPlugInstrument MIDI in
+ok: JACK again, after OK: audio ports
+ok: JACK again: amidi note moves the meter (#7F7F7F7F7F7F -> #24249D9D1010, note 1)
 ok: File > Quit on JACK with JACK MIDI connected, exit 0
 ok: no JACK MIDI ports after quit
 ok: under gdb on PulseAudio: virmidi -> sequencer client 128 'IPlugInstrument'
-ok: under gdb on PulseAudio: amidi note moves the meter (#7F7F7F7F7F7F -> #24249D9D1010)
-  * 1    Thread 0xfffff7e3eac0 (LWP 86339) "IPlugInstrument" __GI_exit (status=0) at ./stdlib/exit.c:138
-    3    Thread 0xfffff4a4ede0 (LWP 86342) "gmain"           0x0000fffff70f0bdc in __GI___poll (fds=0xaaaaab0a1f10, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
+ok: under gdb on PulseAudio: amidi note moves the meter (#7F7F7F7F7F7F -> #24249D9D1010, note 1)
+  * 1    Thread 0xfffff7e3eac0 (LWP 94793) "IPlugInstrument" __GI_exit (status=0) at ./stdlib/exit.c:138
+    3    Thread 0xfffff4a4ede0 (LWP 94796) "gmain"           0x0000fffff70f0bdc in __GI___poll (fds=0xaaaaab08d270, nfds=1, timeout=<optimized out>) at ../sysdeps/unix/sysv/linux/poll.c:41
 ok: 2 thread(s) at exit()
 ok: only main and gmain at exit()
 RESULT: PASS

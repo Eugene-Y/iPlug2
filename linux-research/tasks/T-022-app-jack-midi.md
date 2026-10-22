@@ -167,3 +167,40 @@ plain jackd without the a2jmidid bridge.
     - They remain on Windows: DirectSound ↔ ASIO round trip, then OK/Cancel.
     - On mac/win, `--no-io` still writes `indev=off`.
   - **Next:** an independent review of 509dbe71a.
+- 2026-10-22 — review round 3 (R1-2 follow-up, `notes/29-review-T-022.md`, 84ca1d167): approve with fixes. All
+  fixed in f48e2803f; R3-3 is left as an option.
+  - **R3-1 major, fixed.** After a JACK server restart the RtMidi clients are dead but still report their ports open,
+    so MIDI stayed disconnected and quitting could crash. `RecreateJackMidiIfAudioStopped()` now runs before the audio
+    restart on OK, Apply and Cancel: on JACK with the audio stopped it calls `RecreateMidi()`. The audio is stopped at
+    that point, so the audio thread can't reach `mMidiOut`.
+  - **R3-2 fixed.** Apply and OK call `ReselectSavedMidiPorts()` (it replaces `ReopenSavedMidiPorts`). It reopens the
+    saved ports even when they are open, so a source that restarted or was re-plugged reconnects. Trade-off: every
+    OK/Apply briefly closes and reopens the MIDI ports.
+  - **R3-3, not done (optional UX).** The combo shows "off" while a missing port is kept. Picking "off" clears it
+    (SWELL sends the selection change even when nothing changes, scenario H).
+  - **R3-4 fixed.** `TurnOffMissingMidiPort` is renamed `HandleMissingMidiPort`. `RecreateMidi()` is split out of
+    `TryToChangeMidiApi()`, and the docs are corrected. The reason for the OK/Cancel restart sits at the IDOK
+    condition.
+  - **R3-5 fixed.** The screenshots are renumbered (09 input picked … 14 server restarted).
+  - **Docker** `docker-jack-midi` PASS. New phases:
+    - The source client restarts and OK reconnects it.
+    - The JACK server restarts and OK brings back the audio and both MIDI ports, and the note plays.
+    - File > Quit exits 0 afterwards.
+    - The harness waits for jackd to exit before starting a new one.
+  - **Reviewer's scenarios** → `evidence/t022/r3fix-adversarial3` (F G Go Gs Ggdb H I J K) and `r3fix-adversarial`
+    (A–E):
+    - F, G, Go, Gs: MIDI reconnects and Quit exits 0. Under gdb, G exits normally; the script's "exit 1" is gdb's
+      own error on `bt` after the exit.
+    - H, I, J, C, D, E: as expected.
+    - K: 0 events by design. The saved source was missing at Apply, so the input port is closed, and the script's
+      manual `jack_connect` to it fails. The source connects on the next Apply/OK.
+  - **VM** `vm-jack-midi` PASS twice. The note check now sends up to 3 notes and reports which one sounded; both runs
+    sounded on note 1.
+    - Before that, the VM's PipeWire MIDI bridge had stopped passing events even without the APP. Restarting the
+      user's pipewire/wireplumber fixed it.
+    - The restart renamed the bridge port to `Midi-Bridge:Virtual MIDI Card 1:(capture_0) VirMIDI 1-0`, so the probe
+      now matches `(capture_0) VirMIDI`.
+    - The probe left an orphan `jack_midi_dump` (started through a shell function, so `kill` hit the wrapper). It
+      now starts the process directly.
+  - **macOS:** CMake `IPlugInstrument-app` links, no warnings in the APP files.
+  - **Next:** the reviewer re-checks the R3 fixes.

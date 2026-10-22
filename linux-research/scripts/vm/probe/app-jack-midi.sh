@@ -23,10 +23,10 @@ sleep 2
 CLINE=$(aconnect -i | grep -m1 "^client [0-9]*: 'Virtual Raw MIDI")
 CARD=$(sed -E 's/.*card=([0-9]+).*/\1/' <<<"$CLINE")
 [ -n "$CARD" ] && pass "virmidi: $CLINE, rawmidi hw:$CARD,0" || { fail "no VirMIDI sequencer client: $(aconnect -i)"; exit 1; }
-SRC=$(jack jack_lsp | grep -m1 "^Midi-Bridge:Virtual Raw MIDI.*(capture_0)")
+SRC=$(jack jack_lsp | grep -m1 "^Midi-Bridge:.*(capture_0) VirMIDI")
 [ -n "$SRC" ] && pass "JACK port of the virmidi card: '$SRC'" || { fail "no Midi-Bridge port for virmidi: $(jack jack_lsp | tr '\n' ' ')"; exit 1; }
 DUMP=midi-monitor:input
-jack jack_midi_dump > "$OUT/midi-out.txt" &
+env "$JACKLIB" jack_midi_dump > "$OUT/midi-out.txt" 2> /dev/null &
 DUMPPID=$!
 sleep 1
 
@@ -48,14 +48,19 @@ app_jack_midi_ports() { jack jack_lsp | grep "^$NAME MIDI " | tr '\n' ' '; }
 jack_connected() { jack jack_lsp -c | awk -v p="$1" -v q="$2" '$0==p{f=1;next} /^[^ \t]/{f=0} f&&index($0,q){found=1} END{exit !found}'; }
 SEQCLIENT=$(sed -E 's/^client ([0-9]+):.*/\1/' <<<"$CLINE")
 meter_pixel() { local X Y; read -r X Y < <(origin "$(win "$NAME")"); import -window root -crop "1x1+$((X + 943))+$((Y + 294))" txt:- | tail -1 | awk '{print $3}'; }
+# Up to 3 notes, and the message says which one sounded: right after PipeWire (re)starts, its bridge can lose the first
 note_moves_meter() {
-  local quiet px
+  local quiet px try
   quiet=$(meter_pixel)
-  amidi -p "hw:$CARD,0" -S '90 3C 7F'
-  for _ in 1 2 3 4 5; do sleep 0.2; px=$(meter_pixel); [ "$px" != "$quiet" ] && break; done
-  [ -n "${1:-}" ] && import -window root "$1"
-  amidi -p "hw:$CARD,0" -S '80 3C 00'
-  echo "$quiet -> $px"; [ "$px" != "$quiet" ]
+  for try in 1 2 3; do
+    amidi -p "hw:$CARD,0" -S '90 3C 7F'
+    for _ in 1 2 3 4 5; do sleep 0.2; px=$(meter_pixel); [ "$px" != "$quiet" ] && break; done
+    [ "$px" != "$quiet" ] && [ -n "${1:-}" ] && import -window root "$1"
+    amidi -p "hw:$CARD,0" -S '80 3C 00'
+    [ "$px" != "$quiet" ] && { echo "$quiet -> $px, note $try"; return 0; }
+    sleep 0.5
+  done
+  echo "$quiet -> $px, 3 notes"; return 1
 }
 prefs_open() {
   read -r X Y < <(origin "$(win "$NAME")")
@@ -116,6 +121,8 @@ jack_connected "$SRC" "$NAME MIDI in:" && pass "JACK again: picked from the list
 prefs_button $OK
 dismiss_audio_box && fail "Audio box back on JACK: $(grep -a 'Audio is off' "$OUT/stderr.txt" | tail -1)"
 [ "$(ini audio driver)" = driver=1 ] && [ "$(ini midi indev)" = "indev=$SRC" ] && pass "settings.ini: $(ini audio driver) $(ini midi indev)" || fail "settings.ini: $(ini audio driver) $(ini midi indev)"
+jack_connected "$SRC" "$NAME MIDI in:" && pass "JACK again, after OK: '$SRC' -> $NAME MIDI in" || fail "JACK again, after OK: '$SRC' not connected: $(jack jack_lsp -c | tr '\n' ' ')"
+[ "$(jack jack_lsp | grep -c "^$NAME:out")" -ge 2 ] && pass "JACK again, after OK: audio ports" || fail "JACK again, after OK: no audio ports: $(jack jack_lsp | grep "$NAME" | tr '\n' ' ')"
 M=$(note_moves_meter "$OUT/06-jack-again-note.png") && pass "JACK again: amidi note moves the meter ($M)" || fail "JACK again: meter unchanged ($M)"
 
 read -r X Y < <(origin "$(win "$NAME")")
