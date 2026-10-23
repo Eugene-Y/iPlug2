@@ -548,8 +548,7 @@ void TestFallbackSkipsCallbacksDuringAHostCall()
   EXPECT(!loop.IsFallbackThread());
 
   {
-    std::lock_guard<std::recursive_mutex> hostCall(loop.GetHostCallGate());
-    std::this_thread::sleep_for(std::chrono::milliseconds(5)); // a callback that already runs finishes first
+    std::lock_guard<std::recursive_mutex> hostCall(loop.GetHostCallGate()); // waits out a running round
     const int during = calls.load();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     EXPECT(calls.load() == during);
