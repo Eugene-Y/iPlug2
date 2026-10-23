@@ -384,6 +384,10 @@ IGraphicsSkia::IGraphicsSkia(IGEditorDelegate& dlg, int w, int h, int fps, float
 
 IGraphicsSkia::~IGraphicsSkia()
 {
+#if defined OS_LINUX && !defined IGRAPHICS_NO_SKIA_SKPARAGRAPH
+  mFontCollection = nullptr;
+  mLoadedFontFamilies = nullptr;
+#endif
   StaticStorage<Font>::Accessor storage(sFontCache);
   storage.Release();
 }
@@ -727,8 +731,8 @@ bool IGraphicsSkia::LoadAPIFont(const char* fontID, const PlatformFontPtr& font)
 }
 
 #if defined OS_LINUX && !defined IGRAPHICS_NO_SKIA_SKPARAGRAPH
-// Per instance, not with the static font cache: the typefaces read the cache's font data, which lives as long as
-// some instance does.
+// Per instance, not with the static font cache: the typefaces read the cache's font data, which the last instance's
+// destructor frees, after dropping these.
 void IGraphicsSkia::AddLoadedFontFamily(const char* fontID, sk_sp<SkTypeface> typeface)
 {
   // DrawMultiLineText asks for the font ID up to its first '-'

@@ -303,6 +303,13 @@ bool TakesSkiaPixels(const Visual* pVisual, int depth)
       && pVisual->red_mask == 0xff0000 && pVisual->green_mask == 0xff00 && pVisual->blue_mask == 0xff;
 }
 
+/** The device pixels that cover a rectangle of the UI */
+SkIRect DevicePixelsCovering(const IRECT& r, float scale)
+{
+  return SkIRect::MakeLTRB(static_cast<int>(std::floor(r.L * scale)), static_cast<int>(std::floor(r.T * scale)),
+                           static_cast<int>(std::ceil(r.R * scale)), static_cast<int>(std::ceil(r.B * scale)));
+}
+
 /** Copies the area of the pixels to the same place in the drawable, whose visual TakesSkiaPixels() */
 void PutSkiaPixels(Display* pDisplay, Drawable drawable, GC gc, Visual* pVisual, int depth, const SkPixmap& pixels,
                    SkIRect area)
@@ -980,11 +987,9 @@ void IGraphicsLinux::DrawDirtyControls()
   SkPixmap frame;
   if (static_cast<SkCanvas*>(GetDrawContext())->peekPixels(&frame))
   {
-    const float scale = GetBackingPixelScale();
-    const IRECT drawn = rects.Bounds();
-    const SkIRect area = SkIRect::MakeLTRB(static_cast<int>(std::floor(drawn.L * scale)), static_cast<int>(std::floor(drawn.T * scale)),
-                                           static_cast<int>(std::ceil(drawn.R * scale)), static_cast<int>(std::ceil(drawn.B * scale)));
-    PutSkiaPixels(w.mDisplay, w.mWindow, w.mPutImageGC, w.mVisual, w.mDepth, frame, area);
+    const SkIRect drawn = DevicePixelsCovering(rects.Bounds(), GetBackingPixelScale());
+    PutSkiaPixels(w.mDisplay, w.mWindow, w.mPutImageGC, w.mVisual, w.mDepth, frame, drawn);
+    XFlush(w.mDisplay);
   }
 #else
   ActivateGLContext();

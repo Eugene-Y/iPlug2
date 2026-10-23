@@ -43,6 +43,11 @@ LIBS=(
 if [ ! -d "$SKIA_SRC_DIR/.git" ]; then
   git clone --depth 1 --branch $SKIA_VERSION $SKIA_URL "$SKIA_SRC_DIR"
 fi
+CHECKED_OUT=$(git -C "$SKIA_SRC_DIR" rev-parse --abbrev-ref HEAD)
+if [ "$CHECKED_OUT" != "$SKIA_VERSION" ]; then
+  echo "Error: $SKIA_SRC_DIR has $CHECKED_OUT checked out, not $SKIA_VERSION. Check out $SKIA_VERSION or remove it."
+  exit 1
+fi
 
 cd "$SKIA_SRC_DIR"
 echo "Syncing Deps..."

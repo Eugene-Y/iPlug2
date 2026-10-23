@@ -120,3 +120,14 @@ branch after the WIN32/APPLE ones. Windows: only `OS_LINUX` blocks in shared fil
 
 Next: independent review (`notes/34-review-T-018.md`).
 
+### 2026-10-23 — review round 1 (approved, 3 Minor + 2 Info) and fixes
+- Round 1 (043c7187c): APPROVED; the reviewer re-ran builds, P3b GL3 CLAP + CPU VST3, tooltip, churn ×30, inspect.
+- Fixed: R1-1 `NOT EMSCRIPTEN` on the Linux Skia default renderer; R1-2 CPU frames flushed after `XPutImage`, the
+  device-pixel rectangle is a named helper (`DevicePixelsCovering`); R1-3 `build-skia-linux.sh` stops when the source
+  checkout is not `chrome/m130`; R1-5 the Linux font provider and collection are dropped before the font cache is
+  released (`~IGraphicsSkia`, `OS_LINUX` block), comment says so.
+- Not changed: R1-4 (Info) a GrContext released with no GL context current when the host destroyed the window first:
+  NanoVG does the same, harmless on Mesa/libglvnd.
+- Re-verified after the fixes: `build-skia-linux.sh` re-run (no work, libs copied), P3b CLAP + VST3 for Skia GL3 and
+  CPU: PASS ×4, `Draw`/timer/X events on tid 1 only, mac proof re-run against `hvoya-linux` (same three differences, `-fsyntax-only` passes).
+
