@@ -1,0 +1,14 @@
+# First attempt: the form opened at Page 1 (not Page 2 as in T-013), so the typed values went to parameter 1 (pre flt A detune), not oversampling; no SetLatency. Kept for the record.
+pid=7521 (main LWP)
+ACTION 07:05:13.410 sh:xdotool mousemove 395 259 mousedown 3; sleep 0.1; xdotool mouseup 3; sleep 1; c(){ xdotool mousemove $1 $2 mousedown 1; sleep 0.08; xdotool mouseup 1; sleep ${3:-1}; }; c 456 556 2
+HIT _ZThn1880_N5iplug9IPlugVST317getLatencySamplesEv lwp=7521 t=07:05:14 x1=3918280944
+HIT _ZThn1880_N5iplug9IPlugVST317getLatencySamplesEv lwp=7521 t=07:05:14 x1=3918280944
+HIT _ZThn1880_N5iplug9IPlugVST317getLatencySamplesEv lwp=7521 t=07:05:14 x1=3918280944
+ACTION 07:05:20.615 sh:xdotool mousemove 566 376 click 1 key ctrl+a type 0; xdotool key Return
+ACTION 07:05:24.806 sh:xdotool mousemove 566 376 click 1 key ctrl+a type 3; xdotool key Return
+ACTION 07:05:28.977 sh:c(){ xdotool mousemove $1 $2 mousedown 1; sleep 0.08; xdotool mouseup 1; sleep ${3:-1}; }; c 1007 227
+ACTION 07:05:34.085 sh:c(){ xdotool mousemove $1 $2 mousedown 1; sleep 0.08; xdotool mouseup 1; sleep ${3:-1}; }; c 411 158
+ACTION 07:05:39.214 sh:c(){ xdotool mousemove $1 $2 mousedown 1; sleep 0.08; xdotool mouseup 1; sleep ${3:-1}; }; c 444 158
+HIT _ZThn1880_N5iplug9IPlugVST317getLatencySamplesEv lwp=7521 t=07:05:39 x1=3918280944
+setParamNormalized: 8 (main: 8)
+---
