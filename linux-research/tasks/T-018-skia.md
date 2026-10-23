@@ -1,6 +1,6 @@
 # T-018 — Skia backend on Linux
 
-- **Status:** in progress
+- **Status:** review-done
 - **Owner:** T-018 worker (subagent of the coordinator chat f91df715), 2026-10-22
 - **Branch/worktree:** `linux/T-018` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-018`.
 - **Depends on:** nothing. The GL-context part touches IGraphicsLinux — coordinate (T-019/T-009/T-020 use it too).
@@ -24,7 +24,7 @@
 ## Acceptance
 - [x] Skia builds for both arches reproducibly; IPlugControls Skia CLAP/VST3/APP pass the P3b scripts.
 - [x] Exports minimal, NEEDED unchanged, glibc floor recorded.
-- [ ] mac/win untouched; independent review (AGENTS §4); evidence in `evidence/t018/`; Log complete.
+- [x] mac/win untouched; independent review (AGENTS §4); evidence in `evidence/t018/`; Log complete.
 
 ## Log
 (append: date — what was done — commits — next)
@@ -130,4 +130,17 @@ Next: independent review (`notes/34-review-T-018.md`).
   NanoVG does the same, harmless on Mesa/libglvnd.
 - Re-verified after the fixes: `build-skia-linux.sh` re-run (no work, libs copied), P3b CLAP + VST3 for Skia GL3 and
   CPU: PASS ×4, `Draw`/timer/X events on tid 1 only, mac proof re-run against `hvoya-linux` (same three differences, `-fsyntax-only` passes).
+
+### 2026-10-23 — review round 2: APPROVED, no findings (cc86be810)
+**Final verdict: APPROVED after 2 rounds** (`notes/34-review-T-018.md`; round 1 043c7187c: 3 Minor + 2 Info, fixed in
+36ca28de7 except R1-4 Info; round 2 cc86be810: no findings). Reviewer evidence: `evidence/t018-review/`.
+
+**Hand-over.** Commits (`git log refs/heads/hvoya-linux..refs/heads/linux/T-018`): b7137e3b0 implementation,
+8fc1fad92 x86_64 EGL-stub fix, 36ca28de7 review fixes; the rest evidence/Log/review. Evidence `evidence/t018/`.
+Open for the coordinator / user:
+- Hosting Linux Skia prebuilts, or keep the per-developer `build-skia-linux.sh` (needs ~7 GB of Skia source).
+- Cross-platform findings above (LoadBitmap null deref on missing images; Skia face index on mac/win) — not fixed.
+- Not checked here: mac Skia screenshots for a visual comparison; the VM (GL 2.1 virgl: Skia GL3 cannot open there by
+  design, Skia CPU should); real GPU drivers. Worktree keeps `Dependencies/Build/src/skia` (7 GB, ignored) and the
+  libraries in `Dependencies/Build/linux/{aarch64,x86_64}/lib`; copy them with `cp -cR` for later Skia work.
 
