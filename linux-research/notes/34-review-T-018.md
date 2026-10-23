@@ -81,3 +81,28 @@ mac/win untouched (convincing proof for mac, reading for Windows), evidence in `
 Minor findings are worth fixing in the same branch but do not block.
 
 Verdict round 1: APPROVED
+
+## Round 2
+
+Fix commit 36ca28de7 (`git diff 043c7187c 36ca28de7`), read in full.
+
+| ID | Status | Check |
+|---|---|---|
+| R1-1 | Fixed | `IGraphics.cmake:523` now `UNIX AND NOT APPLE AND NOT EMSCRIPTEN AND … SKIA`. |
+| R1-2 | Fixed | `XFlush` right after the CPU frame's `PutSkiaPixels`; `DevicePixelsCovering(const IRECT&, float)` names the floor/ceil conversion, and the call site reads itself within 120 columns. |
+| R1-3 | Fixed | `build-skia-linux.sh` stops with a clear message when `rev-parse --abbrev-ref HEAD` of the checkout is not `chrome/m130` (a detached or other branch fails too). Checked by reading and `bash -n`; the local tree reports `chrome/m130`, so the success path is the implementer's re-run. My attempt to exercise the failure path in a throwaway container was not permitted; the logic is three lines under `set -e`. |
+| R1-4 | Accepted as is | Info; the task Log records it (NanoVG is in the same position). |
+| R1-5 | Fixed | `~IGraphicsSkia` drops `mFontCollection` and `mLoadedFontFamilies` before `storage.Release()`, inside `OS_LINUX && !IGRAPHICS_NO_SKIA_SKPARAGRAPH` (mac/win destructor unchanged); the comment now matches the code. |
+
+Re-run [R] (Docker 24.04 aarch64, incremental rebuild of `build/t018rev-{gl3,cpu}` at 36ca28de7, container `t018rev`,
+removed afterwards):
+- [R] Full P3b, Skia CPU **CLAP** (`evidence/t018-review/r2-cpu-controls-clap/`): RESULT: PASS; Draw/timer/X events
+  tid=1 only. Looked at `c06-textentry-igraphics.png`: complete UI, text entry open.
+- [R] Editor churn ×25, `EDIT=1`, Skia GL3 **VST3** (`r2-gl3-churn-vst3.log`), which runs the changed destructor 50×:
+  PASS; fds 6→6, sockets 1→1, threads 14→14 closed; RSS growth in line with round 1 / Mesa per-context.
+- Implementer's re-runs present and green: `evidence/t018/skia-{gl3,cpu}-controls-{clap,vst3}/RESULT.txt` all PASS,
+  `draw-threads.txt` all tid=1.
+
+No new findings.
+
+Verdict round 2: APPROVED
