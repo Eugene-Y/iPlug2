@@ -199,24 +199,28 @@ gdb -iex "set debug-file-directory $PWD/Name_v1.0.0_linux_x86_64_debug-symbols" 
 
 ## 8. Known host issues
 
-Host behaviour seen while testing on Linux; iPlug2 does not work around it.
+Host behaviour seen while testing on Linux. iPlug2 has no host-specific workarounds; where a bullet says what iPlug2
+does, that is its general behaviour (§9).
 - **Carla, development version (main, tested at 97a9e07), VST3:** runs the plug frame's `IRunLoop` handlers (timers and
   the X connection's fd) on its engine thread instead of the UI thread, so the editor's `OnIdle` and drawing run off
   the main thread and can crash while the editor opens. CLAP in Carla main and VST3 in Carla 2.5.10 were fine.
 - **Renoise 3.5.4:** hosts VST3 (no CLAP on Linux). While an editor has the keyboard focus, Renoise delivers keys to it
   as synthetic events. iPlug2 handles them (text entry works) but does not pass unhandled ones back (that loops in
   REAPER), and Renoise ignores keys passed to the parent window, so host shortcuts (Space) don't work until the focus
-  leaves the editor.
+  leaves the editor. It gives `IRunLoop` only through the plug frame, so with the editor closed `OnIdle` runs on
+  iPlug2's own thread, and a latency change made there reaches Renoise at its next call on its UI thread (see §9):
+  at once while playing, when Renoise keeps setting parameter values; with the transport stopped, at the next
+  parameter change or transport start. Renoise then restarts the plug-in and re-reads the latency on its UI thread.
 - **Qtractor (1.5.3, and the same code in 1.6.4), CLAP:** one shared timer drives every CLAP plug-in's timers, and
   closing the last CLAP editor stops it. From then on no plug-in gets timer callbacks, so `OnIdle` (and anything a
   plug-in reports from it, such as a latency change) waits until a CLAP editor opens or a plug-in registers a new
   timer.
 - **Qtractor 1.5.3, VST3:** gives `IRunLoop` only through the plug frame, so with the editor closed `OnIdle` runs on
-  iPlug2's own thread. A latency change made then reaches the host's `restartComponent` from that thread, which VST3
-  does not allow (an iPlug2 limitation); Qtractor answers it with a state round trip (`getState`/`setState`) on that
-  thread. It reads the latency when playback starts. Qtractor 1.6.4's source also offers `IRunLoop` on the host
-  context, but drives it from the same kind of shared timer, stopped when the last VST3 editor closes, so with every
-  VST3 editor closed `OnIdle` would not run at all (read from the source; untested).
+  iPlug2's own thread. A latency change made then reaches Qtractor at its next call on its UI thread (see §9); its
+  plug-in form, while open, makes one right away. Qtractor answers the restart with a state round trip
+  (`getState`/`setState`) on its UI thread, and reads the latency when playback starts. Qtractor 1.6.4's source also
+  offers `IRunLoop` on the host context, but drives it from the same kind of shared timer, stopped when the last VST3
+  editor closes, so with every VST3 editor closed `OnIdle` would not run at all (read from the source; untested).
 - **Files dropped from a GTK file manager (GNOME Files):** it drops on the top-level window under the pointer, so a file
   reaches the editor only if the host forwards XDND to its plug-in window: Ardour and REAPER do; Carla 2.5.10 takes the
   drop itself; Qtractor's plug-in window is drop-aware and refuses it; Carla main (CLAP) and Renoise don't. A source
@@ -225,6 +229,14 @@ Host behaviour seen while testing on Linux; iPlug2 does not work around it.
   GNOME Files as the target).
 
 ## 9. Plug-in code: differences from macOS and Windows
+
+- **`OnIdle` may run on iPlug2's own thread.** A host that gives no event loop (a CLAP host without `timer-support`;
+  VST3 in Renoise, Qtractor 1.5.3 and Carla while the editor is closed) leaves the timers, and with them `OnIdle`, on a
+  thread of iPlug2's own. With VST3 that thread never runs `OnIdle` during a call the host makes on its UI thread
+  (state, parameters, activation, the editor attaching), as on macOS and Windows, and what `OnIdle` sends the host
+  (`SetLatency`, parameter changes) waits for the host's next such call, since VST3 has no way to ask for one.
+  Parameter changes are merged meanwhile: the host gets the last value of each parameter, as one gesture. The latency
+  the host reads is the new one at once.
 
 - **Dialogs are asynchronous only.** `PromptForFile`, `PromptForDirectory`, `PromptForColor` and `ShowMessageBox`
   return at once on Linux, as on iOS, and the answer arrives later in the completion handler, on the host's main

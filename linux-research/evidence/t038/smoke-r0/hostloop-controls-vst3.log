@@ -1,0 +1,38 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+REAPER pid 4353
+add 0
+--- closed: hits by symbol, thread (main = lwp 4353), object
+    136 HIT IPlugControls::OnIdle lwp=4353 this=0xdbd3a90
+    137 HIT iplug::IPlugAPIBase::OnTimer lwp=4353 this=0xdbd3a90
+shown
+--- open: hits by symbol, thread (main = lwp 4353), object
+    133 HIT IPlugControls::OnIdle lwp=4353 this=0xdbd3a90
+    133 HIT iplug::IPlugAPIBase::OnTimer lwp=4353 this=0xdbd3a90
+closed
+--- reclose: hits by symbol, thread (main = lwp 4353), object
+    141 HIT IPlugControls::OnIdle lwp=4353 this=0xdbd3a90
+    141 HIT iplug::IPlugAPIBase::OnTimer lwp=4353 this=0xdbd3a90
+add2 0
+--- two: hits by symbol, thread (main = lwp 4353), object
+    137 HIT IPlugControls::OnIdle lwp=4353 this=0xdbd3a90
+    137 HIT IPlugControls::OnIdle lwp=4353 this=0xe6471e0
+    137 HIT iplug::IPlugAPIBase::OnTimer lwp=4353 this=0xdbd3a90
+    137 HIT iplug::IPlugAPIBase::OnTimer lwp=4353 this=0xe6471e0
+--- latency: REAPER pdc of track 1 fx 0 (editor closed)
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+pdc 0
+--- churn: 50x add/delete on track 3
+track3
+threads 14 -> 14, fds 6 -> 6, trace: '' -> 'live registrations in module=2', backends installed in total: 52
+--- after-churn: hits by symbol, thread (main = lwp 4353), object
+     97 HIT IPlugControls::OnIdle lwp=4353 this=0xdbd3a90
+     98 HIT IPlugControls::OnIdle lwp=4353 this=0xe6471e0
+     97 HIT iplug::IPlugAPIBase::OnTimer lwp=4353 this=0xdbd3a90
+     98 HIT iplug::IPlugAPIBase::OnTimer lwp=4353 this=0xe6471e0
+RESULT: PASS

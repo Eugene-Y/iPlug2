@@ -17,6 +17,7 @@
 
 #ifdef OS_LINUX
 #include "Linux/IPlugLinuxHostLoopVST3.h"
+#include "Linux/IPlugLinuxVST3HostThread.h"
 #endif
 
 /** IPlug VST3 View  */
@@ -133,6 +134,7 @@ public:
 #elif defined OS_LINUX
       if (strcmp(type, Steinberg::kPlatformTypeX11EmbedWindowID) != 0)
         return Steinberg::kResultFalse;
+      iplug::VST3HostThread::Call hostCall(mOwner.GetHostThread(), iplug::VST3HostThread::kSendDeferred);
       // Before OpenWindow: the window registers its timers and X fd on the loop chosen here.
       mOwner.GetHostLoopSelector().SetFrame(plugFrame);
       pView = mOwner.OpenWindow(pParent);
@@ -152,6 +154,9 @@ public:
   {
     if (mOwner.HasUI())
     {
+#ifdef OS_LINUX
+      iplug::VST3HostThread::Call hostCall(mOwner.GetHostThread(), iplug::VST3HostThread::kSendDeferred);
+#endif
       mOwner.CloseWindow();
 #ifdef OS_LINUX
       mOwner.GetHostLoopSelector().SetFrame(nullptr);

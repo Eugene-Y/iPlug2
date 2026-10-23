@@ -1,16 +1,20 @@
 #define INIT_CLASS_IID // defines the SDK interface ids in this TU
 #include "pluginterfaces/gui/iplugview.h"
+#include "pluginterfaces/vst/ivsteditcontroller.h"
 #undef INIT_CLASS_IID
 
 #include "IPlugTimer.h"
 #include "Linux/IPlugLinuxHostLoop.h"
 #include "Linux/IPlugLinuxHostLoopVST3.h"
+#include "Linux/IPlugLinuxVST3HostThread.h"
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdarg>
 #include <cstdio>
 #include <dirent.h>
+#include <string>
 #include <thread>
 #include <type_traits>
 #include <unistd.h>
@@ -532,6 +536,184 @@ void TestIsHostDrivenDoesNotWaitForACallback()
   loop.SetBackend(nullptr);
 }
 
+void TestFallbackSkipsCallbacksDuringAHostCall()
+{
+  HostLoop loop("gate");
+  std::atomic<int> calls { 0 };
+  std::atomic<bool> onFallbackThread { false };
+  loop.AddTimer(1, [&]() { calls++; onFallbackThread = loop.IsFallbackThread(); });
+  loop.SetBackend(MakeFallbackHostLoopBackend(loop));
+  EXPECT(WaitFor([&]() { return calls.load() >= 2; }));
+  EXPECT(onFallbackThread.load());
+  EXPECT(!loop.IsFallbackThread());
+
+  {
+    std::lock_guard<std::recursive_mutex> hostCall(loop.GetHostCallGate()); // waits out a running round
+    const int during = calls.load();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    EXPECT(calls.load() == during);
+  }
+  const int after = calls.load();
+  EXPECT(WaitFor([&]() { return calls.load() > after; }));
+  loop.SetBackend(nullptr);
+}
+
+void TestBackendSwapInsideAHostCallDoesNotWaitForTheGate()
+{
+  // A view attach joins the fallback thread inside a host call: the thread must not be waiting for the gate.
+  int fds[2];
+  EXPECT(pipe(fds) == 0);
+  EXPECT(write(fds[1], "x", 1) == 1); // stays readable: the fallback thread retries it while the gate is held
+  HostLoop loop("swap-in-host-call");
+  std::atomic<int> calls { 0 };
+  loop.AddTimer(1, [&]() { calls++; });
+  loop.AddFd(fds[0], HostLoop::kFdRead, [&](int, int) {});
+  loop.SetBackend(MakeFallbackHostLoopBackend(loop));
+  EXPECT(WaitFor([&]() { return calls.load() >= 1; }));
+  for (int round = 0; round < 20; round++)
+  {
+    std::lock_guard<std::recursive_mutex> hostCall(loop.GetHostCallGate());
+    std::this_thread::sleep_for(std::chrono::milliseconds(3));
+    loop.SetBackend(round % 2 ? MakeFallbackHostLoopBackend(loop) : std::make_unique<FakeBackend>(loop));
+  }
+  loop.SetBackend(nullptr);
+  close(fds[0]);
+  close(fds[1]);
+}
+
+/** Records the notifications a plug-in sends, and the thread they come from. */
+class FakeComponentHandler final : public Vst::IComponentHandler, public Vst::IComponentHandler2
+{
+public:
+  tresult PLUGIN_API queryInterface(const TUID iid, void** obj) override
+  {
+    if (FUnknownPrivate::iidEqual(iid, FUnknown::iid) || FUnknownPrivate::iidEqual(iid, Vst::IComponentHandler::iid))
+      *obj = static_cast<Vst::IComponentHandler*>(this);
+    else if (FUnknownPrivate::iidEqual(iid, Vst::IComponentHandler2::iid))
+      *obj = static_cast<Vst::IComponentHandler2*>(this);
+    else
+    {
+      *obj = nullptr;
+      return kNoInterface;
+    }
+    return kResultOk;
+  }
+  uint32 PLUGIN_API addRef() override { return 2; }
+  uint32 PLUGIN_API release() override { return 1; }
+
+  tresult PLUGIN_API beginEdit(Vst::ParamID id) override { return Log("begin %u", id); }
+  tresult PLUGIN_API performEdit(Vst::ParamID id, Vst::ParamValue value) override { return Log("perform %u %.2f", id, value); }
+  tresult PLUGIN_API endEdit(Vst::ParamID id) override { return Log("end %u", id); }
+  tresult PLUGIN_API restartComponent(int32 flags) override
+  {
+    Log("restart %d", flags);
+    if (mOnRestart)
+      mOnRestart();
+    return kResultOk;
+  }
+  tresult PLUGIN_API setDirty(TBool) override { return Log("dirty"); }
+  tresult PLUGIN_API requestOpenEditor(FIDString) override { return Log("open"); }
+  tresult PLUGIN_API startGroupEdit() override { return Log("group"); }
+  tresult PLUGIN_API finishGroupEdit() override { return Log("/group"); }
+
+  std::string mCalls;
+  bool mOffThread = false;
+  std::function<void()> mOnRestart;
+
+private:
+  tresult Log(const char* format, ...)
+  {
+    char line[64];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(line, sizeof(line), format, args);
+    va_end(args);
+    mCalls += line;
+    mCalls += ";";
+    mOffThread |= HostLoopThreadId() != mMainThread;
+    return kResultOk;
+  }
+  const long mMainThread = HostLoopThreadId();
+};
+
+void TestVST3NotificationsFromTheFallbackWaitForAHostCall()
+{
+  FakeComponentHandler host;
+  IPtr<Vst::IComponentHandler> handler(&host);
+  HostLoop loop("vst3-deferred");
+  VST3HostThread hostThread(loop, handler, 3);
+  hostThread.Initialize();
+
+  EXPECT(!hostThread.DeferRestart(Vst::kLatencyChanged)); // on the UI thread: sent at once by the caller
+  EXPECT(!hostThread.DeferEdit(0, 0.5));
+  EXPECT(!hostThread.DeferGesture());
+
+  std::atomic<bool> done { false };
+  const int id = loop.AddTimer(1, [&]() {
+    if (done)
+      return;
+    EXPECT(hostThread.DeferGesture());
+    EXPECT(hostThread.DeferEdit(1, 0.25));
+    EXPECT(hostThread.DeferEdit(1, 0.75)); // the last value wins
+    EXPECT(hostThread.DeferGesture());
+    EXPECT(hostThread.DeferEdit(2, 0.5));
+    EXPECT(hostThread.DeferRestart(Vst::kLatencyChanged));
+    EXPECT(hostThread.DeferRestart(Vst::kParamTitlesChanged));
+    done = true;
+  });
+  loop.SetBackend(MakeFallbackHostLoopBackend(loop));
+  EXPECT(WaitFor([&]() { return done.load(); }));
+  loop.RemoveTimer(id);
+  EXPECT(host.mCalls.empty());
+
+  { VST3HostThread::Call setActive(hostThread, VST3HostThread::kKeepDeferred); }
+  EXPECT(host.mCalls.empty());
+
+  {
+    VST3HostThread::Call outer(hostThread, VST3HostThread::kKeepDeferred);
+    VST3HostThread::Call nested(hostThread, VST3HostThread::kSendDeferred);
+    EXPECT(host.mCalls.empty()); // only the outermost host call sends
+  }
+
+  std::thread otherThread([&]() { VST3HostThread::Call fromAudioThread(hostThread, VST3HostThread::kSendDeferred); });
+  otherThread.join();
+  EXPECT(host.mCalls.empty());
+
+  int nestedRestarts = 0;
+  host.mOnRestart = [&]() {
+    // A host that handles the restart at once calls the plug-in back (Qtractor: getState, setState).
+    VST3HostThread::Call getState(hostThread, VST3HostThread::kSendDeferred);
+    nestedRestarts++;
+  };
+  { VST3HostThread::Call getParamNormalized(hostThread, VST3HostThread::kSendDeferred); }
+  EXPECT(host.mCalls == "group;begin 1;perform 1 0.75;end 1;begin 2;perform 2 0.50;end 2;/group;restart 24;");
+  EXPECT(nestedRestarts == 1);
+  EXPECT(!host.mOffThread);
+
+  host.mCalls.clear();
+  { VST3HostThread::Call again(hostThread, VST3HostThread::kSendDeferred); }
+  EXPECT(host.mCalls.empty());
+
+  loop.SetBackend(nullptr);
+  hostThread.Terminate();
+}
+
+void TestVST3HostCallOffTheUIThreadNeverWaits()
+{
+  FakeComponentHandler host;
+  IPtr<Vst::IComponentHandler> handler(&host);
+  HostLoop loop("vst3-rt-call");
+  VST3HostThread hostThread(loop, handler, 1);
+  hostThread.Initialize();
+
+  std::lock_guard<std::recursive_mutex> runningOnIdle(loop.GetHostCallGate());
+  std::atomic<bool> returned { false };
+  std::thread audioThread([&]() { VST3HostThread::Call call(hostThread, VST3HostThread::kSendDeferred); returned = true; });
+  EXPECT(WaitFor([&]() { return returned.load(); }, 500));
+  audioThread.join();
+  hostThread.Terminate();
+}
+
 } // namespace
 
 int main()
@@ -554,6 +736,10 @@ int main()
   TestVST3RunLoopThatRefusesTimers();
   TestVST3RefusingRunLoopWithoutTimersYet();
   TestIsHostDrivenDoesNotWaitForACallback();
+  TestFallbackSkipsCallbacksDuringAHostCall();
+  TestBackendSwapInsideAHostCallDoesNotWaitForTheGate();
+  TestVST3NotificationsFromTheFallbackWaitForAHostCall();
+  TestVST3HostCallOffTheUIThreadNeverWaits();
 
   if (gFailures)
   {

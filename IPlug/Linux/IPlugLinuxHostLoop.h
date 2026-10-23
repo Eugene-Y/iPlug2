@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
 
 #include "IPlugPlatform.h"
 #include "mutex.h"
@@ -111,6 +112,13 @@ public:
 
   const char* GetOwnerName() const { return mOwnerName; }
 
+  /** A format wrapper (so far VST3) holds it during the calls the host makes on its main thread. The fallback thread
+   * runs callbacks only while it can take it, so they never overlap such a call, as with a host-driven backend. */
+  std::recursive_mutex& GetHostCallGate() { return mHostCallGate; }
+
+  /** True when the caller is this loop's fallback thread, from which the host must not be called. */
+  bool IsFallbackThread() const;
+
 private:
   int Add(HostLoopEntry* pEntry);
   HostLoopEntry* Find(int id) const;
@@ -119,6 +127,7 @@ private:
   // on the fallback thread has finished: after that the caller may destroy what the callback uses.
   // Recursive, so callbacks may add and remove entries.
   mutable WDL_Mutex mMutex;
+  std::recursive_mutex mHostCallGate;
   std::atomic<bool> mHostDriven { false };
   WDL_PtrList<HostLoopEntry> mEntries;
   std::unique_ptr<HostLoopBackend> mBackend;
@@ -128,7 +137,7 @@ private:
 };
 
 /** A worker thread that runs the callbacks itself. Only for when the host offers no loop: callbacks then
- * run off the main thread, which breaks anything in OnIdle that needs the main thread (UI, SetLatency). */
+ * run off the main thread, though never during a host call that holds the host-call gate. */
 std::unique_ptr<HostLoopBackend> MakeFallbackHostLoopBackend(HostLoop& loop);
 
 /** Linux thread id of the caller, for the trace and thread checks. */
