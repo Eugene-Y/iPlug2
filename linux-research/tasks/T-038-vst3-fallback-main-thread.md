@@ -219,3 +219,16 @@ plug-in form open at Page 2 — it opened at Page 1 this time, so the first atte
 Clean-up: Renoise quit (song not saved), its OSC server off again; Qtractor exited with "Discard" (session file
 unchanged); my `jackd` stopped (the desktop's `jackdbus` was already running and was left alone); no gdb left. VM lock
 released between batches.
+
+### 2026-10-23 (4) — Docker regression smoke; macOS
+
+`scripts/t038/smoke.sh` → `evidence/t038/smoke-r0/` (`summary.txt`), Release builds from 136b82a9e–0b09f76ce:
+- `host-loop-test.sh`, trace + latency (+ edit) builds: IPlugEffect CLAP, IPlugEffect VST3, IPlugControls VST3 PASS
+  (REAPER's factory loop: everything on main, `pdc` follows 0↔256, no "deferred" line in the VST3 trace, churn flat);
+  IPlugEffect VST3 fallback-forced with `EXPECT_CLOSED=worker` PASS (threads 16→16, fds 8→8 over 50× churn; `pdc`
+  stays 0 because REAPER makes no call while idle, as designed — see the REAPER table above).
+- IPlugControls P3b, Gneiss and Sand steps in REAPER: all PASS in CLAP and VST3, except Gneiss VST3
+  `g04b-context-menu` (the known synthetic-click limitation, T28-c; STATUS gotchas).
+- macOS: IPlugEffect `macOS-VST3` Debug via `scripts/coord/mac-xcodebuild.sh`, all paths in the scratchpad: exit 0,
+  no warning from the changed files. Xcode's `Examples/IPlugEffect/plug_build_info.hpp` removed afterwards.
+- Unit tests at 5e8e667db: `evidence/t038/unit/asan-tsan-x3.txt`.
