@@ -30,6 +30,7 @@ Update it at every merge or user decision.
 - **VM restarted by the user 2026-10-23.** Pending on it: T-013's GNOME Wayland run (steps in its Log, no password needed), T-009's VM run. VM has Release Gneiss/Sand/IPlugControls (iPlug2 29d9410c0); Ardour's VST3 cache may need a rescan.
 - **Qtractor CLAP timer bug:** the draft upstream report is in `notes/35-qtractor-clap-timer-report.md`; the user may send it (2026-10-23).
 - **T-018 (Skia, merged 2026-10-23):** host prebuilt Linux Skia libraries (~52 MB per arch) or keep `Dependencies/IGraphics/build-skia-linux.sh` (~7 GB of Skia source per developer)?
+- **T-038 follow-up idea (merged 2026-10-23):** run iPlug's timers on the host's GLib main loop when the host has GLib loaded (REAPER, Ardour, Qt hosts), so `OnIdle` stays on the UI thread with the editor closed; needs its own host matrix. Say if wanted.
 - **T-011 left:** port `duplicate.py` to `hvoya`? Is VS Code on one out-of-tree duplicate + gdb for the others enough for its first acceptance box?
 - **Decisions:** `RestorePreset` question (T-023 merged), T-029 (S-1 text entry, (a) and/or (b); typing check on mac).
 - **More decisions (2026-10-19 evening):** IME via IBus/Fcitx (deviation or task); reword the pre-port "morph rig" comment in `IPlugCLAP.cpp` on `hvoya`; T-033's CI workflow change.

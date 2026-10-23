@@ -1,6 +1,6 @@
 # T-038 — VST3 on Linux without a host run loop: host notifications from the fallback thread
 
-- **Status:** review-done (user 2026-10-23: fix it; T-010 item 1, re-opened by T-013). Independent review: approve
+- **Status:** merged d3107afc2 (review approved in round 2, `notes/36-review-T-038.md`)
   with minors in round 2 (nits fixed after it); `notes/36-review-T-038.md`.
 - **Owner:** T-038 worker (lock `.linux-port-locks/T-038`, 2026-10-23)
 - **Branch/worktree:** `linux/T-038` from `hvoya-linux` 901602a14, in `/Volumes/Storage/code/IPlug2-T-038`.
