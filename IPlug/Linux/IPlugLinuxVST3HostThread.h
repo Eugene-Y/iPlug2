@@ -99,6 +99,7 @@ public:
     if (!mLoop.IsFallbackThread())
       return false;
     mRestartFlags |= flags;
+    HostLoopTrace("%s: VST3 restartComponent(%d) on the fallback thread: deferred", mLoop.GetOwnerName(), (int) flags);
     return true;
   }
 
@@ -161,11 +162,15 @@ private:
         handler2->finishGroupEdit();
     }
 
-    if (const Steinberg::int32 flags = mRestartFlags)
+    const Steinberg::int32 flags = mRestartFlags;
+    if (flags)
     {
       mRestartFlags = 0;
       pHandler->restartComponent(flags);
     }
+
+    if (nEdits || flags)
+      HostLoopTrace("%s: VST3 deferred notifications sent: %d edit(s), restartComponent(%d)", mLoop.GetOwnerName(), nEdits, (int) flags);
   }
 
   HostLoop& mLoop;
