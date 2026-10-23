@@ -144,3 +144,116 @@ so the reason alone ("a host edit from OnIdle as well, as a MIDI CC mediator mak
 - [ ] Independent review: round 1 approves with minors. R1-1 is a two-line fix and should go in; R1-2 and R1-3 need a
   note or a clause. Docs §8/§9: accurate apart from R1-3 (and R1-1 for the claim that `OnIdle` never overlaps a
   UI-thread call).
+
+## Round 2
+
+**Verdict: approve with minors.** No blocker, no major. Every round-1 finding is fixed or answered. The R1-1 fix
+cannot deadlock. The re-runs pass. The three new findings are nits and need no further round.
+
+### What I read
+- `AGENTS.md`, both `CLAUDE.md`s, the task file (design note, Log up to "(5) review round 1 … and fixes"), round 1
+  above.
+- The whole code diff `901602a14..42d7d04b2` again, with fresh eyes, and the round-1 fix diff `e3e99d498..HEAD`.
+- Context: `IPlugLinuxHostLoopVST3.h` (`Initialize` → `Update` → `SetBackend`, `Terminate`), `HostLoop::SetBackend`,
+  `Dispatch`, the fallback thread's `Run` and destructor, `IPlugAPIBase` (one `HostLoop` per instance, so one gate per
+  instance), every `beginEdit`/`performEdit`/`endEdit`/`startGroupEdit`/`finishGroupEdit`/`restartComponent`
+  call site in `IPlug/VST3` and `IGraphics.cpp`.
+
+### Round-1 findings
+- **R1-1, fixed.** The `Call` (`kKeepDeferred`) follows `mHostThread.Initialize()`, so `IsUIThread()` is already true.
+  It lives to the end of the `if` block and so covers `OnHostIdentified` and `OnParamReset`.
+  - Deadlock check: `mHostLoopSelector.Initialize` → `Update` → `SetBackend(fallback)` starts the thread while the UI
+    thread holds the gate.
+  - The new thread takes only its own backend mutex (never held across a join) and try-locks the gate. It reaches
+    `Dispatch`, and with it `HostLoop::mMutex`, only after the try-lock succeeds. So while the UI thread holds the
+    gate, the thread never waits for anything the UI thread holds. It polls the wake fd for 2 ms and tries again.
+  - `SetBackend` joins an old backend outside `mMutex`. In `initialize` there is normally no old backend. If a host
+    calls `initialize` twice without `terminate`, `Update` keeps the running fallback (no join). Joining a fallback
+    inside a held gate is covered anyway by `TestBackendSwapInsideAHostCallDoesNotWaitForTheGate` (20 swaps with a
+    ready fd).
+  - `AcceptsTimers` calls the host's `registerTimer` under the gate; that is a host-driven path, with no fallback
+    thread involved.
+  - The comment ("Held through OnHostIdentified and OnParamReset: the fallback thread starts below") is a WHY.
+- **R1-2, answered.** The `VST3HostThread::Initialize` doc and the Log state the risk and the reason. Adequate.
+- **R1-3, fixed.** §9 now says that parameter changes are merged into one gesture with the last value.
+- **R1-4, fixed.**
+  - Design note point 5: dropped ticks vs retried fds; the lock order is qualified.
+  - Code comments: the fallback's try-lock comment; `GetHostCallGate` ("A format wrapper (so far VST3)");
+    `IsFallbackThread`.
+- **R1-5, fixed.** `DeferEdit`'s doc names bypass and MIDI CC.
+- **R1-6, R1-7: recorded in the Log** (as a watch item and as the evidence scope).
+- **R1-8, fixed.** `smoke.sh` prints the name first; `smoke-r0/summary.txt` carries a note.
+- **R1-9, fixed.** The task id is gone from `IPlugEffect.cpp`.
+
+### Fresh look at the whole diff
+- **Deadlock:** none.
+  - The fallback thread never blocks on the gate.
+  - The UI thread waits on the gate for at most one round of callbacks, and that round makes no host call.
+  - Lock order with a fallback thread present: gate → `HostLoop::mMutex` → the backend mutex on both threads.
+  - The reverse order (`mMutex` → gate) only arises in a host-driven `Dispatch`. No fallback thread exists then:
+    `SetBackend` unregisters the old backend under `mMutex` and joins it before it registers the new one.
+- **Race / lost or duplicate notification:**
+  - The flags and the edit array are written only on the fallback thread under the gate, and read and cleared only on
+    the UI thread under the gate.
+  - Each entry is cleared before its host call, and only the outermost call sends, so a host that calls back cannot
+    get a duplicate.
+  - The edits go out before the restart, and a guarded `setParamNormalized`/`setState` sends what waited before it
+    applies the host's own value. The host's value therefore wins, as it should.
+  - `terminate` drops what waits after the thread is joined.
+- **Re-entrancy:** a restart inside the flush makes the host call back into us; the unit test covers it, and so does
+  Renoise's `setProcessing`/`setActive` sequence in the VM evidence. Processing-state calls never flush.
+- **Lifetime:** `mHostThread` refers to the base's `componentHandler`, which is constructed earlier and destroyed later.
+  `NParams()` is final when `mHostThread` is built. A `Call` points at `mHostThread` for one host call.
+- **Realtime:** `process`, `setProcessing` and `getLatencySamples` are untouched. A guarded entry called off the UI
+  thread costs one acquire load plus `pthread_equal`, and never waits or sends. Nothing allocates after construction.
+- **mac/win:** the round-1 fixes are all inside `#ifdef OS_LINUX` or in comments and docs. Round 1's unifdef result
+  and the worker's xcodebuild still hold.
+- **Product names:** `check-product-names.sh`: clean (HEAD 42d7d04b2).
+- **Merge:** `git merge-tree hvoya-linux linux/T-038` is clean. Since the base, hvoya-linux changed only
+  `linux-development.md` among the files this branch touches (T-018).
+
+### What I re-ran (Docker; my GUI container `t038r2` removed afterwards; builds in `linux-research/build/t038r2-*`)
+- `Tests/LinuxHostLoop` as configured (ASan+UBSan), `build/t038r2-unit`: 3/3 "all host-loop tests passed".
+- The same sources with g++ `-fsanitize=thread -O1`, run under `setarch -R`, `build/t038r2-tsan`: 3/3 passed,
+  0 ThreadSanitizer warnings.
+- Fresh Debug IPlugEffect VST3, `build/t038r2-dbg`. CMakeCache confirms Debug and the four flags
+  (`IPLUG_TEST_VST3_FRAME_RUNLOOP_ONLY`, `_LATENCY_FROM_IDLE`, `_EDIT_FROM_IDLE`, `IPLUG_TRACE_HOST_LOOP`).
+- `scripts/t038/reaper-deferred-test.sh` on that build, output in `build/t038r2-out/reaper-deferred/`: **PASS**.
+  - idle: 6× `SetLatency` on the fallback thread and no host call; `pdc` stays 0.
+  - poll: 12× `beginEdit`/`performEdit`/`endEdit`/`restartComponent(8)`, all on REAPER's main thread; `pdc` goes
+    256 0 256 0 …
+  - play: `getLatencySamples` on main.
+  - open: what waited goes out on main.
+  - The calls by phase contain no `OFF-MAIN HOST` line.
+  - Trace: 36 "deferred" lines, all on the two fallback tids (128, then 453 after the editor closed), and 13 "sent"
+    lines, all on the main tid 64.
+- Not re-run: the VM (as instructed) and macOS (the round-1 fixes are Linux-only).
+
+### Findings
+
+**R2-1 (nit): `SendDeferred` scans all `NParams()` entries on every outermost `kSendDeferred` call, even when nothing
+waits.**
+This also happens in hosts with a loop, where nothing can ever be deferred. A host that sweeps `getParamNormalized`
+over all parameters therefore pays O(N²) comparisons per sweep (e.g. 500 parameters: 250 000 per sweep, well under a
+millisecond). It is not a correctness issue. One option: a pending flag or count, set in `DeferRestart`/`DeferEdit`
+under the gate and checked first in `SendDeferred`. That makes the empty case O(1) and lets the counting loop go.
+
+**R2-2 (nit): the file header of `IPlugLinuxVST3HostThread.h` overstates the guard.**
+It says "each host call on the UI thread holds the loop's host-call gate". Only the listed entries hold it:
+`createView`, `terminate`, `setProcessing`, the static getters and the view's sizing calls don't. §9 lists them
+correctly ("state, parameters, activation, the editor attaching"). Suggested wording: "the host's UI-thread calls that
+reach plug-in state hold …".
+
+**R2-3 (nit): the §8 lead-in no longer fits two of its bullets.**
+§8 opens with "Host behaviour seen while testing on Linux; iPlug2 does not work around it". The Renoise and Qtractor
+1.5.3 VST3 bullets now describe what iPlug2 does about the missing loop (it holds the notification until the host's
+next UI-thread call). Either drop "iPlug2 does not work around it" from the lead-in, or keep only the host behaviour in
+those bullets and point to §9 for iPlug2's side.
+
+### Acceptance status (round 2)
+- [x] Design note with options, costs and the choice.
+- [x] No `restartComponent`/`performEdit` off the UI thread in Renoise, Qtractor (VM, worker's evidence, checked in
+  round 1) and REAPER with the fallback forced (re-run in rounds 1 and 2); latency honoured where the host supports it.
+- [x] mac/win unchanged.
+- [x] Independent review: round 2 approves with minors (R2-1…R2-3 are nits, optional). Docs §8/§9 accurate, apart
+  from the R2-3 wording.

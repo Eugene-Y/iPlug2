@@ -260,3 +260,12 @@ released between batches.
 - Re-checked at 5ac2d648f: unit tests pass; `reaper-deferred-test.sh` PASS (`evidence/t038/reaper-deferred-fix-r1/`,
   same picture as before: idle no host call, poll 12× all on main, `pdc` 256/0); plain `host-loop-test.sh` VST3 PASS
   with `pdc` following and no "deferred" line (`evidence/t038/hostloop-effect-vst3-r1/`).
+
+### 2026-10-23 (6) — review round 2 (approve with minors, nits only) and fixes
+
+- **R2-1:** `mHasDeferred` lets a flush return at once when nothing waits, so hosts that sweep `getParamNormalized`
+  no longer scan every parameter per call.
+- **R2-2:** the header names which host calls hold the gate.
+- **R2-3:** §8's lead-in no longer says iPlug2 does nothing: it has no host-specific workarounds, and what the bullets
+  describe is §9's general behaviour.
+- Re-checked: unit tests ASan ×3 and TSan ×3 pass; `reaper-deferred-test.sh` PASS (`evidence/t038/reaper-deferred-fix-r2/`).

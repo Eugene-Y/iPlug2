@@ -181,7 +181,8 @@ gdb -iex "set debug-file-directory $PWD/Name_v1.0.0_linux_x86_64_debug-symbols" 
 
 ## 8. Known host issues
 
-Host behaviour seen while testing on Linux; iPlug2 does not work around it.
+Host behaviour seen while testing on Linux. iPlug2 has no host-specific workarounds; where a bullet says what iPlug2
+does, that is its general behaviour (§9).
 - **Carla, development version (main, tested at 97a9e07), VST3:** runs the plug frame's `IRunLoop` handlers (timers and
   the X connection's fd) on its engine thread instead of the UI thread, so the editor's `OnIdle` and drawing run off
   the main thread and can crash while the editor opens. CLAP in Carla main and VST3 in Carla 2.5.10 were fine.

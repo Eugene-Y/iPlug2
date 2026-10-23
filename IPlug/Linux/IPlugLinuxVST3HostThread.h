@@ -15,8 +15,9 @@
  *
  * A host that offers no Linux::IRunLoop (several do so only to an open editor) leaves the timers, and with them
  * OnIdle, on the HostLoop's fallback thread. VST3 has no way to ask the host for a call on its UI thread, so:
- * - each host call on the UI thread holds the loop's host-call gate (a VST3HostThread::Call), and the fallback thread
- *   never runs a callback meanwhile, so OnIdle does not overlap the host's calls, as on mac/win;
+ * - the host calls on the UI thread that change or read the plug-in's state (state, parameters, activation, the view
+ *   attaching) hold the loop's host-call gate (a VST3HostThread::Call), and the fallback thread never runs a callback
+ *   meanwhile, so OnIdle does not overlap them, as on mac/win;
  * - the notifications OnIdle sends to the host on the fallback thread (restartComponent, parameter edits) are kept
  *   here and sent at the start of the next host call that may send them (kSendDeferred).
  * Calls on other threads (the audio thread, plug-in threads) are left as they are on every platform.
@@ -100,6 +101,7 @@ public:
     if (!mLoop.IsFallbackThread())
       return false;
     mRestartFlags |= flags;
+    mHasDeferred = true;
     HostLoopTrace("%s: VST3 restartComponent(%d) on the fallback thread: deferred", mLoop.GetOwnerName(), (int) flags);
     return true;
   }
@@ -110,7 +112,10 @@ public:
     if (!mLoop.IsFallbackThread())
       return false;
     if (tag < (Steinberg::Vst::ParamID) mEditValues.GetSize())
+    {
       mEditValues.Get()[tag] = value;
+      mHasDeferred = true;
+    }
     return true;
   }
 
@@ -128,6 +133,7 @@ private:
 
   void ClearDeferred()
   {
+    mHasDeferred = false;
     mRestartFlags = 0;
     for (int i = 0; i < mEditValues.GetSize(); i++)
       mEditValues.Get()[i] = kNoEdit;
@@ -136,8 +142,9 @@ private:
   void SendDeferred()
   {
     Steinberg::Vst::IComponentHandler* pHandler = mHandler;
-    if (!pHandler)
+    if (!mHasDeferred || !pHandler)
       return;
+    mHasDeferred = false;
 
     int nEdits = 0;
     for (int i = 0; i < mEditValues.GetSize(); i++)
@@ -180,6 +187,7 @@ private:
   std::atomic<bool> mHasUIThread { false }; // any thread asks IsUIThread()
   int mCallDepth = 0;
   // Written on the fallback thread and read on the UI thread, each while holding the host-call gate.
+  bool mHasDeferred = false; // spares hosts that poll getParamNormalized a scan of every parameter
   Steinberg::int32 mRestartFlags = 0;
   WDL_TypedBuf<double> mEditValues;
 };
