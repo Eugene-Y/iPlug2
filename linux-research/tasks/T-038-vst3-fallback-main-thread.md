@@ -257,3 +257,6 @@ released between batches.
 - **R1-8:** `smoke.sh` prints each run's name before its RESULT; `smoke-r0/summary.txt` carries a note for the old
   order.
 - **R1-9:** the task id is gone from the `IPlugEffect.cpp` comment.
+- Re-checked at 5ac2d648f: unit tests pass; `reaper-deferred-test.sh` PASS (`evidence/t038/reaper-deferred-fix-r1/`,
+  same picture as before: idle no host call, poll 12× all on main, `pdc` 256/0); plain `host-loop-test.sh` VST3 PASS
+  with `pdc` following and no "deferred" line (`evidence/t038/hostloop-effect-vst3-r1/`).
