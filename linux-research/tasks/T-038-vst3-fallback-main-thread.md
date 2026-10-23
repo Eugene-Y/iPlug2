@@ -147,3 +147,41 @@ iterates it elsewhere, or not at all, must be detected; Renoise's toolkit is unk
 gate are needed anyway for hosts without it.
 
 Next: implement (HostLoop gate + `IsFallbackThread`, VST3 deferral), unit tests, Docker, VM.
+
+### 2026-10-23 (2) — implementation; REAPER with the fallback forced
+
+Commits 136b82a9e (fix, tests, REAPER evidence), 0b09f76ce (trace lines, smoke script).
+
+**Code** (all Linux-only; mac/win see two empty macro lines per entry point, i.e. nothing):
+- `HostLoop` (`IPlugLinuxHostLoop.*`): `GetHostCallGate()` (a `std::recursive_mutex`) and `IsFallbackThread()`
+  (a `thread_local` set by the fallback thread). The fallback thread dispatches a round only after `try_lock`; when
+  the gate is busy it waits 2 ms on its wake fd and tries again.
+- `VST3HostThread` (new `IPlug/Linux/IPlugLinuxVST3HostThread.h`): the UI thread from `initialize`; `Call` (RAII,
+  gate + outermost-call flush, a no-op off the UI thread); `DeferRestart`, `DeferEdit`, `DeferGesture`; the flush
+  (`SendDeferred`) and two trace lines (`IPLUG_TRACE_HOST_LOOP`).
+- `IPlugVST3`: `VST3_HOST_CALL(kSendDeferred|kKeepDeferred)` at the entry points of the design note (the guarded
+  list there, minus `initialize`, `terminate` and `createView`: `initialize` starts the fallback thread, `terminate`
+  stops it before anything else, and `createView` touches nothing `OnIdle` uses); the view's `attached`/`removed` hold a
+  `Call` with `kSendDeferred`; overrides of `beginEdit`/`performEdit`/`endEdit`/`startGroupEdit`/`finishGroupEdit`;
+  `DeferRestart` before the two `restartComponent` calls.
+- Test switch `IPLUG_TEST_EDIT_FROM_IDLE` in `Examples/IPlugEffect` (inside the existing `IPLUG_TEST_LATENCY_FROM_IDLE`
+  block): a gesture on the mix parameter with each latency change.
+
+**Unit tests** (`Tests/LinuxHostLoop`, 4 new): the fallback runs no callback while the gate is held; backend swaps
+inside a held gate with a ready fd never hang; deferred restart/edits are sent once, in order, on the UI thread, only
+by an outermost `kSendDeferred` call, also with a host that calls back inside `restartComponent`; a `Call` off the UI
+thread neither sends nor waits. ASan+UBSan pass; TSan (`setarch -R`) ×3 pass with no warning.
+
+**REAPER, fallback forced** (`scripts/t038/reaper-deferred-test.sh`, Debug IPlugEffect VST3 with
+`IPLUG_TEST_VST3_FRAME_RUNLOOP_ONLY`, `IPLUG_TEST_LATENCY_FROM_IDLE`, `IPLUG_TEST_EDIT_FROM_IDLE`; gdb finds REAPER's
+own `IComponentHandler` methods through the plug-in's `componentHandler` vtable and logs every call with its LWP):
+
+| phase (editor closed unless said) | before (hvoya-linux) | after |
+|---|---|---|
+| idle, 4 s, REAPER makes no call | `restartComponent(8)` ×7 from the fallback thread; `pdc` 0 throughout | `SetLatency` ×7 on the fallback thread, **no host call**; `pdc` 0 throughout |
+| poll: `TrackFX_GetParamNormalized` every 0.5 s | ×12 off the main thread; `pdc` stays 0 | `restartComponent(8)`, `beginEdit`/`performEdit`/`endEdit` ×12, all on REAPER's main thread; REAPER re-reads `getLatencySamples` each time; **`pdc` follows: 256 0 256 0 …** |
+| transport start | `getLatencySamples` on main | same |
+| editor open (frame `IRunLoop`) | `SetLatency` and `restartComponent` on main | the attach sends what waited; then everything on main |
+
+Evidence: `evidence/t038/reaper-deferred-{fix,base}/` (`summary.txt`, `calls-by-phase.txt`, `RESULT.txt`). The
+"base" run uses the unfixed hvoya-linux build (no edit switch) with `expect=offthread`: the test does catch the bug.
