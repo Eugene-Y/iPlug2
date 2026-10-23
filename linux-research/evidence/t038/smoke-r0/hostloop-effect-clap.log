@@ -1,0 +1,44 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+REAPER pid 1613
+add 0
+--- closed: hits by symbol, thread (main = lwp 1613), object
+    106 HIT IPlugEffect::OnIdle lwp=1613 this=0x295523b0
+    102 HIT iplug::IPlugAPIBase::OnTimer lwp=1613 this=0x295523b0
+shown
+--- open: hits by symbol, thread (main = lwp 1613), object
+    105 HIT IPlugEffect::OnIdle lwp=1613 this=0x295523b0
+    101 HIT iplug::IPlugAPIBase::OnTimer lwp=1613 this=0x295523b0
+closed
+--- reclose: hits by symbol, thread (main = lwp 1613), object
+    107 HIT IPlugEffect::OnIdle lwp=1613 this=0x295523b0
+    103 HIT iplug::IPlugAPIBase::OnTimer lwp=1613 this=0x295523b0
+add2 0
+--- two: hits by symbol, thread (main = lwp 1613), object
+    108 HIT IPlugEffect::OnIdle lwp=1613 this=0x295523b0
+    107 HIT IPlugEffect::OnIdle lwp=1613 this=0x2a978400
+    104 HIT iplug::IPlugAPIBase::OnTimer lwp=1613 this=0x295523b0
+    104 HIT iplug::IPlugAPIBase::OnTimer lwp=1613 this=0x2a978400
+--- latency: REAPER pdc of track 1 fx 0 (editor closed)
+pdc 256
+pdc 0
+pdc 0
+pdc 256
+pdc 256
+pdc 0
+pdc 0
+pdc 256
+IPLUG_TEST SetLatency(256) from OnIdle tid=1613 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=1613 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=1613 ui=0
+IPLUG_TEST SetLatency(0) from OnIdle tid=1613 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=1613 ui=0
+IPLUG_TEST SetLatency(256) from OnIdle tid=1613 ui=0
+--- churn: 50x add/delete on track 3
+track3
+threads 14 -> 14, fds 6 -> 6, trace: '' -> 'live registrations in module=2', backends installed in total: 52
+--- after-churn: hits by symbol, thread (main = lwp 1613), object
+     84 HIT IPlugEffect::OnIdle lwp=1613 this=0x295523b0
+     86 HIT IPlugEffect::OnIdle lwp=1613 this=0x2a978400
+     82 HIT iplug::IPlugAPIBase::OnTimer lwp=1613 this=0x295523b0
+     82 HIT iplug::IPlugAPIBase::OnTimer lwp=1613 this=0x2a978400
+RESULT: PASS

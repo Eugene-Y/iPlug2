@@ -61,6 +61,9 @@ public:
 
   bool GetTextFromClipboard(WDL_String& str) override;
   bool SetTextInClipboard(const char* str) override;
+  bool SetFilePathInClipboard(const char* path) override;
+  bool InitiateExternalFileDragDrop(const char* path, const IRECT& iconBounds) override;
+  EUIAppearance GetUIAppearance() const override;
 
 protected:
   IPopupMenu* CreatePlatformPopupMenu(IPopupMenu& menu, const IRECT bounds, bool& isAsync) override;
@@ -111,6 +114,8 @@ private:
   void ShowDueTooltip();
   void ShowTooltip();
   void HideTooltip();
+  /** The size of the tooltip's text in logical pixels. @return false when it cannot be drawn */
+  bool MeasureTooltip(const char* text, float& width, float& height);
   void DrawTooltip();
   /** @return false when the host closed the editor meanwhile */
   bool TellHostTheOpenedSize();

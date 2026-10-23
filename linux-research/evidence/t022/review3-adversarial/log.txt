@@ -1,0 +1,52 @@
+=== F: the source vanishes and comes back while the APP's input is open
+F: at start: in-connected out-connected
+F: source restarted (same port name seq:out): in-NOT-connected out-connected; APP MIDI ports: IPlugInstrument MIDI in:RtMidi Input IPlugInstrument MIDI out:RtMidi Output 
+F: after Apply: in-NOT-connected out-connected
+F: after OK: in-NOT-connected out-connected; settings.ini: indev=seq:out
+F: APP alive
+F: File > Quit exit 0
+=== G: the JACK server restarts while the APP runs
+G: at start: in-connected out-connected, audio ports 2
+G: server stopped; boxes: 0
+G: APP alive
+G: server back: in-NOT-connected out-NOT-connected, audio ports 0
+G: Preferences 'Preferences'
+G: boxes after Apply: 0
+G: after Apply: in-NOT-connected out-NOT-connected, audio ports 2, APP MIDI ports: 
+G: boxes after OK: 0
+G: after OK: in-NOT-connected out-NOT-connected, audio ports 2; settings.ini indev=seq:out outdev=midi-monitor:input
+G: APP alive
+G: File > Quit exit 139
+=== H: clear a kept port while the server is down
+H: boxes at start: 1
+H: settings.ini at start: indev=seq:out outdev=midi-monitor:input
+H: boxes after OK: 1
+H: settings.ini after picking off and OK: indev=off outdev=off
+H: boxes after Apply with the server up: 0
+H: after Apply: in-NOT-connected out-NOT-connected, audio ports 2
+H: settings.ini at the end: indev=off outdev=off
+H: APP alive
+H: File > Quit exit 0
+=== I: audio off for lack of a device; OK, Cancel, Apply
+I: boxes at start: 1
+I: boxes after OK: 1; Preferences open: ''
+I: boxes after Cancel: 1; Preferences open: ''
+I: boxes after Apply 1: 1
+I: boxes after Apply 2: 1
+I: boxes after Cancel: 1
+I: 'Audio is off' lines in stderr: 6
+I: settings.ini: driver=1 indev=seq:out outdev=midi-monitor:input
+I: APP alive
+I: File > Quit exit 0
+=== J: Preferences opened without a server; server and source up; Apply after 2 s
+J: boxes after Apply: 0
+J: after Apply: in-connected out-connected, audio ports 2
+J: APP alive
+J: File > Quit exit 0
+=== K: saved output missing while notes are echoed; it appears; Apply while the audio runs
+K: at start (no monitor yet): in-connected out-NOT-connected, audio ports 2
+K: 20 s of echoed notes with the output missing
+K: after Apply: in-NOT-connected out-connected; events at midi-monitor:input with the source stopped: 0
+K: after restarting the source for 3.5 s: 6 events (expect about 6-8)
+K: APP alive
+K: File > Quit exit 0

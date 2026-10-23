@@ -368,6 +368,9 @@ void IPlugAPPHost::ProbeAudioIO()
 
 void IPlugAPPHost::ProbeMidiIO()
 {
+  mMidiInputDevNames.clear();
+  mMidiOutputDevNames.clear();
+
   if (!mMidiIn || !mMidiOut)
     return;
   else
@@ -597,6 +600,17 @@ void IPlugAPPHost::ReportAudioOff(const char* reason)
 }
 #endif
 
+void IPlugAPPHost::HandleMissingMidiPort([[maybe_unused]] WDL_String& portName)
+{
+#ifdef OS_LINUX
+  // The MIDI API follows the audio driver, and JACK's ports exist only while its server runs, so a saved port is
+  // often missing just for now: it stays saved, closed, and Apply or OK connects it once it is back.
+#else
+  portName.Set(OFF_TEXT);
+  UpdateINI();
+#endif
+}
+
 bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
 {
   int port = GetMIDIPortNumber(direction, pPortName);
@@ -605,8 +619,7 @@ bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
   {
     if (port == -1)
     {
-      mState.mMidiInDev.Set(OFF_TEXT);
-      UpdateINI();
+      HandleMissingMidiPort(mState.mMidiInDev);
       port = 0;
     }
 
@@ -651,14 +664,16 @@ bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
   {
     if (port == -1)
     {
-      mState.mMidiOutDev.Set(OFF_TEXT);
-      UpdateINI();
+      HandleMissingMidiPort(mState.mMidiOutDev);
       port = 0;
     }
     
     if (mMidiOut)
     {
       //TODO: send all notes off?
+#ifdef OS_LINUX
+      mMidiOutPortOpen = false;
+#endif
       mMidiOut->closePort();
       
       if (port == 0)
@@ -686,6 +701,7 @@ bool IPlugAPPHost::SelectMIDIDevice(ERoute direction, const char* pPortName)
       else
       {
         mMidiOut->openPort(port-1);
+        mMidiOutPortOpen = true;
         return true;
       }
 #endif
@@ -779,16 +795,83 @@ bool IPlugAPPHost::InitAudio(uint32_t inID, uint32_t outID, uint32_t sr, uint32_
   return true;
 }
 
+#ifdef OS_LINUX
+static RtMidi::Api MidiApiForAudioDriver(int audioDriverType)
+{
+  return audioDriverType == kDeviceJack ? RtMidi::UNIX_JACK : RtMidi::LINUX_ALSA;
+}
+
+// The client name in aconnect and PipeWire. JACK gives every RtMidi object its own client; clients named BUNDLE_NAME
+// would push the audio client, opened later, to a numbered name like "<app>-02".
+static std::string MidiClientName(RtMidi::Api api, const char* pDirection)
+{
+  std::string name(BUNDLE_NAME);
+  if (api == RtMidi::UNIX_JACK)
+    name.append(" MIDI ").append(pDirection);
+  return name;
+}
+
+void IPlugAPPHost::TryToChangeMidiApi()
+{
+  if (!mMidiIn || mMidiIn->getCurrentApi() != MidiApiForAudioDriver(mState.mAudioDriverType))
+    RecreateMidi();
+}
+
+void IPlugAPPHost::RecreateJackMidiIfAudioStopped()
+{
+  if (mState.mAudioDriverType == kDeviceJack && !IsAudioRunning())
+    RecreateMidi();
+}
+
+void IPlugAPPHost::RecreateMidi()
+{
+  // The old input's thread or JACK client must be gone before the new one feeds mMidiMsgsFromCallback
+  mMidiIn = nullptr;
+  mMidiOutPortOpen = false;
+  mMidiOut = nullptr;
+  InitMidi();
+  ProbeMidiIO();
+  SelectMIDIDevice(ERoute::kInput, mState.mMidiInDev.Get());
+  SelectMIDIDevice(ERoute::kOutput, mState.mMidiOutDev.Get());
+}
+
+void IPlugAPPHost::ReselectSavedMidiPorts()
+{
+  ProbeMidiIO();
+  ReselectSavedMidiPort(ERoute::kInput, mMidiIn.get(), mState.mMidiInDev);
+  ReselectSavedMidiPort(ERoute::kOutput, mMidiOut.get(), mState.mMidiOutDev);
+}
+
+void IPlugAPPHost::ReselectSavedMidiPort(ERoute direction, RtMidi* pMidi, const WDL_String& portName)
+{
+  // Closing a JACK port unregisters it, which drops the connections made to it in a patchbay. RtMidi's JACK openPort
+  // on an open port only connects it to the saved one again.
+  const int port = GetMIDIPortNumber(direction, portName.Get());
+  if (pMidi && pMidi->isPortOpen() && mState.mAudioDriverType == kDeviceJack && port != 0)
+  {
+    if (port > 0)
+      pMidi->openPort(port - 1);
+    return;
+  }
+
+  SelectMIDIDevice(direction, portName.Get());
+}
+#endif
+
 bool IPlugAPPHost::InitMidi()
 {
   // Skip MIDI initialization in no-I/O mode or screenshot mode
   if (mNoIO || IsScreenshotMode())
     return true;
 
+#ifdef OS_LINUX
+  const RtMidi::Api api = MidiApiForAudioDriver(mState.mAudioDriverType);
+#endif
+
   try
   {
 #ifdef OS_LINUX
-    mMidiIn = std::make_unique<RtMidiIn>(RtMidi::UNSPECIFIED, BUNDLE_NAME); // the client name in aconnect and PipeWire
+    mMidiIn = std::make_unique<RtMidiIn>(api, MidiClientName(api, "in"));
 #else
     mMidiIn = std::make_unique<RtMidiIn>();
 #endif
@@ -803,7 +886,7 @@ bool IPlugAPPHost::InitMidi()
   try
   {
 #ifdef OS_LINUX
-    mMidiOut = std::make_unique<RtMidiOut>(RtMidi::UNSPECIFIED, BUNDLE_NAME);
+    mMidiOut = std::make_unique<RtMidiOut>(api, MidiClientName(api, "out"));
 #else
     mMidiOut = std::make_unique<RtMidiOut>();
 #endif

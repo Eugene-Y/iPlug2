@@ -1,0 +1,56 @@
+diff --git a/Examples/IPlugControls/IPlugControls.cpp b/Examples/IPlugControls/IPlugControls.cpp
+index b20810fe8..eb1a07588 100644
+--- a/Examples/IPlugControls/IPlugControls.cpp
++++ b/Examples/IPlugControls/IPlugControls.cpp
+@@ -3,6 +3,9 @@
+ #include "IPlugPaths.h"
+ #include "IconsForkAwesome.h"
+ #include "IconsFontaudio.h"
++#ifdef T032_MAC_PROBE
++#import <Cocoa/Cocoa.h>
++#endif
+ #if (defined IPLUG_TEST_DIALOGS || defined IPLUG_TEST_APPEARANCE) && defined OS_LINUX
+   #include <unistd.h>
+   #include "Linux/IPlugLinuxHostLoop.h"
+@@ -615,7 +618,40 @@ IPlugControls::IPlugControls(const InstanceInfo& info)
+       {
+         const IRECT presetBounds(area.L, area.T - 28.f, area.R, area.T - 2.f);
+         auto onPresetLoaded = [report](const WDL_String& fileName) { report("preset", fileName.Get(), ""); };
+-        pGraphics->AttachControl(new IVDiskPresetManagerControl(presetBounds, presetDir.Get(), "fxp", true, "", testStyle, onPresetLoaded));
++        auto* pPresetProbe = new IVDiskPresetManagerControl(presetBounds, presetDir.Get(), "fxp", true, "", testStyle, onPresetLoaded);
++        pGraphics->AttachControl(pPresetProbe);
++#ifdef T032_MAC_PROBE
++        if (getenv("T032_PROBE"))
++        {
++          const bool removeWhileOpen = strstr(getenv("T032_PROBE"), "remove") != nullptr;
++          const bool accept = strstr(getenv("T032_PROBE"), "ok") != nullptr;
++          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
++            IControl* pLoad = pPresetProbe->GetChild(2);
++            fprintf(stderr, "T032 probe: clicking Load\n");
++            pLoad->OnMouseDown(pLoad->GetRECT().MW(), pLoad->GetRECT().MH(), IMouseMod());
++            pLoad->OnMouseUp(pLoad->GetRECT().MW(), pLoad->GetRECT().MH(), IMouseMod());
++          });
++          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 8 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
++            NSWindow* pWindow = [[NSApp windows] firstObject];
++            for (NSWindow* w in [NSApp windows]) if (w.attachedSheet) pWindow = w;
++            fprintf(stderr, "T032 probe: sheet=%s (%s) on window '%s'\n", pWindow.attachedSheet ? "yes" : "no",
++                    pWindow.attachedSheet ? [NSStringFromClass([pWindow.attachedSheet class]) UTF8String] : "-", [pWindow.title UTF8String]);
++            if (removeWhileOpen)
++            {
++              pGraphics->RemoveControl(pPresetProbe);
++              fprintf(stderr, "T032 probe: control removed while the sheet is open\n");
++            }
++            if (pWindow.attachedSheet)
++            {
++              NSOpenPanel* pPanel = (NSOpenPanel*) pWindow.attachedSheet;
++              [pPanel setDirectoryURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:getenv("T032_PROBE_DIR")]]];
++              fprintf(stderr, "T032 probe: panel filename now '%s'\n", [[pPanel filename] UTF8String] ?: "(nil)");
++              [pWindow endSheet:pPanel returnCode:accept ? NSModalResponseOK : NSModalResponseCancel];
++            }
++            fprintf(stderr, "T032 probe: sheet ended with %s, app alive\n", accept ? "OK" : "Cancel");
++          });
++        }
++#endif
+       }
+     }
+ #endif

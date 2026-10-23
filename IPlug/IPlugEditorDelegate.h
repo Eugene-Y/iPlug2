@@ -27,6 +27,10 @@
 
 BEGIN_IPLUG_NAMESPACE
 
+#ifdef OS_LINUX
+class HostLoop;
+#endif
+
 /** This pure virtual interface delegates communication in both directions between a UI editor and something else (which is usually a plug-in)
  *  It is also the class that owns parameter objects (for historical reasons) - although it's not necessary to allocate them
  *
@@ -351,6 +355,9 @@ public:
   /** Called right before a host first asks for the editor's size (CLAP gui.create, VST3 createView, the APP's
    * window). X11 sizes are physical pixels, so an editor that scales to the desktop updates its size here. */
   virtual void UpdateEditorSizeForScreenScale() {}
+
+  /** The host main thread's loop, which the editor's timers and fd watches run on. Without one the editor cannot open. */
+  virtual HostLoop* GetEditorHostLoop() { return nullptr; }
 #endif
 
   friend class IPlugAPP;

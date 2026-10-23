@@ -14,7 +14,7 @@ Several Claude instances work on this port in parallel; none of them shares memo
 - **Plan and history:**
   - `linux-research/PLAN.md` — §1–2 are **binding decisions**; then the Progress table and phases P0–P12.
   - Research and phase notes: `linux-research/notes/NN-*.md`.
-  - Human summary: `LINUX_PORT_RESEARCH.md`.
+  - Human summary: `linux-research/LINUX_PORT_RESEARCH.md`.
 - **Done (reviewed):**
   - P0–P1: build, exports, paths;
   - P2: host-loop timers — everything on the host main thread;
@@ -105,7 +105,7 @@ colima status || colima start --cpu 6 --memory 8 --disk 50 --vm-type vz --vz-ros
      - code quality and the shared-code / mac-win rule.
 
      It writes its findings with severities into the task file's Log, or into `notes/NN-review-T-NNN.md` for larger tasks.
-   - **You fix the findings**, then the reviewer re-checks: at most 2 rounds.
+   - **You fix the findings**, then the reviewer re-checks. Repeat until it approves with no major finding left (user 2026-10-22: more rounds are fine when 2 aren't enough); a late fix of a major finding goes back to the reviewer too.
    - Run the reviewer **after** your own work, not in parallel with it, and keep only one subagent running at a time.
    - Record the final verdict in the task file.
 5. **Hand over.** Set Status `review-done`, and list commits, evidence paths and open issues in the task file. Remove your Docker containers, release your locks, and leave the worktree in place. The **coordinator** merges `linux/T-NNN` into `hvoya-linux` (`--no-ff`), re-runs smoke tests, updates `tasks/README.md` and PLAN Progress, and removes the worktree.

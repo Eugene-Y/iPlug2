@@ -502,6 +502,20 @@ void IGraphicsNanoVG::DrawResize()
   
     if (mMainFrameBuffer == nullptr)
       DBGMSG("Could not init FBO.\n");
+#ifdef IGRAPHICS_GL
+    else
+    {
+      // A new renderbuffer's contents are undefined, and NanoVG's fills assume a zero stencil (each fill zeroes only
+      // what it covered). Garbage there makes concave fills paint their whole bounding box until something redraws.
+      // BeginFrame clears the window's buffers, not this FBO's.
+      nvgBindFramebuffer(mMainFrameBuffer);
+      glViewport(0, 0, WindowWidth() * GetScreenScale(), WindowHeight() * GetScreenScale());
+      glClearColor(0.f, 0.f, 0.f, 0.f);
+      glClearStencil(0);
+      glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+      nvgBindFramebuffer(nullptr);
+    }
+#endif
   }
 }
 

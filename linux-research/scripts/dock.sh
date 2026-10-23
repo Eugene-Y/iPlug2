@@ -27,6 +27,7 @@ case "$GITCOMMON" in
   ""|"$REPO"/*) ;;
   *) MOUNTS+=(-v "$GITCOMMON:$GITCOMMON") ;;
 esac
+# Extra docker run arguments: DOCK_ARGS (word-split), e.g. DOCK_ARGS="--device /dev/snd" for ALSA.
 # Extra trees (e.g. a plug-in repo outside iPlug2): DOCK_MOUNTS="/abs/path[:ro] ...", mounted at the same path.
 for m in ${DOCK_MOUNTS:-}; do
   case "$m" in
@@ -37,5 +38,5 @@ done
 # no core dumps (a REAPER crash otherwise drops ~580 MB into the cwd); shm + ptrace for gdb; repo mounted at the identical path so worktree .git links resolve.
 exec docker run --rm --init $DETACH $NAME $PLATFORM \
   --ulimit core=0 --shm-size=512m --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-  "${MOUNTS[@]}" -w "$HERE" ${ENVARGS[@]+"${ENVARGS[@]}"} \
+  "${MOUNTS[@]}" -w "$HERE" ${ENVARGS[@]+"${ENVARGS[@]}"} ${DOCK_ARGS:-} \
   "$IMAGE" "$@"

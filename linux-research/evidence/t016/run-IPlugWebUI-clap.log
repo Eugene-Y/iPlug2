@@ -1,0 +1,26 @@
+REAPER up: REAPER v7.82 - EVALUATION LICENSE
+add 0
+REAPER ALIVE pid=25003 (open)
+FAIL: render[first-open]: editor window 'IPlugWebUI.*Track 1' not found
+view origin 112 159
+[xact] origin 112,159
+REAPER ALIVE pid=25003 (steps)
+REAPER ALIVE pid=25003 (reopen 1)
+REAPER ALIVE pid=25003 (reopen 2)
+REAPER ALIVE pid=25003 (reopen 3)
+REAPER ALIVE pid=25003 (reopen 4)
+REAPER ALIVE pid=25003 (reopen 5)
+FAIL: render[after-reopen]: editor window 'IPlugWebUI.*Track 1' not found
+add2 0
+REAPER ALIVE pid=25003 (two instances)
+FAIL: render[second-instance]: editor window 'IPlugWebUI.*Track 2' not found
+--- draw/timer hits by gdb thread id (1 = REAPER main thread):
+FAIL: no Draw/OnDisplayTimer/ProcessXEvents hits in 5 s (editor not rendering, or REAPER gone)
+FAIL: no Draw hits in 5 s, even with the mouse moving over the editor
+REAPER ALIVE pid=25003 (end)
+RESULT: FAIL (5)
+  - render[first-open]: editor window 'IPlugWebUI.*Track 1' not found
+  - render[after-reopen]: editor window 'IPlugWebUI.*Track 1' not found
+  - render[second-instance]: editor window 'IPlugWebUI.*Track 2' not found
+  - no Draw/OnDisplayTimer/ProcessXEvents hits in 5 s (editor not rendering, or REAPER gone)
+  - no Draw hits in 5 s, even with the mouse moving over the editor

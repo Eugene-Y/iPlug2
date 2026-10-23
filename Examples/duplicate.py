@@ -24,7 +24,7 @@
 
 from __future__ import generators
 
-import fileinput, glob, string, sys, os, re, uuid, pprint, random
+import fileinput, glob, io, string, sys, os, re, uuid, pprint, random
 from shutil import copy, copytree, ignore_patterns, rmtree
 from os.path import join
 
@@ -37,7 +37,7 @@ from parse_config import parse_config, parse_xcconfig, set_uniqueid
 VERSION = "0.96"
 
 # binary files that we don't want to do find and replace inside
-FILTERED_FILE_EXTENSIONS = [".ico",".icns", ".pdf", ".png", ".zip", ".exe", ".wav", ".aif"]
+FILTERED_FILE_EXTENSIONS = [".ico",".icns", ".pdf", ".png", ".zip", ".exe", ".wav", ".aif", ".knob"]
 # files that we don't want to duplicate
 DONT_COPY = ("node_modules", ".vs", "*.exe", "*.dmg", "*.pkg", "*.mpkg", "*.svn", "*.ncb", "*.suo", "*sdf", "ipch", "build-*", "*.layout", "*.depend", ".DS_Store", "xcuserdata", "*.aps", ".reapeaks")
 
@@ -85,6 +85,32 @@ def replacestrsChop(filename, s, r):
     if(line.startswith(s)):
       line = r + "\n"
     sys.stdout.write(line)
+
+def replacepathruns(text, s, r):
+  "replace s only where it is a whole run of .. components, so that ../.. never matches inside ../../.."
+  return re.sub(r'\.\.(?:/\.\.)*', lambda match: r if match.group(0) == s else match.group(0), text)
+
+# dirwalk() rewrites the iPlug2 root as seen from config/ and projects/. Files in the project folder,
+# and in .vscode/ through ${workspaceFolder}, see it from one level up.
+def replaceprojectroot(projectpath, oldroot, newroot):
+  for dir in [projectpath, os.path.join(projectpath, ".vscode")]:
+    if not os.path.isdir(dir):
+      continue
+
+    for f in os.listdir(dir):
+      fullpath = os.path.join(dir, f)
+      extension = os.path.splitext(f)[1]
+
+      if os.path.isfile(fullpath) and not(extension in FILTERED_FILE_EXTENSIONS):
+        with io.open(fullpath, newline='') as handle:
+          text = handle.read()
+
+        newtext = replacepathruns(text, oldroot, newroot)
+
+        if newtext != text:
+          print("Replacing iPlug2 root folder in file " + f)
+          with io.open(fullpath, 'w', newline='') as handle:
+            handle.write(newtext)
 
 def dirwalk(dir, searchproject, replaceproject, searchman, replaceman, oldroot= "", newroot=""):
   for f in os.listdir(dir):
@@ -171,7 +197,9 @@ def main():
     manufacturer=sys.argv[3]
 
   if numargs == 4:
-    outputbasepath=os.path.abspath(sys.argv[4])
+    # The new relative iPlug2 paths resolve physically, so the target and the iPlug2 root are both resolved; a symlink
+    # would skew a lexical relpath.
+    outputbasepath=os.path.realpath(sys.argv[4])
   else:
     outputbasepath=os.getcwd()
 
@@ -214,24 +242,36 @@ def main():
     sys.exit(1)
   # rmtree(output)
 
-  print("copying " + inputprojectname + " folder to " + outputpath)
-  copytree(inputprojectname, outputpath, ignore=ignore_patterns(*DONT_COPY))
-
   oldroot = ""
   newroot = ""
-  
+
   if numargs == 4:
     configpath = os.path.join(inputprojectname, "config")
     xcconfig = parse_xcconfig(configpath + "/" + inputprojectname + "-mac.xcconfig")
     oldroot = xcconfig["IPLUG2_ROOT"]
-    iplug2folder = os.path.abspath(os.path.join(configpath, oldroot))
-    newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config"))
-  else:
-    newroot = ""
+    iplug2folder = os.path.realpath(os.path.join(configpath, oldroot))
+    try:
+      # '/' on every platform: the files outside the VS projects need it, and dirwalk() derives the VS files' '\' form
+      # in a later pass, which would match a '\' newroot again and double the path.
+      newroot = os.path.relpath(iplug2folder, os.path.join(outputpath, "config")).replace(os.sep, '/')
+      # These land in CMake and JSON files, which read '\' as an escape.
+      # Lexical, like inputprojectname, which is relative to the unresolved cwd (on Windows a subst or mapped drive or a
+      # junction would make a resolved path disagree with it).
+      oldprojectroot = os.path.relpath(os.path.join(configpath, oldroot), inputprojectname).replace(os.sep, '/')
+      newprojectroot = os.path.relpath(iplug2folder, outputpath).replace(os.sep, '/')
+    except ValueError:
+      print("error: output path must be on the same drive as iPlug2 (" + iplug2folder + ")")
+      sys.exit(1)
+
+  print("copying " + inputprojectname + " folder to " + outputpath)
+  copytree(inputprojectname, outputpath, ignore=ignore_patterns(*DONT_COPY))
 
   #replace manufacturer name strings
   for dir in dirwalk(outputpath, inputprojectname, outputprojectname, "AcmeInc", manufacturer, oldroot, newroot):
     pass
+
+  if numargs == 4:
+    replaceprojectroot(outputpath, oldprojectroot, newprojectroot)
 
   print("\ncopying gitignore template into project folder\n")
 

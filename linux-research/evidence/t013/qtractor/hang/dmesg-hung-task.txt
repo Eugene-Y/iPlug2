@@ -1,0 +1,20 @@
+624:[201033.322111] INFO: task kworker/u16:0:96740 blocked for more than 122 seconds.
+[201033.322111] INFO: task kworker/u16:0:96740 blocked for more than 122 seconds.
+[201033.322144]       Not tainted 7.0.0-38-generic #38~24.04.4-Ubuntu
+[201033.322213] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
+[201033.322214] task:kworker/u16:0   state:D stack:0     pid:96740 tgid:96740 ppid:2      task_flags:0x4208060 flags:0x00000010
+[201033.322218] Workqueue: events_unbound commit_work
+[201033.322223] Call trace:
+[201033.322224]  __switch_to+0xf4/0x1c8 (T)
+[201033.324825]  __schedule+0x2c4/0x920
+[201033.324829]  schedule+0x40/0x110
+[201033.324830]  schedule_timeout+0x13c/0x150
+[201033.324832]  dma_fence_default_wait+0x230/0x2c0
+[201033.325188]  dma_fence_wait_timeout+0x1f4/0x458
+[201033.325190]  drm_atomic_helper_wait_for_fences+0x194/0x2a0
+[201033.325192]  commit_tail+0x4c/0x268
+[201033.325193]  commit_work+0x20/0x48
+[201033.325194]  process_one_work+0x1a0/0x578
+[201033.325197]  worker_thread+0x19c/0x350
+[201033.325198]  kthread+0x114/0x130
+[201033.325199]  ret_from_fork+0x10/0x20

@@ -15,7 +15,9 @@
 #include <cstdlib>
 #include <memory>
 #include <dlfcn.h>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "IGraphicsLinux.h"
 #include "IGraphicsLinuxDialogs.h"
@@ -23,13 +25,17 @@
 #include "IPlugAPIBase.h"
 #include "IPopupMenuControl.h"
 #include "ITextEntryControl.h"
+#include "Linux/IPlugLinuxDBus.h" // before Xlib, whose Bool macro would rename linux_dbus::Bool
 #include "Linux/IPlugLinuxHostLoop.h"
 #include "Linux/IPlugLinuxOpen.h"
 
 #if defined IGRAPHICS_NANOVG && defined IGRAPHICS_GL
   #include "IGraphicsNanoVG.cpp"
+#elif defined IGRAPHICS_SKIA && (defined IGRAPHICS_GL3 || defined IGRAPHICS_CPU)
+  #include "IGraphicsSkia.cpp"
+  #include "include/core/SkFontMetrics.h"
 #else
-  #error IGraphicsLinux needs IGRAPHICS_NANOVG with IGRAPHICS_GL2 or IGRAPHICS_GL3
+  #error IGraphicsLinux needs IGRAPHICS_NANOVG with IGRAPHICS_GL2 or IGRAPHICS_GL3, or IGRAPHICS_SKIA with IGRAPHICS_GL3 or IGRAPHICS_CPU
 #endif
 
 // X11 after every iPlug header: its macros (None, Bool, Status, Success, ...) collide with iPlug names.
@@ -44,8 +50,10 @@
 #include "IGraphicsLinuxGLX.h"
 #include "IGraphicsLinuxKeys.h"
 #include "IGraphicsLinuxClipboard.h"
-#include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxCursors.h"
+#include "IGraphicsLinuxDragSource.h"
+#include "IGraphicsLinuxAppearance.h"
+#include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxFontconfig.h"
 
 using namespace iplug;
@@ -66,6 +74,10 @@ namespace
 constexpr long kWindowEventMask = ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask
                                 | PointerMotionMask | LeaveWindowMask | KeyPressMask | KeyReleaseMask
                                 | FocusChangeMask | PropertyChangeMask | VisibilityChangeMask;
+// Every pointer event selection (X.h); the drag's grab must keep whichever of them the window selects.
+constexpr long kPointerEventMasks = ButtonPressMask | ButtonReleaseMask | EnterWindowMask | LeaveWindowMask | PointerMotionMask
+                                  | PointerMotionHintMask | Button1MotionMask | Button2MotionMask | Button3MotionMask
+                                  | Button4MotionMask | Button5MotionMask | ButtonMotionMask | KeymapStateMask;
 constexpr Time kDoubleClickMs = 400;
 constexpr float kDoubleClickSlop = 4.f;
 constexpr unsigned kWheelUp = Button4;
@@ -74,6 +86,7 @@ constexpr long kXEmbedVersion = 0;
 constexpr long kXEmbedMapped = 1;
 constexpr long kXEmbedEmbeddedNotify = 0;
 constexpr long kXEmbedRequestFocus = 3;
+constexpr long kXEmbedFocusIn = 4;
 constexpr long kXEmbedFocusOut = 5;
 constexpr int kClipboardTimeoutMs = 200;
 // After a click, the window manager's click-to-focus and the host's focus proxy (GDK) move the focus within its own
@@ -92,6 +105,7 @@ constexpr float kTooltipFontSize = 13.f;
 constexpr float kTooltipPadX = 6.f;
 constexpr float kTooltipPadY = 4.f;
 constexpr float kTooltipBelowPointer = 20.f;
+constexpr const char* kMenuFontFamily = "sans-serif";
 
 bool HasGLXExtension(const char* extensions, const char* name)
 {
@@ -215,6 +229,27 @@ void DisableSwapWait(const GLXFunctions* pGLX, Display* pDisplay, GLXDrawable dr
   }
 }
 
+#ifdef IGRAPHICS_GL3
+/** @return a core 3.2 context, or nullptr when the driver has none (the caller's X error trap catches the error
+ * a refused version raises) */
+GLXContext CreateCoreContext(const GLXFunctions* pGLX, Display* pDisplay, GLXFBConfig fbConfig)
+{
+  const char* glxExtensions = pGLX->QueryExtensionsString(pDisplay, DefaultScreen(pDisplay));
+  auto createContextAttribs = reinterpret_cast<PFNGLXCREATECONTEXTATTRIBSARBPROC>(GLXFunctions::GetProc("glXCreateContextAttribsARB"));
+  if (!HasGLXExtension(glxExtensions, "GLX_ARB_create_context_profile") || !createContextAttribs)
+    return nullptr;
+
+  const int contextAttributes[] = {
+    GLX_CONTEXT_MAJOR_VERSION_ARB, 3, GLX_CONTEXT_MINOR_VERSION_ARB, 2,
+    GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+    None
+  };
+  GLXContext context = createContextAttribs(pDisplay, fbConfig, nullptr, True, contextAttributes);
+  XSync(pDisplay, False);
+  return context;
+}
+#endif
+
 /** Lets the pointer pass through the window, as through native tooltips: an empty input shape (X Shape extension
  * 1.1; libXext is dlopen'ed and never unloaded, the host may use it too).
  * @return false without libXext or the extension */
@@ -258,6 +293,41 @@ unsigned long PixelFor(const Visual* pVisual, unsigned char r, unsigned char g, 
   };
   return component(pVisual->red_mask, r) | component(pVisual->green_mask, g) | component(pVisual->blue_mask, b);
 }
+
+#ifdef IGRAPHICS_SKIA
+/** Whether XPutImage can take Skia's raster pixels as they are: N32 is B, G, R, A in memory on little-endian
+ * machines, which is a 32-bit pixel of a TrueColor visual with red at 0xff0000. */
+bool TakesSkiaPixels(const Visual* pVisual, int depth)
+{
+  return (depth == 24 || depth == 32) && pVisual->c_class == TrueColor
+      && pVisual->red_mask == 0xff0000 && pVisual->green_mask == 0xff00 && pVisual->blue_mask == 0xff;
+}
+
+/** The device pixels that cover a rectangle of the UI */
+SkIRect DevicePixelsCovering(const IRECT& r, float scale)
+{
+  return SkIRect::MakeLTRB(static_cast<int>(std::floor(r.L * scale)), static_cast<int>(std::floor(r.T * scale)),
+                           static_cast<int>(std::ceil(r.R * scale)), static_cast<int>(std::ceil(r.B * scale)));
+}
+
+/** Copies the area of the pixels to the same place in the drawable, whose visual TakesSkiaPixels() */
+void PutSkiaPixels(Display* pDisplay, Drawable drawable, GC gc, Visual* pVisual, int depth, const SkPixmap& pixels,
+                   SkIRect area)
+{
+  if (!area.intersect(pixels.bounds()))
+    return;
+  char* pData = static_cast<char*>(pixels.writable_addr());
+  XImage* pImage = XCreateImage(pDisplay, pVisual, depth, ZPixmap, 0, pData, pixels.width(), pixels.height(), 32,
+                                static_cast<int>(pixels.rowBytes()));
+  if (!pImage)
+    return;
+  pImage->byte_order = LSBFirst;
+  if (pImage->bits_per_pixel == 32)
+    XPutImage(pDisplay, drawable, gc, pImage, area.x(), area.y(), area.x(), area.y(), area.width(), area.height());
+  pImage->data = nullptr; // Skia's, not for XDestroyImage to free
+  XDestroyImage(pImage);
+}
+#endif
 
 IMouseMod MouseModFromState(unsigned int state)
 {
@@ -334,6 +404,9 @@ struct IGraphicsLinux::Impl
   int mDepth = 0;
   Colormap mColormap = 0;
   GLXContext mGLContext = nullptr;
+#ifdef IGRAPHICS_SKIA
+  GC mPutImageGC = nullptr; // raster frames and the tooltip
+#endif
   bool mViewInitialized = false;
   bool mMenuFontLoaded = false; // into this view's drawing context
   bool mMapped = false;
@@ -399,12 +472,17 @@ struct IGraphicsLinux::Impl
   Window mFocusBefore = None;
   int mRevertBefore = RevertToParent;
   Window mEmbedder = 0; // an XEmbed embedder that announced itself with EMBEDDED_NOTIFY
+  bool mEmbedderFocusOutPending = false; // its FOCUS_OUT during an edit, not yet answered by a FOCUS_IN
+  std::chrono::steady_clock::time_point mEmbedderFocusOutAt;
   Atom mXEmbed = None;
   // Keys whose press the editor kept: their releases are kept too, all other releases go on to the host.
   unsigned char mKeptKeys[32] = {};
 
   LinuxClipboard mClipboard;
+  LinuxDragSource mDragSource;
   LinuxFileDrop mFileDrop;
+  LinuxAppearance mAppearance;
+  std::chrono::steady_clock::time_point mAppearancePolledAt;
   bool mPasteKeyPending = false; // Ctrl+V of an edit, replayed once the clipboard's text is here
   IKeyPress mPasteKey { "v", 'V' };
 
@@ -430,6 +508,11 @@ struct IGraphicsLinux::Impl
   int mTooltipW = 0; // physical pixels
   int mTooltipH = 0;
   WDL_String mTooltipText;
+#ifdef IGRAPHICS_SKIA
+  sk_sp<SkTypeface> mTooltipTypeface;
+  double mTooltipHeightEMRatio = 1.0;
+  std::vector<std::string> mTooltipLines;
+#endif
 
   Time mLastClickTime = 0;
   unsigned mLastClickButton = 0;
@@ -457,17 +540,21 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
 {
   CloseWindow();
 
-  auto* pPlug = dynamic_cast<IPlugAPIBase*>(GetDelegate());
-  if (!pPlug)
+  HostLoop* pLoop = GetDelegate()->GetEditorHostLoop();
+  if (!pLoop)
   {
-    fprintf(stderr, "iPlug2: IGraphicsLinux needs an IPlugAPIBase delegate for its host loop, the editor cannot open\n");
+    fprintf(stderr, "iPlug2: the editor's delegate has no host loop, the editor cannot open\n");
     return nullptr;
   }
+  // nullptr for a delegate that is not a plug-in instance, such as a REAPER extension
+  auto* pPlug = dynamic_cast<IPlugAPIBase*>(GetDelegate());
 
   Impl& w = *mImpl;
+#ifndef IGRAPHICS_CPU
   w.mGLX = GLXFunctions::Get();
   if (!w.mGLX)
     return nullptr;
+#endif
 
   // A connection of our own: the host's Display is not ours to read from, and two editors must not
   // steal each other's events.
@@ -507,6 +594,29 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     }
   }
 
+#if defined IGRAPHICS_CPU
+  XVisualInfo rasterVisual {};
+  if (!XMatchVisualInfo(pDisplay, screen, 24, TrueColor, &rasterVisual) || !TakesSkiaPixels(rasterVisual.visual, rasterVisual.depth))
+    return fail("no 24-bit TrueColor visual with 8-bit channels at 0xff0000, 0xff00, 0xff");
+  XVisualInfo* pVisual = &rasterVisual;
+#elif defined IGRAPHICS_GL3
+  // A core profile can only be requested for an FBConfig (glXCreateContextAttribsARB), not for a visual.
+  const int configAttributes[] = {
+    GLX_X_RENDERABLE, True, GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT, GLX_RENDER_TYPE, GLX_RGBA_BIT, GLX_DOUBLEBUFFER, True,
+    GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
+    GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
+    GLX_STENCIL_SIZE, 8,
+    None
+  };
+  int nConfigs = 0;
+  GLXFBConfig* pConfigs = w.mGLX->ChooseFBConfig && w.mGLX->GetVisualFromFBConfig
+                        ? w.mGLX->ChooseFBConfig(pDisplay, screen, configAttributes, &nConfigs) : nullptr;
+  if (!pConfigs || nConfigs < 1)
+    return fail("no GLX FBConfig with RGB8, stencil 8 and double buffering");
+  const GLXFBConfig fbConfig = pConfigs[0];
+  XFree(pConfigs);
+  XVisualInfo* pVisual = w.mGLX->GetVisualFromFBConfig(pDisplay, fbConfig);
+#else
   int visualAttributes[] = {
     GLX_RGBA, GLX_DOUBLEBUFFER,
     GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
@@ -514,6 +624,7 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     None
   };
   XVisualInfo* pVisual = w.mGLX->ChooseVisual(pDisplay, screen, visualAttributes);
+#endif
   if (!pVisual)
     return fail("no GLX visual with RGB8, stencil 8 and double buffering");
 
@@ -536,7 +647,9 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   w.mWindowAlive = w.mWindow != 0;
   w.mXEmbed = XInternAtom(pDisplay, "_XEMBED", False);
   w.mClipboard.Init(pDisplay, w.mWindow);
+  w.mDragSource.Init(pDisplay, w.mWindow, &w.mCursors, kWindowEventMask & kPointerEventMasks);
   w.mFileDrop.Init(pDisplay, w.mWindow);
+  w.mAppearance.Start();
   w.mCursors.Init(pDisplay);
   // Per connection: key repeat then sends presses only, not release + press pairs.
   XkbSetDetectableAutoRepeat(pDisplay, True, nullptr);
@@ -565,15 +678,22 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   {
     w.mWMDeleteWindow = XInternAtom(pDisplay, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(pDisplay, w.mWindow, &w.mWMDeleteWindow, 1);
-    XStoreName(pDisplay, w.mWindow, pPlug->GetPluginName());
+    XStoreName(pDisplay, w.mWindow, pPlug ? pPlug->GetPluginName() : "");
   }
 
-  // A legacy context gets whatever version the driver defaults to, down to 2.1 on old or virtual drivers. Only
-  // NanoVG GL2 is guaranteed and tested; IGRAPHICS_GL3 would need a core 3.2 context via glXCreateContextAttribsARB.
+#ifdef IGRAPHICS_GL3
+  w.mGLContext = CreateCoreContext(w.mGLX, pDisplay, fbConfig);
+  XFree(pVisual);
+  if (!w.mGLContext)
+    return fail("no OpenGL 3.2 core context (this build renders with GL3)");
+#elif defined IGRAPHICS_GL2
+  // A legacy context gets whatever version the driver defaults to, down to 2.1 on old or virtual drivers, which
+  // is enough for NanoVG GL2.
   w.mGLContext = w.mGLX->CreateContext(pDisplay, pVisual, nullptr, True);
   XFree(pVisual);
   if (!w.mGLContext)
     return fail("glXCreateContext failed");
+#endif
 
   XMapWindow(pDisplay, w.mWindow);
   WatchTopLevel();
@@ -581,6 +701,9 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   if (trap.GetErrorCount() > 0)
     return fail("X errors while creating the window");
 
+#ifdef IGRAPHICS_CPU
+  OnViewInitialized(nullptr);
+#else
   ActivateGLContext();
   if (w.mGLX->GetCurrentContext() != w.mGLContext || !gladLoadGLLoader(&GLXFunctions::GetProc))
   {
@@ -589,10 +712,30 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   }
 
   DisableSwapWait(w.mGLX, pDisplay, w.mWindow);
+  // Mesa's software rasterizer takes the drawable's size at the first make-current and looks again only after a
+  // swap. Without this one, a resize before the first frame (a host sizing the editor right after the open) leaves
+  // that frame drawn at the old size and cut off.
+  glClearColor(0.f, 0.f, 0.f, 1.f);
+  glClear(GL_COLOR_BUFFER_BIT);
+  w.mGLX->SwapBuffers(pDisplay, w.mWindow);
 
+#if defined IGRAPHICS_SKIA
+  // Skia builds its GL interface from this loader (IGraphicsSkia::OnViewInitialized)
+  OnViewInitialized(reinterpret_cast<void*>(&GLXFunctions::GetProc));
+#else
   OnViewInitialized(w.mGLContext);
+#endif
+#endif
   w.mViewInitialized = true;
+#ifdef IGRAPHICS_SKIA
+  w.mPutImageGC = XCreateGC(pDisplay, w.mWindow, 0, nullptr);
+#endif
   DrawResize();
+  if (!GetDrawContext())
+  {
+    DeactivateGLContext();
+    return fail("the drawing backend cannot start");
+  }
   GetDelegate()->LayoutUI(this);
   GetDelegate()->OnUIOpen();
   SetAllControlsDirty();
@@ -600,9 +743,9 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
 
   // The standalone app's window is the editor's own, so it takes the keys like a focused view on mac.
   // In a host they stay with the host outside text entry: its shortcuts must keep working.
-  w.mFocusOnClick = pPlug->GetAPI() == kAPIAPP;
+  w.mFocusOnClick = pPlug && pPlug->GetAPI() == kAPIAPP;
   w.mOpen = std::make_shared<bool>(true);
-  w.mLoop = &pPlug->GetHostLoop();
+  w.mLoop = pLoop;
   w.mFdId = w.mLoop->AddFd(ConnectionNumber(pDisplay), HostLoop::kFdRead,
                            [this](int, int flags) { OnXConnectionReadable(flags); });
   const uint32_t frameMs = static_cast<uint32_t>(std::max(1, 1000 / std::max(1, FPS())));
@@ -671,8 +814,14 @@ void IGraphicsLinux::DestroyWindowResources()
     if (w.mInputMethod)
       XCloseIM(w.mInputMethod);
     w.mClipboard.Release();
+    w.mDragSource.Release();
     w.mFileDrop.Release();
+    w.mAppearance.Stop();
     w.mCursors.Free();
+#ifdef IGRAPHICS_SKIA
+    if (w.mPutImageGC)
+      XFreeGC(w.mDisplay, w.mPutImageGC);
+#endif
     if (w.mTooltipWindow)
       XDestroyWindow(w.mDisplay, w.mTooltipWindow);
     if (w.mWindow && w.mWindowAlive)
@@ -757,6 +906,15 @@ void IGraphicsLinux::OnDisplayTimer()
   if (!ProcessXEvents())
     return;
   mImpl->mFileDrop.Idle();
+  mImpl->mDragSource.Idle();
+  constexpr auto kAppearancePoll = std::chrono::milliseconds(250);
+  const auto now = std::chrono::steady_clock::now();
+  if (mImpl->mAppearance.IsWaitingForAnswer() || now - mImpl->mAppearancePolledAt > kAppearancePoll)
+  {
+    mImpl->mAppearancePolledAt = now;
+    if (mImpl->mAppearance.Poll())
+      OnAppearanceChanged(GetUIAppearance());
+  }
   if (mImpl->mHostSizeUnconfirmed && !TellHostTheOpenedSize())
     return;
   // A host that maps its own window after the open (Carla) gets it managed, and WM_STATE set, only later; no event
@@ -824,6 +982,16 @@ void IGraphicsLinux::DrawDirtyControls()
     return;
 
   ScopedXErrorTrap trap(w.mDisplay);
+#ifdef IGRAPHICS_CPU
+  Draw(rects);
+  SkPixmap frame;
+  if (static_cast<SkCanvas*>(GetDrawContext())->peekPixels(&frame))
+  {
+    const SkIRect drawn = DevicePixelsCovering(rects.Bounds(), GetBackingPixelScale());
+    PutSkiaPixels(w.mDisplay, w.mWindow, w.mPutImageGC, w.mVisual, w.mDepth, frame, drawn);
+    XFlush(w.mDisplay);
+  }
+#else
   ActivateGLContext();
   if (w.mGLX->GetCurrentContext() == w.mGLContext)
   {
@@ -831,6 +999,7 @@ void IGraphicsLinux::DrawDirtyControls()
     w.mGLX->SwapBuffers(w.mDisplay, w.mWindow);
   }
   DeactivateGLContext();
+#endif
 }
 
 // Like the mac version, a full repaint: callers use it right after Resize + LayoutUI.
@@ -846,6 +1015,13 @@ void IGraphicsLinux::DrawNow()
 void IGraphicsLinux::HandleXEvent(const XEvent& event)
 {
   Impl& w = *mImpl;
+  const bool wasDragging = w.mDragSource.IsDragging();
+  if (w.mDragSource.HandleEvent(event))
+  {
+    if (wasDragging && !w.mDragSource.IsDragging())
+      ReleaseMouseCapture();
+    return;
+  }
   if (w.mClipboard.HandleEvent(event))
     return;
   if (w.mFileDrop.HandleEvent(event, w.mWindowW, w.mWindowH, [this](const std::vector<const char*>& paths, int x, int y) {
@@ -1220,6 +1396,7 @@ void IGraphicsLinux::DeclineKeyboardFocus()
 {
   Impl& w = *mImpl;
   w.mHoldsFocus = false;
+  w.mEmbedderFocusOutPending = false;
   w.mFocusDeclined = true;
   EndTextEntryOnFocusLoss();
 }
@@ -1241,15 +1418,27 @@ void IGraphicsLinux::HandleClientMessage(const XEvent& event)
     return;
 
   // Hosts implement XEmbed partially at best (REAPER and Bitwig not at all), so nothing depends on it:
-  // the embedder is remembered for focus requests, and its focus-out ends an edit like a real one.
+  // the embedder is remembered for focus requests; its FOCUS_OUT ends an edit.
+  TRACE_INPUT("XEmbed message %ld, holding focus %d\n", message.data.l[1], w.mHoldsFocus);
   switch (message.data.l[1])
   {
     case kXEmbedEmbeddedNotify:
       w.mEmbedder = static_cast<Window>(message.data.l[3]);
       break;
     case kXEmbedFocusOut:
+      // Decided in UpdateEditingState: Renoise answers an edit's focus request with FOCUS_OUT and then FOCUS_IN, in
+      // one burst, while the X focus stays ours; a FOCUS_OUT that no FOCUS_IN follows is a real one, wherever the X
+      // focus is.
       if (w.mHoldsFocus)
-        DeclineKeyboardFocus();
+      {
+        w.mEmbedderFocusOutPending = true;
+        w.mEmbedderFocusOutAt = std::chrono::steady_clock::now();
+      }
+      break;
+    case kXEmbedFocusIn:
+      if (w.mEmbedderFocusOutPending)
+        TRACE_INPUT("XEmbed FOCUS_IN answers the FOCUS_OUT: the edit stays\n");
+      w.mEmbedderFocusOutPending = false;
       break;
     default:
       break;
@@ -1266,6 +1455,19 @@ void IGraphicsLinux::UpdateEditingState()
     ClearInTextEntryControl();
 
   const auto now = std::chrono::steady_clock::now();
+  if (w.mEmbedderFocusOutPending && now - w.mEmbedderFocusOutAt > kFocusQuiet)
+  {
+    w.mEmbedderFocusOutPending = false;
+    if (w.mHoldsFocus)
+    {
+      TRACE_INPUT("XEmbed FOCUS_OUT unanswered: the edit ends\n");
+      // Ending the edit may close the editor
+      const std::shared_ptr<bool> open = w.mOpen;
+      DeclineKeyboardFocus();
+      if (!*open)
+        return;
+    }
+  }
   // The standalone app's window is the editor's own: a click into it asks for the keys, like a click into a view
   // on mac, and the app keeps them afterwards. In a host, only an edit or an open menu does; an open menu so that
   // Escape closes it rather than (in REAPER) the host's window.
@@ -1429,6 +1631,7 @@ void IGraphicsLinux::RememberHostFocusWindow(unsigned long focus)
 void IGraphicsLinux::RequestKeyboardFocus(unsigned long time)
 {
   Impl& w = *mImpl;
+  w.mEmbedderFocusOutPending = false; // one from before this request is not its answer
   XSetInputFocus(w.mDisplay, w.mWindow, RevertToParent, time);
   if (w.mInputContext)
     XSetICFocus(w.mInputContext);
@@ -1450,6 +1653,7 @@ void IGraphicsLinux::ReleaseKeyboardFocus()
 {
   Impl& w = *mImpl;
   w.mHoldsFocus = false;
+  w.mEmbedderFocusOutPending = false;
   w.mFocusLost = false;
   w.mFocusBeforeKnown = false;
   // The standalone app keeps the focus, and the input context with it.
@@ -1652,6 +1856,30 @@ bool IGraphicsLinux::SetTextInClipboard(const char* str)
   return w.mClipboard.SetText(str, w.mLastEventTime);
 }
 
+bool IGraphicsLinux::InitiateExternalFileDragDrop(const char* path, const IRECT& /*iconBounds*/)
+{
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive)
+    return false;
+  HideTooltip();
+  ScopedXErrorTrap trap(w.mDisplay);
+  return w.mDragSource.Start(path, w.mLastEventTime);
+}
+
+EUIAppearance IGraphicsLinux::GetUIAppearance() const
+{
+  return mImpl->mAppearance.IsDark() ? EUIAppearance::Dark : EUIAppearance::Light;
+}
+
+bool IGraphicsLinux::SetFilePathInClipboard(const char* path)
+{
+  Impl& w = *mImpl;
+  if (!w.mWindowAlive)
+    return false;
+  ScopedXErrorTrap trap(w.mDisplay);
+  return w.mClipboard.SetFilePath(path, w.mLastEventTime);
+}
+
 bool IGraphicsLinux::GetTextFromClipboard(WDL_String& str)
 {
   Impl& w = *mImpl;
@@ -1679,7 +1907,7 @@ IText IGraphicsLinux::StandInMenuText()
   static constexpr const char* kMenuFontID = "iPlug2-Linux-menu";
   Impl& w = *mImpl;
   if (!w.mMenuFontLoaded)
-    w.mMenuFontLoaded = LoadFont(kMenuFontID, "sans-serif", ETextStyle::Normal);
+    w.mMenuFontLoaded = LoadFont(kMenuFontID, kMenuFontFamily, ETextStyle::Normal);
   return w.mMenuFontLoaded ? DEFAULT_TEXT.WithFont(kMenuFontID) : DEFAULT_TEXT;
 }
 
@@ -1838,9 +2066,8 @@ void IGraphicsLinux::ShowTooltip()
   Impl& w = *mImpl;
   IControl* pControl = GetControl(w.mTooltipIdx);
   const char* text = pControl ? pControl->GetTooltip() : nullptr;
-  auto* pVG = static_cast<NVGcontext*>(GetDrawContext());
-  const IText font = StandInMenuText();
-  if (!TooltipsEnabled() || !CStringHasContents(text) || pControl->IsHidden() || !w.mWindowAlive || !pVG || nvgFindFont(pVG, font.mFont) == -1)
+  float textW = 0.f, textH = 0.f;
+  if (!TooltipsEnabled() || !CStringHasContents(text) || pControl->IsHidden() || !w.mWindowAlive || !MeasureTooltip(text, textW, textH))
   {
     HideTooltip();
     return;
@@ -1849,15 +2076,8 @@ void IGraphicsLinux::ShowTooltip()
 
   // The tooltip is the desktop's, not the editor's: it follows the screen scale, not the plug-in's draw scale.
   const float scale = GetScreenScale();
-  float textBounds[4] = {};
-  nvgSave(pVG);
-  nvgFontFace(pVG, font.mFont);
-  nvgFontSize(pVG, kTooltipFontSize);
-  nvgTextAlign(pVG, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-  nvgTextBoxBounds(pVG, 0.f, 0.f, kTooltipMaxWidth, text, nullptr, textBounds);
-  nvgRestore(pVG);
-  w.mTooltipW = static_cast<int>(std::ceil((textBounds[2] - textBounds[0] + 2.f * kTooltipPadX) * scale));
-  w.mTooltipH = static_cast<int>(std::ceil((textBounds[3] - textBounds[1] + 2.f * kTooltipPadY) * scale));
+  w.mTooltipW = static_cast<int>(std::ceil((textW + 2.f * kTooltipPadX) * scale));
+  w.mTooltipH = static_cast<int>(std::ceil((textH + 2.f * kTooltipPadY) * scale));
 
   ScopedXErrorTrap trap(w.mDisplay);
   int areaX, areaY, areaW, areaH;
@@ -1913,6 +2133,25 @@ void IGraphicsLinux::HideTooltip()
   XFlush(w.mDisplay);
 }
 
+#ifdef IGRAPHICS_NANOVG
+bool IGraphicsLinux::MeasureTooltip(const char* text, float& width, float& height)
+{
+  auto* pVG = static_cast<NVGcontext*>(GetDrawContext());
+  const IText font = StandInMenuText();
+  if (!pVG || nvgFindFont(pVG, font.mFont) == -1)
+    return false;
+  float textBounds[4] = {};
+  nvgSave(pVG);
+  nvgFontFace(pVG, font.mFont);
+  nvgFontSize(pVG, kTooltipFontSize);
+  nvgTextAlign(pVG, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+  nvgTextBoxBounds(pVG, 0.f, 0.f, kTooltipMaxWidth, text, nullptr, textBounds);
+  nvgRestore(pVG);
+  width = textBounds[2] - textBounds[0];
+  height = textBounds[3] - textBounds[1];
+  return true;
+}
+
 void IGraphicsLinux::DrawTooltip()
 {
   Impl& w = *mImpl;
@@ -1949,6 +2188,104 @@ void IGraphicsLinux::DrawTooltip()
   }
   DeactivateGLContext();
 }
+#else
+// Drawn in software and put into the window: in a GL build this leaves the editor's context and Skia's view of
+// its state alone.
+bool IGraphicsLinux::MeasureTooltip(const char* text, float& width, float& height)
+{
+  Impl& w = *mImpl;
+  if (!TakesSkiaPixels(w.mVisual, w.mDepth))
+    return false;
+  if (!w.mTooltipTypeface)
+  {
+    PlatformFontPtr font = LoadPlatformFont(nullptr, kMenuFontFamily, ETextStyle::Normal);
+    IFontDataPtr data = font ? font->GetFontData() : nullptr;
+    if (!data || !data->IsValid())
+      return false;
+    w.mTooltipTypeface = SkFontMgrRefDefault()->makeFromData(SkData::MakeWithCopy(data->Get(), data->GetSize()), data->GetFaceIdx());
+    w.mTooltipHeightEMRatio = data->GetHeightEMRatio();
+    if (!w.mTooltipTypeface)
+      return false;
+  }
+  const SkFont font(w.mTooltipTypeface, static_cast<SkScalar>(kTooltipFontSize * w.mTooltipHeightEMRatio));
+  auto measure = [&font](const std::string& str) {
+    return font.measureText(str.data(), str.size(), SkTextEncoding::kUTF8);
+  };
+
+  // Greedy word wrap at kTooltipMaxWidth, like nvgTextBox, except that a word longer than a line is not broken.
+  w.mTooltipLines.clear();
+  std::string line;
+  for (const char* p = text; ; p++)
+  {
+    const char* pWordEnd = p + strcspn(p, " \n");
+    const std::string word(p, pWordEnd);
+    const std::string longer = line.empty() ? word : line + ' ' + word;
+    if (!line.empty() && measure(longer) > kTooltipMaxWidth)
+    {
+      w.mTooltipLines.push_back(line);
+      line = word;
+    }
+    else
+      line = longer;
+    p = pWordEnd;
+    if (*p != ' ')
+    {
+      w.mTooltipLines.push_back(line);
+      line.clear();
+    }
+    if (*p == '\0')
+      break;
+  }
+
+  width = 0.f;
+  for (const std::string& textLine : w.mTooltipLines)
+    width = std::max(width, measure(textLine));
+  height = font.getSpacing() * w.mTooltipLines.size();
+  return true;
+}
+
+void IGraphicsLinux::DrawTooltip()
+{
+  Impl& w = *mImpl;
+  if (!w.mTooltipShown || !w.mTooltipTypeface)
+    return;
+
+  sk_sp<SkSurface> surface = SkSurfaces::Raster(SkImageInfo::MakeN32Premul(w.mTooltipW, w.mTooltipH));
+  SkPixmap pixels;
+  if (!surface || !surface->peekPixels(&pixels))
+    return;
+
+  const float scale = GetScreenScale();
+  const float width = w.mTooltipW / scale;
+  const float height = w.mTooltipH / scale;
+  SkCanvas* pCanvas = surface->getCanvas();
+  pCanvas->clear(SkColorSetRGB(250, 250, 250));
+  pCanvas->scale(scale, scale);
+  SkPaint border;
+  border.setAntiAlias(true);
+  border.setStyle(SkPaint::kStroke_Style);
+  border.setStrokeWidth(1.f);
+  border.setColor(SkColorSetRGB(118, 118, 118));
+  pCanvas->drawRect(SkRect::MakeLTRB(0.5f, 0.5f, width - 0.5f, height - 0.5f), border);
+
+  const SkFont font(w.mTooltipTypeface, static_cast<SkScalar>(kTooltipFontSize * w.mTooltipHeightEMRatio));
+  SkFontMetrics metrics;
+  font.getMetrics(&metrics);
+  SkPaint ink;
+  ink.setAntiAlias(true);
+  ink.setColor(SkColorSetRGB(30, 30, 30));
+  float baseline = kTooltipPadY - metrics.fAscent;
+  for (const std::string& line : w.mTooltipLines)
+  {
+    pCanvas->drawSimpleText(line.data(), line.size(), SkTextEncoding::kUTF8, kTooltipPadX, baseline, font, ink);
+    baseline += font.getSpacing();
+  }
+
+  ScopedXErrorTrap trap(w.mDisplay);
+  PutSkiaPixels(w.mDisplay, w.mTooltipWindow, w.mPutImageGC, w.mVisual, w.mDepth, pixels, pixels.bounds());
+  XFlush(w.mDisplay);
+}
+#endif
 
 #pragma mark - Dialogs
 

@@ -1,0 +1,91 @@
+Breakpoint 1 at 0xa6c70
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0xfffff527ede0 (LWP 566)]
+[New Thread 0xfffff5076de0 (LWP 567)]
+[Thread 0xfffff5076de0 (LWP 567) exited]
+[Thread 0xfffff527ede0 (LWP 566) exited]
+[New Thread 0xfffff527ede0 (LWP 568)]
+[New Thread 0xfffff5076de0 (LWP 569)]
+[New Thread 0xfffff4fd4de0 (LWP 570)]
+[New Thread 0xfffff4f44de0 (LWP 571)]
+[New Thread 0xfffff4eb4de0 (LWP 572)]
+[New Thread 0xfffff4e24de0 (LWP 573)]
+[New Thread 0xfffff4614de0 (LWP 574)]
+[Thread 0xfffff4614de0 (LWP 574) exited]
+[New Thread 0xfffff4614de0 (LWP 575)]
+[Thread 0xfffff4614de0 (LWP 575) exited]
+[New Thread 0xfffff4614de0 (LWP 576)]
+[New Thread 0xfffff4584de0 (LWP 577)]
+[New Thread 0xffffe954ede0 (LWP 578)]
+[New Thread 0xffffe8d3ede0 (LWP 579)]
+[New Thread 0xffffcee7ede0 (LWP 580)]
+[New Thread 0xffffce66ede0 (LWP 581)]
+[New Thread 0xffffcde5ede0 (LWP 582)]
+[New Thread 0xffffcd64ede0 (LWP 583)]
+[New Thread 0xffffcce3ede0 (LWP 584)]
+[New Thread 0xffffafffede0 (LWP 585)]
+[New Thread 0xffffaf7eede0 (LWP 586)]
+[New Thread 0xffffaefdede0 (LWP 587)]
+[New Thread 0xffffae7cede0 (LWP 588)]
+[New Thread 0xffffadfbede0 (LWP 589)]
+[New Thread 0xffffad7aede0 (LWP 590)]
+[Thread 0xffffadfbede0 (LWP 589) exited]
+[Thread 0xffffad7aede0 (LWP 590) exited]
+[Thread 0xffffae7cede0 (LWP 588) exited]
+[Thread 0xffffaefdede0 (LWP 587) exited]
+[Thread 0xffffaf7eede0 (LWP 586) exited]
+[Thread 0xffffafffede0 (LWP 585) exited]
+[Thread 0xffffcce3ede0 (LWP 584) exited]
+[Thread 0xffffcd64ede0 (LWP 583) exited]
+[Thread 0xffffcde5ede0 (LWP 582) exited]
+[Thread 0xffffce66ede0 (LWP 581) exited]
+[Thread 0xffffcee7ede0 (LWP 580) exited]
+[Thread 0xffffe8d3ede0 (LWP 579) exited]
+[Thread 0xffffe954ede0 (LWP 578) exited]
+[Thread 0xfffff4584de0 (LWP 577) exited]
+[Thread 0xfffff4614de0 (LWP 576) exited]
+[Thread 0xfffff4eb4de0 (LWP 572) exited]
+[Thread 0xfffff4f44de0 (LWP 571) exited]
+[Thread 0xfffff4fd4de0 (LWP 570) exited]
+[Thread 0xfffff5076de0 (LWP 569) exited]
+[Thread 0xfffff527ede0 (LWP 568) exited]
+
+Thread 1 "IPlugInstrument" hit Breakpoint 1, 0x0000fffff706f2f4 in exit () from /lib/aarch64-linux-gnu/libc.so.6
+  Id   Target Id                                         Frame 
+* 1    Thread 0xfffff7e4eac0 (LWP 564) "IPlugInstrument" 0x0000fffff706f2f4 in exit () from /lib/aarch64-linux-gnu/libc.so.6
+  9    Thread 0xfffff4e24de0 (LWP 573) "gmain"           0x0000fffff7110bdc in poll () from /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 9 (Thread 0xfffff4e24de0 (LWP 573) "gmain"):
+#0  0x0000fffff7110bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff7ba1b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000fffff7b3ebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+
+Thread 1 (Thread 0xfffff7e4eac0 (LWP 564) "IPlugInstrument"):
+#0  0x0000fffff706f2f4 in exit () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fffff70584c8 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000fffff7058598 in __libc_start_main () at /lib/aarch64-linux-gnu/libc.so.6
+applied rlimit 16384/524288
+
+BEGIN IPLUG CHANNEL IO PARSER --------------------------------------------------
+Channel I/O #1 - 0-2
+               - input bus count: 0, output bus count 1
+               - channel count on output bus 1: 2
+               - input channel count across all buses: 0, output channel count across all buses 2
+
+1 I/O configs detected
+Total # in chans: 0, Total # out chans: 2 
+
+END IPLUG CHANNEL IO PARSER --------------------------------------------------
+Reading ini file from /Volumes/Storage/code/IPlug2-T-022/linux-research/evidence/t022/review-docker-jack-midi/home/.config/IPlugInstrument/settings.ini
+
+RtAudio Version 6.0.1trying to start audio stream @ 48000 sr, buffer size 256
+indev = system
+outdev = system
+inputs = 0
+outputs = 2
+IGraphics NanoVG @ 60 FPS
+[Thread 0xfffff7e4eac0 (LWP 564) exited]
+[Thread 0xfffff4e24de0 (LWP 573) exited]
+[New process 564]
+[Inferior 1 (process 564) exited normally]

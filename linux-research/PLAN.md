@@ -140,7 +140,7 @@ Working plan for continuing the port from a cold session. Written 2026-10-11.
 - Each format build compiles every iPlug source again (9 targets ≈ 5 min on colima). Fine for now.
 - `IPlugEffect` APP on macOS needs `IPlugAPP.cpp` set to Objective-C++ in its project (pre-existing).
 
-Research summary for humans: [`../LINUX_PORT_RESEARCH.md`](../LINUX_PORT_RESEARCH.md) (Russian).
+Research summary for humans: [`LINUX_PORT_RESEARCH.md`](LINUX_PORT_RESEARCH.md) (Russian).
 VM setup for visual tests: [`../LINUX_VM_SETUP.md`](../LINUX_VM_SETUP.md).
 
 ## 0. Cold start checklist

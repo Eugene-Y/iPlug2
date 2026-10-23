@@ -1,0 +1,18 @@
+pid=18742 cmd=build/t018-skia-cpu/out/IPlugControls --no-io 
+--- threads (count name)
+      1 IPlugControls
+      1 gmain
+--- backtraces
+Thread 2 (Thread 0xfa5a731cedc0 (LWP 18743) "gmain"):
+#0  0x0000fa5a750c0bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fa5a75b51b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000fa5a75aeebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000fa5a75aeec24 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#4  0x0000fa5a75b1f618 [PAC] in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000fa5a7506582c [PAC] in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000fa5a750cbb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 1 (Thread 0xfa5a75df4ac0 (LWP 18742) "IPlugControls"):
+#0  0x0000fa5a750c0bdc in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000fa5a75b51b7c in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#2  0x0000fa5a75aeebc8 [PAC] in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#3  0x0000b3efae87985c [PAC] in main ()

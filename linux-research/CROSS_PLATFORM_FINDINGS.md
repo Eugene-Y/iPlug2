@@ -40,10 +40,10 @@ Gneiss на mac/win использует нативные меню — его н
 | ID | Серьёзность | Суть | Затрагивает mac/win? |
 |---|---|---|---|
 | T6-1 ✅ одобрено автором 2026-10-17 | Средняя | `stateLoad` восстанавливает параметры, но не зовёт `host->params->rescan(CLAP_PARAM_RESCAN_VALUES)`. Хосты с кэшем значений (общий UI параметров, полосы автоматизации) после открытия проекта / загрузки пресета хостом показывают старые значения. clap-validator `state-reproducibility-basic/-binary/-buffered` падают у всех iPlug2 CLAP, в том числе у установленного mac Gneiss. Фикс 46d10516c: rescan после `OnRestoreState()`; после него все три теста проходят на Linux и mac (IPlugEffect, IPlugControls, IPlugInstrument, Gneiss). Изменение на mac/win: после загрузки состояния хост перечитывает значения параметров; автоматизация из этого не пишется (так по спеке). Доказательства: `tasks/T-006-clap-state-repro.md`, `evidence/t006/` | **Да** (все CLAP) |
-Рядом, не исправлено: CLAP не переопределяет `InformHostOfPresetChange`, поэтому пресеты iPlug (`RestorePreset`, FXP/FXB) тоже оставляют CLAP-хосту старые значения. Gneiss это не покрыло бы: его PresetManager не зовёт `InformHostOfPresetChange`, а morph undo вызывает `UnserializeState` напрямую. Для Gneiss остаётся фикс C4.
+Рядом: CLAP не переопределял `InformHostOfPresetChange`. iPlug зовёт его только из загрузчиков FXP/FXB (`LoadStateFromFXP`/`LoadBankFromFXB` …), не из `RestorePreset`. Предложение T23-1 ниже (T-023).
 
 ## Из T-004 (standalone APP, общий код `IPlug/APP/IPlugAPP_host.cpp`) — исправлено с согласия автора
-Меняют поведение mac/win только в сбойных случаях, нормальная работа не меняется. В `hvoya-linux`; в `hvoya` попадут при будущем слиянии.
+Меняют поведение mac/win только в сбойных случаях, нормальная работа не меняется. В `hvoya-linux`; в `hvoya` попадут при будущем слиянии. **Перенесено в `hvoya` 2026-10-20 по команде автора:** b304a5a3c, 41c689868, de16d8c8c; там же 593293cfb (CLAP `paramsValueToText`: запись на байт за буфер, коммит из основы порта).
 | ID | Коммит | Суть |
 |---|---|---|
 | A2 | 013328ba4 | `GetMIDIPortNumber`: разыменование null, если RtMidi не инициализировался, а в settings.ini имя порта ≠ "off" |
@@ -109,7 +109,50 @@ Gneiss на mac/win использует нативные меню — его н
 |---|---|---|---|
 | T10-1 | Низкая (UX) | Alt‑drag / Alt‑клик по ручкам частоты (привязка к ноте) на Xfce, MATE, Cinnamon, KDE Plasma 5 перехватывает оконный менеджер: окно двигается вместо привязки. GNOME и Plasma 6 используют Super | Решение автора: пометка в MANUAL (Gneiss `linux-experiment`), без изменения кода |
 
+## Из T-034 (общий код iPlug, NanoVG на GL: Linux, Windows GL2/GL3) — подробности: `tasks/T-034-nanovg-fbo-stencil.md`
+| ID | Серьёзность | Где | Суть | Статус |
+|---|---|---|---|---|
+| T34-1 | Низкая–средняя | `IGraphics/Drawing/IGraphicsNanoVG.cpp` `DrawResize` | Stencil главного FBO (`mMainFrameBuffer`) после создания не очищался: содержимое нового renderbuffer не определено, `BeginFrame` чистит буферы окна, а не FBO. Вогнутые заливки (SVG-лого) на первом кадре рисовались ограничивающими прямоугольниками. На VM (virgl) в Ardour — 3 из 4 первых открытий; на Windows не наблюдалось (драйверы обычно отдают обнулённую память), Metal не затронут | Исправлено: hvoya-linux 29022e440, `hvoya` 07953bf26 (OK автора 2026-10-20) |
+
 ## Сообщено автором (mac)
 | ID | Серьёзность | Суть | Статус |
 |---|---|---|---|
 | S-1 | Средняя (UX), все плагины на маке | **Причина найдена (2026-10-19).** Нативное поле ввода на маке (`IGraphicsMac_view.mm` `createTextEntry` + `IGRAPHICS_FORMATTER isPartialStringValid`) проверяет фильтром символов (цифры `.+-`) **всю строку поля**, а не только введённый символ. Поле открывается с текстом дисплея («10.00 kHz»), поэтому любая правка, включая Backspace, отклоняется, пока весь текст не выделен и не заменён цифрой: «только цифры и не с первого раза», одинаково в CLAP и VST3 (автор). На Windows (`ParamEditProc`, `WM_CHAR`) и в `ITextEntryControl` (Linux) проверяется каждый введённый символ: правка работает, но единицы («kHz») тоже не набрать, хотя после T-024/T-028 плагины их разбирают | Предложение: (а) мак — проверять только вставленные символы, как Windows; (б) все платформы — не фильтровать символы, если у параметра есть `TextToValueFunc` (плагин сам разбирает текст). Ждёт решения автора |
+
+## Из T-023 (CLAP, общий код `IPlug/CLAP/IPlugCLAP.*`; касается mac/win) — принято автором 2026-10-20
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T23-1 | Низкая–средняя | После загрузки FXP/FXB (iPlug зовёт `InformHostOfPresetChange`) CLAP-хост продолжал показывать и автоматизировать старые значения. Предложение `linux/T-023`: `InformHostOfPresetChange` всегда откладывает `params.rescan(VALUES)` до ближайшего `on_main_thread` хоста (через `request_callback`, без мьютекса и аллокаций), чтобы хост прочитал значения уже после того, как вызывающий код доприменит состояние. **Поведение на mac/win:** у Gneiss загрузка пользовательского пресета и шаги по полосе пресетов (`PresetManager` → `LoadStateFromFXP`) теперь приводят к повторному чтению значений хостом, уже после восстановления workspace; заводские пресеты (из чанка) — нет; Sand не затронут | Исправлено (OK автора 2026-10-20): hvoya-linux, `hvoya`. Открыто: звать ли то же из `RestorePreset` (общий для всех форматов) |
+| T23-2 | Средняя (Release-краш) | `FlushParamsIfNeeded` звал `params.request_flush` без проверки `canUseParams()`: у хоста без `clap.params` Debug падает на ассерте clap-helpers, **Release падает** (проверено тестовым хостом ревьюера T-023). Предложение: проверять `canUseParams()` | Исправлено (OK автора 2026-10-20): hvoya-linux, `hvoya` |
+
+## Из T-011 (`Examples/duplicate.py`, `Examples/gitignore_template`; касается mac/win) — OK автора на правку 2026-10-16, в `hvoya` не перенесено
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T11-1 | Средняя | Дубликат вне дерева iPlug2 (4-й аргумент) получал верный `IPLUG2_ROOT` только в `config/*.xcconfig`/props; `CMakeLists.txt` (`IPLUG2_DIR`), `CMakePresets.json`, `-linux.code-workspace`, `.vscode/c_cpp_properties.json` сохраняли `../..` — CMake-сборка такого дубликата ломалась на всех платформах. Теперь эти файлы переписываются (пути с `/` на всех ОС; цель и корень через `realpath`). Вывод Xcode/VS для обычных путей байт-в-байт тот же (20 примеров × 5 размещений) | Исправлено: hvoya-linux 839e1b51d. Перенос в `hvoya` — решение автора |
+| T11-2 | Средняя | Дублирование IPlugControls падало на полпути (`UnicodeDecodeError` на `scripts/IBitmapSlider.knob`) на всех ОС: `.knob` теперь бинарный | Исправлено: hvoya-linux 839e1b51d |
+| T11-3 | Низкая | `gitignore_template` не игнорировал `plug_build_info.hpp` (мак-сборка оставляла его неотслеживаемым в каждом дубликате) | Исправлено: hvoya-linux 839e1b51d |
+| T11-4 | Низкая (Windows) | Существующая (апстрим, 2018) замена путей в `config/`/`projects/` пишет обратные слэши `relpath` во все файлы, включая mac xcconfig/pbxproj, web `.mk`, `makedist-*.sh`, `prepare_resources-*.py`; если iPlug2 не прямой потомок целевой папки, путь удваивается (`..\..\..\iPlug2\iPlug2`). Сборка на Windows не страдает, дубликат с Windows не собирается на mac/iOS/web. Исправление в одну строку: нормализовать `newroot` к `/` до `dirwalk()` | Исправлено: T-037, hvoya-linux dc753df33 (эмуляция Windows и `ntpath`; реальный Windows не запускался). В `hvoya` не перенесено |
+| T11-5 | Низкая | Не исправлено, отчёт: путь цели с `[ ] * ?` делает старый `replacestrs` молчаливым no-op (glob); цель на другом диске Windows → `ValueError` (исправлено в T-037: понятная ошибка до копирования); первая сборка Xcode меняет 6 отслеживаемых `resources/*-Info.plist`; `.RPP` дубликата ссылается на плагин примера | Отчёт |
+| T37-1 | Низкая | Замена корня — простая подстрока: в дубликате вне дерева `@executable_path/../../../../Frameworks` в mac pbxproj IPlugConvoEngine, IPlugWebUI, IPlugOSCEditor становится `@executable_path/../../iPlug2/../Frameworks`; так же портится iOS-путь `netinc.h` у IPlugOSCEditor. На всех платформах | Отчёт (T-037 Log) |
+| T37-2 | Низкая (Windows) | Скрипт пишет файлы в текстовом режиме: на Windows все тронутые файлы получают CRLF; `.sh`, перенесённый на мак без git, bash не запустит. Не проверено на PC | Отчёт |
+| T37-3 | Тривиальная | `.gitattributes:34` содержит `.mk` вместо `*.mk` — правило ни к чему не применяется | Отчёт |
+
+## Из T-031 (REAPER-расширения на Linux; общий код `IPlug/ReaperExt/*`, `IPlugEditorDelegate.h`, `IPlugAPIBase.h`, `Scripts/cmake/{ReaperExt,Deploy}.cmake`)
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T31-1 | — | Все изменения в общих файлах под `OS_LINUX` / `UNIX AND NOT APPLE`; на mac/win поведение не меняется. Единственное общее изменение без гарда: `iplug_add_plugin_resources(target format)` в `Examples/IPlugReaperPlugin/CMakeLists.txt` получила аргумент формата (на mac тот же результат) | hvoya-linux cbb4d7105; в `hvoya` — вместе с Linux-портом |
+
+## Из T-032 (общий код `IGraphics/Controls/IVPresetManagerControls.h`, `IGraphics.h`; касается mac/win) — по решению автора 2026-10-22 («асинхронно, если нет весомых причин»)
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T32-0 | — | **Изменение поведения:** кнопка Load у `IVDiskPresetManagerControl` вызывает `PromptForFile` с completion handler. На маке панель — sheet на окне плагина (была app-modal); Windows без изменений (handler вызывается до возврата); iOS больше не падает на ассерте (не собиралось). Доки: `linux-development.md` §9, комментарии к диалогам в `IGraphics.h` | hvoya-linux; в `hvoya` не перенесено |
+| XP-1 | Низкая | Мак: `PromptForColor` без handler бросает `bad_function_call`, когда пользователь выбирает цвет (`IGraphicsMac_view.mm:1300`) | Отчёт (`tasks/T-032-sync-dialogs.md`, Log) |
+| XP-2 | Средняя | `IVDiskPresetManagerControl` с `showFileExtensions=false` передаёт в `OnLoadFunc` путь без расширения — плагин просят загрузить несуществующий файл | Отчёт |
+| XP-3 | Тривиальная | В двух тестовых контролах `SetDirty(false)` вне `if` (нет фигурных скобок) | Отчёт |
+| XP-4 | Низкая (web) | `ShowMessageBox`: ветка Yes-No/OK-Cancel проваливается, возвращает `kNoResult` и не зовёт handler | Отчёт |
+
+## Из T-018 (Skia на Linux; общий код `IGraphics/Drawing/IGraphicsSkia.*`, `IGraphics.cpp`) — изменения под `OS_LINUX`, mac/win не меняются
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T18-1 | Средняя (краш) | `IGraphics::LoadBitmap` в Release разыменовывает null, если картинки нет (`IGraphics.cpp:1814`): и NanoVG, и Skia падают без папки ресурсов (причина провала «CLAP без ресурсов» в package smoke) | Отчёт (T-018 Log) |
+| T18-2 | Низкая | `IGraphicsSkia::LoadAPIFont` на mac/win игнорирует индекс начертания (face index) шрифта; на Linux исправлено, предложение — передавать везде | Отчёт |

@@ -3,9 +3,32 @@
 #include "IPlugPaths.h"
 #include "IconsForkAwesome.h"
 #include "IconsFontaudio.h"
-#if defined IPLUG_TEST_DIALOGS && defined OS_LINUX
+#if (defined IPLUG_TEST_DIALOGS || defined IPLUG_TEST_APPEARANCE) && defined OS_LINUX
   #include <unistd.h>
   #include "Linux/IPlugLinuxHostLoop.h"
+#endif
+
+#if defined IPLUG_TEST_DRAGOUT && defined OS_LINUX
+// Linux drag-out harness (linux-research/evidence/t020/dragout): dragging this square drags $IPLUG_TEST_DRAG_FILE out.
+class TestDragOutControl : public IControl
+{
+public:
+  using IControl::IControl;
+  void Draw(IGraphics& g) override { g.FillRect(COLOR_ORANGE, mRECT); }
+  void OnMouseDrag(float, float, float, float, const IMouseMod&) override
+  {
+    if (mStarted)
+      return;
+    const char* path = getenv("IPLUG_TEST_DRAG_FILE");
+    mStarted = true;
+    const bool started = path && GetUI()->InitiateExternalFileDragDrop(path, mRECT);
+    fprintf(stderr, "IPLUG_TEST_DRAGOUT start '%s' -> %d\n", path ? path : "", started);
+    fflush(stderr);
+  }
+  void OnMouseDown(float, float, const IMouseMod&) override { mStarted = false; }
+private:
+  bool mStarted = false;
+};
 #endif
 
 IPlugControls::IPlugControls(const InstanceInfo& info)
@@ -511,6 +534,19 @@ IPlugControls::IPlugControls(const InstanceInfo& info)
     
     pGraphics->AttachControl(new IVButtonControl(sameCell().SubRectVertical(5, 4).FracRectHorizontal(0.5f, true), SplashClickActionFunc, "font...", style.WithDrawShadows(false)))->SetAnimationEndActionFunction(promptValueFont);
     
+#if defined IPLUG_TEST_DRAGOUT && defined OS_LINUX
+    pGraphics->AttachControl(new TestDragOutControl(IRECT::MakeXYWH(700.f, 690.f, 24.f, 24.f)));
+#endif
+
+#if defined IPLUG_TEST_APPEARANCE && defined OS_LINUX
+    // Linux appearance harness (linux-research/evidence/t020/appearance): every change goes to stderr with its thread.
+    pGraphics->SetUIAppearanceChangedFunc([](EUIAppearance appearance) {
+      fprintf(stderr, "IPLUG_TEST_APPEARANCE %s main=%d\n", appearance == EUIAppearance::Dark ? "dark" : "light",
+              HostLoopThreadId() == (long) getpid());
+      fflush(stderr);
+    });
+#endif
+
 #ifdef IPLUG_TEST_DIALOGS
     // Linux dialog harness (linux-research/scripts/dialog-test.sh): every answer goes to stderr with the thread
     // it arrived on. IPLUG_TEST_DIALOG_DIR is where the file and folder dialogs start.
@@ -574,6 +610,13 @@ IPlugControls::IPlugControls(const InstanceInfo& info)
         report("sync", fileName.Get(), path.Get());
       });
       pGraphics->AttachControl(new ITextControl(area.GetGridCell(4, 0, 5, 1), "dialog result", IText(11.f, EAlign::Near)), kTagTestResult);
+
+      if (const WDL_String presetDir = startDir(); presetDir.GetLength())
+      {
+        const IRECT presetBounds(area.L, area.T - 28.f, area.R, area.T - 2.f);
+        auto onPresetLoaded = [report](const WDL_String& fileName) { report("preset", fileName.Get(), ""); };
+        pGraphics->AttachControl(new IVDiskPresetManagerControl(presetBounds, presetDir.Get(), "fxp", true, "", testStyle, onPresetLoaded));
+      }
     }
 #endif
 

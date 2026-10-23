@@ -187,6 +187,7 @@ public:
 #ifdef OS_LINUX
   /** Timers and fd watches on the host main thread. The API class installs the backend. */
   HostLoop& GetHostLoop() { return mHostLoop; }
+  HostLoop* GetEditorHostLoop() override { return &mHostLoop; }
 #endif
   
 private:

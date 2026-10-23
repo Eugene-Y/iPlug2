@@ -1,0 +1,96 @@
+plain C:, iPlug2 a direct child of the target
+  cwd=C:\work\iPlug2\Examples target=C:\work
+  before: newroot=..\..\iPlug2  oldprojectroot=../..  newprojectroot=../iPlug2
+          '/' files: IPLUG2_ROOT = ..\..\iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\iPlug2</IPLUG2_ROOT>
+  after : newroot=../../iPlug2  oldprojectroot=../..  newprojectroot=../iPlug2
+          '/' files: IPLUG2_ROOT = ../../iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\iPlug2</IPLUG2_ROOT>
+plain C:, sibling target (iPlug2 not a direct child)
+  cwd=C:\work\iPlug2\Examples target=C:\work\out
+  before: newroot=..\..\..\iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+  after : newroot=../../../iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ../../../iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+plain C:, deep target
+  cwd=C:\work\iPlug2\Examples target=C:\work\a\b\c\d
+  before: newroot=..\..\..\..\..\..\iPlug2  oldprojectroot=../..  newprojectroot=../../../../../iPlug2
+          '/' files: IPLUG2_ROOT = ..\..\..\..\..\..\iPlug2\..\..\..\..\..\..\iPlug2\iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\..\..\iPlug2</IPLUG2_ROOT>
+  after : newroot=../../../../../../iPlug2  oldprojectroot=../..  newprojectroot=../../../../../iPlug2
+          '/' files: IPLUG2_ROOT = ../../../../../../iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\..\..\iPlug2</IPLUG2_ROOT>
+plain C:, target '.' (Examples)
+  cwd=C:\work\iPlug2\Examples target=.
+  before: newroot=..\..\..  oldprojectroot=../..  newprojectroot=../..
+          '/' files: IPLUG2_ROOT = ..\..\..
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..</IPLUG2_ROOT>
+  after : newroot=../../..  oldprojectroot=../..  newprojectroot=../..
+          '/' files: IPLUG2_ROOT = ../../..
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..</IPLUG2_ROOT>
+subst S:=C:\work, target on S:
+  cwd=S:\iPlug2\Examples target=S:\out
+  before: newroot=..\..\..\iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+  after : newroot=../../../iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ../../../iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+subst S:, relative target ..\..\out
+  cwd=S:\iPlug2\Examples target=..\..\out
+  before: newroot=..\..\..\iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+  after : newroot=../../../iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ../../../iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+subst S:, target given on C:
+  cwd=S:\iPlug2\Examples target=C:\work\out
+  before: newroot=..\..\..\iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+  after : newroot=../../../iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ../../../iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+subst S:, target '.'
+  cwd=S:\iPlug2\Examples target=.
+  before: newroot=..\..\..  oldprojectroot=../..  newprojectroot=../..
+          '/' files: IPLUG2_ROOT = ..\..\..
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..</IPLUG2_ROOT>
+  after : newroot=../../..  oldprojectroot=../..  newprojectroot=../..
+          '/' files: IPLUG2_ROOT = ../../..
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..</IPLUG2_ROOT>
+mapped Z:=\\srv\share, target on Z:
+  cwd=Z:\iPlug2\Examples target=Z:\out
+  before: newroot=..\..\..\iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+  after : newroot=../../../iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ../../../iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+mapped Z:, target on local D:
+  cwd=Z:\iPlug2\Examples target=D:\out
+  before: traceback after copytree (half-renamed project left): ValueError: path is on mount '\\\\srv\\share', start on mount 'D:'
+  after : error before copytree: output path must be on the same drive as iPlug2 (\\srv\share\iPlug2)
+junction C:\dev->C:\real, target in C:\dev
+  cwd=C:\dev\iPlug2\Examples target=C:\dev\out
+  before: newroot=..\..\..\iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ..\..\..\iPlug2\iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+  after : newroot=../../../iPlug2  oldprojectroot=../..  newprojectroot=../../iPlug2
+          '/' files: IPLUG2_ROOT = ../../../iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\iPlug2</IPLUG2_ROOT>
+junction, target outside it
+  cwd=C:\dev\iPlug2\Examples target=C:\other\out
+  before: newroot=..\..\..\..\real\iPlug2  oldprojectroot=../..  newprojectroot=../../../real/iPlug2
+          '/' files: IPLUG2_ROOT = ..\..\..\..\real\iPlug2\..\real\iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\real\iPlug2</IPLUG2_ROOT>
+  after : newroot=../../../../real/iPlug2  oldprojectroot=../..  newprojectroot=../../../real/iPlug2
+          '/' files: IPLUG2_ROOT = ../../../../real/iPlug2
+          VS files : <IPLUG2_ROOT>$(ProjectDir)..\..\..\..\real\iPlug2</IPLUG2_ROOT>
+different physical drive
+  cwd=C:\work\iPlug2\Examples target=D:\out
+  before: traceback after copytree (half-renamed project left): ValueError: path is on mount 'C:', start on mount 'D:'
+  after : error before copytree: output path must be on the same drive as iPlug2 (C:\work\iPlug2)

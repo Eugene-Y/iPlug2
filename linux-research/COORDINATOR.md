@@ -29,6 +29,7 @@ You are a fresh Claude instance taking over the **coordinator** role of the Linu
 1. **Inventory.** `git -C /Volumes/Storage/code/IPlug2-linux log --oneline hvoya-linux..linux/T-NNN`, `git diff --stat hvoya-linux...linux/T-NNN -- . ':!linux-research/evidence'`, the task file's Log/Hand-over (decisions, shared-code commits, open items), the lock dir `/Volumes/Storage/code/.linux-port-locks/` and `docker ps -a` (the worker should have released/removed its own).
 2. **Shared-code check.** Any change that also builds on mac/win needs the user's decision (AGENTS §2) unless the task file records it. Read those diffs yourself.
 3. **Secrets / junk check before merging** — the branch's whole history lands in `hvoya-linux`, which the user pushes to GitHub: `git log hvoya-linux..linux/T-NNN --name-only --format= | grep -i -E 'cookie|\.pulse|token|secret|\.ssh|\.pem'`, and look at evidence sizes (`git ls-tree -r -l`). T-004 had three VM PulseAudio cookies in its history: the branch was rewritten before the merge with `git branch backup/T-NNN-before-filter linux/T-NNN; FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --index-filter 'git rm -q --cached --ignore-unmatch -- "<glob>"' -- hvoya-linux..linux/T-NNN`, then old SHAs mentioned in docs were updated. Only for unpushed branches.
+   **No plug-in names** in iPlug2's shipped text (AGENTS §2): `linux-research/scripts/coord/check-product-names.sh linux/T-NNN` must exit 0 (1 = names found, 2 = nothing checked); run it again on `HEAD` after the merge commit, which also covers conflict resolutions.
 4. **Trial merge:** `git merge --no-ff --no-commit linux/T-NNN` in `/Volumes/Storage/code/IPlug2-linux`. Conflicts so far were almost always the board table (`tasks/README.md`): keep both sides' rows. Copy a conflicted file to the scratchpad before resolving.
 5. **Smoke test on the trial-merged tree** (Docker; never trust a worker's PASS alone — look at screenshots when a run is visual). Templates from earlier merges: `scripts/coord/merge-smoke-t0NN.sh` (APP: t004; CLAP state: t006; Sand + xact changes: t012; packaging + clean-distro: t021; product fixes, validators, Sand/Gneiss steps: t024) and `scripts/coord/mac-xcodebuild.sh` (mac build of a product from a **temporary detached worktree**, so the build doesn't dirty the main checkout: `git -C <repo> worktree add --detach ../<Name>-verify master`, remove it afterwards). Use your own container and build-dir names (`m0NN`), remove them after.
 6. **Commit the merge** with a message that says what landed, the shared-code commits and the smoke result; then a follow-up commit with the merge-log row (`tasks/README.md` "Merge log": date, task, merge sha, smoke summary), board status, `STATUS.md`, `CROSS_PLATFORM_FINDINGS.md` rows for new mac/win findings.
@@ -46,21 +47,20 @@ Before `git worktree remove --force`, check **`git -C <wt> status --porcelain --
 - REAPER GUI steps: `GUI=<container> scripts/run-gui-test.sh <plugin> <outdir> scripts/steps/<file>.txt <container>`.
 - Long jobs: run in the background and wait for the completion notice; don't poll with sleeps. No `timeout` on macOS: `perl -e 'alarm N; exec @ARGV' cmd`.
 
-## Where the coordinator stopped (2026-10-19, second coordinator)
-See `STATUS.md` "In flight" and "Waiting on the user" for the authoritative list. In short:
-- Done since 2026-10-18: **T-028** merged (Gneiss master c6f4442, linux-experiment f799cb3 + MANUAL 2cab58b), **T-010**
-  merged (11ca71243), **T-025** merged (1e0e4be70) and ported to `hvoya` (8ca9f3324; mac Gneiss/Sand VST3/AUv2/CLAP
-  built). Spent worktrees and branches removed (user's OK). Pushed by the user up to 2026-10-19 morning except `hvoya`
-  8ca9f3324 and hvoya-linux after 1e0e4be70.
-- Worktrees: `IPlug2` (hvoya), `IPlug2-linux` (hvoya-linux); products `Gneiss-linux`, `Sand-linux`; `DMT-t024`,
-  `Melter-t024`, `Crust_new-t024` (keep: uncommitted one-liners for the user).
-- **User's decisions 2026-10-19:** T-013 may install Carla, Ardour, Renoise on the VM. T-027: research docs stay in
-  `linux-research/` (move `LINUX_PORT_RESEARCH.md` there); the `CLAUDE.md` port section goes when the port is finished,
-  leaving a note that this fork's authors did the port, not iPlug2's maintainers.
-- **T-009 references are in** `evidence/t009/mac-refs/` (Retina 2x; Gneiss CLAP incl. `clean moogRPP.RPP` with the
-  CLEAN MOOG preset, Sand VST3 views). Gneiss has no text entry yet (user); leave it out of the comparison.
-- **S-1** (findings): Sand CLAP text entry on mac takes no keys in REAPER, VST3 works. Waiting for the user's two checks
-  (REAPER "Send all keyboard input to plug-in"; an old release).
-- Coordinator's queue (no user needed): **T-023** (Gneiss and Sand are 0 failures on Linux; left: mac runs, iPlug CLAP
-  items, empty Sand's stale `known-clap-failures/Sand.txt`), then **T-013** (VM hosts), then **T-009**.
-- Shared-code (mac/win) fixes always go to the user before merging; Gneiss commits only on the user's command.
+## Where the coordinator stopped (2026-10-21 day)
+See `STATUS.md` "Waiting on the user". Since the night section below:
+- **Merged 2026-10-21** (each via worker agent → independent reviewer agent, ≤ 2 rounds): T-013 Renoise (d6a361df0; IGraphicsLinux XEmbed FOCUS_OUT/FOCUS_IN pairing), T-013 drops + T-020 VM checks + PC checklist (c62128b28), T-011 (839e1b51d; `duplicate.py`, shared mac/win, not on `hvoya`), T-031 (cbb4d7105; done and reviewed in another chat, smoke here).
+- **Unpushed:** hvoya-linux after 1cd9110fa (everything above), Sand `dist-scripts`.
+- **Other chats:** T-022 (APP JACK MIDI) in progress, lock `T-022`.
+- **VM state:** `~/.clap/Gneiss.clap` is T-011's Debug build: redeploy before the next VM test. `~/dev/t011/` holds T-011's duplicates for the user to try. Renoise OSC off, colour scheme `prefer-dark`.
+- **T-013 left:** Qtractor, Zrythm (install approved in the task's Hosts section), a Wayland session, the final review. T-009's VM run still open (coordinator holds T-009 and T-013 locks).
+- **Smoke gotcha:** `reaper-ext-test.sh` runs in the GUI container with cwd `linux-research`: pass `build/<dir>/out/reaper_X.so`, not `../build/...`.
+
+## Where the coordinator stopped (2026-10-21 night, second coordinator, before a context compaction)
+See `STATUS.md` "Waiting on the user" for the authoritative list; the user decides those in the morning.
+- **Done 2026-10-20:** T-034 (NanoVG GL main-FBO stencil; merged 29022e440, `hvoya` 07953bf26), T-023 (CLAP preset rescan + flush check; merged 4cbaaef7a, `hvoya` b5dc25d0d), shared fixes ported to `hvoya` (CLAP `paramsValueToText` off-by-one 593293cfb, APP A1-A4, IPlugEffect example 5b263fc83/f743742bc), Gneiss `master` b1733b7 / Sand `master` d2294da picks, `makedist-linux.sh` for Gneiss and Sand (publish to `hvoya/distr/<Plugin>/`, `debug-symbols/` subfolder, `--allow-dirty`), T-013 Ardour results (`linux/T-013` f932e7e0c), T-035 merged 6ba2a22bf (real-hardware kit, notes/25-*), T-036 review-done (Sand `dist-scripts` bcb22ec in `/Volumes/Storage/code/hvoya/Sand-dist`, not merged). Everything up to 5cb35ed39 pushed with the user's permission; **unpushed:** hvoya-linux after 1cd9110fa (board/STATUS/T-035 merge/T-036 records, HEAD 0b3fcc9fe+), Sand `dist-scripts`.
+- **Review practice (the user asked 2026-10-20):** every task runs worker agent → independent reviewer agent (rounds until approve with no major finding; user 2026-10-22), one subagent at a time; today's earlier unreviewed changes got a retro review (`notes/24-review-2026-10-20.md`, approved). Don't skip the reviewer again, even when the user says "merge".
+- **VM:** restarted by the user 2026-10-20; Ardour done; set to the Dummy backend (`~/.config/ardour8/config`, backup `config.t013-alsa`). `mutter-x11-frames` was restarted by hand after `xdotool windowclose` crashed it (STATUS gotcha). Locks held: T-009, T-013 (both coordinator, VM work pending). No VM lock held.
+- **Next for the coordinator (the user: "take priority tasks you can do yourself during the night"):** pick from: T-013 (Renoise, drops from GNOME Files, item 9 = T-020's VM checks; needs the VM lock), T-031 (REAPER extensions, 2-3 d), T-011 (duplicate.py, ready), T-009's VM part. Run each through worker + reviewer agents. Don't merge shared-code (mac/win) changes or anything into plug-in `master`s without the user.
+- Worktrees: `IPlug2-T-009`, `-T-013`, `-T-029` (T-029 proposal waits for the user), Sand `Sand-dist` (T-036), products `Gneiss-linux`, `Sand-linux`.
+
