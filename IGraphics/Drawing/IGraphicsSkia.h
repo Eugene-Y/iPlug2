@@ -23,6 +23,7 @@
 
 namespace skia::textlayout {
 class FontCollection;
+class TypefaceFontProvider;
 }
 
 BEGIN_IPLUG_NAMESPACE
@@ -165,6 +166,11 @@ private:
   
 #if !defined IGRAPHICS_NO_SKIA_SKPARAGRAPH
   sk_sp<skia::textlayout::FontCollection> mFontCollection;
+#if defined OS_LINUX
+  /** Without a system font manager, DrawMultiLineText finds its families among the loaded fonts */
+  void AddLoadedFontFamily(const char* fontID, sk_sp<SkTypeface> typeface);
+  sk_sp<skia::textlayout::TypefaceFontProvider> mLoadedFontFamilies;
+#endif
 #endif
   
 #ifdef IGRAPHICS_METAL

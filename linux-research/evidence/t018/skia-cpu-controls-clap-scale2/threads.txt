@@ -1,0 +1,123 @@
+pid=90 cmd=/opt/REAPER/reaper -nosplash -new 
+--- threads (count name)
+      1 reaper
+      1 reaper/audio_dm
+      5 reaper/livefx
+      6 reaper/mediaafx
+      1 reaper/video
+--- backtraces
+Thread 14 (Thread 0xe8ce3e596160 (LWP 108) "reaper/video"):
+#0  0x0000e8ce4f4dbd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4e60bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f50b5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000e8ce3d7fff38 in ??? () at /opt/REAPER/Plugins/reaper_video.so
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 13 (Thread 0xe8ce3d66f160 (LWP 109) "reaper/audio_dm"):
+#0  0x0000e8ce4f4dbd90 in clock_nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4e60bc in nanosleep () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f50b5b8 in usleep () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000000000a31268 in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 12 (Thread 0xe8ce3ce5f160 (LWP 110) "reaper/mediaafx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 11 (Thread 0xe8ce37fff160 (LWP 111) "reaper/mediaafx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 10 (Thread 0xe8ce377ef160 (LWP 112) "reaper/mediaafx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 9 (Thread 0xe8ce36fdf160 (LWP 113) "reaper/mediaafx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 8 (Thread 0xe8ce367cf160 (LWP 114) "reaper/mediaafx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 7 (Thread 0xe8ce35fbf160 (LWP 115) "reaper/mediaafx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x000000000070217c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 6 (Thread 0xe8ce357af160 (LWP 116) "reaper/livefx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 5 (Thread 0xe8ce34f9f160 (LWP 117) "reaper/livefx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 4 (Thread 0xe8ce3478f160 (LWP 118) "reaper/livefx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 3 (Thread 0xe8ce33f7f160 (LWP 119) "reaper/livefx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 2 (Thread 0xe8ce3376f160 (LWP 120) "reaper/livefx"):
+#0  0x0000e8ce4f4a1d6c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000e8ce4f4a4d20 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000e8ce4f35cc2c in ??? () at /opt/REAPER/libSwell.so
+#3  0x0000000000701d2c in ??? ()
+#4  0x0000e8ce4f35d25c in ??? () at /opt/REAPER/libSwell.so
+#5  0x0000e8ce4f4a582c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#6  0x0000e8ce4f50bb4c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+Thread 1 (Thread 0xe8ce4fb11460 (LWP 90) "reaper"):
+#0  0x0000e8ce2b26a0ec in SafeRLEAdditiveBlitter::blitAntiH(int, int, int, unsigned char) () at /tmp/rhome/.clap/IPlugControls.clap
+#1  0x0000e8ce2b26ca28 in blit_trapezoid_row(AdditiveBlitter*, int, int, int, int, int, int, int, unsigned char, unsigned char*, bool) () at /tmp/rhome/.clap/IPlugControls.clap
+#2  0x0000e8ce2b26bc3c in aaa_fill_path(SkPath const&, SkIRect const&, AdditiveBlitter*, int, int, bool, bool, bool) () at /tmp/rhome/.clap/IPlugControls.clap
+#3  0x0000e8ce2b26a714 in SkScan::AAAFillPath(SkPath const&, SkBlitter*, SkIRect const&, SkIRect const&, bool) () at /tmp/rhome/.clap/IPlugControls.clap
+#4  0x0000e8ce2b09af60 in SkScan::AntiFillPath(SkPath const&, SkRegion const&, SkBlitter*, bool) () at /tmp/rhome/.clap/IPlugControls.clap
+#5  0x0000e8ce2b034ab0 in SkDrawBase::drawDevPath(SkPath const&, SkPaint const&, bool, SkBlitter*, bool) const () at /tmp/rhome/.clap/IPlugControls.clap
+#6  0x0000e8ce2b034e20 in SkDrawBase::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool, bool, SkBlitter*) const () at /tmp/rhome/.clap/IPlugControls.clap
+#7  0x0000e8ce2b22a3e0 in SkBitmapDevice::drawPath(SkPath const&, SkPaint const&, bool) () at /tmp/rhome/.clap/IPlugControls.clap
+#8  0x0000e8ce2b028520 in SkCanvas::onDrawPath(SkPath const&, SkPaint const&) () at /tmp/rhome/.clap/IPlugControls.clap
+#9  0x0000e8ce2ae415a4 in iplug::igraphics::IGraphicsSkia::RenderPath(SkPaint&) () at /tmp/rhome/.clap/IPlugControls.clap

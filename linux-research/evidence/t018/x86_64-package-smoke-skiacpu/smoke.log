@@ -1,0 +1,31 @@
+=== IPlugControls_v1.0.0_linux_x86_64_skiacpu on Ubuntu 22.04.5 LTS x86_64, glibc 2.35
+CLAP -> /home/customer/.clap/IPlugControls.clap
+VST3 -> /home/customer/.vst3/IPlugControls.vst3
+Standalone -> /home/customer/.local/lib/IPlugControls/IPlugControls (link /home/customer/.local/bin/IPlugControls, menu entry /home/customer/.local/share/applications/iplugcontrols.desktop)
+Done. Rescan plug-ins in your host if it does not pick IPlugControls up.
+CLAP -> /home/customer/.clap/IPlugControls.clap
+VST3 -> /home/customer/.vst3/IPlugControls.vst3
+Standalone -> /home/customer/.local/lib/IPlugControls/IPlugControls (link /home/customer/.local/bin/IPlugControls, menu entry /home/customer/.local/share/applications/iplugcontrols.desktop)
+Done. Rescan plug-ins in your host if it does not pick IPlugControls up.
+--- ldd
+--- validators (installed per-user copies, run as customer)
+clap-validator exit=0 :: 44 tests run, 36 passed, 0 failed, 1 warnings, 7 skipped
+vst3 validator exit=0 :: Result: 537 tests passed, 0 tests failed
+clap-validator failed: 
+--- REAPER
+CLAP: RESULT: PASS
+VST3: RESULT: PASS
+--- standalone (as customer, --no-io)
+standalone window up
+--- CLAP without its .resources folder
+RESULT: FAIL (1)
+iPlug2: resource folder /tmp/rhome/.clap/IPlugControls.resources/ not found; fonts and images will be missing.
+FAIL: CLAP without resources crashed REAPER
+--- system install
+CLAP -> /usr/lib/clap/IPlugControls.clap
+VST3 -> /usr/lib/vst3/IPlugControls.vst3
+Standalone -> /opt/IPlugControls/IPlugControls (link /usr/local/bin/IPlugControls, menu entry /usr/share/applications/iplugcontrols.desktop)
+Done. Rescan plug-ins in your host if it does not pick IPlugControls up.
+--- uninstall
+RESULT: FAIL (1)
+  - CLAP without resources crashed REAPER

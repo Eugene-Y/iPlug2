@@ -364,6 +364,22 @@ if(NOT TARGET iPlug2::IGraphics::Skia)
       ${SKIA_LIB_PATH}/libskunicode_core.a
       ${SKIA_LIB_PATH}/libskunicode_icu.a
     )
+  elseif(UNIX AND NOT EMSCRIPTEN)
+    # Dependencies/IGraphics/build-skia-linux.sh. GNU ld resolves static libraries in order, so they are grouped.
+    set(SKIA_LIB_PATH ${DEPS_DIR}/Build/linux/${CMAKE_SYSTEM_PROCESSOR}/lib)
+    if(NOT EXISTS ${SKIA_LIB_PATH}/libskia.a)
+      message(WARNING "No Skia libraries in ${SKIA_LIB_PATH}: run Dependencies/IGraphics/build-skia-linux.sh")
+    endif()
+    target_link_libraries(iPlug2::IGraphics::Skia INTERFACE
+      -Wl,--start-group
+      ${SKIA_LIB_PATH}/libsvg.a
+      ${SKIA_LIB_PATH}/libskparagraph.a
+      ${SKIA_LIB_PATH}/libskshaper.a
+      ${SKIA_LIB_PATH}/libskunicode_icu.a
+      ${SKIA_LIB_PATH}/libskunicode_core.a
+      ${SKIA_LIB_PATH}/libskia.a
+      -Wl,--end-group
+    )
   endif()
 endif()
 
@@ -398,6 +414,9 @@ if(NOT TARGET iPlug2::IGraphics::Skia::GL3)
     target_link_libraries(iPlug2::IGraphics::Skia::GL3 INTERFACE
       "-framework OpenGL"
     )
+  elseif(UNIX AND NOT EMSCRIPTEN)
+    target_include_directories(iPlug2::IGraphics::Skia::GL3 INTERFACE ${IGRAPHICS_DEPS_DIR}/glad_GL3/include)
+    target_sources(iPlug2::IGraphics::Skia::GL3 INTERFACE ${IGRAPHICS_DEPS_DIR}/glad_GL3/src/glad.c)
   endif()
 
   target_link_libraries(iPlug2::IGraphics::Skia::GL3 INTERFACE
@@ -501,6 +520,8 @@ if(NOT DEFINED IGRAPHICS_RENDERER)
     set(DEFAULT_RENDERER "GL2")
   elseif(APPLE OR IOS)
     set(DEFAULT_RENDERER "METAL")
+  elseif(UNIX AND NOT APPLE AND NOT EMSCRIPTEN AND IGRAPHICS_BACKEND STREQUAL "SKIA")
+    set(DEFAULT_RENDERER "GL3")
   elseif(UNIX AND NOT APPLE)
     # GL2 like the Windows build. IGraphicsNanoVG.h defines NANOVG_FBO_VALID itself, so the GL2 path has
     # FBOs too (through GL_ARB_framebuffer_object, which glad_GL2 loads).
@@ -510,6 +531,11 @@ if(NOT DEFINED IGRAPHICS_RENDERER)
   endif()
   set(IGRAPHICS_RENDERER "${DEFAULT_RENDERER}" CACHE STRING "IGraphics renderer")
   set_property(CACHE IGRAPHICS_RENDERER PROPERTY STRINGS "GL2" "GL3" "METAL" "CPU")
+endif()
+
+if(UNIX AND NOT APPLE AND NOT EMSCRIPTEN AND IGRAPHICS_BACKEND STREQUAL "SKIA"
+   AND NOT IGRAPHICS_RENDERER MATCHES "^(GL3|CPU)$")
+  message(FATAL_ERROR "Skia on Linux renders with IGRAPHICS_RENDERER GL3 or CPU, not ${IGRAPHICS_RENDERER}")
 endif()
 
 # Construct IGRAPHICS_LIB target based on selections
