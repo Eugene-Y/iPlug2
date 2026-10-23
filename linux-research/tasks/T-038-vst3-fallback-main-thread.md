@@ -1,6 +1,7 @@
 # T-038 — VST3 on Linux without a host run loop: host notifications from the fallback thread
 
-- **Status:** in progress (user 2026-10-23: fix it; T-010 item 1, re-opened by T-013)
+- **Status:** review-done (user 2026-10-23: fix it; T-010 item 1, re-opened by T-013). Independent review: approve
+  with minors in round 2 (nits fixed after it); `notes/36-review-T-038.md`.
 - **Owner:** T-038 worker (lock `.linux-port-locks/T-038`, 2026-10-23)
 - **Branch/worktree:** `linux/T-038` from `hvoya-linux` 901602a14, in `/Volumes/Storage/code/IPlug2-T-038`.
 - **Depends on:** T-010, T-013 (host traces), T-025 (`SetLatency` race).
@@ -34,12 +35,13 @@ load, `setActive`/`setProcessing`, the editor attaching. So:
    non-UI thread (trace builds).
 
 ## Acceptance
-- [ ] Design note in the Log (options, costs, choice).
-- [ ] No `restartComponent`/`performEdit` from a non-UI thread in the trace builds, editor closed, in Renoise,
-  Qtractor and REAPER-forced-fallback; latency change honoured (PDC) where the host supports it.
-- [ ] mac/win unchanged (Linux-only code).
-- [ ] Independent review until approval with no major finding; docs (`linux-development.md` §8 Qtractor/Renoise
-  bullets) updated.
+- [x] Design note in the Log (options, costs, choice): deferral on the fallback thread + host-call gate (option B).
+- [x] No `restartComponent`/`performEdit` from a non-UI thread in the trace builds, editor closed, in Renoise,
+  Qtractor and REAPER-forced-fallback; latency change honoured (PDC) where the host supports it — at the host's next
+  UI-thread call (REAPER makes none while idle; it and Qtractor read the latency at transport start). Carla not run.
+- [x] mac/win unchanged (Linux-only code; IPlugEffect macOS-VST3 builds).
+- [x] Independent review until approval with no major finding (2 rounds); docs (`linux-development.md` §8
+  Qtractor/Renoise bullets, a §9 bullet) updated.
 
 ## Log
 (append: date — what was done — commits — next)
@@ -269,3 +271,15 @@ released between batches.
 - **R2-3:** §8's lead-in no longer says iPlug2 does nothing: it has no host-specific workarounds, and what the bullets
   describe is §9's general behaviour.
 - Re-checked: unit tests ASan ×3 and TSan ×3 pass; `reaper-deferred-test.sh` PASS (`evidence/t038/reaper-deferred-fix-r2/`).
+
+### 2026-10-23 (7) — handover
+
+- Commits on `linux/T-038`: f1c385946 … eda432127 (`git log 901602a14..linux/T-038`). Merges cleanly into the current
+  hvoya-linux (T-018 merged meanwhile; `git merge-tree`).
+- **VM left with Release builds (no trace) from eda432127** (Gneiss linux-experiment 6246fb7, Sand 95be3b0) of Gneiss,
+  Sand and IPlugControls in `~/.clap` and `~/.vst3` (`build/t038-final-*`). IPlugEffect there is still the older build.
+- Renoise's and Qtractor's song/session files unchanged; Renoise's OSC server off.
+- Open, for the user: the GLib-main-context option in the design note (OnIdle on the host's UI thread with the editor
+  closed in GLib hosts, so nothing needs deferring there) as a possible follow-up; R1-6 (`getParamNormalized` as a
+  flush point) is a watch item.
+- Containers removed; T-038 and VM locks released.
