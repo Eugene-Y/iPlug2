@@ -441,7 +441,11 @@ void IGraphicsSkia::OnViewInitialized(void* pContext)
 #elif defined OS_LINUX
   // pContext is IGraphicsLinux's GL loader: Skia's own GLX interface would link libGL, which the platform dlopens.
   using GetProcFunc = void* (*)(const char*);
-  auto glInterface = GrGLMakeAssembledInterface(pContext, [](void* pGetProc, const char name[]) {
+  auto glInterface = GrGLMakeAssembledInterface(pContext, [](void* pGetProc, const char name[]) -> GrGLFuncPtr {
+    // Skia also asks for eglQueryString and calls whatever it gets; glXGetProcAddress returns a stub for any name,
+    // which crashes there (Mesa's llvmpipe on x86_64).
+    if (strncmp(name, "egl", 3) == 0)
+      return nullptr;
     return reinterpret_cast<GrGLFuncPtr>(reinterpret_cast<GetProcFunc>(pGetProc)(name));
   });
 #endif
