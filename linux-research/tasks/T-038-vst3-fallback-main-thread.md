@@ -118,12 +118,13 @@ allocation after construction.
   a MIDI-CC mediator, preset morphing or layout work is exposed).
 - **B. A gate (chosen).** A recursive mutex per instance, in `HostLoop`. The VST3 wrapper holds it during each host
   call on the UI thread (point 1). The fallback thread runs a round of callbacks only if `try_lock` succeeds;
-  otherwise it skips the round and retries 2 ms later. Costs: the UI thread may wait for one running `OnIdle` (the
+  otherwise the due timer ticks are dropped until their next interval, and ready fds are retried 2 ms later. Costs: the UI thread may wait for one running `OnIdle` (the
   same serialisation as on mac/win, where both share one thread); a skipped tick when they collide; one uncontended
   lock per guarded host call in every host (tens of ns; no contention where a host loop exists, because then there
   is no fallback thread). No deadlock: the fallback thread never blocks on the gate, so a UI thread that joins the
-  fallback thread inside a guarded call (`attached`, `terminate` → `SetBackend`) cannot hang; the lock order is
-  gate → `HostLoop::mMutex` on both threads; and with point 2 the fallback thread never calls the host while it holds
+  fallback thread inside a guarded call (`attached`, `terminate` → `SetBackend`) cannot hang; while a fallback thread exists the
+  lock order is gate → `HostLoop::mMutex` on both threads (with a host-driven backend the UI thread may take them the
+  other way round, harmless with no second thread); and with point 2 the fallback thread never calls the host while it holds
   the gate.
 - C. Run `OnIdle` from the flush points on the UI thread instead of the fallback thread. Then `OnIdle` stops
   whenever the host makes no call (REAPER idle: none at all), and plug-ins that apply settings in `OnIdle` (an
@@ -160,8 +161,8 @@ Commits 136b82a9e (fix, tests, REAPER evidence), 0b09f76ce (trace lines, smoke s
   gate + outermost-call flush, a no-op off the UI thread); `DeferRestart`, `DeferEdit`, `DeferGesture`; the flush
   (`SendDeferred`) and two trace lines (`IPLUG_TRACE_HOST_LOOP`).
 - `IPlugVST3`: `VST3_HOST_CALL(kSendDeferred|kKeepDeferred)` at the entry points of the design note (the guarded
-  list there, minus `initialize`, `terminate` and `createView`: `initialize` starts the fallback thread, `terminate`
-  stops it before anything else, and `createView` touches nothing `OnIdle` uses); the view's `attached`/`removed` hold a
+  list there, minus `terminate` and `createView`: `terminate` stops the fallback thread before anything else, and
+  `createView` touches nothing `OnIdle` uses; `initialize` got its `Call` in review round 1, R1-1); the view's `attached`/`removed` hold a
   `Call` with `kSendDeferred`; overrides of `beginEdit`/`performEdit`/`endEdit`/`startGroupEdit`/`finishGroupEdit`;
   `DeferRestart` before the two `restartComponent` calls.
 - Test switch `IPLUG_TEST_EDIT_FROM_IDLE` in `Examples/IPlugEffect` (inside the existing `IPLUG_TEST_LATENCY_FROM_IDLE`
@@ -232,3 +233,27 @@ released between batches.
 - macOS: IPlugEffect `macOS-VST3` Debug via `scripts/coord/mac-xcodebuild.sh`, all paths in the scratchpad: exit 0,
   no warning from the changed files. Xcode's `Examples/IPlugEffect/plug_build_info.hpp` removed afterwards.
 - Unit tests at 5e8e667db: `evidence/t038/unit/asan-tsan-x3.txt`.
+
+### 2026-10-23 (5) — review round 1 (approve with minors; `notes/36-review-T-038.md`) and fixes
+
+- **R1-1:** `initialize` holds a `Call` (`kKeepDeferred`) right after `mHostThread.Initialize()`, so
+  `OnHostIdentified`/`OnParamReset` cannot overlap the fallback thread's first `OnIdle`.
+- **R1-2 (accepted risk, documented at `VST3HostThread::Initialize`):** a host that calls `initialize` on a thread
+  other than its later UI thread would never get the deferred notifications (before, they went out off-thread). Every
+  traced host (REAPER, Ardour, Carla, Renoise, Qtractor, the SDK validator) initializes on the thread that later runs
+  its frame `IRunLoop`, and the other way round breaks VST3's own threading rules. No runtime diagnostic: a call on
+  another thread cannot be told apart from a legitimate audio-thread call.
+- **R1-3:** §9 now says that parameter changes from the fallback thread are merged (last value per parameter, one
+  gesture).
+- **R1-4:** design note and comments: dropped timer ticks vs retried fds; the lock-order claim qualified;
+  `GetHostCallGate`/`IsFallbackThread` comments.
+- **R1-5:** `DeferEdit`'s doc says a non-parameter tag is dropped.
+- **R1-6 (watch item):** `getParamNormalized` is a flush point, so a host's getter can trigger a synchronous
+  `restartComponent`; fine in REAPER, Renoise and Qtractor. If a host misbehaves there, it is the first flush point to
+  drop.
+- **R1-7 (evidence scope):** deferred `performEdit` was measured only in REAPER (forced fallback) and the unit tests;
+  the Renoise and Qtractor runs changed only oversampling ("0 edit(s)"). Carla was not run (its source ignores VST3
+  latency restarts, T-010).
+- **R1-8:** `smoke.sh` prints each run's name before its RESULT; `smoke-r0/summary.txt` carries a note for the old
+  order.
+- **R1-9:** the task id is gone from the `IPlugEffect.cpp` comment.

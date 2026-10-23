@@ -215,8 +215,9 @@ Host behaviour seen while testing on Linux; iPlug2 does not work around it.
   VST3 in Renoise, Qtractor 1.5.3 and Carla while the editor is closed) leaves the timers, and with them `OnIdle`, on a
   thread of iPlug2's own. With VST3 that thread never runs `OnIdle` during a call the host makes on its UI thread
   (state, parameters, activation, the editor attaching), as on macOS and Windows, and what `OnIdle` sends the host
-  (`SetLatency`, parameter changes) waits for the host's next such call, since VST3 has no way to ask for one. The
-  latency the host reads is the new one at once.
+  (`SetLatency`, parameter changes) waits for the host's next such call, since VST3 has no way to ask for one.
+  Parameter changes are merged meanwhile: the host gets the last value of each parameter, as one gesture. The latency
+  the host reads is the new one at once.
 
 - **Dialogs are asynchronous only.** `PromptForFile`, `PromptForDirectory`, `PromptForColor` and `ShowMessageBox`
   return at once on Linux, as on iOS, and the answer arrives later in the completion handler, on the host's main

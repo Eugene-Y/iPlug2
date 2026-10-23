@@ -440,7 +440,8 @@ private:
       std::unique_lock<std::recursive_mutex> gate(mLoop.GetHostCallGate(), std::try_to_lock);
       if (!gate.owns_lock())
       {
-        // Only the wake fd, so a stop still ends the wait at once, and a ready fd does not spin.
+        // A ready fd is retried after this wait; the due timers are dropped until their next interval. Only the wake
+        // fd is polled, so a stop still ends the wait at once and a ready fd does not spin.
         poll(pollFds.Get(), 1, kHostCallRetryMs);
         continue;
       }

@@ -62,6 +62,8 @@ tresult PLUGIN_API IPlugVST3::initialize(FUnknown* context)
     IPlugVST3GetHost(this, context);
 #ifdef OS_LINUX
     mHostThread.Initialize();
+    // Held through OnHostIdentified and OnParamReset: the fallback thread starts below.
+    VST3HostThread::Call hostCall(mHostThread, VST3HostThread::kKeepDeferred);
     mHostLoopSelector.Initialize(context);
 #endif
     OnHostIdentified();

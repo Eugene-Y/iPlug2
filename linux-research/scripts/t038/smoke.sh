@@ -24,9 +24,9 @@ hl effect-vst3 main $B-trace/out/IPlugEffect.vst3 "VST3: IPlugEffect" IPlugEffec
 hl controls-vst3 main $B-trace/out/IPlugControls.vst3 "VST3: IPlugControls" IPlugControls
 hl effect-vst3-forced worker $B-forced/out/IPlugEffect.vst3 "VST3: IPlugEffect" IPlugEffect
 for f in clap vst3; do
-  GUI=$C scripts/run-gui-test.sh $B-ex/out/IPlugControls.$f $E/controls-p3b-$f scripts/steps/iplugcontrols-p3b.txt $C 2>&1 | grep -E "xact\] FAIL|RESULT" | tail -2; echo "== controls p3b $f"; docker exec $C pkill -x reaper
+  echo "== controls p3b $f"; GUI=$C scripts/run-gui-test.sh $B-ex/out/IPlugControls.$f $E/controls-p3b-$f scripts/steps/iplugcontrols-p3b.txt $C 2>&1 | grep -E "xact\] FAIL|RESULT" | tail -2; docker exec $C pkill -x reaper
   for p in Gneiss Sand; do lp=$(echo $p | tr A-Z a-z)
-    GUI=$C scripts/run-gui-test.sh $B-$p/out/$p.$f $E/$lp-$f scripts/steps/$lp.txt $C 2>&1 | grep -E "xact\] FAIL|RESULT" | tail -2; echo "== $lp $f"; docker exec $C pkill -x reaper
+    echo "== $lp $f"; GUI=$C scripts/run-gui-test.sh $B-$p/out/$p.$f $E/$lp-$f scripts/steps/$lp.txt $C 2>&1 | grep -E "xact\] FAIL|RESULT" | tail -2; docker exec $C pkill -x reaper
   done
 done
 echo ALL-DONE

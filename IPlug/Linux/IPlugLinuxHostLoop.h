@@ -112,11 +112,11 @@ public:
 
   const char* GetOwnerName() const { return mOwnerName; }
 
-  /** Format code holds it during each call the host makes on its main thread. The fallback thread runs callbacks
-   * only while it can take it, so they never overlap such a call, as with a host-driven backend. */
+  /** A format wrapper (so far VST3) holds it during the calls the host makes on its main thread. The fallback thread
+   * runs callbacks only while it can take it, so they never overlap such a call, as with a host-driven backend. */
   std::recursive_mutex& GetHostCallGate() { return mHostCallGate; }
 
-  /** True on this loop's fallback thread: the host's main thread is busy elsewhere and must not be called from here. */
+  /** True when the caller is this loop's fallback thread, from which the host must not be called. */
   bool IsFallbackThread() const;
 
 private:

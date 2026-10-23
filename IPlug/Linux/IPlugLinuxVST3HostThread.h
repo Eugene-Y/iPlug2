@@ -79,7 +79,8 @@ public:
     ClearDeferred();
   }
 
-  /** In initialize(), which VST3 calls on the host's UI thread. */
+  /** In initialize(), which VST3 calls on the host's UI thread. A host that later calls from another thread never gets
+   * what was deferred: no traced host does, and it would break VST3's own threading rules. */
   void Initialize()
   {
     mUIThread = pthread_self();
@@ -103,7 +104,7 @@ public:
     return true;
   }
 
-  /** performEdit. @return true if deferred */
+  /** performEdit. @return true if deferred; a tag that is not a plug-in parameter (bypass, MIDI CC) is dropped */
   bool DeferEdit(Steinberg::Vst::ParamID tag, Steinberg::Vst::ParamValue value)
   {
     if (!mLoop.IsFallbackThread())
