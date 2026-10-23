@@ -127,6 +127,11 @@ void IPlugEffect::OnActivate (bool enable) {
         const int latency = GetLatency() == 0 ? 256 : 0;
         fprintf (stderr, "IPLUG_TEST SetLatency(%d) from OnIdle tid=%ld ui=%d\n", latency, iplug::HostLoopThreadId(), GetUI() != nullptr);
         SetLatency (latency);
+        #ifdef IPLUG_TEST_EDIT_FROM_IDLE // T-038: a host edit from OnIdle as well, as a MIDI CC mediator makes them
+            BeginInformHostOfParamChangeFromUI (par_master_mix);
+            SetParameterValue (par_master_mix, latency ? 0.9 : 1.0);
+            EndInformHostOfParamChangeFromUI (par_master_mix);
+        #endif
     }
 #endif
 

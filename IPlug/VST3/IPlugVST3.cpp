@@ -24,6 +24,12 @@ using namespace Vst;
 
 #include "IPlugVST3_Parameter.h"
 
+#ifdef OS_LINUX
+  #define VST3_HOST_CALL(deferred) VST3HostThread::Call hostCall(mHostThread, VST3HostThread::deferred)
+#else
+  #define VST3_HOST_CALL(deferred)
+#endif
+
 #pragma mark - IPlugVST3 Constructor/Destructor
 
 IPlugVST3::IPlugVST3(const InstanceInfo& info, const Config& config)
@@ -55,6 +61,7 @@ tresult PLUGIN_API IPlugVST3::initialize(FUnknown* context)
 
     IPlugVST3GetHost(this, context);
 #ifdef OS_LINUX
+    mHostThread.Initialize();
     mHostLoopSelector.Initialize(context);
 #endif
     OnHostIdentified();
@@ -72,6 +79,7 @@ tresult PLUGIN_API IPlugVST3::terminate()
 
 #ifdef OS_LINUX
   mHostLoopSelector.Terminate();
+  mHostThread.Terminate();
 #endif
   return SingleComponentEffect::terminate();
 }
@@ -79,13 +87,15 @@ tresult PLUGIN_API IPlugVST3::terminate()
 tresult PLUGIN_API IPlugVST3::setBusArrangements(SpeakerArrangement* pInputBusArrangements, int32 numInBuses, SpeakerArrangement* pOutputBusArrangements, int32 numOutBuses)
 {
   TRACE
- 
+  VST3_HOST_CALL(kKeepDeferred);
+
   return IPlugVST3ProcessorBase::SetBusArrangements(this, pInputBusArrangements, numInBuses, pOutputBusArrangements, numOutBuses) ? kResultTrue : kResultFalse;
 }
 
 tresult PLUGIN_API IPlugVST3::setActive(TBool state)
 {
   TRACE
+  VST3_HOST_CALL(kKeepDeferred);
 
   OnActivate((bool) state);
   return SingleComponentEffect::setActive(state);
@@ -94,6 +104,7 @@ tresult PLUGIN_API IPlugVST3::setActive(TBool state)
 tresult PLUGIN_API IPlugVST3::setupProcessing(ProcessSetup& newSetup)
 {
   TRACE
+  VST3_HOST_CALL(kKeepDeferred);
 
   return SetupProcessing(newSetup, processSetup) ? kResultOk : kResultFalse;
 }
@@ -121,25 +132,29 @@ tresult PLUGIN_API IPlugVST3::canProcessSampleSize(int32 symbolicSampleSize)
 tresult PLUGIN_API IPlugVST3::setState(IBStream* pState)
 {
   TRACE
-  
+  VST3_HOST_CALL(kSendDeferred);
+
   return IPlugVST3State::SetState(this, pState) ? kResultOk :kResultFalse;
 }
 
 tresult PLUGIN_API IPlugVST3::getState(IBStream* pState)
 {
   TRACE
-  
+  VST3_HOST_CALL(kSendDeferred);
+
   return IPlugVST3State::GetState(this, pState) ? kResultOk :kResultFalse;
 }
 
 #pragma mark IEditController overrides
 ParamValue PLUGIN_API IPlugVST3::getParamNormalized(ParamID tag)
 {
+  VST3_HOST_CALL(kSendDeferred);
   return IPlugVST3ControllerBase::GetParamNormalized(tag);
 }
 
 tresult PLUGIN_API IPlugVST3::setParamNormalized(ParamID tag, ParamValue value)
 {
+  VST3_HOST_CALL(kSendDeferred);
   if (IPlugVST3ControllerBase::SetParamNormalized(this, tag, value))
     return kResultTrue;
   else
@@ -192,6 +207,7 @@ tresult PLUGIN_API IPlugVST3::getMidiControllerAssignment(int32 busIndex, int16 
 
 Steinberg::tresult PLUGIN_API IPlugVST3::setChannelContextInfos(Steinberg::Vst::IAttributeList* pList)
 {
+  VST3_HOST_CALL(kKeepDeferred);
   return IPlugVST3ControllerBase::SetChannelContextInfos(pList) ? kResultTrue : kResultFalse;
 }
 
@@ -219,6 +235,10 @@ void IPlugVST3::EndInformHostOfParamChange(int idx)
 
 void IPlugVST3::InformHostOfParameterDetailsChange()
 {
+#ifdef OS_LINUX
+  if (mHostThread.DeferRestart(kParamTitlesChanged))
+    return;
+#endif
   FUnknownPtr<IComponentHandler> handler(componentHandler);
   handler->restartComponent(kParamTitlesChanged);
 }
@@ -270,6 +290,10 @@ void IPlugVST3::SetLatency(int latency)
 
   if (changed && componentHandler)
   {
+#ifdef OS_LINUX
+    if (mHostThread.DeferRestart(kLatencyChanged))
+      return;
+#endif
     FUnknownPtr<IComponentHandler> handler(componentHandler);
 
     if (handler)
@@ -278,3 +302,32 @@ void IPlugVST3::SetLatency(int latency)
     }
   }
 }
+
+#ifdef OS_LINUX
+#pragma mark EditController overrides
+
+tresult IPlugVST3::beginEdit(ParamID tag)
+{
+  return mHostThread.DeferGesture() ? kResultOk : SingleComponentEffect::beginEdit(tag);
+}
+
+tresult IPlugVST3::performEdit(ParamID tag, ParamValue valueNormalized)
+{
+  return mHostThread.DeferEdit(tag, valueNormalized) ? kResultOk : SingleComponentEffect::performEdit(tag, valueNormalized);
+}
+
+tresult IPlugVST3::endEdit(ParamID tag)
+{
+  return mHostThread.DeferGesture() ? kResultOk : SingleComponentEffect::endEdit(tag);
+}
+
+tresult IPlugVST3::startGroupEdit()
+{
+  return mHostThread.DeferGesture() ? kResultOk : SingleComponentEffect::startGroupEdit();
+}
+
+tresult IPlugVST3::finishGroupEdit()
+{
+  return mHostThread.DeferGesture() ? kResultOk : SingleComponentEffect::finishGroupEdit();
+}
+#endif

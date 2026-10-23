@@ -84,6 +84,15 @@ public:
   Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* pState) override;
   Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* pState) override;
     
+#ifdef OS_LINUX
+  // EditController: what OnIdle sends from the fallback thread waits for the host's UI thread (VST3HostThread)
+  Steinberg::tresult beginEdit(Steinberg::Vst::ParamID tag) override;
+  Steinberg::tresult performEdit(Steinberg::Vst::ParamID tag, Steinberg::Vst::ParamValue valueNormalized) override;
+  Steinberg::tresult endEdit(Steinberg::Vst::ParamID tag) override;
+  Steinberg::tresult startGroupEdit() override;
+  Steinberg::tresult finishGroupEdit() override;
+#endif
+
   // IEditController
   Steinberg::Vst::ParamValue PLUGIN_API getParamNormalized(Steinberg::Vst::ParamID tag) override;
   Steinberg::tresult PLUGIN_API setParamNormalized(Steinberg::Vst::ParamID tag, Steinberg::Vst::ParamValue value) override;
@@ -133,6 +142,7 @@ public:
   ViewType* GetView() { return mView; }
 #ifdef OS_LINUX
   VST3HostLoopSelector& GetHostLoopSelector() { return mHostLoopSelector; }
+  VST3HostThread& GetHostThread() { return mHostThread; }
 #endif
   
   Steinberg::Vst::AudioBus* getAudioInput(Steinberg::int32 index)
@@ -173,6 +183,7 @@ private:
   ViewType* mView;
 #ifdef OS_LINUX
   VST3HostLoopSelector mHostLoopSelector { GetHostLoop() };
+  VST3HostThread mHostThread { GetHostLoop(), componentHandler, NParams() };
 #endif
 };
 

@@ -50,6 +50,8 @@ void iplug::HostLoopTrace(const char* format, ...)
 // Across all loops in the module; the trace prints it so a test can spot registrations that leak.
 static std::atomic<int> sLiveRegistrations { 0 };
 
+static thread_local const HostLoop* tFallbackThreadOf = nullptr;
+
 HostLoop::HostLoop(const char* ownerName)
 {
   SetOwnerName(ownerName);
@@ -136,6 +138,11 @@ void HostLoop::RemoveTimer(int id)
     pEntry->mRemoved = true; // Dispatch() deletes it once the callback that removed it returns
   else
     delete pEntry;
+}
+
+bool HostLoop::IsFallbackThread() const
+{
+  return tFallbackThreadOf == this;
 }
 
 bool HostLoop::IsFdWatched(int id) const
@@ -347,6 +354,7 @@ private:
 
   void Run()
   {
+    tFallbackThreadOf = &mLoop;
     HostLoopTrace("%s: fallback thread started", mLoop.GetOwnerName());
     WDL_TypedBuf<pollfd> pollFds;
     WDL_TypedBuf<uintptr_t> pollHandles;
@@ -425,12 +433,26 @@ private:
         }
       }
 
+      if (!ready.GetSize())
+        continue;
+
+      // Never wait for the gate: the host's thread may hold it while it joins this thread (SetBackend).
+      std::unique_lock<std::recursive_mutex> gate(mLoop.GetHostCallGate(), std::try_to_lock);
+      if (!gate.owns_lock())
+      {
+        // Only the wake fd, so a stop still ends the wait at once, and a ready fd does not spin.
+        poll(pollFds.Get(), 1, kHostCallRetryMs);
+        continue;
+      }
+
       // Without mMutex: Dispatch takes the loop's lock, and the main thread takes the two in the other order.
       for (int i = 0; i < ready.GetSize(); i++)
         mLoop.Dispatch(ready.Get()[i].mIsFd, ready.Get()[i].mHandle, ready.Get()[i].mFdFlags);
     }
     HostLoopTrace("%s: fallback thread stopped", mLoop.GetOwnerName());
   }
+
+  static constexpr int kHostCallRetryMs = 2;
 
   WDL_Mutex mMutex;
   WDL_TypedBuf<Slot> mSlots;
