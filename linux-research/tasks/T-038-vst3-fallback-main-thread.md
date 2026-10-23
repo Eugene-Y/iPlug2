@@ -185,3 +185,37 @@ own `IComponentHandler` methods through the plug-in's `componentHandler` vtable 
 
 Evidence: `evidence/t038/reaper-deferred-{fix,base}/` (`summary.txt`, `calls-by-phase.txt`, `RESULT.txt`). The
 "base" run uses the unfixed hvoya-linux build (no edit switch) with `expect=offthread`: the test does catch the bug.
+
+### 2026-10-23 (3) — VM: Renoise 3.5.4 and Qtractor 1.5.3 (VST3, editor closed)
+
+Gneiss VST3 Release + `IPLUG_TRACE_HOST_LOOP` from this branch (0b09f76ce; Gneiss linux-experiment 6246fb7, its tree
+untouched), deployed to `~/.vst3`. Symbol lists for `call-trace.sh` regenerated (`scripts/vm/probe/t038/*.syms`,
+`make-vst3-syms.sh`): the `HostLoop` gate moves the `IPlugVST3` thunk offsets (1320 → 1368, 1832 → 1880, …), so
+T-013's lists would miss every host call. VM checked with `timeout 8 xdpyinfo` before and after every batch; no hang.
+
+**Renoise** (`evidence/t038/vm-renoise/`; song `~/t013-renoise/t013.xrns`, Gneiss on track 1, oversampling =
+parameter 26, set from Lua):
+- **Playing** (`latency-playing-editor-closed.txt`): `SetLatency` on the fallback thread → `TVst3Plug::restartComponent(8)`
+  on Renoise's **main** thread within the same second, with **no deferred lambda** (T-013: the call came off-thread and
+  Renoise queued it) → `setProcessing(0)`, `setActive(0/1)`, `getLatencySamples`, `setProcessing(1)` on main. The flush
+  came from Renoise's own `setParamNormalized` calls, which it makes continuously while playing (2310 in 30 s, all on
+  main).
+- **Stopped** (`latency-stopped-editor-closed.txt`): the restart waited 6 s, until the next parameter change from Lua
+  (a `setParamNormalized` on main); Renoise then restarted and re-read the latency on main. Reading a value from Lua
+  makes no plug-in call.
+- **Transport start with a restart pending** (`latency-pending-at-transport-start.txt`): Renoise reads
+  `getLatencySamples` on its audio thread as it resumes, and the pending restart goes out on main at once (the
+  playing parameter sync), followed by a re-read on main.
+- Trace (`stderr-session1.txt`): every "deferred" line is on the fallback tid, every "sent" line on the main tid.
+
+**Qtractor** (`evidence/t038/vm-qtractor/`; session `~/t013-qtractor/t013vst3.qtr`, transport playing, Gneiss's
+plug-in form open at Page 2 — it opened at Page 1 this time, so the first attempt typed into parameter 1
+(`attempt1-wrong-page.txt`)):
+- `latency-editor-closed.txt`: oversampling 8x, then 1x in the form: `SetLatency` on the fallback thread; the form's
+  next `setParamNormalized` (main) sends the restart; Qtractor's state round trip `getState`/`setState` now runs on its
+  **main** thread (T-013: on iPlug's fallback thread). Transport start: `getLatencySamples` on main.
+- Trace: deferred on the fallback tid, sent on the main tid, twice.
+
+Clean-up: Renoise quit (song not saved), its OSC server off again; Qtractor exited with "Discard" (session file
+unchanged); my `jackd` stopped (the desktop's `jackdbus` was already running and was left alone); no gdb left. VM lock
+released between batches.
