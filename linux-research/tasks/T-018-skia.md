@@ -22,8 +22,8 @@
 5. Test IPlugControls (Skia build) with the full P3b scripts, visual check vs mac Skia shots (ask the coordinator), churn 100×, main thread; exports/NEEDED.
 
 ## Acceptance
-- [ ] Skia builds for both arches reproducibly; IPlugControls Skia CLAP/VST3/APP pass the P3b scripts.
-- [ ] Exports minimal, NEEDED unchanged, glibc floor recorded.
+- [x] Skia builds for both arches reproducibly; IPlugControls Skia CLAP/VST3/APP pass the P3b scripts.
+- [x] Exports minimal, NEEDED unchanged, glibc floor recorded.
 - [ ] mac/win untouched; independent review (AGENTS §4); evidence in `evidence/t018/`; Log complete.
 
 ## Log
@@ -72,4 +72,51 @@ before (+ `<mutex>` after `<map>`) and after: the only differences are a forward
 `class TypefaceFontProvider;`, braces around `if (cached) return true;`, and `__FILE__`/`__LINE__` in asserts; the new
 file passes `-fsyntax-only` in all three. CMake: every change is in a `UNIX AND NOT APPLE`/`UNIX AND NOT EMSCRIPTEN`
 branch after the WIN32/APPLE ones. Windows: only `OS_LINUX` blocks in shared files; not built here.
+
+**Verification (step 5), all Docker (REAPER 7.82, Xvfb, openbox, llvmpipe), evidence `evidence/t018/`.** Builds
+`build/t018-{skia-gl3,skia-cpu,nvg}` (24.04 aarch64, Release), IPlugControls + IGraphicsTest CLAP/VST3/APP.
+| Check | Skia GL3 | Skia CPU | NanoVG GL2 (regression) |
+|---|---|---|---|
+| Full P3b, CLAP / VST3 (`*-controls-{clap,vst3}`) | PASS / PASS | PASS / PASS | PASS / PASS |
+| P3b APP steps (`*-controls-app`, no failed check) | PASS | PASS | — |
+| Full P3b CLAP at REAPER UI scale 2 (`*-controls-clap-scale2`, 2600×1900 screen) | PASS | PASS | — |
+| Tooltip steps (`iplugcontrols-tooltip.txt`, `sheet-tooltip-gl3-cpu-nvg.png`) | PASS | PASS | PASS |
+| Editor churn ×100, `EDIT=1`, CLAP / VST3 (`*-churn-*`) | PASS / PASS | PASS / PASS | — |
+| IGraphicsTest open/reopen/2 instances CLAP / VST3 | PASS / PASS | PASS / PASS | PASS (CLAP) |
+| `Draw`, `OnDisplayTimer`, `ProcessXEvents` threads (gdb, every run) | tid 1 only | tid 1 only | tid 1 only |
+- Visuals: contact sheets (`*/sheet.png`), IGraphicsTest page tour NanoVG/GL3/CPU side by side
+  (`sheet-igraphicstest-pages-{1,2}.png`). Skia GL3 and CPU match each other; vs NanoVG only the renderer's own
+  differences (multi-stop gradients, dashed MultiPath stroke, mask, ~1 px text baseline). **No mac Skia shots were
+  compared**: none exist in the repo, and the main checkout's mac Skia prebuilt is an older release (one
+  `libskunicode.a`); a mac Skia build of IPlugControls would be the next step if the coordinator wants that check.
+- Skia adds no threads (thread census `*/threads.txt`); the CPU build has no llvmpipe threads at all.
+- Churn RSS (closed, before → after 100 cycles × 2 instances): Skia GL3 103 → 343 MB (CLAP and VST3), NanoVG GL2
+  103 → 300 MB (T-019's run, same script), Skia CPU 157 → 185 / 103 → 129 MB. The GL growth is mostly Mesa's per
+  context (known, notes/03 V3); Skia GL adds ~0.2 MB per open on top. fds, sockets, threads equal before/after.
+- **Binary hygiene** (`evidence/t018/package/*.inspect.txt`, `Scripts/linux/package.sh --variant
+  skia:-DIGRAPHICS_BACKEND=SKIA`, 22.04-gcc13 images): CLAP exports `clap_entry` only, VST3 the 3 entry points,
+  NEEDED `libX11 libm libc ld` = the NanoVG archive's, **glibc floor 2.35** on both arches; CLAP 25.5 MB vs ~4 MB.
+- **x86_64** (Rosetta): `scripts/package-smoke.sh` on `iplug2-rt:ubuntu22.04-amd64`, Skia GL3 and Skia CPU archives:
+  validators pass (clap-validator 0 failed, VST3 537/537), REAPER CLAP + VST3 PASS, standalone opens
+  (`x86_64-package-smoke-{skia,skiacpu}/`, `sheet-x86_64-reaper-clap-gl3-cpu.png`). Its first run found a real bug:
+  Skia asks the GL loader for `eglQueryString` and calls the stub glXGetProcAddress returns → crash at open on x86_64
+  llvmpipe. Fixed 8fc1fad92 (the loader callback answers `egl*` with nullptr); P3b CLAP+VST3 re-run on the fixed GL3
+  build: PASS. The smoke's remaining FAIL, "CLAP without resources crashed REAPER", is not Skia: NanoVG IPlugControls
+  crashes too (below).
+- gdb breakpoints don't fire under Rosetta, so the x86_64 thread check rests on aarch64 (same code).
+
+### Cross-platform findings (report, not fixed)
+- **Low — IGraphics::LoadBitmap dereferences a null bitmap when the image is missing** (`IGraphics/IGraphics.cpp:1814`,
+  `pAPIBitmap->GetScale()` after an `assert` that release builds drop). Repro: IPlugControls (any backend) with its
+  resources folder removed; the Skia build dies there, the NanoVG build a step later in `ISVGSliderControl::OnResize`
+  (invalid SVG). mac/win: the same code; a broken install crashes instead of drawing without images.
+- **Low — `IGraphicsSkia::LoadAPIFont` ignores the font's face index** (`makeFromData(data)` without `ttcIndex`): a
+  `.ttc` system font found by name gets its first face on mac/win too. Fixed for Linux only (`#if defined OS_LINUX`);
+  proposal: pass `data->GetFaceIdx()` everywhere (mac CoreText font data can carry a face index).
+
+### Proposals for the user (not committed)
+- Hosting of Linux Skia prebuilts (~52 MB per arch uncompressed): today `build-skia-linux.sh` per developer and arch.
+- No shared-code change altered mac/win behaviour, so nothing else is held back.
+
+Next: independent review (`notes/34-review-T-018.md`).
 
