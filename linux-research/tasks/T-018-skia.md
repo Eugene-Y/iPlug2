@@ -1,6 +1,6 @@
 # T-018 — Skia backend on Linux
 
-- **Status:** merged 214baae75 (review-done
+- **Status:** merged 214baae75 (review approved after 2 rounds, `notes/34-review-T-018.md`)
 - **Owner:** T-018 worker (subagent of the coordinator chat f91df715), 2026-10-22
 - **Branch/worktree:** `linux/T-018` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-018`.
 - **Depends on:** nothing. The GL-context part touches IGraphicsLinux — coordinate (T-019/T-009/T-020 use it too).
