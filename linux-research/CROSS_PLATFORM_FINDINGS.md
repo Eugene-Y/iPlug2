@@ -150,3 +150,9 @@ Gneiss на mac/win использует нативные меню — его н
 | XP-2 | Средняя | `IVDiskPresetManagerControl` с `showFileExtensions=false` передаёт в `OnLoadFunc` путь без расширения — плагин просят загрузить несуществующий файл | Отчёт |
 | XP-3 | Тривиальная | В двух тестовых контролах `SetDirty(false)` вне `if` (нет фигурных скобок) | Отчёт |
 | XP-4 | Низкая (web) | `ShowMessageBox`: ветка Yes-No/OK-Cancel проваливается, возвращает `kNoResult` и не зовёт handler | Отчёт |
+
+## Из T-018 (Skia на Linux; общий код `IGraphics/Drawing/IGraphicsSkia.*`, `IGraphics.cpp`) — изменения под `OS_LINUX`, mac/win не меняются
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T18-1 | Средняя (краш) | `IGraphics::LoadBitmap` в Release разыменовывает null, если картинки нет (`IGraphics.cpp:1814`): и NanoVG, и Skia падают без папки ресурсов (причина провала «CLAP без ресурсов» в package smoke) | Отчёт (T-018 Log) |
+| T18-2 | Низкая | `IGraphicsSkia::LoadAPIFont` на mac/win игнорирует индекс начертания (face index) шрифта; на Linux исправлено, предложение — передавать везде | Отчёт |
