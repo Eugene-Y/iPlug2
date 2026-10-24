@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # T-009 on the VM at REAPER scale 2, where the editor is wider than the screen: open one plug-in (fresh, or from a
-# project), then shoot the FX window at two horizontal positions so that the two tiles cover the whole view.
+# project), then try two horizontal positions of the FX window; tiles.txt records which part of the view each tile
+# shows (Mutter may refuse the second position).
 # Usage: x2-tiles.sh <out> "<FMT: Name>" <plugin> [project.RPP]   (through vm-run.sh)
 # Writes tile-<n>.png (the visible part of the view), tiles.txt ("<n> <view x of the tile's left edge> <width>"),
 # geometry.txt (the FX window and view as the window manager left them).

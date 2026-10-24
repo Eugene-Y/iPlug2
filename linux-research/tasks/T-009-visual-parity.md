@@ -1,6 +1,7 @@
 # T-009 — Visual parity of Gneiss and Sand with macOS/Windows (P6)
 
-- **Status:** in review — Docker comparison (scale 2 and 1) and VM (virgl) run (scale 1) done: no rendering difference to fix
+- **Status:** review-done — Docker comparison (scale 2 and 1) and VM (virgl) run (scale 1; scale 2 only in part, the
+  VM's screen is too small): no rendering difference to fix; one Linux build fix (about box format name, dc1ba588a)
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-009`
 - **Branch/worktree:** `linux/T-009` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-009`. Product repos only on their local `linux-experiment` branches, and only if a product itself must change (unlikely).
 - **Depends on:** T-003 (Gneiss build), T-012 (Sand build).
@@ -36,7 +37,8 @@ Gneiss and Sand on Linux look like on mac and win: same layout, colours, fonts, 
 - [x] No mac/win change; step scripts PASS. *Besides `linux-research/` (harness), T-009 changes `hvoya/hvoya.cmake`,
   which only CMake builds use (Xcode/VS run their own pre-build); no product code. `steps/gneiss.txt` and `steps/sand.txt` PASS in Docker with the CLAP builds at dc1ba588a
   (`evidence/t009/steps-{gneiss,sand}-clap/RESULT.txt`).*
-- [ ] Independent review (AGENTS §4); Log complete.
+- [x] Independent review (AGENTS §4); Log complete. *`notes/38-review-T-009.md`: round 1 changes needed (V1 about
+  box, V2 1× explanation), fixed; round 2 approved with minor findings, fixed.*
 
 ## Log
 (append: date — what was done — commits — next)
@@ -155,6 +157,11 @@ c3144b82c (`build/t009-{gneiss,sand}`), staged on the VM in `~/iplug-builds/t009
 **Evidence:** `evidence/t009/{docker,vm}-x1-{gneiss,sand}/` (xact logs, window trees, VM `run.log`; PNGs local),
 `vm-x2-{gneiss,sand}/`, `docker-x2-one-{gneiss,sand}/`, `fix-about-*/`, `vm-x1-results.txt`, `sheets/` (local),
 `mac-refs-half/` (local; `make-vm-sheets.sh` writes them afresh each run).
+- Docker 2× shots with the fixed builds (`XVFB_SCREEN=2600x1900x24 scripts/gui-up.sh t009d`, then
+  `scripts/gx.sh t009d env REAPER_UI_SCALE=2 scripts/t009-capture.sh evidence/t009/docker-x2-one-gneiss "CLAP: Gneiss"
+  build/t009-gneiss/out/Gneiss.clap <steps: "shot g01-clean-moog-all"> "evidence/t009/mac-refs/clean moogRPP.RPP"`, and
+  Sand with "shot s01-flt"); VM tiles: `scripts/vm/vm-run.sh vm/probe/t009/x2-tiles.sh evidence/t009/vm-x2-sand
+  "CLAP: Sand" ~/iplug-builds/t009/.clap/Sand.clap` (Gneiss with the project). All sheets: `make-vm-sheets.sh`.
 
 **Builds after the fix:** Gneiss CLAP/VST3/APP and Sand CLAP/VST3 at dc1ba588a, staged on the VM in
 `~/iplug-builds/t009` (the x2 tiles used them).

@@ -182,3 +182,73 @@ are wording, list and reproducibility fixes, and V8 is a nit.
 - **V8:** `find-offset.sh` comment (±6), temp dirs removed on exit in both helpers, `t009-capture.sh` stops when the FX
   window is not found.
 - Step scripts re-run with the fixed builds: PASS.
+
+## Round 2
+
+Scope: dc1ba588a (`hvoya/hvoya.cmake`) and 48dbe8193 (Log, harness, evidence).
+
+### Checked and resolved
+- **V1: fixed, and the code is sound.**
+  - The change only touches the CMake path. The Xcode pre-build passes `${TARGET_NAME}` and the VS `.bat` passes the
+    format, and neither reads `hvoya.cmake`. So Xcode/VS builds are unaffected.
+  - Each format target compiles its own sources (`IPlugPlugin.cmake:142-212`: `<name>-app/-vst3/-clap/...`). So
+    `$<TARGET_PROPERTY:NAME>`, evaluated in the consuming target's context, picks the right directory. It comes
+    before the product-named fallback, and quote includes then find it.
+  - Confirmed in the run's build dirs:
+    - `linux-research/build/t009-{gneiss,sand}/generated/<product>-<fmt>/plug_build_info.hpp` hold "APP"/"VST3"/"CLAP"/….
+    - `build.ninja` includes `generated/<product>-app`, `-clap` and `-vst3` for the matching targets only.
+  - The rebuilt about boxes read "CLAP aarch64 release" and "SAND v1.1.10 VST3"
+    (`fix-about-gneiss-clap/g05-about-view.png`, `fix-about-sand-vst3/s08-about-view.png`, opened).
+  - The comment states a WHY, and the commit message has the repro.
+- **V2 and V4:** the rewording is accurate (`DEFAULT_TEXT_SIZE` 14, `kTooltipFontSize` 13).
+- **V3: the partial 2× run supports the new claim.**
+  - `vm-x2-*/geometry.txt`: Mutter left the FX window at x 66 and 1302 px wide for both requested positions. The view
+    stays 1880 (1480) px wide, so REAPER's own window clips it.
+  - `sheets/vm-vs-docker-x2-g01-clean-moog-all.png`: RMSE 0.00035, no red. `sheets/vm-x2-s01-flt.png` (mac) shows
+    the expected sep/joint state only.
+  - The deviation is now in the user-acceptance list.
+- **V5–V8:** all addressed as described.
+  - `make-vm-sheets.sh` regenerates the half references and the tall crops, and the table matches my clean re-run.
+  - The temp-dir traps and the empty-geometry stop are in place.
+
+### R1 — minor — the 2× VM sheets have no recorded command
+- **What is missing:** how `sheets/vm-x2-*.png`, `sheets/vm-vs-docker-x2-*.png` and the `docker-x2-one-*` captures
+  were made. That covers the Docker run's arguments, the crop of the Docker 2× view to the visible 1302 px, and the
+  mac offset. None of it is in a script or the Log, which is the same gap V7 closed for the 1× sheets.
+- **Fix:** add these few lines to `make-vm-sheets.sh` (or a sibling script), or record the exact commands in the Log.
+
+### R2 — nit — `scripts/vm/probe/t009/x2-tiles.sh` header promises what the VM did not deliver
+- The header says the two positions are taken "so that the two tiles cover the whole view". On this VM the window
+  manager clamps the window, both tiles are the same left 1302 px, and `tiles.txt` shows `1 0 1302` / `2 0 1302`.
+- **Fix:** reword to "tries two horizontal positions; tiles.txt records which part of the view each tile shows".
+
+### R3 — nit — `hvoya.cmake` relies on an unstated naming coupling
+- The per-format lookup works only when `product` is the name passed to `iplug_add_plugin`, which creates
+  `<product>-clap` etc. Any other name silently falls back to the product-named header, which shows the old bug.
+- Add a few words to the function comment or the usage header, e.g. "`product` must be `iplug_add_plugin`'s name".
+- AUv3, iOS and WAM targets (`<name>AU-framework`, `-ios-app`, `-wam`) also fall back to the product name. They are
+  not built on Linux; acceptable as is.
+
+### R4 — nit — a comment in `make-vm-sheets.sh` gets the order of events wrong
+- It says "MORPH on grows Gneiss … after the run cropped its shots". The capture script reads the view geometry
+  before the steps and crops every shot to it later, so the growth happens between the geometry read and the crops.
+- Suggested: "`t009-capture.sh` crops every shot to the 200-point view it measured before the steps; MORPH on grows
+  Gneiss to 620".
+
+### R5 — nit — the task's Status line is stale
+- It still reads "VM (virgl) run (scale 1) done: no rendering difference to fix".
+- Mention the about-box build fix (dc1ba588a) and the partial 2× on virgl.
+
+### Verdict (round 2)
+**Approved with minor findings.** No major finding is left. R1 is a reproducibility gap in the evidence, and R2–R5
+are wording nits that the author can fix without another review round.
+
+## Author's response to round 2 (2026-10-24)
+- R1: `make-vm-sheets.sh` now also makes the 2× sheets (mac offset from `find-offset.sh`, crops to the VM tile); the
+  Docker 2× and VM tile commands are in the Log's Evidence list. Re-run: same RMSE (0.0087, 0.00035, 0.0055, 0.0002).
+- R2: `x2-tiles.sh` header says it tries two positions and `tiles.txt` records what each tile shows.
+- R3: `hvoya.cmake` comment: `<product>` must be `iplug_add_plugin`'s name.
+- R4: the tall-crop comment states the order (geometry measured before the steps).
+- R5: Status updated (review-done, the about-box fix, partial 2×).
+
+Final verdict: approved with minor findings (round 2); all fixed.

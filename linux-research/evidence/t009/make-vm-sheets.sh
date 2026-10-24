@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # T-009, VM part: for every view, (1) the mac reference shrunk to 50% | the VM capture at scale 1 | difference, and
 # (2) the Docker capture | the VM capture | difference, both at scale 1. Prints a table (also in vm-x1-results.txt).
+# Then the main views at scale 2, of which the VM shows only the left part (vm-x2-*/tile-1.png): mac | VM and
+# Docker | VM, each cropped to that part.
 # Usage: make-vm-sheets.sh   (from evidence/t009; needs ImageMagick 7)
 set -u
 cd "$(dirname "$0")"
 mkdir -p sheets mac-refs-half
-# MORPH on grows Gneiss from 200 to 620 points after the run cropped its shots: crop g04 again at the full size, from
-# the view origin the capture logged.
+# t009-capture.sh crops every shot to the 200-point view it measured before the steps; MORPH on grows Gneiss to 620:
+# crop g04 again at the full size, from the view origin the capture logged.
 for run in vm-x1-gneiss docker-x1-gneiss; do
   o=$(sed -n 's/^\[xact\] origin \([0-9]*\),\([0-9]*\).*/+\1+\2/p' "$run/xact.log" | head -1)
   magick "$run/g04-user-morph-on.png" -crop "940x620$o" +repage "$run/g04-user-morph-on-tall-view.png"
@@ -38,4 +40,12 @@ for v in "${views[@]}"; do
   d=$(MAC_LABEL="Linux Docker (llvmpipe), scale 1" LIN_LABEL="Linux VM (virgl), scale 1" ./make-sheet.sh "$dk" "$vm" 0 0 "sheets/vm-vs-docker-x1-$name.png" | sed 's/.*rmse=//')
   ae=$(magick compare -metric AE -fuzz 8% "$dk" "$vm" null: 2>&1)
   printf '%-28s %-14s %-14s %s\n' "$name" "$m" "$d" "$ae" | tee -a vm-x1-results.txt
+done
+for v in "gneiss g01-clean-moog-all|gneiss  clean moog all.png" "sand s01-flt|sand flt tab.png"; do
+  prod=${v%% *}; rest=${v#* }; name=${rest%%|*}; ref=${rest#*|}
+  tile="vm-x2-$prod/tile-1.png"; dk="docker-x2-one-$prod/$name-view.png"
+  read -r x y _ < <(./find-offset.sh "mac-refs/$ref" "$dk")
+  LIN_LABEL="Linux VM (virgl), scale 2, the visible part" ./make-sheet.sh "mac-refs/$ref" "$tile" "$x" "$y" "sheets/vm-x2-$name.png"
+  MAC_LABEL="Linux Docker (llvmpipe), scale 2" LIN_LABEL="Linux VM (virgl), scale 2, the visible part" \
+    ./make-sheet.sh "$dk" "$tile" 0 0 "sheets/vm-vs-docker-x2-$name.png"
 done
