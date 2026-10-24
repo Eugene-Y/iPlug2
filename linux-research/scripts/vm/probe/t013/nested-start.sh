@@ -10,11 +10,12 @@ pgrep -f '^gnome-shell --nested' >/dev/null && { echo "a nested shell already ru
 rm -rf "$R"; mkdir -m 700 "$R"
 XDG_RUNTIME_DIR="$R" MUTTER_DEBUG_DUMMY_MODE_SPECS="$SIZE" \
   setsid dbus-run-session -- gnome-shell --nested --wayland > "$R/shell.log" 2>&1 < /dev/null &
-for i in $(seq 40); do
+END=$((SECONDS + 30))
+while [ $SECONDS -lt $END ]; do
   D=$(sed -n 's/.*Using public X11 display \(:[0-9]*\).*/\1/p' "$R/shell.log")
   A=$(ls "$R"/.mutter-Xwaylandauth.* 2>/dev/null | head -1)
-  [ -n "$D" ] && [ -n "$A" ] && DISPLAY="$D" XAUTHORITY="$A" timeout 2 xdpyinfo >/dev/null 2>&1 && { echo "nested up: $D"; exit 0; }
+  [ -n "$D" ] && [ -n "$A" ] && DISPLAY="$D" XAUTHORITY="$A" timeout 1 xdpyinfo >/dev/null 2>&1 && { echo "nested up: $D"; exit 0; }
   sleep 0.5
 done
-# Seen in 2 of 5 starts: the stage stays unmapped and Xwayland waits on its Wayland socket for good.
+# Seen in 4 of 7 starts: the shell never shows its panel and Xwayland waits on its Wayland socket for good.
 echo "nested shell hung (no answer from Xwayland ${D:-?}); stop it with nested-stop.sh"; exit 1

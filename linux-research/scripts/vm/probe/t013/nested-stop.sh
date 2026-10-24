@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stop the nested GNOME Shell of nested-start.sh: a polite close of its window, else the processes on its private bus;
 # then remove what a killed Xwayland leaves behind. Usage: nested-stop.sh   (run through vm-x.sh)
-R="$XDG_RUNTIME_DIR/t013-nested"
+R="${XDG_RUNTIME_DIR:?}/t013-nested"
 NP=$(pgrep -f '^gnome-shell --nested' | head -1)
 [ -n "$NP" ] || { echo "no nested shell"; rm -rf "$R"; exit 0; }
 BUS=$(tr '\0' '\n' < /proc/$NP/environ | grep '^DBUS_SESSION_BUS_ADDRESS=')
@@ -19,10 +19,10 @@ if kill -0 "$NP" 2>/dev/null; then
 fi
 pkill -f '^dbus-run-session -- gnome-shell --nested' 2>/dev/null
 L=$(on_bus); [ -z "$L" ] && echo "nested shell stopped" || echo "still running: $L"
-# Xwayland's public display and the one for managed services (:N+1), when a kill left their files.
-if [ -n "$XD" ] && [ "$XD" != "$OUTER" ] && [ "$(( XD + 1 ))" != "$OUTER" ]; then
-  for n in "$XD" "$(( XD + 1 ))"; do
-    pgrep -f "^/usr/bin/Xwayland :$n " >/dev/null || rm -f "/tmp/.X$n-lock" "/tmp/.X11-unix/X$n"
-  done
+# Xwayland's public display and the one for managed services (:N+1), when a kill left their files. One Xwayland,
+# started as :N, serves both.
+if [ -n "$XD" ] && [ "$XD" != "$OUTER" ] && [ "$(( XD + 1 ))" != "$OUTER" ] \
+   && ! pgrep -f "^/usr/bin/Xwayland :$XD " >/dev/null; then
+  rm -f "/tmp/.X$XD-lock" "/tmp/.X11-unix/X$XD" "/tmp/.X$(( XD + 1 ))-lock" "/tmp/.X11-unix/X$(( XD + 1 ))"
 fi
 rm -rf "$R"

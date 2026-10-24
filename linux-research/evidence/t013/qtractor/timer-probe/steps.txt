@@ -1,9 +1,7 @@
-# Docker iplug2-linux:24.04 (arm64, Xvfb + openbox), Qtractor 1.5.3 (noble-backports, Qt 6.4.2), dummy jackd, session with timer-probe.clap on Track 1. Times UTC. Step 3 "editor closed (window close)" did nothing (no wmctrl in the image): the editor stayed open until the Alt+F4 step.
-=== 14:58:32 before any editor (log line 24)
-=== 14:58:40 after double click (log line 34)
-=== 14:58:46 editor closed (window close) (log line 40)
-=== 14:58:56 10 s later (log line 50)
-=== 14:59:06 editor closed (Alt+F4, openbox: WM_DELETE_WINDOW) (log line 60)
-=== 14:59:16 10 s later (log line 60)
-=== 14:59:23 still closed (log line 60)
-=== 14:59:28 editor reopened (log line 67)
+# Docker iplug2-linux:24.04 (arm64, Xvfb + openbox), Qtractor 1.5.3 (noble-backports), dummy jackd, session with timer-probe.clap on Track 1, editor not open at load. Times UTC.
+=== 15:07:45 no editor opened yet (log line 12)
+=== 15:07:51 editor opened (double click in the track's plug-in list) (log line 20)
+=== 15:07:56 editor closed (Alt+F4: openbox sends WM_DELETE_WINDOW) (log line 26)
+=== 15:08:11 15 s later (log line 26)
+=== 15:08:12 editor opened again (log line 28)
+=== 15:08:17 5 s later (log line 34)

@@ -1,6 +1,6 @@
 # T-013 — Host matrix (P10)
 
-- **Status:** in review — every host done: Carla, Ardour, Renoise, Qtractor (VST3 on the VM, CLAP in Docker), a GNOME
+- **Status:** review-done — every host done: Carla, Ardour, Renoise, Qtractor (VST3 on the VM, CLAP in Docker), a GNOME
   Wayland session (nested GNOME Shell, REAPER on its Xwayland, 2026-10-24), drops (case 8), item 9, PC checklist;
   Zrythm N/A (no arm64 package).
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-013`
@@ -49,7 +49,8 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
   state round trip on that thread (Log 2026-10-22, case 5).*
 - [x] PC checklist for Bitwig/x86_64 written (section below; review approved, notes/28).
 - [x] Independent review (AGENTS §4): approved in round 2, `notes/33-review-T-013-final.md` (R2-1, R2-2 fixed). The
-  Wayland run: `notes/37-review-T-013-wayland.md` (verdict at the end of the Log).
+  Wayland run and the Qtractor report (notes/35): `notes/37-review-T-013-wayland.md`, approved in round 2 with minor
+  findings, all fixed.
 
 ## PC checklist (Bitwig, x86_64)
 For a tester with an x86_64 PC running Linux, Bitwig Studio 5 and, if possible, REAPER. It covers what our test VM
@@ -657,7 +658,8 @@ keyboard would; xdotool's moves are jumps, not glides.
   `crossing-watch.c` (timestamped Enter/Leave of another client's window), `stderr-flush-check.sh` (X11).
 - Evidence `evidence/t013/wayland/` (PNGs local): the first session (2026-10-23 08:12 – 2026-10-24 16:14, one nested
   shell, REAPER restarted per plug-in) in `NN-*.png` and `logs/`; the review re-check (2026-10-24 16:42, a fresh
-  nested shell) in `recheck/`. The `logs/*-stderr.txt` are whole copies of REAPER's `/tmp/reaper.log`.
+  nested shell) in `recheck/`. The `logs/*-stderr.txt` are whole copies of REAPER's `/tmp/reaper.log`; in the first
+  session's Sand files, input lines of edits on screen never reached that file (finding 3).
 - The first session's nested shell was started with the shared runtime directory
   (`MUTTER_DEBUG_DUMMY_MODE_SPECS=1280x768 setsid dbus-run-session -- gnome-shell --nested --wayland`); the re-check
   with `nested-start.sh`.
@@ -700,7 +702,8 @@ Findings:
    makes REAPER flush its stdio, so REAPER's stderr is not buffered (on X11 too: `logs/x11-sand-clap-flushcheck.txt`).
    The first session's Sand files (`logs/sand-clap-stderr.txt`, `sand-vst3-stderr.txt`) lack these lines for edits
    that are on screen; why is not known. Their host-loop lines are flushed one by one (`HostLoopTrace`).
-4. No `OFF-MAIN` line in any run, the re-check's whole log included.
+4. No `OFF-MAIN` line in any stderr file of the runs. The host-loop lines are flushed one by one, so the first
+   session's files should hold them all even where they miss input lines; the re-check's log is complete.
 
 Not run under Wayland: IPlugControls, right-click menus, drops (case 8), automation, state; one host only (REAPER),
 as the task asked. A real Wayland login (GDM) was not needed: the nested shell ran.
@@ -709,7 +712,7 @@ as the task asked. A real Wayland login (GDM) was not needed: the nested shell r
 - **The nested shell hangs at start in about half of the starts** (4 of 7 by 2026-10-24: 08:12 on 10-23, the
   reviewer's 16:22, and two at 16:5x on 10-24; with and without `MUTTER_DEBUG_DUMMY_MODE_SPECS`). Its window maps
   (640×480 or the requested size) without the shell's panel, and Xwayland never answers (it polls only its Wayland
-  socket; `logs/nested-shell-run1-stuck.log`). `nested-start.sh` reports it after 20 s; `nested-stop.sh` then stops
+  socket; `logs/nested-shell-run1-stuck.log`). `nested-start.sh` reports it after about 30 s; `nested-stop.sh` then stops
   the processes on the shell's private bus (closing its window does not end a hung one) and removes the files a
   killed Xwayland leaves (`/tmp/.X<n>-lock`, `/tmp/.X11-unix/X<n>` for its two displays).
 - **Use `nested-start.sh`: it gives the shell its own `XDG_RUNTIME_DIR`.** With the session's own one, the nested
@@ -734,8 +737,14 @@ as the task asked. A real Wayland login (GDM) was not needed: the nested shell r
 - **For the user:** two sockets of the running X11 session were deleted by these runs, `/tmp/.X11-unix/X0` (Xorg's
   file socket) and `/run/user/1000/at-spi/bus_0` (the accessibility bus). Both come back with the next login or VM
   restart; until then most clients still connect (Xorg's abstract socket), and apps started now get no
-  accessibility bus.
+  accessibility bus. There is no `/tmp/.X0-lock` either, but it was already missing on 2026-10-23 08:15, before the
+  first `nested-stop.sh` (a listing of `/tmp/.X*-lock` then showed only the nested `.X1-lock` and `.X2-lock`); without
+  it another X server could claim `:0`.
 - The trace builds stay staged in `~/iplug-builds/t013-wl`; `~/.clap` and `~/.vst3` hold the Release builds of T-038
   eda432127. VM lock released.
 
 **Cross-platform findings:** none.
+
+**Review (notes/37):** round 1 changes needed (W1, W2 major: the Leave and key-path findings), fixed with a re-check
+in a fresh nested shell; round 2 approved with minor findings, fixed. notes/35 (Qtractor report, on hvoya-linux):
+reviewed in the same file, a tested minimal reproducer added (d210dba81, 44dd0fa84).

@@ -283,3 +283,157 @@ Part 2 (notes/35):
   (`evidence/t013/qtractor/timer-probe/` on linux/T-013). The framework is named as an in-development Linux port.
 - **Q2–Q6:** v1.6.4 line references (unchanged on main as of 2026-10-24) and 1.5.3's; environment and close method;
   the concrete latency effect; the VST3 1.5.3/1.6.x note with its one-line fix; an offer to test a patch.
+
+## Round 2
+
+### What I checked
+
+- **T-013:** a6ce313c2 and 203448267 on `linux/T-013`. I read:
+  - the rewritten Log section, PC checklist step 8 and the author's response above;
+  - every file in `evidence/t013/wayland/recheck/`, opening the four PNGs;
+  - the renamed `03`–`05` and the new `06a`/`06b`, opened;
+  - `logs/x11-sand-clap-flushcheck*.txt`;
+  - all the new and reworked probes, and the `reaper-up.sh` diff.
+- **notes/35:** d210dba81 on `hvoya-linux`, plus `evidence/t013/qtractor/timer-probe/`. The source in that directory
+  is byte-identical to the one inlined in the report.
+- **VM:** a read-only check under the VM lock (16:5x), with no new nested shell. What it showed:
+  - `:0` answers `xdpyinfo`;
+  - no nested shell, Xwayland, REAPER, jackd, xev or crossing-watch is running;
+  - `/tmp/.X11-unix/` is empty and there is no `/tmp/.X*-lock`;
+  - `/run/user/1000/at-spi/` is empty;
+  - `/run/user/1000` has no nested leftovers.
+
+### Part 1 — round 1 findings
+
+- **W1: resolved.**
+  - Finding 2 is now a nested-session observation with the cause open, citing Xwayland's source.
+  - The re-check backs it with a plain X11 client and no XTEST input on `:1`:
+    - in `xev-raw.txt` there is one EnterNotify and one LeaveNotify, the Leave at root (600,500), which is REAPER's
+      main window, as in `xev-path.txt`;
+    - nothing comes for the moves onto the nested desktop and out of the compositor;
+    - the view's crossings carry times that match the path: Enter 16:48:08.469 after the move at 08.464; no Leave
+      for the desktop move at 11.731; Leave at 16.501 after the move onto REAPER at 16.498.
+  - `tooltip-after-leave-to-desktop.png` shows the tooltip still up with the pointer on the nested desktop (1326,817).
+    `…-to-reaper.png` shows it gone.
+  - PC checklist step 8 now covers the wheel and the tooltip in a Wayland session.
+- **W2: resolved.**
+  - `recheck/reaper-stderr.txt` holds the full sequence for the edit:
+    - "take focus" and "check focus … (ours)";
+    - four keycodes `handled` (11, 19, 19, 19 = "2000") and Return `kept (edit or menu)`;
+    - "release focus".
+  - The counts before and after gdb's `fflush(0)` are equal, here and on X11, and `HostLoopTrace` calls
+    `fflush(stderr)` (`IPlugLinuxHostLoop.cpp:44`).
+  - Finding 3 is rewritten. The `onKeyDown` and Docker citations are gone, and the first session's missing lines are
+    called unexplained. Remaining point: R2-1.
+- **W3: resolved.**
+  - `03` is renamed to MORPH on with no change, consistent with Gneiss' MORPH mode, where knobs don't edit the patch.
+  - `04` (help stays, pointer on the nested desktop) and `05` (help hides back in the editor) are renamed to what
+    they show.
+  - `06a` shows B hz 535.8 Hz after the wheel through the compositor; `06b` shows 853.6 Hz after XTEST on `:1`. Both
+    still have A res 0.9648, i.e. they come from before the overnight change.
+- **W4: resolved in the Log** (4 of 7 starts hung, the recipe is in `nested-stop.sh`). Remaining point: R2-2.
+- **W5: resolved.** `nested-start.sh` gives the shell its own `XDG_RUNTIME_DIR`, and the lost outer sockets are
+  listed "for the user". Remaining point: R2-3.
+- **W6–W10: resolved.**
+  - `crossing-watch.c` prints times and a usage line, and no longer uses the comma operator.
+  - `nested-env.sh` checks for the shell and reads the display and cookie from the shell's own runtime dir.
+  - `nested-view.sh` states its two choices.
+  - Shebangs are added.
+  - "Cause unknown" replaces "not caused by the probes".
+  - The wheel wording is fixed.
+- `reaper-up.sh` now writes `verchk=0`, and its comment gives the WHY. Fine.
+
+### Part 1 — new findings
+
+**R2-1 — minor. Finding 4 and the "whole copies" sentence don't fit together.**
+
+The Log says the `logs/*-stderr.txt` are "whole copies of REAPER's `/tmp/reaper.log`" and, in finding 3, that the
+first session's Sand files lack the edit's lines for unknown reasons. Finding 4 then says "No `OFF-MAIN` line in any
+run". For the first session's Sand runs, that rests on files now known to miss lines. Qualify finding 4: the re-check's
+whole log plus the Gneiss files, while the first session's Sand files are incomplete for an unknown reason. Either
+drop "whole copies" for those two files or say that the copy was whole but the lines never reached it.
+
+**R2-2 — minor. `nested-start.sh` has a stale comment and a wrong timeout claim.**
+
+- Line 19 says "Seen in 2 of 5 starts: the stage stays unmapped". The Log says 4 of 7, and that the window maps
+  (640×480 or the requested size), which is also what I saw. Fix the comment or delete it (comments lie).
+- The Log says the script "reports it after 20 s". In a hang, though, the log already names the display and the
+  cookie exists (both true in `nested-shell-run1-stuck.log`). Every try then waits for the 2 s `xdpyinfo` timeout, so
+  40 tries take up to about 100 s. Either bound the loop by elapsed time or state the real figure.
+
+**R2-3 — minor. The VM state likely misses `/tmp/.X0-lock`.**
+
+There is no `/tmp/.X*-lock` on the VM now. The buggy `nested-stop.sh` removed `/tmp/.X$n-lock` together with
+`/tmp/.X11-unix/X$n`, so with n = 0 it very likely deleted Xorg's lock file too. The Log names only the socket. The
+consequence goes beyond clients: with no lock file, a later X server or Xwayland can take `:0` to be free. Add it to
+"For the user"; the same re-login or reboot fixes it.
+
+**R2-4 — nit. `nested-stop.sh` details.**
+
+- It guards the managed-services display `:N+1` with `pgrep "^/usr/bin/Xwayland :N+1 "`, which never matches, because
+  Xwayland runs as `:N` only. If an Xwayland survives the kill, its `:N+1` files are removed while it still runs.
+  Test `:N` for both.
+- `R="$XDG_RUNTIME_DIR/t013-nested"` followed by `rm -rf "$R"` is safer as `${XDG_RUNTIME_DIR:?}`.
+- `nested-env.sh` does not check that `DISPLAY` came out non-empty, e.g. for a shell started without
+  `nested-start.sh`.
+
+The fix for the X0 deletion itself is right: the display number now comes from the shell's log, and the code refuses
+`:N` and `:N+1` when either equals the outer display.
+
+**Verdict part 1: approved with minor findings** (R2-1 to R2-3 minor, R2-4 nit). Every claim in the matrix and the
+findings is now backed by the evidence.
+
+### Part 2 — notes/35
+
+**Round 1 findings.**
+- **Q1: resolved.** The framework is named as an in-development Linux port. The report now has a minimal reproducer
+  that has been run.
+  - The source checks out against the CLAP structs: `clap_plugin`, `clap_plugin_gui` (15 functions, in order), the
+    descriptor, the factory and `clap_entry`.
+  - The run evidence matches the "Actual" lines:
+    - 8–9 calls/s before the editor and while it is open (a 100 ms timer on Qtractor's 30 ms-step shared timer
+      fires every 120 ms, ≈8.3/s);
+    - no line from "GUI destroyed" until the reopen;
+    - 8/s after the reopen.
+- **Q2–Q6: resolved.** The line references are right for v1.6.4 and 1.5.3 (I checked them in round 1). The
+  environment, the latency effect, the VST3 note with its one-line fix, and the offer to test a patch are all there.
+
+**New nits.**
+
+**R2-Q1 — nit. The silent gap is 22 s, not 17 s.**
+
+`steps.txt` has the Alt+F4 close at 14:59:06 and the reopen at 14:59:28, with log line 60 unchanged in between. So
+the gap is 22 s, not "the 17 s until it was opened again" (also in the author's response). Use 22 s, or "about 20 s".
+
+**R2-Q2 — nit. Tell the reader what the first output lines mean.**
+
+A stranger's first line will be `timer-probe: register_timer(100 ms) FAILED`, from Qtractor's throwaway instance with
+a host that offers no timer support; `qtractor.log` shows it. Say so in step 2, or the reader may think the probe is
+broken. Likewise, the first line after a reopen ("1 on_timer calls in the last second") reports the second in which
+the timer stopped. A probe that also prints when a second passes without calls would make the gap visible.
+
+**R2-Q3 — nit. Small inconsistencies in `timer-probe.c`.**
+
+- The build line in the source header has no `-std=c11`; step 1 has it. Make them match.
+- The `parent` field is unused.
+- `destroy()` unregisters `s->timer` even when `register_timer` failed. Then it is 0, a valid id. Initialise it to
+  `CLAP_INVALID_ID` and skip the call.
+- `gui_show`/`gui_hide` would crash if a host called them before `set_parent`. Qtractor doesn't; it is only a
+  robustness point for a test plug-in.
+
+**Verdict part 2: approved with minor findings** (nits only). The report is accurate, reproducible by a stranger and
+reasonable in what it asks.
+
+## Author's response to round 2 (2026-10-24)
+- R2-1: finding 4 qualified; the "whole copies" sentence says which first-session lines never reached the file.
+- R2-2: `nested-start.sh` waits on a 30 s deadline (1 s xdpyinfo timeout), comment updated (4 of 7, panel never
+  shows); the Log says about 30 s.
+- R2-3: `/tmp/.X0-lock` was already missing on 2026-10-23 08:15, before any `nested-stop.sh` (that session's
+  `ls -la … /tmp/.X*-lock` listed only `.X1-lock` and `.X2-lock`); added to "For the user" with that note.
+- R2-4: `nested-stop.sh` tests the one Xwayland (`:N`) for both displays and uses `${XDG_RUNTIME_DIR:?}`;
+  `nested-env.sh` checks `DISPLAY`.
+- R2-Q1…Q3 (notes/35, 44dd0fa84 on hvoya-linux): the reproducer hardened as suggested and re-run in Qtractor 1.5.3
+  (`evidence/t013/qtractor/timer-probe/`, replaced): no call for the 16 s between close and reopen; the throwaway
+  instance's FAILED line and the first line after a reopen explained.
+
+Final verdict (round 2): both parts approved with minor findings; the minors and nits above are fixed.
