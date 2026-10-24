@@ -250,3 +250,36 @@ The tone is factual and polite, and the report asks nothing unreasonable. A clos
 would help.
 
 **Verdict part 2: changes needed** (Q1 major; the rest minor or nit). The source analysis and the fix are correct.
+
+## Author's response to round 1 (2026-10-24, commits a6ce313c2 and the next on linux/T-013; notes/35: d210dba81 on hvoya-linux)
+
+Part 1:
+- **W1:** re-checked in a fresh nested shell with no XTEST input on `:1` (`evidence/t013/wayland/recheck/`): xev, a plain
+  X11 client, gets one Leave only for the move onto REAPER, none for the nested desktop or out of the compositor; Sand's
+  view the same, its tooltip stays (`tooltip-after-leave-to-desktop.png`). Finding 2 reworded as a nested-session
+  observation, Xwayland's source cited, cause open (warped synthetic motion the likeliest; a glide test,
+  `nested-xev-glide.sh`, could not run: both starts hung). PC checklist step 8 checks the tooltip and the wheel in a
+  Wayland session.
+- **W2:** re-captured (`recheck/reaper-stderr.txt`, whole file): take focus, keycodes handled, release focus, as on
+  X11; counts equal before and after gdb's `fflush(0)`, on X11 too (`logs/x11-sand-clap-flushcheck*.txt`). Finding 3
+  rewritten; the onKeyDown and Docker citations dropped; the first session's missing lines stated as unexplained.
+  Finding 4 re-checked on the whole re-check log; host-loop lines are flushed one by one.
+- **W3:** `03`–`05` renamed (MORPH on, no change; help bubble stays / hides); wheel shots `06a`, `06b` added (from
+  before the overnight change).
+- **W4:** hang now 4 of 7 starts; `nested-start.sh` detects it, `nested-stop.sh` cleans up.
+- **W5:** `nested-start.sh` gives the nested shell its own `XDG_RUNTIME_DIR`; the deleted outer sockets are in the
+  VM state for the user. While fixing this, the first `nested-stop.sh` deleted the outer `/tmp/.X11-unix/X0` (it
+  took the outer display number); fixed and documented.
+- **W6:** `crossing-watch.c` prints times; the re-check logs the pointer path and the window id.
+- **W7:** "not caused by the probes" replaced by "cause unknown; no command of this worker ran then".
+- **W8, W9:** `nested-env.sh` reads the shell's runtime dir, log and cookie, checks the shell exists; `nested-view.sh`
+  states its choices and finds the viewable nested window; shebangs added; `crossing-watch.c` usage line, no comma
+  operator. **W10:** finding 1 says the cause is not known and that the XTEST check covers the X11 side only.
+- Also: `reaper-up.sh` writes `verchk=0` (REAPER's 7.83 update notice is modal and blocked `rpr.sh`).
+
+Part 2 (notes/35):
+- **Q1:** a minimal CLAP reproducer (`timer-probe.c`, inline in the report) was built and run in Qtractor 1.5.3
+  (Docker): 8–9 calls/s before and with the editor, none for 17 s after it closed, back on reopening
+  (`evidence/t013/qtractor/timer-probe/` on linux/T-013). The framework is named as an in-development Linux port.
+- **Q2–Q6:** v1.6.4 line references (unchanged on main as of 2026-10-24) and 1.5.3's; environment and close method;
+  the concrete latency effect; the VST3 1.5.3/1.6.x note with its one-line fix; an offer to test a patch.
