@@ -1,8 +1,8 @@
 # T-013 — Host matrix (P10)
 
-- **Status:** in progress — all hosts done except the GNOME Wayland session: Carla, Ardour, Renoise, Qtractor
-  (VST3 on the VM, CLAP in Docker), drops (case 8), item 9, PC checklist; Zrythm N/A (no arm64 package). The VM's
-  virgl GPU hung again on 2026-10-22; the Wayland check waits for its restart (the user), steps in the Log.
+- **Status:** in review — every host done: Carla, Ardour, Renoise, Qtractor (VST3 on the VM, CLAP in Docker), a GNOME
+  Wayland session (nested GNOME Shell, REAPER on its Xwayland, 2026-10-24), drops (case 8), item 9, PC checklist;
+  Zrythm N/A (no arm64 package).
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-013`
 - **Branch/worktree:** `linux/T-013` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-013` — for harness/docs and any host-compat fix.
 - **Depends on:** T-002, T-007 (merged). Products: Gneiss (T-003), Sand (T-012).
@@ -39,9 +39,8 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
 9. **From T-020** (merged aa42322c2, Docker-tested only): paste a file put on the clipboard by `SetFilePathInClipboard` into GNOME Files; drag a file out of the editor (`InitiateExternalFileDragDrop`, IPlugControls `-DIPLUG_TEST_DRAGOUT`) into Files and into each host; the real GNOME portal (Settings → Appearance dark/light switch, IPlugControls `-DIPLUG_TEST_APPEARANCE`); a GL3 build (`-DIGRAPHICS_RENDERER=GL3`) on virgl; the drag feedback cursor.
 
 ## Acceptance
-- [ ] Matrix table (host × product × format × case) in the Log with evidence paths (`evidence/t013/`). *Done for Carla,
-  Ardour, Renoise, Qtractor (cases 1–8), item 9; Zrythm N/A. Missing: the GNOME Wayland session (the VM hung; steps
-  in the Log, "Wayland").*
+- [x] Matrix table (host × product × format × case) in the Log with evidence paths (`evidence/t013/`). *Carla,
+  Ardour, Renoise, Qtractor (cases 1–8), item 9, GNOME Wayland (REAPER on Xwayland, 2026-10-24); Zrythm N/A.*
 - [x] Every failure: fixed (Linux-only code, own commit) or ticketed with a minimal repro; host bugs documented as such.
   *The XEmbed text-entry fix (c86d82e5d). Host bugs, documented with repros: Carla main's VST3 IRunLoop threading;
   Qtractor's CLAP timers stopping when the last CLAP editor closes. The hosts that drop no files on plug-ins are
@@ -49,8 +48,8 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
   `restartComponent` from its fallback thread, which the VST3 contract does not allow; Qtractor 1.5.3 then runs a
   state round trip on that thread (Log 2026-10-22, case 5).*
 - [x] PC checklist for Bitwig/x86_64 written (section below; review approved, notes/28).
-- [x] Independent review (AGENTS §4): approved in round 2, `notes/33-review-T-013-final.md` (R2-1, R2-2 fixed). Log
-  complete except the Wayland run.
+- [x] Independent review (AGENTS §4): approved in round 2, `notes/33-review-T-013-final.md` (R2-1, R2-2 fixed). The
+  Wayland run: `notes/37-review-T-013-wayland.md` (verdict at the end of the Log).
 
 ## PC checklist (Bitwig, x86_64)
 For a tester with an x86_64 PC running Linux, Bitwig Studio 5 and, if possible, REAPER. It covers what our test VM
@@ -171,7 +170,8 @@ Case 7 = which event loop the host gives iPlug (all callbacks on the main thread
 | Qtractor 1.5.3 (VM) | VST3 | PASS | PASS | PASS | frame `IRunLoop` open; fallback closed | 2026-10-22 |
 | Qtractor 1.5.3 (Docker) | CLAP | PASS, but host bug | PASS | PASS (case 7 only) | timer + posix-fd support; **all CLAP timers stop once the last CLAP editor closes (host bug)** | 2026-10-22 |
 | Zrythm | — | n.a. | n.a. | n.a. | not packaged for arm64 | 2026-10-22 |
-| GNOME Wayland (XWayland), one host | — | **not run** | | | — | 2026-10-22, "Wayland" |
+| REAPER 7.82 on GNOME Wayland (nested GNOME Shell 46, Xwayland 23.2.6, VM) | CLAP | PASS | PASS | not run | timer + posix-fd support | 2026-10-24 |
+| REAPER 7.82 on GNOME Wayland (same) | VST3 | PASS | PASS | not run | factory host-context `IRunLoop` | 2026-10-24 |
 | Bitwig 5 (x86_64) | CLAP, VST3 | PC checklist | | | | PC checklist |
 
 Item 9 (T-020's VM checks), section 2026-10-21 (2): all PASS except the GL3 build, which virgl cannot render
@@ -632,3 +632,79 @@ autologin). Both start after the user's VM restart; take the VM lock.
 - Not changed: GDM (X11, autologin), Renoise and Ardour configs, the GNOME appearance.
 
 **Cross-platform findings:** none new.
+
+### 2026-10-23/24 — GNOME Wayland: nested GNOME Shell, REAPER on its Xwayland
+**Branch:** hvoya-linux b8079e9df (T-038 merged) fast-forwarded into linux/T-013. No framework code changed.
+
+**Builds.** Trace builds (Release, `-DIPLUG_TRACE_HOST_LOOP -DIGRAPHICS_TRACE_LINUX_INPUT`, `build/t013-rn-{gneiss,sand}`)
+from this worktree at b8079e9df, Gneiss linux-experiment 6246fb7, Sand 95be3b0. Staged on the VM in
+`~/iplug-builds/t013-wl` (`vm-deploy.sh -p`); `~/.clap` and `~/.vst3` were not touched and still hold the Release
+builds from T-038 eda432127.
+
+**Session.** The nested way (the X11 session stays; GDM and AccountsService untouched):
+`MUTTER_DEBUG_DUMMY_MODE_SPECS=1280x768 setsid dbus-run-session -- gnome-shell --nested --wayland` inside the X11
+session. GNOME Shell 46.0 (mutter 46.2) runs as a Wayland compositor in an X11 window and starts Xwayland 23.2.6 on
+`:1` (auth `/run/user/1000/.mutter-Xwaylandauth.*`, Wayland display `wayland-0`). REAPER started with `DISPLAY=:1`,
+`WAYLAND_DISPLAY=wayland-0`, `XDG_SESSION_TYPE=wayland` still runs as an X11 client of Xwayland (its windows are in
+`:1`'s tree), as it would in a Wayland login. Input was sent with xdotool to the **outer** X11 screen, so it reaches
+REAPER and the plug-in through the nested compositor, as a person's mouse and keyboard would.
+- Probes (`scripts/vm/probe/t013/`, through `vm-x.sh`): `nested-env.sh` (the nested `DISPLAY`/`XAUTHORITY`/bus),
+  `nested-open.sh` (the harness REAPER with one plug-in, update notice and nag closed), `nested-view.sh` (the editor's
+  position on the outer screen), `crossing-watch.c` (Enter/Leave of another client's window).
+- Evidence `evidence/t013/wayland/` (PNGs local), stderr and XI2 traces in `logs/`.
+
+| Case | Gneiss CLAP | Gneiss VST3 | Sand CLAP | Sand VST3 |
+|---|---|---|---|---|
+| editor opens, renders (logo fine) | PASS `02` | PASS `30` | PASS `10` | PASS `20` |
+| plug-in-initiated resize (MORPH off, 940×620 → 940×200), REAPER's window follows | PASS `06` | PASS `31` | — | — |
+| mouse drag | A hz 457 Hz → 20.0 kHz `06` | A hz 211 Hz → 20.0 kHz `31` | comp 0.300 → 0.624 `13` | comp, arc grows `22` |
+| wheel | see below | | | |
+| text entry (click value, type, Enter) | — (none in Gneiss) | — | 10 kHz → `2000` → 2.00 kHz `11`, `12`; a second entry `31` → 31.0 Hz (`13`) | `2000` → 2.00 kHz `21`, `22` |
+| tooltip / Gneiss hover help | help bubble `03` | help bubble `32` | tooltip `14` | tooltip `22` |
+| Space with the editor clicked → host transport | plays `07` | plays `31` | | |
+| case 7 (host loop) | timer + posix-fd, on main | factory-context `IRunLoop`, on main | same as Gneiss CLAP | same as Gneiss VST3 |
+
+Findings:
+1. **Wheel: not testable through the nested compositor (harness).** `xdotool click 4` on the outer screen did not
+   reach Xwayland at all: its XI2 root trace shows the pointer motion and no button or scroll event
+   (`logs/xi2-wheel-via-compositor.txt`); mutter's nested X11 backend did not forward the synthetic wheel. The same
+   wheel sent by XTEST into Xwayland (`:1`) reaches the editor: B hz 535.8 → 853.6 Hz
+   (`logs/xi2-wheel-xtest-on-xwayland.txt`). Nothing points to a Wayland-specific problem; a real wheel in a Wayland
+   login stays a PC-checklist item (step 8).
+2. **Xwayland sends no LeaveNotify when the pointer leaves for a non-X surface.** Moving from the editor onto
+   REAPER's arrange view gives `Leave` and hides Gneiss' help bubble (`32`). Moving onto the Wayland desktop, or out of
+   the nested compositor, gives no `Leave` (`logs/crossing-gneiss-vst3.txt`: one Leave/Enter pair for three exits),
+   so the bubble stays (an iPlug tooltip too: it hides on LeaveNotify) until the pointer comes back (`33`, `04`). That is Xwayland's behaviour for
+   every X11 client; nothing to fix in iPlug.
+3. **Keys reach the edit through REAPER, as on X11.** The input trace has focus lines but no per-key lines for these
+   edits; the XI2 trace has the key events addressed to REAPER's FX window (`logs/xi2-sand-clap-text-entry.txt`).
+   For VST3, REAPER hands keys to the view through `IPlugView::onKeyDown`, which is not traced; for CLAP the Docker
+   X11 REAPER trace has no key lines either (`renoise-fix-r1-docker/sand-clap/reaper-stderr-tail.txt`). The edits'
+   results are on screen.
+4. No `OFF-MAIN` line in any run (`logs/*-stderr.txt`).
+
+Not run under Wayland: IPlugControls, right-click menus, drops (case 8), automation, state; one host only (REAPER),
+as the task asked. A real Wayland login (GDM) was not needed: the nested shell ran.
+
+**Harness notes (nested GNOME Shell on the VM)**
+- The first start (2026-10-23 08:12, `MUTTER_DEBUG_DUMMY_MODE_SPECS=1280x760`) never mapped its window (640×480,
+  unmapped) and its Xwayland never answered (polling only its Wayland socket; `logs/nested-shell-run1-stuck.log`). A
+  start without the variable (800×600) and the next with `1280x768` worked (`logs/nested-shell.log`). Not reproduced;
+  if it sticks, kill it and start again.
+- A killed nested shell leaves `/tmp/.X1-lock`, `/tmp/.X2-lock`, `/tmp/.X11-unix/X1`, `X2`,
+  `/run/user/1000/wayland-0{,.lock}`, `.mutter-Xwaylandauth.*`, and `/run/user/1000/gnome-shell-disable-extensions`
+  (which makes the next GNOME Shell start without extensions). Remove them. Closing its window with the title bar's
+  close (`wmctrl -i -c`) ends it cleanly and removes all of them; the services it started on its private bus exit with
+  it.
+- REAPER 7.82 now shows a modal "New Version Notification" (7.83) over the evaluation nag at every start;
+  `nested-open.sh` closes both with `wmctrl -c`.
+- Between the 2026-10-23 and 2026-10-24 sessions (the worker stopped at a usage limit, leaving the nested shell and
+  REAPER running), the outer GNOME opened its Activities overview and Gneiss CLAP's FX window moved and its A/B res went
+  to 1.0000; the take/release-focus pairs in `logs/gneiss-clap-stderr.txt` date from then. Not caused by the probes.
+- `xinput test-xi2 --root` on Xwayland warns that it is Xwayland and works.
+
+**VM state left:** the nested shell, REAPER and the dummy jackd are stopped, the stale files above removed, X11 `:0`
+answers `xdpyinfo`; GDM, AccountsService and the GNOME settings unchanged; the trace builds stay staged in
+`~/iplug-builds/t013-wl`; `~/.clap` and `~/.vst3` hold the Release builds of T-038 eda432127. VM lock released.
+
+**Cross-platform findings:** none.
