@@ -31,6 +31,7 @@ FXW=$(fx_win "${FX#*: }.*Track 1")
 [ -n "$FXW" ] && { if command -v wmctrl >/dev/null; then wmctrl -i -r "$FXW" -e 0,20,40,-1,-1; else xdotool windowmove "$FXW" 20 40; fi; sleep 1; }
 read -r X Y W H < <(view_geom "${FX#*: }.*Track 1")
 echo "view $X $Y $W $H"
+[ "$W" -gt 0 ] || { echo "no FX window: nothing to crop"; pkill -x reaper; exit 1; }
 (echo "origin $X $Y"; cat "$STEPS") | OUT="$OUT" XACT_SCALE="$REAPER_UI_SCALE" "$HERE/xact.sh" | tee "$OUT/xact.log"
 for f in "$OUT"/*.png; do
   case "$f" in *-view.png) continue;; esac

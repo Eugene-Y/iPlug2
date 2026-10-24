@@ -5,6 +5,12 @@
 set -u
 cd "$(dirname "$0")"
 mkdir -p sheets mac-refs-half
+# MORPH on grows Gneiss from 200 to 620 points after the run cropped its shots: crop g04 again at the full size, from
+# the view origin the capture logged.
+for run in vm-x1-gneiss docker-x1-gneiss; do
+  o=$(sed -n 's/^\[xact\] origin \([0-9]*\),\([0-9]*\).*/+\1+\2/p' "$run/xact.log" | head -1)
+  magick "$run/g04-user-morph-on.png" -crop "940x620$o" +repage "$run/g04-user-morph-on-tall-view.png"
+done
 views=(
   "gneiss g01-clean-moog-all|gneiss  clean moog all.png"
   "gneiss g02-freqs|gneiss freq tab.png"
@@ -26,7 +32,7 @@ printf '%-28s %-14s %-14s %s\n' view mac50-vs-vm docker-vs-vm "pixels >8% (docke
 for v in "${views[@]}"; do
   prod=${v%% *}; rest=${v#* }; name=${rest%%|*}; ref=${rest#*|}
   vm="vm-x1-$prod/$name-view.png"; dk="docker-x1-$prod/$name-view.png"
-  [ -f "mac-refs-half/$ref" ] || magick "mac-refs/$ref" -resize 50% "mac-refs-half/$ref"
+  magick "mac-refs/$ref" -resize 50% "mac-refs-half/$ref"
   read -r x y _ < <(./find-offset.sh "mac-refs-half/$ref" "$vm")
   m=$(MAC_LABEL="mac (Retina, shrunk 50%)" LIN_LABEL="Linux VM (GNOME X11, virgl), scale 1" ./make-sheet.sh "mac-refs-half/$ref" "$vm" "$x" "$y" "sheets/vm-x1-$name.png" | sed 's/.*rmse=//')
   d=$(MAC_LABEL="Linux Docker (llvmpipe), scale 1" LIN_LABEL="Linux VM (virgl), scale 1" ./make-sheet.sh "$dk" "$vm" 0 0 "sheets/vm-vs-docker-x1-$name.png" | sed 's/.*rmse=//')
