@@ -31,7 +31,8 @@ Gneiss and Sand on Linux look like on mac and win: same layout, colours, fonts, 
   MIDI CC menu and tooltips use the desktop's sans-serif face, as mac/win menus use the system font (Noto Sans on
   Ubuntu's desktop, DejaVu Sans in Docker).*
 - [x] No mac/win change; step scripts PASS. *T-009 changes only `linux-research/` (harness); no framework or product
-  code. The step scripts were not re-run here: no code they exercise changed.*
+  code. `steps/gneiss.txt` and `steps/sand.txt` PASS in Docker with this run's CLAP builds
+  (`evidence/t009/steps-{gneiss,sand}-clap/RESULT.txt`).*
 - [ ] Independent review (AGENTS §4); Log complete.
 
 ## Log
