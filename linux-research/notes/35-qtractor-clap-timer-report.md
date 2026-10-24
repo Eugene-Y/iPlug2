@@ -3,7 +3,7 @@
 Found in T-013 (`tasks/T-013-host-matrix.md`, Log 2026-10-22, "Qtractor"). Evidence on `linux/T-013`:
 `evidence/t013/qtractor/docker-clap/` (`clap-timer-counts.txt`, `timers-fresh-session.txt`,
 `onidle-count-editor-closed.txt`) for our plug-ins, and `evidence/t013/qtractor/timer-probe/` for the minimal
-reproducer below (run 2026-10-24). Reviewed in `notes/37-review-T-013-wayland.md` (T-013 branch). Not reported yet: the
+reproducer below (run 2026-10-24, the source as below). Reviewed in `notes/37-review-T-013-wayland.md` (T-013 branch). Not reported yet: the
 user decides whether to send it (as an issue at https://github.com/rncbc/qtractor/issues). The text below is ready to
 paste.
 
@@ -52,8 +52,12 @@ plug-in's `on_timer` is called again until an editor opens or some plug-in regis
 
 **Actual** (Ubuntu 24.04 arm64, Xvfb + openbox, dummy JACK):
 - before any editor was opened, and while the editor is open: 8–9 calls/s;
-- after the editor closed (`timer-probe: GUI destroyed`): no call at all, for the 17 s until it was opened again;
-- after the editor was opened again: 8 calls/s again.
+- after the editor closed (`timer-probe: GUI destroyed`): no call at all, for the 16 s until it was opened again;
+- after the editor was opened again: 8 calls/s again (the first line then counts the calls of the second in which
+  the timer had stopped).
+
+The first output line, `register_timer(100 ms) FAILED`, comes from the instance Qtractor creates and destroys before
+the real one, with a host that offers no timer support; the real instance's line says `ok`.
 
 We first saw it with three plug-ins built with an in-development Linux port of the iPlug2 framework: about 150
 `on_timer` calls/s in total before and with an editor open, 0 after the last editor closed, while `process` went on.
@@ -89,7 +93,7 @@ We are happy to test a patch.
 
 ```c
 // timer-probe.clap: registers a 100 ms timer in init() and prints its on_timer calls per second to stderr.
-// Its GUI is an empty X11 window. Build: cc -shared -fPIC -I<clap>/include -o timer-probe.clap timer-probe.c -lX11
+// Its GUI is an empty X11 window. Build: cc -std=c11 -shared -fPIC -I<clap>/include -o timer-probe.clap timer-probe.c -lX11
 #include <clap/clap.h>
 #include <X11/Xlib.h>
 #include <stdio.h>
@@ -105,7 +109,6 @@ typedef struct {
   time_t second;
   Display* display;
   Window window;
-  clap_xwnd parent;
 } probe_t;
 
 static void on_timer(const clap_plugin_t* p, clap_id id) {
@@ -146,8 +149,8 @@ static bool gui_set_parent(const clap_plugin_t* p, const clap_window_t* w) {
 }
 static bool gui_set_transient(const clap_plugin_t* p, const clap_window_t* w) { return false; }
 static void gui_suggest_title(const clap_plugin_t* p, const char* t) {}
-static bool gui_show(const clap_plugin_t* p) { probe_t* s = p->plugin_data; XMapWindow(s->display, s->window); XFlush(s->display); return true; }
-static bool gui_hide(const clap_plugin_t* p) { probe_t* s = p->plugin_data; XUnmapWindow(s->display, s->window); XFlush(s->display); return true; }
+static bool gui_show(const clap_plugin_t* p) { probe_t* s = p->plugin_data; if (!s->display) return false; XMapWindow(s->display, s->window); XFlush(s->display); return true; }
+static bool gui_hide(const clap_plugin_t* p) { probe_t* s = p->plugin_data; if (!s->display) return false; XUnmapWindow(s->display, s->window); XFlush(s->display); return true; }
 static const clap_plugin_gui_t gui_ext = {
   gui_is_api_supported, gui_get_preferred_api, gui_create, gui_destroy, gui_set_scale, gui_get_size, gui_can_resize,
   gui_get_resize_hints, gui_adjust_size, gui_set_size, gui_set_parent, gui_set_transient, gui_suggest_title,
@@ -157,13 +160,14 @@ static bool init(const clap_plugin_t* p) {
   probe_t* s = p->plugin_data;
   const clap_host_timer_support_t* t = s->host->get_extension(s->host, CLAP_EXT_TIMER_SUPPORT);
   bool ok = t && t->register_timer(s->host, 100, &s->timer);
+  if (!ok) s->timer = CLAP_INVALID_ID;
   fprintf(stderr, "timer-probe: register_timer(100 ms) %s\n", ok ? "ok" : "FAILED");
   return true;
 }
 static void destroy(const clap_plugin_t* p) {
   probe_t* s = p->plugin_data;
   const clap_host_timer_support_t* t = s->host->get_extension(s->host, CLAP_EXT_TIMER_SUPPORT);
-  if (t) t->unregister_timer(s->host, s->timer);
+  if (t && s->timer != CLAP_INVALID_ID) t->unregister_timer(s->host, s->timer);
   free(s);
 }
 static bool activate(const clap_plugin_t* p, double sr, uint32_t min, uint32_t max) { return true; }
@@ -188,6 +192,7 @@ static const clap_plugin_descriptor_t* get_desc(const clap_plugin_factory_t* f, 
 static const clap_plugin_t* create(const clap_plugin_factory_t* f, const clap_host_t* host, const char* id) {
   probe_t* s = calloc(1, sizeof(probe_t));
   s->host = host;
+  s->timer = CLAP_INVALID_ID;
   s->plugin = (clap_plugin_t) { &desc, s, init, destroy, activate, deactivate, start_processing, stop_processing,
                                 reset, process, get_extension, on_main_thread };
   return &s->plugin;
