@@ -1,8 +1,8 @@
 # T-013 — Host matrix (P10)
 
-- **Status:** in progress — all hosts done except the GNOME Wayland session: Carla, Ardour, Renoise, Qtractor
-  (VST3 on the VM, CLAP in Docker), drops (case 8), item 9, PC checklist; Zrythm N/A (no arm64 package). The VM's
-  virgl GPU hung again on 2026-10-22; the Wayland check waits for its restart (the user), steps in the Log.
+- **Status:** review-done — every host done: Carla, Ardour, Renoise, Qtractor (VST3 on the VM, CLAP in Docker), a GNOME
+  Wayland session (nested GNOME Shell, REAPER on its Xwayland, 2026-10-24), drops (case 8), item 9, PC checklist;
+  Zrythm N/A (no arm64 package).
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-013`
 - **Branch/worktree:** `linux/T-013` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-013` — for harness/docs and any host-compat fix.
 - **Depends on:** T-002, T-007 (merged). Products: Gneiss (T-003), Sand (T-012).
@@ -39,9 +39,8 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
 9. **From T-020** (merged aa42322c2, Docker-tested only): paste a file put on the clipboard by `SetFilePathInClipboard` into GNOME Files; drag a file out of the editor (`InitiateExternalFileDragDrop`, IPlugControls `-DIPLUG_TEST_DRAGOUT`) into Files and into each host; the real GNOME portal (Settings → Appearance dark/light switch, IPlugControls `-DIPLUG_TEST_APPEARANCE`); a GL3 build (`-DIGRAPHICS_RENDERER=GL3`) on virgl; the drag feedback cursor.
 
 ## Acceptance
-- [ ] Matrix table (host × product × format × case) in the Log with evidence paths (`evidence/t013/`). *Done for Carla,
-  Ardour, Renoise, Qtractor (cases 1–8), item 9; Zrythm N/A. Missing: the GNOME Wayland session (the VM hung; steps
-  in the Log, "Wayland").*
+- [x] Matrix table (host × product × format × case) in the Log with evidence paths (`evidence/t013/`). *Carla,
+  Ardour, Renoise, Qtractor (cases 1–8), item 9, GNOME Wayland (REAPER on Xwayland, 2026-10-24); Zrythm N/A.*
 - [x] Every failure: fixed (Linux-only code, own commit) or ticketed with a minimal repro; host bugs documented as such.
   *The XEmbed text-entry fix (c86d82e5d). Host bugs, documented with repros: Carla main's VST3 IRunLoop threading;
   Qtractor's CLAP timers stopping when the last CLAP editor closes. The hosts that drop no files on plug-ins are
@@ -49,8 +48,9 @@ Short batches; `timeout 8 xdpyinfo` before and after each batch; kill everything
   `restartComponent` from its fallback thread, which the VST3 contract does not allow; Qtractor 1.5.3 then runs a
   state round trip on that thread (Log 2026-10-22, case 5).*
 - [x] PC checklist for Bitwig/x86_64 written (section below; review approved, notes/28).
-- [x] Independent review (AGENTS §4): approved in round 2, `notes/33-review-T-013-final.md` (R2-1, R2-2 fixed). Log
-  complete except the Wayland run.
+- [x] Independent review (AGENTS §4): approved in round 2, `notes/33-review-T-013-final.md` (R2-1, R2-2 fixed). The
+  Wayland run and the Qtractor report (notes/35): `notes/37-review-T-013-wayland.md`, approved in round 2 with minor
+  findings, all fixed.
 
 ## PC checklist (Bitwig, x86_64)
 For a tester with an x86_64 PC running Linux, Bitwig Studio 5 and, if possible, REAPER. It covers what our test VM
@@ -136,6 +136,9 @@ reopen, oversampling, two at once, closing), using the trace archives. Then:
    once in an X11 session.
    *Expected:* the plug-in window has the right size for the scale (not tiny, not cut off), text is sharp, and
    clicks land where you click.
+   In the Wayland session also: scroll the mouse wheel over a knob; and in Sand, hover a knob until its tooltip shows,
+   then move the pointer straight onto another program's window (a terminal or Files, not the host).
+   *Expected:* the wheel turns the knob; the tooltip goes away when the pointer leaves the plug-in.
 9. **Dark and light.** With IPlugControls (trace archive) open, switch the desktop between dark and light style
    (Settings > Appearance).
    *Expected:* the terminal shows `IPLUG_TEST_APPEARANCE dark main=1` and then `light main=1` (or the reverse).
@@ -171,7 +174,8 @@ Case 7 = which event loop the host gives iPlug (all callbacks on the main thread
 | Qtractor 1.5.3 (VM) | VST3 | PASS | PASS | PASS | frame `IRunLoop` open; fallback closed | 2026-10-22 |
 | Qtractor 1.5.3 (Docker) | CLAP | PASS, but host bug | PASS | PASS (case 7 only) | timer + posix-fd support; **all CLAP timers stop once the last CLAP editor closes (host bug)** | 2026-10-22 |
 | Zrythm | — | n.a. | n.a. | n.a. | not packaged for arm64 | 2026-10-22 |
-| GNOME Wayland (XWayland), one host | — | **not run** | | | — | 2026-10-22, "Wayland" |
+| REAPER 7.82 on GNOME Wayland (nested GNOME Shell 46, Xwayland 23.2.6, VM) | CLAP | PASS | PASS | not run | timer + posix-fd support | 2026-10-24 |
+| REAPER 7.82 on GNOME Wayland (same) | VST3 | PASS | PASS | not run | factory host-context `IRunLoop` | 2026-10-24 |
 | Bitwig 5 (x86_64) | CLAP, VST3 | PC checklist | | | | PC checklist |
 
 Item 9 (T-020's VM checks), section 2026-10-21 (2): all PASS except the GL3 build, which virgl cannot render
@@ -632,3 +636,115 @@ autologin). Both start after the user's VM restart; take the VM lock.
 - Not changed: GDM (X11, autologin), Renoise and Ardour configs, the GNOME appearance.
 
 **Cross-platform findings:** none new.
+
+### 2026-10-23/24 — GNOME Wayland: nested GNOME Shell, REAPER on its Xwayland
+**Branch:** hvoya-linux b8079e9df (T-038 merged) fast-forwarded into linux/T-013. No framework code changed.
+
+**Builds.** Trace builds (Release, `-DIPLUG_TRACE_HOST_LOOP -DIGRAPHICS_TRACE_LINUX_INPUT`, `build/t013-rn-{gneiss,sand}`)
+from this worktree at b8079e9df, Gneiss linux-experiment 6246fb7, Sand 95be3b0. Staged on the VM in
+`~/iplug-builds/t013-wl` (`vm-deploy.sh -p`); `~/.clap` and `~/.vst3` were not touched and still hold the Release
+builds from T-038 eda432127.
+
+**Session.** The nested way (the X11 session stays; GDM and AccountsService untouched): GNOME Shell 46.0 (mutter
+46.2) runs as a Wayland compositor in an X11 window of the VM's GNOME X11 session and starts Xwayland 23.2.6 on `:1`.
+REAPER started with `DISPLAY=:1`, `WAYLAND_DISPLAY`, `XDG_SESSION_TYPE=wayland` still runs as an X11 client of
+Xwayland (its windows are in `:1`'s tree), as it would in a Wayland login. Input was sent with xdotool to the
+**outer** X11 screen, so it reaches REAPER and the plug-in through the nested compositor, as a person's mouse and
+keyboard would; xdotool's moves are jumps, not glides.
+- Probes (`scripts/vm/probe/t013/`, through `vm-x.sh`): `nested-start.sh` (own `XDG_RUNTIME_DIR`, waits for Xwayland,
+  detects the hang below), `nested-stop.sh`, `nested-env.sh` (the nested display, cookie, Wayland socket, bus, outer
+  display), `nested-open.sh` (the harness REAPER with one plug-in), `nested-view.sh` (the editor's position on the
+  outer screen), `nested-checks.sh` (the review re-checks), `nested-xev-glide.sh` (not run, below),
+  `crossing-watch.c` (timestamped Enter/Leave of another client's window), `stderr-flush-check.sh` (X11).
+- Evidence `evidence/t013/wayland/` (PNGs local): the first session (2026-10-23 08:12 – 2026-10-24 16:14, one nested
+  shell, REAPER restarted per plug-in) in `NN-*.png` and `logs/`; the review re-check (2026-10-24 16:42, a fresh
+  nested shell) in `recheck/`. The `logs/*-stderr.txt` are whole copies of REAPER's `/tmp/reaper.log`; in the first
+  session's Sand files, input lines of edits on screen never reached that file (finding 3).
+- The first session's nested shell was started with the shared runtime directory
+  (`MUTTER_DEBUG_DUMMY_MODE_SPECS=1280x768 setsid dbus-run-session -- gnome-shell --nested --wayland`); the re-check
+  with `nested-start.sh`.
+
+| Case | Gneiss CLAP | Gneiss VST3 | Sand CLAP | Sand VST3 |
+|---|---|---|---|---|
+| editor opens, renders (logo fine) | PASS `02` | PASS `30` | PASS `10`, `recheck/` | PASS `20` |
+| plug-in-initiated resize (MORPH off, 940×620 → 940×200), REAPER's window follows | PASS `06` | PASS `31` | — | — |
+| mouse drag | A hz 457 Hz → 20.0 kHz with MORPH off `06` (with MORPH on no change `03`: Gneiss' UX) | A hz 211 Hz → 20.0 kHz `31` | comp 0.300 → 0.624 `13` | comp, arc grows `22` |
+| wheel | see finding 1 | | | |
+| text entry (click value, type, Enter) | — (none in Gneiss) | — | 10 kHz → `2000` → 2.00 kHz `11`, `12`; `31` → 31.0 Hz `13`; re-check `recheck/text-entry-result.png` | `2000` → 2.00 kHz `21`, `22` |
+| tooltip / Gneiss hover help | help bubble `03`, `05` | help bubble `32` | tooltip `14`, `recheck/tooltip-over-comp.png` | tooltip `22` |
+| Space with the editor clicked → host transport | plays `07` | plays `31` | | |
+| case 7 (host loop) | timer + posix-fd, on main | factory-context `IRunLoop`, on main | same as Gneiss CLAP | same as Gneiss VST3 |
+
+Findings:
+1. **Wheel: not tested through the compositor.** `xdotool click 4` on the outer screen reached nothing in Xwayland: its
+   XI2 root trace has the pointer motion and no button or scroll event (`logs/xi2-wheel-via-compositor.txt`), and B hz
+   stays at 535.8 Hz (`06a`). Why the nested compositor dropped the synthetic wheel is not known. A wheel sent by
+   XTEST straight into Xwayland (`:1`) moves B hz 535.8 → 853.6 Hz (`06b`, `logs/xi2-wheel-xtest-on-xwayland.txt`),
+   which re-tests the X11 side only. A real wheel in a Wayland session is in the PC checklist (step 8).
+2. **In this nested session, X11 windows get no LeaveNotify when the pointer goes onto a non-X surface.** Re-check
+   (`recheck/`, a fresh nested shell, no XTEST input on `:1`):
+   - xev, a plain X11 client: one Enter, then a Leave only for the move onto REAPER's main window; none for the
+     moves onto the nested desktop and out of the nested compositor (`xev-path.txt`, `xev-crossings.txt`,
+     `xev-raw.txt`).
+   - Sand's view: the same (`view-path.txt`, `view-crossings.txt`). Its tooltip stays after the move onto the nested
+     desktop (`tooltip-after-leave-to-desktop.png`) and goes after the move onto REAPER
+     (`tooltip-after-leave-to-reaper.png`). Gneiss' help bubble behaves the same (`04`, `32`, `33`).
+   - Xwayland 23.2.6's own source does send a LeaveNotify when the Wayland pointer leaves its surfaces
+     (`hw/xwayland/xwayland-input.c`, `pointer_handle_leave` → `CheckMotion`, and `sprite_check_lost_focus`, under a
+     condition on the last pointer device; review notes/37 W1). So the cause is open: mutter's nested backend with
+     warped (jumping) synthetic motion is the likeliest. A glide in small steps (`nested-xev-glide.sh`) was not run:
+     both starts for it hung.
+   - iPlug hides its tooltip on LeaveNotify like any X11 client. If a real Wayland login behaves the same, a tooltip
+     stays over other windows until the pointer comes back; PC checklist step 8 now checks this.
+3. **Keys: the same path as on X11.** The re-check's whole stderr (`recheck/reaper-stderr.txt`,
+   `text-entry-counts.txt`) has the edit taking the X focus (`take focus from …`, `check focus: … (ours)`), every key
+   `handled`, Return `kept (edit or menu)`, then `release focus`; the line counts are the same before and after gdb
+   makes REAPER flush its stdio, so REAPER's stderr is not buffered (on X11 too: `logs/x11-sand-clap-flushcheck.txt`).
+   The first session's Sand files (`logs/sand-clap-stderr.txt`, `sand-vst3-stderr.txt`) lack these lines for edits
+   that are on screen; why is not known. Their host-loop lines are flushed one by one (`HostLoopTrace`).
+4. No `OFF-MAIN` line in any stderr file of the runs. The host-loop lines are flushed one by one, so the first
+   session's files should hold them all even where they miss input lines; the re-check's log is complete.
+
+Not run under Wayland: IPlugControls, right-click menus, drops (case 8), automation, state; one host only (REAPER),
+as the task asked. A real Wayland login (GDM) was not needed: the nested shell ran.
+
+**Harness notes (nested GNOME Shell on the VM)**
+- **The nested shell hangs at start in about half of the starts** (4 of 7 by 2026-10-24: 08:12 on 10-23, the
+  reviewer's 16:22, and two at 16:5x on 10-24; with and without `MUTTER_DEBUG_DUMMY_MODE_SPECS`). Its window maps
+  (640×480 or the requested size) without the shell's panel, and Xwayland never answers (it polls only its Wayland
+  socket; `logs/nested-shell-run1-stuck.log`). `nested-start.sh` reports it after about 30 s; `nested-stop.sh` then stops
+  the processes on the shell's private bus (closing its window does not end a hung one) and removes the files a
+  killed Xwayland leaves (`/tmp/.X<n>-lock`, `/tmp/.X11-unix/X<n>` for its two displays).
+- **Use `nested-start.sh`: it gives the shell its own `XDG_RUNTIME_DIR`.** With the session's own one, the nested
+  shell's accessibility bus bound `/run/user/1000/at-spi/bus_0`, the outer session's socket, and deleted it on exit
+  (notes/37 W5); a killed shell also left `wayland-0`, the Xwayland cookie and `gnome-shell-disable-extensions` (which
+  makes the next GNOME Shell start without extensions) in `/run/user/1000`.
+- **A bug in the first `nested-stop.sh` deleted the outer X server's socket file `/tmp/.X11-unix/X0`** (it took the
+  display number from the shell's own `DISPLAY`, the outer `:0`, at 16:49 on 10-24). Fixed in the same commit: the
+  number now comes from the shell's log and is never the outer display's. Xorg still answers on its abstract socket,
+  which local clients use first; a client that only uses the file cannot connect until the X session restarts.
+- REAPER 7.82 showed a modal "New Version Notification" (7.83) over the evaluation nag at every start, which blocks
+  `rpr.sh`. `reaper-up.sh` now writes `verchk=0` (no update check); no notice since, on the VM and in Docker.
+- `xev` sets no `_NET_WM_PID`; find its window with `wmctrl -l` ("Event Tester"), not `xdotool search --pid`.
+- Between the two parts of the first session (the worker stopped at a usage limit from 2026-10-23 08:20 to
+  2026-10-24 16:02, leaving the nested shell and REAPER running), the outer GNOME opened its Activities overview, and
+  Gneiss CLAP's FX window moved and its A/B res went to 1.0000. No command of this worker ran in that time; the cause
+  is unknown. `07` (Space) comes from after it; `06a`/`06b` (wheel) from before (A res 0.9648).
+
+**VM state left:**
+- No process of this run: the nested shells, REAPER, jackd and xev are stopped. X11 `:0` answers `xdpyinfo`; GDM,
+  AccountsService and the GNOME settings are unchanged.
+- **For the user:** two sockets of the running X11 session were deleted by these runs, `/tmp/.X11-unix/X0` (Xorg's
+  file socket) and `/run/user/1000/at-spi/bus_0` (the accessibility bus). Both come back with the next login or VM
+  restart; until then most clients still connect (Xorg's abstract socket), and apps started now get no
+  accessibility bus. There is no `/tmp/.X0-lock` either, but it was already missing on 2026-10-23 08:15, before the
+  first `nested-stop.sh` (a listing of `/tmp/.X*-lock` then showed only the nested `.X1-lock` and `.X2-lock`); without
+  it another X server could claim `:0`.
+- The trace builds stay staged in `~/iplug-builds/t013-wl`; `~/.clap` and `~/.vst3` hold the Release builds of T-038
+  eda432127. VM lock released.
+
+**Cross-platform findings:** none.
+
+**Review (notes/37):** round 1 changes needed (W1, W2 major: the Leave and key-path findings), fixed with a re-check
+in a fresh nested shell; round 2 approved with minor findings, fixed. notes/35 (Qtractor report, on hvoya-linux):
+reviewed in the same file, a tested minimal reproducer added (d210dba81, 44dd0fa84).
