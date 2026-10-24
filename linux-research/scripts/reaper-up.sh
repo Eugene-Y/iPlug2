@@ -28,10 +28,12 @@ done
 # Unused while reaper.ini selects Dummy Audio (linux_audio_mode=2), which already runs an audio thread without a
 # sound card; switching to JACK (mode 0) needs this server.
 pgrep -x jackd >/dev/null || { jackd --no-realtime -d dummy -r 48000 -p 256 >/tmp/jackd.log 2>&1 & sleep 1.5; }
+# verchk=0: no update check, whose notice (a modal since 7.83 came out) blocks the Lua calls of rpr.sh.
 cat > "$HOME/.config/REAPER/reaper.ini" <<'EOF'
 [REAPER]
 linux_audio_mode=2
 splashscreen=0
+verchk=0
 EOF
 [ -n "${REAPER_UI_SCALE:-}" ] && printf '[.swell]\nui_scale=%s\n' "$REAPER_UI_SCALE" >> "$HOME/.config/REAPER/reaper.ini"
 if [ -n "${REAPER_EXIT_FILE:-}" ]; then
