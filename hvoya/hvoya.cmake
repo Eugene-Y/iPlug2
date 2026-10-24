@@ -50,6 +50,7 @@ function(hvoya_add_utils name product)
   hvoya_write_plug_build_info(${_build_info_dir} ${product})
   # The Xcode/VS pre-builds name the format in PLUG_PRODUCT (the about box shows "CLAP arm64 release"), so each
   # format target gets its own copy, found through the consuming target's name; other consumers get the one above.
+  # So <product> must be the name given to iplug_add_plugin, whose targets are <product>-clap, -vst3, ...
   foreach(_format APP VST2 VST3 CLAP AAX AU)
     string(TOLOWER ${_format} _suffix)
     hvoya_write_plug_build_info(${_build_info_dir}/${product}-${_suffix} ${_format})
