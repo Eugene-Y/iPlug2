@@ -156,3 +156,8 @@ Gneiss на mac/win использует нативные меню — его н
 |---|---|---|---|
 | T18-1 | Средняя (краш) | `IGraphics::LoadBitmap` в Release разыменовывает null, если картинки нет (`IGraphics.cpp:1814`): и NanoVG, и Skia падают без папки ресурсов (причина провала «CLAP без ресурсов» в package smoke) | Отчёт (T-018 Log) |
 | T18-2 | Низкая | `IGraphicsSkia::LoadAPIFont` на mac/win игнорирует индекс начертания (face index) шрифта; на Linux исправлено, предложение — передавать везде | Отчёт |
+
+## Из T-009 (общий `hvoya/hvoya.cmake`; только CMake-сборки, Xcode/VS не затронуты)
+| ID | Серьёзность | Суть | Статус |
+|---|---|---|---|
+| T9-1 | Низкая | В CMake-сборках окно About показывало имя продукта вместо формата («Gneiss aarch64 release» вместо «CLAP aarch64 release»): `plug_build_info.hpp` был один на все форматы. Теперь — свой на каждый target | Исправлено: hvoya-linux 5da62b59c |

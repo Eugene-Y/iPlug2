@@ -1,6 +1,6 @@
 # T-009 — Visual parity of Gneiss and Sand with macOS/Windows (P6)
 
-- **Status:** review-done — Docker comparison (scale 2 and 1) and VM (virgl) run (scale 1; scale 2 only in part, the
+- **Status:** merged 5da62b59c (review-done) — Docker comparison (scale 2 and 1) and VM (virgl) run (scale 1; scale 2 only in part, the
   VM's screen is too small): no rendering difference to fix; one Linux build fix (about box format name, 638b48673)
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-009`
 - **Branch/worktree:** `linux/T-009` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-009`. Product repos only on their local `linux-experiment` branches, and only if a product itself must change (unlikely).

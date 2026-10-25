@@ -27,8 +27,8 @@ Update it at every merge or user decision.
 ## Waiting on the user
 - **T-036 open (merged into Sand `master` 4669ede 2026-10-22):** version before the first default run (`config.h` 1.1.10, `PLUG_VERSION_HEX 0x00010110` reads as 1.1.16); Windows VST3 bundle or bare DLL; install by default; Windows output folder `C:\code\Distributables\Sand`; first real Windows run. Gneiss could take Sand's safety fixes (staged swap, iPlug2 dirty check, stale-file cleanup, `-LiteralPath`): say if wanted.
 - **T-031:** port to `hvoya`? All shared-file changes are behind `OS_LINUX` / `UNIX AND NOT APPLE` (CROSS_PLATFORM_FINDINGS T31-1); nothing to decide unless you want it on `hvoya` before the Linux port lands there.
-- **VM restarted by the user 2026-10-23.** Pending on it: T-013's GNOME Wayland run (steps in its Log, no password needed), T-009's VM run. VM has Release Gneiss/Sand/IPlugControls (iPlug2 29d9410c0); Ardour's VST3 cache may need a rescan.
-- **Qtractor CLAP timer bug:** the draft upstream report is in `notes/35-qtractor-clap-timer-report.md`; the user may send it (2026-10-23).
+- **VM: log in again or restart when convenient** (2026-10-24): T-013's nested-shell runs deleted the X11 session's `/tmp/.X11-unix/X0` socket (script bug, fixed) and the at-spi bus socket; both return with the next login. `~/.clap`/`~/.vst3`: Release builds from T-038 eda432127.
+- **Qtractor CLAP timer bug:** report ready in `notes/35-qtractor-clap-timer-report.md` (reviewed, with a minimal CLAP reproducer); the user may send it.
 - **T-018 (Skia, merged 2026-10-23):** host prebuilt Linux Skia libraries (~52 MB per arch) or keep `Dependencies/IGraphics/build-skia-linux.sh` (~7 GB of Skia source per developer)?
 - **T-038 follow-up idea (merged 2026-10-23):** run iPlug's timers on the host's GLib main loop when the host has GLib loaded (REAPER, Ardour, Qt hosts), so `OnIdle` stays on the UI thread with the editor closed; needs its own host matrix. Say if wanted.
 - **T-011 left:** port `duplicate.py` to `hvoya`? Is VS Code on one out-of-tree duplicate + gdb for the others enough for its first acceptance box?

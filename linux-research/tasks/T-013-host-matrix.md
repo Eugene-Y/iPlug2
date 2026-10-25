@@ -1,6 +1,6 @@
 # T-013 — Host matrix (P10)
 
-- **Status:** review-done — every host done: Carla, Ardour, Renoise, Qtractor (VST3 on the VM, CLAP in Docker), a GNOME
+- **Status:** merged 951adfcbb (review-done) — every host done: Carla, Ardour, Renoise, Qtractor (VST3 on the VM, CLAP in Docker), a GNOME
   Wayland session (nested GNOME Shell, REAPER on its Xwayland, 2026-10-24), drops (case 8), item 9, PC checklist;
   Zrythm N/A (no arm64 package).
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-013`
