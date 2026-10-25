@@ -1,8 +1,8 @@
 # Review of T-009 (visual parity, Docker and VM parts)
 
 Reviewer: independent subagent, fresh context, 2026-10-24.
-Scope: `refs/heads/hvoya-linux..refs/heads/linux/T-009` (26b3103b2 Docker part, c3144b82c merge, 40cdfbaa5 VM part,
-8888cd256 step scripts), the task file, `evidence/t009/`, the harness scripts.
+Scope: `refs/heads/hvoya-linux..refs/heads/linux/T-009` (6785d2074 Docker part, c3144b82c merge, cb2369394 VM part,
+ff48454aa step scripts), the task file, `evidence/t009/`, the harness scripts.
 
 ## Round 1
 
@@ -166,7 +166,7 @@ Neither needs framework code changed within T-009: V1 is a finding to record and
 are wording, list and reproducibility fixes, and V8 is a nit.
 
 ## Author's response to round 1 (2026-10-24)
-- **V1:** fixed in Linux-only CMake: dc1ba588a (`hvoya/hvoya.cmake`, one `plug_build_info.hpp` per format target via
+- **V1:** fixed in Linux-only CMake: 638b48673 (`hvoya/hvoya.cmake`, one `plug_build_info.hpp` per format target via
   `$<TARGET_PROPERTY:NAME>`). Checked in Docker: "CLAP aarch64 release", "SAND v1.1.10 VST3"
   (`evidence/t009/fix-about-*`). Logged as a finding, the 10-19 table corrected.
 - **V2:** the 1× explanation rewritten (glyph advance/position rounding in fontstash, a few percent narrower; same on
@@ -185,7 +185,7 @@ are wording, list and reproducibility fixes, and V8 is a nit.
 
 ## Round 2
 
-Scope: dc1ba588a (`hvoya/hvoya.cmake`) and 48dbe8193 (Log, harness, evidence).
+Scope: 638b48673 (`hvoya/hvoya.cmake`) and 142701be0 (Log, harness, evidence).
 
 ### Checked and resolved
 - **V1: fixed, and the code is sound.**
@@ -237,7 +237,7 @@ Scope: dc1ba588a (`hvoya/hvoya.cmake`) and 48dbe8193 (Log, harness, evidence).
 
 ### R5 — nit — the task's Status line is stale
 - It still reads "VM (virgl) run (scale 1) done: no rendering difference to fix".
-- Mention the about-box build fix (dc1ba588a) and the partial 2× on virgl.
+- Mention the about-box build fix (638b48673) and the partial 2× on virgl.
 
 ### Verdict (round 2)
 **Approved with minor findings.** No major finding is left. R1 is a reproducibility gap in the evidence, and R2–R5

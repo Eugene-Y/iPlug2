@@ -1,7 +1,7 @@
 # T-009 — Visual parity of Gneiss and Sand with macOS/Windows (P6)
 
 - **Status:** review-done — Docker comparison (scale 2 and 1) and VM (virgl) run (scale 1; scale 2 only in part, the
-  VM's screen is too small): no rendering difference to fix; one Linux build fix (about box format name, dc1ba588a)
+  VM's screen is too small): no rendering difference to fix; one Linux build fix (about box format name, 638b48673)
 - **Owner:** coordinator (chat f91df715), lock `.linux-port-locks/T-009`
 - **Branch/worktree:** `linux/T-009` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-009`. Product repos only on their local `linux-experiment` branches, and only if a product itself must change (unlikely).
 - **Depends on:** T-003 (Gneiss build), T-012 (Sand build).
@@ -29,13 +29,13 @@ Gneiss and Sand on Linux look like on mac and win: same layout, colours, fonts, 
   match Docker and mac. 1×: VM against the mac references shrunk 50% and against Docker, every view. No Windows
   references exist.*
 - [x] Every difference fixed or explained; the remaining list goes to the user for acceptance. *One Linux-only fix:
-  the about box named the product where mac names the format (dc1ba588a, `hvoya/hvoya.cmake`). For the user to
+  the about box named the product where mac names the format (638b48673, `hvoya/hvoya.cmake`). For the user to
   accept: at 1× NanoVG rounds glyph advances to whole pixels, so text runs are a few percent narrower than the 2× mac
   render shrunk (as on Windows at 100 % or a non-Retina mac); the stand-in menus and tooltips use fontconfig's
   generic sans-serif face at fixed sizes (Noto Sans on the VM, DejaVu Sans in Docker), not the desktop's UI font; 2×
   on virgl seen only in part (the VM's screen is too small).*
 - [x] No mac/win change; step scripts PASS. *Besides `linux-research/` (harness), T-009 changes `hvoya/hvoya.cmake`,
-  which only CMake builds use (Xcode/VS run their own pre-build); no product code. `steps/gneiss.txt` and `steps/sand.txt` PASS in Docker with the CLAP builds at dc1ba588a
+  which only CMake builds use (Xcode/VS run their own pre-build); no product code. `steps/gneiss.txt` and `steps/sand.txt` PASS in Docker with the CLAP builds at 638b48673
   (`evidence/t009/steps-{gneiss,sand}-clap/RESULT.txt`).*
 - [x] Independent review (AGENTS §4); Log complete. *`notes/38-review-T-009.md`: round 1 changes needed (V1 about
   box, V2 1× explanation), fixed; round 2 approved with minor findings, fixed.*
@@ -60,14 +60,14 @@ Gneiss and Sand on Linux look like on mac and win: same layout, colours, fonts, 
 | Gneiss FREQS | 0.068 | the hover-help bubble (help on, pointer resting on FREQS); mac had MAIN oct 1 (shot before the project was loaded) |
 | Gneiss USER, morph off | 0.097 | state (mac shot is a custom preset) |
 | Gneiss USER, morph on | 0.054 | state: the morph field's contours follow the points' sounds; grid, points, numbers, line style identical |
-| Gneiss about box | 0.035 | build-info text (branch/commit/date); and the product name where mac names the format: a Linux build bug, fixed 2026-10-24 (dc1ba588a) |
+| Gneiss about box | 0.035 | build-info text (branch/commit/date); and the product name where mac names the format: a Linux build bug, fixed 2026-10-24 (638b48673) |
 | Gneiss factory preset list | 0.094 | state behind the list; the current preset row highlighted on Linux (CLEAN MOOG is current) |
 | Gneiss MIDI CC menu | 0.17 | by design: native NSMenu on mac, IGraphics stand-in on Linux (no GTK in the plug-in, P3). The stand-in opens its submenu to the left (`◀`) because the knob is right of the editor's centre (`IPopupMenuControl` places submenus towards the larger side) — upstream behaviour |
 | Sand FLT, ENV, GRIND, PAN | 0.020 each | the debug "[ ]" button: mac shots are a Debug build (button exists), Linux Release (no button) |
 | Sand separate dry/wet | 0.025 | hover highlights (mac: HP; Linux: sep) |
 | Sand debug control bounds | 0.11 | Release has no debug button, so no bounds on Linux (expected) |
 | Sand text entry | 0.092 | native NSTextField (blue selection) vs `ITextEntryControl` (grey selection); the field's size and text match |
-| Sand about | 0.042 | build-info text; product name for format, as for Gneiss (fixed, dc1ba588a) |
+| Sand about | 0.042 | build-info text; product name for format, as for Gneiss (fixed, 638b48673) |
 
 Fonts, glyph shapes (MDI icon font), SVG logos, knob arcs, line widths, colours and layout are the same to the pixel where the state is the same. **No rendering difference to fix at scale 2.**
 
@@ -144,7 +144,7 @@ c3144b82c (`build/t009-{gneiss,sand}`), staged on the VM in `~/iplug-builds/t009
   x86_64 release", Sand "SAND v1.1.10 VST3"; Linux: "Gneiss aarch64 release", "SAND v1.1.10 Sand". The 2026-10-19
   table put it under "build-info text". Cause: `hvoya/hvoya.cmake` wrote one `plug_build_info.hpp` for every CMake
   format target, with `PLUG_PRODUCT` = the project's name, where the Xcode/VS pre-builds pass the format. **Fix
-  dc1ba588a**: one copy per format target, found through the consuming target's name; CMake builds only. Repro and
+  638b48673**: one copy per format target, found through the consuming target's name; CMake builds only. Repro and
   check: `evidence/t009/fix-about-gneiss-clap/` and `fix-about-sand-vst3/` (Docker, scale 1): "CLAP aarch64 release",
   "SAND v1.1.10 VST3". The VM's x1 about shots (g05, s08) predate the fix; the x2 tiles were taken with it.
   `PLUG_ARCHS` stays the CMake processor name ("aarch64"; mac lists its `ARCHS`).
@@ -163,7 +163,7 @@ c3144b82c (`build/t009-{gneiss,sand}`), staged on the VM in `~/iplug-builds/t009
   Sand with "shot s01-flt"); VM tiles: `scripts/vm/vm-run.sh vm/probe/t009/x2-tiles.sh evidence/t009/vm-x2-sand
   "CLAP: Sand" ~/iplug-builds/t009/.clap/Sand.clap` (Gneiss with the project). All sheets: `make-vm-sheets.sh`.
 
-**Builds after the fix:** Gneiss CLAP/VST3/APP and Sand CLAP/VST3 at dc1ba588a, staged on the VM in
+**Builds after the fix:** Gneiss CLAP/VST3/APP and Sand CLAP/VST3 at 638b48673, staged on the VM in
 `~/iplug-builds/t009` (the x2 tiles used them).
 
 **VM state left:** no REAPER or jackd running; X11 `:0` answers; the builds stay staged in `~/iplug-builds/t009`;
