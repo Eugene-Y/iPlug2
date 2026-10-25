@@ -38,6 +38,9 @@
 BEGIN_IPLUG_NAMESPACE
 
 class IWebViewImpl;
+#ifdef OS_LINUX
+class HostLoop;
+#endif
 
 /** IWebView is a base interface for hosting a platform web view inside an IPlug plug-in's UI */
 class IWebView
@@ -103,6 +106,18 @@ public:
   
   /** Used to toggle devtools after the IWebView has been contstructed. Will only have an effect after close/reopen */
   void SetEnableDevTools(bool enable) { mEnableDevTools = enable; }
+
+#ifdef OS_LINUX
+  /** The host main thread's loop, which carries the web view's helper process messages and X11 events.
+   * Required before OpenWebView(). */
+  void SetWebViewHostLoop(HostLoop* pLoop);
+
+  /** X11 pixels per unit of the coordinates OpenWebView() and SetWebViewBounds() take; X11 has no logical units */
+  void SetWebViewScreenScale(float scale);
+
+  /** The desktop's UI scale (Xft.dpi / 96, else GDK_SCALE), for an editor no host gave a scale to */
+  static float GetLinuxDesktopScale();
+#endif
   
 #pragma mark -
   

@@ -63,9 +63,17 @@ public:
   void OnAttached() override
   {
     IGraphics* pGraphics = GetUI();
+#ifdef OS_LINUX
+    SetWebViewHostLoop(pGraphics->GetDelegate()->GetEditorHostLoop());
+    SetWebViewScreenScale(pGraphics->GetScreenScale());
+#endif
     mPlatformView = OpenWebView(pGraphics->GetWindow(), mRECT.L, mRECT.T, mRECT.W(), mRECT.H(), pGraphics->GetDrawScale());
     pGraphics->AttachPlatformView(mRECT, mPlatformView);
     EnableScroll(mEnableScroll);
+#ifdef OS_LINUX
+    // The Linux web view is a child window placed by these bounds; the ones above lack the draw scale.
+    UpdateWebViewBounds();
+#endif
   }
   
   void Draw(IGraphics& g) override
@@ -122,6 +130,9 @@ private:
   void UpdateWebViewBounds()
   {
     auto ds = GetUI()->GetDrawScale();
+#ifdef OS_LINUX
+    SetWebViewScreenScale(GetUI()->GetScreenScale());
+#endif
     SetWebViewBounds(mRECT.L * ds, mRECT.T * ds, mRECT.W() * ds, mRECT.H() * ds, ds);
   }
   

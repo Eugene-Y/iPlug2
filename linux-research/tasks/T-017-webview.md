@@ -1,7 +1,7 @@
 # T-017 — WebView on Linux (out-of-process WebKitGTK helper)
 
-- **Status:** ready (design decided by the user 2026-10-16: notes/22 option 1)
-- **Owner:** —
+- **Status:** in progress (design decided by the user 2026-10-16: notes/22 option 1)
+- **Owner:** Claude worker (T-017 lock, 2026-10-26)
 - **Branch/worktree:** `linux/T-017` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-017`.
 - **Depends on:** nothing to start; the IGraphicsLinux platform-view hook (step 4) is coordinated with T-019/T-009/T-020 (same file).
 - **Conflicts:** `IPlug/Extras/WebView/*` (Linux files only), `IGraphics/Platforms/IGraphicsLinux*` (step 4), CMake for the helper.
@@ -42,3 +42,12 @@
 - `WM_INITDIALOG`/`WM_SIZE` divide the client size by `GetScaleForHWND()` (SWELL's UI scale) for the WebView delegate.
 - Release deploy copies `resources/web/` to `~/.config/REAPER/UserPlugins/IPlugReaperExtensionWebUI/`.
 - Test: `scripts/reaper-ext-test.sh <out> reaper_IPlugReaperExtensionWebUI.so` (today it skips the paint checks for it).
+
+### Log
+
+- 2026-10-26 — Lock taken, worktree `/Volumes/Storage/code/IPlug2-T-017` on `linux/T-017` from `hvoya-linux` 2aeb81213.
+  Docker: `iplug2-linux:24.04` extended in place with `libwebkit2gtk-4.1-dev` (WebKitGTK 2.52.6) by
+  `docker/webview/Dockerfile` (a full rebuild of the main Dockerfile was uncached, ~1 h, and would have changed every
+  package); the old image is tagged `iplug2-linux:24.04-pre-t017`. The main Dockerfile has the same layer for fresh
+  builds. 22.04 has WebKitGTK 2.50 (`libwebkit2gtk-4.1-0` in jammy-updates), so the helper's floor (2.40) holds there.
+- First working version: helper + IPC + XEmbed; IPlugWebUI CLAP renders in REAPER (Docker).

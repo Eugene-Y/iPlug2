@@ -74,6 +74,57 @@ function(_iplug_expand_formats input_formats output_var)
 endfunction()
 
 # ============================================================================
+# Linux has no bundle for CLAP/APP, so each module gets its own <Name>.resources/ beside it,
+# never a shared resources/ that two plug-ins in ~/.clap would overwrite. VST3 uses the
+# bundle's Contents/Resources/. Must match IPlug/Linux/IPlugLinuxPathUtils.h.
+# ============================================================================
+function(_iplug_linux_resource_dir target out_var)
+  set(_res_dir "")
+  get_target_property(_target_type ${target} TYPE)
+  if("${_target_type}" STREQUAL "EXECUTABLE")
+    get_target_property(_outdir ${target} RUNTIME_OUTPUT_DIRECTORY)
+  elseif("${_target_type}" STREQUAL "SHARED_LIBRARY" OR "${_target_type}" STREQUAL "MODULE_LIBRARY")
+    get_target_property(_outdir ${target} LIBRARY_OUTPUT_DIRECTORY)
+  else()
+    set(_outdir "")
+  endif()
+  if(_outdir)
+    get_target_property(_outname ${target} OUTPUT_NAME)
+    if("${_outdir}" MATCHES "-linux$")
+      set(_res_dir "${_outdir}/../Resources")
+    else()
+      set(_res_dir "${_outdir}/${_outname}.resources")
+    endif()
+  endif()
+  set(${out_var} "${_res_dir}" PARENT_SCOPE)
+endfunction()
+
+# ============================================================================
+# Linux: a target with a web view (the WebView UI, or IWebViewControl) carries the WebView helper
+# in its resource folder.
+# ============================================================================
+function(_iplug_linux_add_webview_helper target ui_lib base_lib)
+  if(NOT UNIX OR APPLE)
+    return()
+  endif()
+  set(_needs_helper FALSE)
+  if("${ui_lib}" STREQUAL "iPlug2::WebView")
+    set(_needs_helper TRUE)
+  elseif(TARGET ${base_lib})
+    get_target_property(_base_links ${base_lib} INTERFACE_LINK_LIBRARIES)
+    if(_base_links AND "iPlug2::Extras::IWebViewControl" IN_LIST _base_links)
+      set(_needs_helper TRUE)
+    endif()
+  endif()
+  if(_needs_helper AND COMMAND iplug_linux_bundle_webview_helper)
+    _iplug_linux_resource_dir(${target} _res_dir)
+    if(_res_dir)
+      iplug_linux_bundle_webview_helper(${target} "${_res_dir}")
+    endif()
+  endif()
+endfunction()
+
+# ============================================================================
 # Add resources to a bundle target (macOS/iOS); copy next to executable on Linux.
 # ============================================================================
 function(_iplug_add_resources target resources)
@@ -85,24 +136,8 @@ function(_iplug_add_resources target resources)
     MACOSX_PACKAGE_LOCATION Resources
   )
   if(UNIX AND NOT APPLE)
-    # Linux has no bundle for CLAP/APP, so each module gets its own <Name>.resources/ beside it,
-    # never a shared resources/ that two plug-ins in ~/.clap would overwrite. VST3 uses the
-    # bundle's Contents/Resources/. Must match IPlug/Linux/IPlugLinuxPathUtils.h.
-    get_target_property(_target_type ${target} TYPE)
-    if("${_target_type}" STREQUAL "EXECUTABLE")
-      get_target_property(_outdir ${target} RUNTIME_OUTPUT_DIRECTORY)
-    elseif("${_target_type}" STREQUAL "SHARED_LIBRARY" OR "${_target_type}" STREQUAL "MODULE_LIBRARY")
-      get_target_property(_outdir ${target} LIBRARY_OUTPUT_DIRECTORY)
-    else()
-      set(_outdir "")
-    endif()
-    if(_outdir)
-      get_target_property(_outname ${target} OUTPUT_NAME)
-      if("${_outdir}" MATCHES "-linux$")
-        set(_res_dir "${_outdir}/../Resources")
-      else()
-        set(_res_dir "${_outdir}/${_outname}.resources")
-      endif()
+    _iplug_linux_resource_dir(${target} _res_dir)
+    if(_res_dir)
       foreach(_res ${resources})
         get_filename_component(_abs_res "${_res}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
         get_filename_component(_filename "${_abs_res}" NAME)
@@ -146,6 +181,7 @@ function(_iplug_create_desktop_targets plugin_name formats sources ui_lib resour
     iplug_configure_target(${plugin_name}-app APP ${plugin_name})
     _iplug_add_resources(${plugin_name}-app "${resources}")
     _iplug_add_web_resources(${plugin_name}-app "${web_resources}")
+    _iplug_linux_add_webview_helper(${plugin_name}-app "${ui_lib}" "${base_lib}")
     iplug_deploy_target(${plugin_name}-app APP ${plugin_name})
   endif()
 
@@ -158,6 +194,7 @@ function(_iplug_create_desktop_targets plugin_name formats sources ui_lib resour
     iplug_configure_target(${plugin_name}-vst2 VST2 ${plugin_name})
     _iplug_add_resources(${plugin_name}-vst2 "${resources}")
     _iplug_add_web_resources(${plugin_name}-vst2 "${web_resources}")
+    _iplug_linux_add_webview_helper(${plugin_name}-vst2 "${ui_lib}" "${base_lib}")
     iplug_deploy_target(${plugin_name}-vst2 VST2 ${plugin_name})
   endif()
 
@@ -170,6 +207,7 @@ function(_iplug_create_desktop_targets plugin_name formats sources ui_lib resour
     iplug_configure_target(${plugin_name}-vst3 VST3 ${plugin_name})
     _iplug_add_resources(${plugin_name}-vst3 "${resources}")
     _iplug_add_web_resources(${plugin_name}-vst3 "${web_resources}")
+    _iplug_linux_add_webview_helper(${plugin_name}-vst3 "${ui_lib}" "${base_lib}")
     iplug_deploy_target(${plugin_name}-vst3 VST3 ${plugin_name})
   endif()
 
@@ -182,6 +220,7 @@ function(_iplug_create_desktop_targets plugin_name formats sources ui_lib resour
     iplug_configure_target(${plugin_name}-clap CLAP ${plugin_name})
     _iplug_add_resources(${plugin_name}-clap "${resources}")
     _iplug_add_web_resources(${plugin_name}-clap "${web_resources}")
+    _iplug_linux_add_webview_helper(${plugin_name}-clap "${ui_lib}" "${base_lib}")
     iplug_deploy_target(${plugin_name}-clap CLAP ${plugin_name})
   endif()
 
@@ -421,6 +460,19 @@ function(_iplug_add_web_resources target resources)
     set_source_files_properties(${resource} PROPERTIES
       MACOSX_PACKAGE_LOCATION "${_location}"
     )
+    if(UNIX AND NOT APPLE)
+      # The same web/ tree in the module's Linux resource folder
+      _iplug_linux_resource_dir(${target} _res_dir)
+      if(_res_dir)
+        string(REGEX REPLACE "^Resources" "${_res_dir}" _dest_dir "${_location}")
+        get_filename_component(_filename "${_abs_path}" NAME)
+        add_custom_command(TARGET ${target} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${_dest_dir}"
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_abs_path}" "${_dest_dir}/${_filename}"
+          COMMENT "Copying web resource ${_filename} -> ${_dest_dir}"
+        )
+      endif()
+    endif()
   endforeach()
 endfunction()
 

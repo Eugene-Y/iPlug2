@@ -182,6 +182,12 @@ public:
   
   void OnParentWindowResize(int width, int height) override;
 
+#ifdef OS_LINUX
+  /** X11 sizes are pixels: the editor's size is its UI size (as the page and Resize() see it) times this scale */
+  void SetScreenScale(float scale) override;
+  void UpdateEditorSizeForScreenScale() override;
+#endif
+
   void OnWebViewReady() override
   {
     if (mEditorInitFunc)
@@ -255,6 +261,16 @@ private:
 
 #if defined OS_MAC || defined OS_IOS
   void ResizeWebViewAndHelper(float width, float height);
+#endif
+
+#ifdef OS_LINUX
+  void SetUISize(float width, float height);
+  void RescaleEditorSize(float screenScale);
+
+  float mScreenScale = 1.f;
+  float mHostScreenScale = 0.f;
+  float mUIWidth = 0.f;
+  float mUIHeight = 0.f;
 #endif
 };
 
