@@ -47,6 +47,18 @@ Before `git worktree remove --force`, check **`git -C <wt> status --porcelain --
 - REAPER GUI steps: `GUI=<container> scripts/run-gui-test.sh <plugin> <outdir> scripts/steps/<file>.txt <container>`.
 - Long jobs: run in the background and wait for the completion notice; don't poll with sleeps. No `timeout` on macOS: `perl -e 'alarm N; exec @ARGV' cmd`.
 
+## Where the coordinator stopped (2026-10-25)
+See `STATUS.md` "Waiting on the user". Merged and pushed 2026-10-22..25 (each via worker agent with its own
+independent reviewer loop): T-036 (Sand `master` 4669ede), T-022 (other chat), T-032, T-037, T-018 (Skia), T-038 (VST3
+fallback-thread notifications), T-013 (complete), T-009 (complete). Gneiss `linux-experiment` 6246fb7 (IDE setup).
+- **Left on the board:** T-017 WebView, T-030 multi-touch (uinput on the VM), T-014 LV2, T-015 README (last), T-029
+  (waits for the user), T-033 (workflow change, user first). Ideas: GLib main-loop timers (STATUS).
+- **Worktrees kept:** T-018 (Skia source + libs for later Skia work), T-022 and T-031 (other chats'), T-029.
+- **VM:** needs a re-login (X0 socket deleted by a nested-shell script bug, fixed). Release builds from T-038 in
+  `~/.clap`/`~/.vst3`.
+- **Agents hit usage limits often:** resume a stopped agent with SendMessage (its work is saved) after checking the
+  VM lock and its leftovers.
+
 ## Where the coordinator stopped (2026-10-21 day)
 See `STATUS.md` "Waiting on the user". Since the night section below:
 - **Merged 2026-10-21** (each via worker agent → independent reviewer agent, ≤ 2 rounds): T-013 Renoise (d6a361df0; IGraphicsLinux XEmbed FOCUS_OUT/FOCUS_IN pairing), T-013 drops + T-020 VM checks + PC checklist (c62128b28), T-011 (839e1b51d; `duplicate.py`, shared mac/win, not on `hvoya`), T-031 (cbb4d7105; done and reviewed in another chat, smoke here).
