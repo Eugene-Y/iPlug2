@@ -48,6 +48,13 @@ endfunction()
 function(hvoya_add_utils name product)
   set(_build_info_dir ${CMAKE_CURRENT_BINARY_DIR}/generated)
   hvoya_write_plug_build_info(${_build_info_dir} ${product})
+  # The Xcode/VS pre-builds name the format in PLUG_PRODUCT (the about box shows "CLAP arm64 release"), so each
+  # format target gets its own copy, found through the consuming target's name; other consumers get the one above.
+  # So <product> must be the name given to iplug_add_plugin, whose targets are <product>-clap, -vst3, ...
+  foreach(_format APP VST2 VST3 CLAP AAX AU)
+    string(TOLOWER ${_format} _suffix)
+    hvoya_write_plug_build_info(${_build_info_dir}/${product}-${_suffix} ${_format})
+  endforeach()
   file(GLOB_RECURSE _utils_sources CONFIGURE_DEPENDS ${HVOYA_DIR}/hvoya/utils/*.cpp)
   add_library(${name} INTERFACE)
   target_compile_features(${name} INTERFACE cxx_std_20)
@@ -56,6 +63,7 @@ function(hvoya_add_utils name product)
     ${HVOYA_DIR}/hvoya
     ${HVOYA_DIR}/hvoya/utils
     ${HVOYA_DIR}/hvoya/libs/plog/include
+    ${_build_info_dir}/$<TARGET_PROPERTY:NAME>
     ${_build_info_dir})
   target_sources(${name} INTERFACE ${_utils_sources})
   target_compile_definitions(${name} INTERFACE $<$<CONFIG:Release>:PLOG_DISABLE_LOGGING>)
