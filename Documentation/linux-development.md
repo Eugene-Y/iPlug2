@@ -41,6 +41,9 @@ sudo apt install build-essential cmake ninja-build pkg-config git gdb clangd \
   or `pip install cmake`.
 - Build with GCC (the default). clang does not define `__FLOAT_WORD_ORDER__`, which `WDL/wdlendian.h` requires.
 - GTK is only linked into the standalone APP (SWELL). Plug-ins never load GTK into the host.
+- For a web view UI (`WebViewEditorDelegate`, `IWebViewControl`) also `libwebkit2gtk-4.1-dev` (WebKitGTK 2.40 or
+  newer; Ubuntu 22.04 and 24.04 have it). Without it such projects still build, with a CMake warning, and their web
+  view only shows that its helper is missing (§10).
 
 **VS Code**: install the `.deb` from https://code.visualstudio.com, then the extensions the workspace recommends:
 CMake Tools (`ms-vscode.cmake-tools`), clangd (`llvm-vs-code-extensions.vscode-clangd`) and C/C++
@@ -188,6 +191,9 @@ builds Release CLAP, VST3 and APP and writes to `<project>/build-linux/dist/`:
   `--uninstall` removes either.
 - A `.clap` needs its `<Name>.resources/` folder beside it; copied alone it loads, but without its fonts and
   images. The README tells customers.
+- A project with a web view ships the WebView helper in each format's resource folder, and its README lists
+  WebKitGTK 4.1 as a requirement. The build environment needs `libwebkit2gtk-4.1-dev`; without it the script stops
+  rather than pack a web view that cannot start (§10).
 
 Crash reports: unpack the matching `_debug-symbols` archive and point gdb at it; it matches the binary by build
 id (`readelf -n <binary>` shows it; `….inspect.txt` lists them):
@@ -259,3 +265,52 @@ does, that is its general behaviour (§9).
   without calling its handler when the editor closes; on macOS a sheet can outlive the editor, so a handler that
   captures a control should check that the control still exists, e.g. through a `std::weak_ptr` to a token the control
   owns. iPlug2's own controls use the handler form (`IVDiskPresetManagerControl` does both).
+
+## 10. Web view UIs
+
+`WebViewEditorDelegate` (a whole UI in HTML, e.g. `Examples/IPlugWebUI`, `IPlugSvelteUI`, `IPlugP5js`) and
+`IWebViewControl` (a web view inside an IGraphics UI, e.g. `IPlugOSCEditor`) work as on macOS and Windows, with
+WebKitGTK as the engine. The code is the same: `LoadIndexHtml()`, `LoadFile()`, `LoadURL()`, `LoadHTML()`,
+`EvaluateJavaScript()` with a result handler, the `IPlugSendMsg` messages from the page, the custom URL scheme,
+navigation and download callbacks, `Resize()`.
+
+**The helper.** WebKitGTK is a GTK library, and GTK must not run inside a host's process (it would fight the
+host's own toolkit and main loop). So each open web view starts a small program, `iplug2-webview-helper`, which
+runs WebKitGTK and puts its window into the plug-in's (XEmbed). The plug-in talks to it over a socket; both its
+end and the editor's X events run on the host's main thread, like the rest of the editor. The plug-in itself links
+no GTK or WebKit library (its NEEDED list stays libX11 and libc).
+
+- **Where it lives:** in the module's resource folder, beside the web UI's `web/` folder: `<Name>.resources/` next
+  to a `.clap` or the standalone, `Contents/Resources/` in a `.vst3`, `<stem>.resources/` next to a REAPER
+  extension. CMake builds it once per build tree and copies it there with every target that has a web view, so it
+  works from `~/.clap`, `~/.vst3`, the system folders and the standalone's folder alike. Every plug-in carries its
+  own copy, built from the same iPlug2, so plug-ins built with different iPlug2 versions never share one.
+  `IPLUG2_WEBVIEW_HELPER=<path>` overrides the location (for debugging the helper).
+- **Lifetime:** one helper per open web view. It starts when the editor (or the `IWebViewControl`) opens and ends
+  when it closes, and also when the host quits or crashes: it exits as soon as its socket closes. WebKit itself
+  runs a web process and a network process per helper; together roughly 0.5 GB resident per open editor, most of
+  it the web process, which macOS and Windows also start per web view.
+- **Asynchronous start:** as on Windows, `OnWebViewReady()` (and with it `mEditorInitFunc` and the
+  `IWebViewControl` ready function) comes a moment after the editor opened, once the helper is up. Calls made
+  before that are queued and run in order.
+- **Failures:** if the helper is missing, cannot start (no WebKitGTK 4.1 installed) or crashes, the editor shows a
+  short message instead of the page, and the host keeps running; closing and reopening the editor starts a new
+  helper.
+
+**Customers** need WebKitGTK 4.1, 2.40 or newer: `libwebkit2gtk-4.1-0` on Debian and Ubuntu (22.04 and later),
+`webkit2gtk4.1` on Fedora. Most desktops have it already; `Scripts/linux/package.sh` lists it in the README of a
+package with a web view (§7).
+
+**Behaviour to know:**
+- **Keyboard:** a click into the web view gives it the keyboard, as a first responder on macOS; keys typed then
+  go to the page, not to the host, until the user clicks outside it. Host shortcuts work whenever the web view
+  has not been clicked.
+- **Scaling:** the editor is sized in pixels like an IGraphics editor (the host's scale, else `Xft.dpi`), and the
+  page is zoomed by that scale, so `Resize()` and the page's CSS pixels are the same units as on macOS. GTK dialogs
+  the page opens (`<input type="file">`, `alert()`) are not scaled.
+- **`EvaluateJavaScript()` results** arrive as JSON, as on Windows (a string result arrives quoted).
+- **Developer tools** (`SetEnableDevTools(true)`): the context menu's *Inspect Element* opens WebKit's inspector,
+  and the page's console messages also go to the host's standard output.
+- **Transparent web views** (`opaque = false`) draw on the helper's own window, which X11 does not blend with the
+  IGraphics UI beneath: the area behind the page is not the plug-in's UI.
+- **Links** that open a new window (`target="_blank"`) open in the default browser.
