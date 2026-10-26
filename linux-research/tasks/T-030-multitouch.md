@@ -23,5 +23,29 @@
   (as Windows registers its touch window); otherwise touches stay emulated mouse events as before. Touches get ITouchIDs
   from a counter (X touch ids are unique per device only, and 0 is the mouse); `HandleTouch` maps them to
   `OnMouseDown/Drag/Up` with `L` set, like iOS. No `OnTouchCancelled`: without an `XI_TouchOwnership` selection the
-  server replays a sequence to us only once we own it, so no sequence is taken away midway. Docker build of
-  IPlugControls CLAP/VST3/APP passes; no new NEEDED (libXi is dlopen'ed).
+  server delivers a sequence to us only once we own it (XI 2.2 protocol), so none is taken away midway. Docker build
+  of IPlugControls CLAP/VST3/APP passes; no new NEEDED (libXi is dlopen'ed). Commit 108c7ccdc.
+- f097efae7: `IGRAPHICS_TRACE_LINUX_INPUT` also logs button presses, touches and the touch selection;
+  `scripts/vm/probe/vtouch.py`, a uinput multi-touch screen (python3-evdev, installed on the VM with apt) driven
+  through a FIFO.
+- **VM (GNOME 46 X11, Xorg 21.1.11, XI 2.4), 2026-10-26.** `xinput list` shows the virtual device as a slave pointer
+  with `XITouchClass`, mode direct, 10 touches. Evidence `evidence/t030/vm-app/` (APP, trace builds; logs are the
+  APPs' stderr) and `evidence/t030/vm-reaper-controls-{clap,vst3}/` (REAPER, Release builds, `vm/probe/touch-reaper.sh`).
+  - IGraphicsTest APP: "touches selected" at open; a one-finger tap selects the MultiTouch page (`igt3.png`);
+    two fingers on the multi-touch test control draw two independent tracks (`igt-held2.png`); one finger on that
+    control and one on the Value slider at once move both (`igt-two-controls-held.png`: 1 touch on the control, the
+    slider at 29 %); a third finger 0.6 s after the first two works too (`igt-three-held.png`). The trace shows only
+    `touch` lines for all of these, no `press button` (`t030-igt.log`): the emulated mouse never reaches the editor.
+  - IPlugControls APP: IVKnobControl and the XY pad dragged by two fingers at once (`ctl-two-held.png`: gain 70.24 %,
+    pad moved); one finger on ISVGKnobControl (`ctl-single-knob.png`: 55.24 %); the mouse drags the horizontal slider
+    (`ctl-mouse.png` and its crop: 21.60 %). A temporary motion trace (`t030-ctl2.log`) shows the only core events
+    during touches: one MotionNotify without buttons where a finger lands (the server moves the pointer there, so
+    hover follows the first finger), and the warp back after a knob's cursor lock. No motion with Button1 state.
+  - REAPER CLAP and VST3 (IPlugControls Release): two fingers change gain and Freq 1/2 at once, one finger gain,
+    then the mouse gain: 5/5 PASS each, by the parameter values REAPER reports (`params-*.txt`).
+  - **Not ours, seen on this desktop:** (1) three fingers landing together never reach any client: GNOME Shell's
+    three-finger gestures take them through Mutter's touch grab on the root window; staggered they work.
+    (2) The first mouse press after any touch is lost, in xev too (`t030-xev.log`) and with an APP that did not
+    select touches (`t030-igt-b.log`, started before the device existed, so touches came as emulated mouse events):
+    Mutter/XTEST, not the editor. The probes click once on the background first.
+  - The uinput device was removed afterwards (`xinput list` has no `t030` entry).
