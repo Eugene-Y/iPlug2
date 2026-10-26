@@ -1135,6 +1135,7 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
   Impl& w = *mImpl;
   const XButtonEvent& button = event.xbutton;
   TRACE_INPUT("%s button %u at %d,%d\n", event.type == ButtonPress ? "press" : "release", button.button, button.x, button.y);
+  SetTabletInput(false);
   const float scale = GetTotalScale();
   const float x = button.x / scale;
   const float y = button.y / scale;
@@ -1193,6 +1194,7 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
 void IGraphicsLinux::HandleMotion(const XEvent& event)
 {
   Impl& w = *mImpl;
+  SetTabletInput(false);
   XEvent latest = event;
   // Coalesce only motion that is next in the queue, so that motion never overtakes a button release.
   while (XEventsQueued(w.mDisplay, QueuedAlready) > 0)
@@ -1242,6 +1244,8 @@ void IGraphicsLinux::HandleTouch(const XEvent& event)
   TRACE_INPUT("touch %lu phase %d at %.1f,%.1f\n", static_cast<unsigned long>(touch.id), static_cast<int>(touch.phase), touch.x, touch.y);
 
   w.mLastEventTime = touch.time;
+  // As on mac and Windows, a finger neither locks the pointer nor moves it: the X server moves it with the first finger.
+  SetTabletInput(true);
   const float scale = GetTotalScale();
   IMouseInfo info;
   info.x = touch.x / scale;
@@ -1852,7 +1856,7 @@ void IGraphicsLinux::HideMouseCursor(bool hide, bool lock)
     w.mHiddenCursorX = w.mCursorX;
     w.mHiddenCursorY = w.mCursorY;
     mCursorHidden = true;
-    mCursorLock = lock;
+    mCursorLock = lock && !mTabletInput;
   }
   else
   {
@@ -1872,7 +1876,7 @@ void IGraphicsLinux::HideMouseCursor(bool hide, bool lock)
 void IGraphicsLinux::MoveMouseCursor(float x, float y)
 {
   Impl& w = *mImpl;
-  if (!w.mWindowAlive)
+  if (!w.mWindowAlive || mTabletInput)
     return;
   const float scale = GetTotalScale();
   ScopedXErrorTrap trap(w.mDisplay);
