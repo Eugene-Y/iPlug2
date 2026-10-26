@@ -2,7 +2,8 @@
 # Start REAPER (aarch64/x86_64 Linux build in /opt/REAPER) with a fresh profile and the given plugins
 # installed into that profile's ~/.clap / ~/.vst3. Runs INSIDE the GUI container (gx.sh).
 # Usage: reaper-up.sh <plugin.clap|plugin.vst3|reaper_<ext>.so> ...
-#   An extension goes into the profile's UserPlugins/, with a <ext>/ folder beside it if there is one (web UI files).
+#   An extension goes into the profile's UserPlugins/, with a <ext>/ folder beside it if there is one (web UI files)
+#   and its reaper_<ext>.resources/ (a web view's helper).
 # Env: REAPER_EXIT_FILE=<path>: REAPER's exit status is written there when it ends.
 #      REAPER_UI_SCALE=1.5 sets SWELL's ui_scale (REAPER's own HiDPI setting, which it passes on to CLAP set_scale
 #      and VST3 setContentScaleFactor).
@@ -23,7 +24,9 @@ for p in "$@"; do
     */reaper_*.so)
             mkdir -p "$HOME/.config/REAPER/UserPlugins"; cp -a "$p" "$HOME/.config/REAPER/UserPlugins/"
             ext=$(basename "$p" .so); ext="${ext#reaper_}"
-            [ -d "$(dirname "$p")/$ext" ] && cp -a "$(dirname "$p")/$ext" "$HOME/.config/REAPER/UserPlugins/";;
+            [ -d "$(dirname "$p")/$ext" ] && cp -a "$(dirname "$p")/$ext" "$HOME/.config/REAPER/UserPlugins/"
+            # a web view's helper, in <module stem>.resources/ beside the extension
+            [ -d "${p%.so}.resources" ] && cp -a "${p%.so}.resources" "$HOME/.config/REAPER/UserPlugins/";;
   esac
 done
 # Unused while reaper.ini selects Dummy Audio (linux_audio_mode=2), which already runs an audio thread without a

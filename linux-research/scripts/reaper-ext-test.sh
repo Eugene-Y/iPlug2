@@ -46,8 +46,6 @@ editor_check() {
   echo "editor[$1]: $id ${w}x${h}+$x+$y in a ${cw}x${ch} client"
   [ "$w" -gt 0 ] || { fail "editor[$1]: no editor window under $3"; return; }
   [ "$w" = "$cw" ] && [ "$h" = "$ch" ] || fail "editor[$1]: ${w}x${h}, client ${cw}x${ch}"
-  # the web view's stand-in is SWELL's empty X bridge until T-017
-  [ "$NAME" = IPlugReaperExtensionWebUI ] && return
   paint_check "$2" "$1" "$x" "$y" "$w" "$h"
 }
 
@@ -62,7 +60,6 @@ W=$(dialog_win); [ -n "$W" ] || { fail "Show/Hide opened no '$NAME Window'"; fin
 echo "window toggle: $(toggle_state "$SHOWHIDE")"
 import -window root "$OUT/e01-open.png"; alive open
 if [ "$NAME" = IPlugReaperExtensionWebUI ]; then
-  echo "(the web view itself waits for T-017: only the window and its X bridge are checked)"
   editor_check open "$OUT/e01-open.png" "$W"
 else
   editor_check open "$OUT/e01-open.png" "$W"
