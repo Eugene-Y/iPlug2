@@ -238,6 +238,13 @@ does, that is its general behaviour (§9).
   Parameter changes are merged meanwhile: the host gets the last value of each parameter, as one gesture. The latency
   the host reads is the new one at once.
 
+- **Multi-touch works as on Windows: the layout function enables it** (`EnableMultiTouch(true)`). With it, on an X
+  server with XInput 2.2 and a touchscreen, every finger is a touch of its own (`IMouseMod::touchID`), so two fingers
+  drive two controls at once; a double tap is not a double click. Without it, or without XInput 2.2 or a touchscreen
+  when the editor opens, a touch stays the mouse the X server emulates from the first finger.
+  `PlatformSupportsMultiTouch()` knows the answer once the editor's window is open, which is when the layout function
+  runs. The desktop may claim some gestures first: GNOME on X11 takes three fingers that land together.
+
 - **Dialogs are asynchronous only.** `PromptForFile`, `PromptForDirectory`, `PromptForColor` and `ShowMessageBox`
   return at once on Linux, as on iOS, and the answer arrives later in the completion handler, on the host's main
   thread. A plug-in cannot block there: a nested event loop would pump only the plug-in's own window and freeze the
