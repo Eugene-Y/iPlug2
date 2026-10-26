@@ -1,0 +1,8 @@
+<html><body>remote
+<script>
+window.addEventListener('message', e => IPlugSendMsg({via: 'sandboxed-iframe', data: String(e.data)}));
+fetch('iplug2:/etc/hostname').then(r => r.text()).then(t => IPlugSendMsg({via: 'direct', data: t}))
+  .catch(err => IPlugSendMsg({via: 'direct', error: String(err)}));
+</script>
+<iframe sandbox="allow-scripts" srcdoc="<script>fetch('iplug2:/etc/hostname').then(r=>r.text()).then(t=>parent.postMessage('READ:'+t,'*')).catch(e=>parent.postMessage('ERR:'+e,'*'))</script>"></iframe>
+</body></html>
