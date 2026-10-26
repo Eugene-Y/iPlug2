@@ -303,6 +303,10 @@ if(NOT TARGET iPlug2::Extras::IWebViewControl)
     target_sources(iPlug2::Extras::IWebViewControl INTERFACE
       ${IPLUG_DIR}/Extras/WebView/IPlugWebView_linux.cpp
     )
+    find_package(X11 REQUIRED)
+    target_include_directories(iPlug2::Extras::IWebViewControl INTERFACE ${X11_INCLUDE_DIR})
+    target_link_libraries(iPlug2::Extras::IWebViewControl INTERFACE ${X11_LIBRARIES})
+    include(${CMAKE_CURRENT_LIST_DIR}/Linux/WebViewHelper.cmake)
   endif()
 
   target_include_directories(iPlug2::Extras::IWebViewControl INTERFACE

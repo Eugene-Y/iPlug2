@@ -151,6 +151,11 @@ function(iplug_configure_reaperext target project_name)
       PREFIX ""
     )
     iplug_linux_restrict_exports(${target} ${IPLUG2_LINUX_EXPORT_MAPS_DIR}/reaperext-exports.map)
+    # A bare module's web view finds its helper in <stem>.resources/ beside it
+    get_target_property(_links ${target} LINK_LIBRARIES)
+    if(_links AND "iPlug2::WebView" IN_LIST _links AND COMMAND iplug_linux_bundle_webview_helper)
+      iplug_linux_bundle_webview_helper(${target} "${REAPER_EXT_OUTPUT_DIR}/${reaper_ext_name}.resources")
+    endif()
   endif()
 
   # Auto-deploy to REAPER UserPlugins if enabled

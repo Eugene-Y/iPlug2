@@ -91,9 +91,10 @@ if(NOT TARGET iPlug2::WebView)
     )
   elseif(UNIX AND NOT APPLE)
     set(WEBVIEW_SRC
-      ${WEBVIEW_DIR}/IPlugWebViewEditorDelegate.cpp
+      ${WEBVIEW_DIR}/IPlugWebViewEditorDelegate_linux.cpp
       ${WEBVIEW_DIR}/IPlugWebView_linux.cpp
     )
+    include(${CMAKE_CURRENT_LIST_DIR}/Linux/WebViewHelper.cmake)
   endif()
 
   target_sources(iPlug2::WebView INTERFACE ${WEBVIEW_SRC})
@@ -132,6 +133,8 @@ if(NOT TARGET iPlug2::WebView)
       iPlug2::IPlug
     )
   elseif(UNIX AND NOT APPLE)
-    target_link_libraries(iPlug2::WebView INTERFACE iPlug2::IPlug)
+    find_package(X11 REQUIRED)
+    target_include_directories(iPlug2::WebView INTERFACE ${X11_INCLUDE_DIR})
+    target_link_libraries(iPlug2::WebView INTERFACE iPlug2::IPlug ${X11_LIBRARIES})
   endif()
 endif()

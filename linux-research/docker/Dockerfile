@@ -73,3 +73,7 @@ RUN mkdir -p /tmp/xdg && chmod 700 /tmp/xdg
 RUN apt-get update && apt-get install -y --no-install-recommends xclip xsel \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /work
+
+# T-017: WebKitGTK for the out-of-process WebView helper (own last layer, so the layers above stay cached)
+RUN apt-get update && apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
+    && rm -rf /var/lib/apt/lists/*

@@ -90,11 +90,13 @@ bool IPlugAPPHost::OpenWindow(HWND pParent)
   void* pView = mIPlug->OpenWindow(x11Parent);
   if (pView && gdkWnd)
   {
-    // SWELL draws the menu bar into the same X window, so the editor's child window goes below it.
+    // SWELL draws the menu bar into the same X window, so the editor's child window goes below it. Both
+    // positions from SWELL's own record of the window: GetWindowRect() asks the X server, which may not have
+    // the window's latest move yet (seen when it is resized before this).
     POINT clientOrigin { 0, 0 };
     ClientToScreen(pParent, &clientOrigin);
     RECT windowRect;
-    GetWindowRect(pParent, &windowRect);
+    GetWindowContentViewRect(pParent, &windowRect);
     Display* pDisplay = GDK_WINDOW_XDISPLAY(gdkWnd);
     XMoveWindow(pDisplay, (Window)(uintptr_t)pView, clientOrigin.x - windowRect.left, clientOrigin.y - windowRect.top);
     XFlush(pDisplay);

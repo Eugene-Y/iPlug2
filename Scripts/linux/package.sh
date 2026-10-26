@@ -152,7 +152,7 @@ check_binary() {  # file kind report
     echo "build-id: $(readelf -n "$f" | sed -n 's/.*Build ID: //p')"
     echo "GLIBC floor: $floor"
     echo "NEEDED: $(needed "$f" | tr '\n' ' ')"
-    if [ "$kind" = app ]; then
+    if [ "$kind" = app ] || [ "$kind" = helper ]; then
       echo "exports: $(exports "$f" | wc -l) symbols"
     else
       echo "exports: $(exports "$f" | tr '\n' ' ')"
@@ -167,10 +167,10 @@ check_binary() {  # file kind report
   case "$kind" in
     clap) bad="$(exports "$f" | grep -vx clap_entry || true)" ;;
     vst3) bad="$(exports "$f" | grep -vxE 'GetPluginFactory|ModuleEntry|ModuleExit' || true)" ;;
-    app)  bad="" ;;
+    app|helper) bad="" ;;
   esac
   [ -z "$bad" ] || { echo "$f exports more than its entry points: $bad" >&2; ok=1; }
-  if [ "$kind" != app ]; then
+  if [ "$kind" != app ] && [ "$kind" != helper ]; then
     bad="$(needed "$f" | grep -vxE 'libX11\.so\.6|libc\.so\.6|libm\.so\.6|ld-linux.*\.so\.[0-9]+' || true)"
     [ -z "$bad" ] || { echo "$f needs libraries a plug-in must not: $bad" >&2; ok=1; }
   fi
@@ -218,6 +218,10 @@ package_variant() {  # variant-spec
 
   local name targets=() fmt
   name="$(sed -n 's/^CMAKE_PROJECT_NAME:STATIC=//p' "$build/CMakeCache.txt")"
+  # A web view UI without its helper would only show an error: refuse to pack it.
+  if grep -q '^IPLUG2_LINUX_WEBVIEW_HELPER_MISSING:INTERNAL=ON' "$build/CMakeCache.txt"; then
+    die "the project has a web view, but webkit2gtk-4.1 (2.40+) is missing in the build environment, so its helper is not built: install libwebkit2gtk-4.1-dev"
+  fi
   for fmt in $FORMATS; do
     case "$fmt" in clap|vst3|app) targets+=("$name-$fmt") ;; *) die "--formats: unknown format $fmt" ;; esac
   done
@@ -257,6 +261,14 @@ package_variant() {  # variant-spec
         check_binary "$stage/Standalone/$name" app "$report" || failed=1 ;;
     esac
   done
+  # The WebView helper (one copy per format's resource folder): symbols split like the plug-ins'
+  local helper
+  HAS_WEBVIEW_HELPER=0
+  while IFS= read -r helper; do
+    HAS_WEBVIEW_HELPER=1
+    split_symbols "$helper" "$dstage"
+    check_binary "$helper" helper "$report" || failed=1
+  done < <(find "$stage" -type f -name iplug2-webview-helper | sort)
   local doc
   for doc in "${DOCS[@]+"${DOCS[@]}"}"; do cp "$PROJECT_DIR/$doc" "$stage/"; done
   if [ -n "$ICON" ] && has_format app; then
@@ -270,6 +282,7 @@ package_variant() {  # variant-spec
   normalize_modes "$dstage"
   chmod 755 "$stage/install.sh"
   [ ! -d "$stage/Standalone" ] || chmod 755 "$stage/Standalone/$name"
+  find "$stage" -type f -name iplug2-webview-helper -exec chmod 755 {} +
 
   deterministic_tar "$OUT/$pkg.tar.gz" "$(dirname "$stage")" "$pkg"
   deterministic_tar "$OUT/${pkg}_debug-symbols.tar.gz" "$(dirname "$dstage")" "${pkg}_debug-symbols"
@@ -409,6 +422,11 @@ Requirements
   - libX11, and an OpenGL 2.1 driver (libGL.so.1, from Mesa or your GPU vendor).
   - Optional: libfontconfig (fonts in menus), libXcursor (themed cursors), and zenity,
     kdialog or xdg-desktop-portal for file dialogs.
+EOF
+    [ "$HAS_WEBVIEW_HELPER" = 0 ] || cat <<EOF
+  - Its user interface is a web view: WebKitGTK 4.1, version 2.40 or newer
+    (libwebkit2gtk-4.1-0 on Debian/Ubuntu, webkit2gtk4.1 on Fedora). It runs in a
+    helper program of its own (iplug2-webview-helper, in the resource folders).
 EOF
     has_format app && cat <<EOF
   - The standalone application also needs GTK 3, ALSA, PulseAudio and JACK client

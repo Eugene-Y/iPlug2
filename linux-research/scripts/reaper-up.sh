@@ -2,10 +2,12 @@
 # Start REAPER (aarch64/x86_64 Linux build in /opt/REAPER) with a fresh profile and the given plugins
 # installed into that profile's ~/.clap / ~/.vst3. Runs INSIDE the GUI container (gx.sh).
 # Usage: reaper-up.sh <plugin.clap|plugin.vst3|reaper_<ext>.so> ...
-#   An extension goes into the profile's UserPlugins/, with a <ext>/ folder beside it if there is one (web UI files).
+#   An extension goes into the profile's UserPlugins/, with a <ext>/ folder beside it if there is one (web UI files)
+#   and its reaper_<ext>.resources/ (a web view's helper).
 # Env: REAPER_EXIT_FILE=<path>: REAPER's exit status is written there when it ends.
 #      REAPER_UI_SCALE=1.5 sets SWELL's ui_scale (REAPER's own HiDPI setting, which it passes on to CLAP set_scale
 #      and VST3 setContentScaleFactor).
+#      REAPER_WRAPPER="stdbuf -oL -eL" runs REAPER through that command (line-buffered plug-in printf output).
 # Then drive it with rpr.sh '<lua>' ; screenshots with shot.sh.
 set -euo pipefail
 export HOME=/tmp/rhome
@@ -22,7 +24,9 @@ for p in "$@"; do
     */reaper_*.so)
             mkdir -p "$HOME/.config/REAPER/UserPlugins"; cp -a "$p" "$HOME/.config/REAPER/UserPlugins/"
             ext=$(basename "$p" .so); ext="${ext#reaper_}"
-            [ -d "$(dirname "$p")/$ext" ] && cp -a "$(dirname "$p")/$ext" "$HOME/.config/REAPER/UserPlugins/";;
+            [ -d "$(dirname "$p")/$ext" ] && cp -a "$(dirname "$p")/$ext" "$HOME/.config/REAPER/UserPlugins/"
+            # a web view's helper, in <module stem>.resources/ beside the extension
+            [ -d "${p%.so}.resources" ] && cp -a "${p%.so}.resources" "$HOME/.config/REAPER/UserPlugins/";;
   esac
 done
 # Unused while reaper.ini selects Dummy Audio (linux_audio_mode=2), which already runs an audio thread without a
@@ -39,10 +43,10 @@ EOF
 if [ -n "${REAPER_EXIT_FILE:-}" ]; then
   # A parent that outlives REAPER records how it ended (exit status 128+N = killed by signal N).
   rm -f "$REAPER_EXIT_FILE"
-  ( /opt/REAPER/reaper -nosplash -new > /tmp/reaper.log 2>&1; echo $? > "$REAPER_EXIT_FILE" ) &
+  ( ${REAPER_WRAPPER:-} /opt/REAPER/reaper -nosplash -new > /tmp/reaper.log 2>&1; echo $? > "$REAPER_EXIT_FILE" ) &
   for i in $(seq 50); do pgrep -n -x reaper > /tmp/reaper.pid && break; sleep 0.1; done
 else
-  nohup /opt/REAPER/reaper -nosplash -new > /tmp/reaper.log 2>&1 &
+  nohup ${REAPER_WRAPPER:-} /opt/REAPER/reaper -nosplash -new > /tmp/reaper.log 2>&1 &
   echo $! > /tmp/reaper.pid
 fi
 for i in $(seq 100); do xdotool search --name '^REAPER v' >/dev/null 2>&1 && break; sleep 0.2; done
