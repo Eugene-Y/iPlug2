@@ -165,3 +165,16 @@ I re-checked 146b9987d against every round-1 finding, with the fresh builds in `
   - Serve only files under the folders the plug-in itself navigated to with the scheme. The plug-in sees every navigation (`kIPlugWVNavigationRequest`), so it can pass each loaded page's folder to the helper. That keeps `LoadURL("<scheme>:/path")` working as on mac.
   - Or document the limitation (no remote content in a web view with a custom scheme) in `Documentation/linux-development.md` §10 and record it as a known gap.
 - **Follow-up or blocker:** the coordinator or the user decides.
+
+## Round 2 — fix (worker)
+
+- R2-1 (option 1, the coordinator's decision): the helper's scheme handler serves only files (after `realpath`: no
+  `..`, no symlink escapes) under the folders of the pages the plug-in itself loaded with the scheme
+  (`kIPlugWVLoadURL` with `<scheme>:<path>`, which `LoadFile()` also sends); anything else is an HTTP 403. Page
+  content cannot add a folder. `Access-Control-Allow-Origin: null` stays (the scheme's own pages are opaque-origin;
+  module scripts need it).
+  - The reviewer's CORS probe again: the direct fetch fails as before, and the sandboxed srcdoc iframe now gets
+    "Load failed" instead of the file (`evidence/t017/r3-cors-result.txt`).
+  - Helper probe: module script loads; from a scheme page in `/tmp`, `iplug2:/tmp/mod.js` 200,
+    `iplug2:/etc/hostname` 403, `iplug2:/tmp/../etc/hostname` 403 (`evidence/t017/r3-helper-probe.txt`).
+  - Svelte renders (hashed module assets), IPlugWebUI APP PASS, IPlugWebUI CLAP in REAPER (below).  IPlugWebUI CLAP in REAPER: PASS, 20x churn, fds 6 before/after.

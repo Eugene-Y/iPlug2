@@ -85,6 +85,10 @@ open('/tmp/t017-probe.html', 'w').write("<html><head><script type=module src='mo
 open('/tmp/mod.js', 'w').write("IPlugSendMsg({msg: 'module-loaded', origin: location.href});")
 a.sendall(frame('LoadURL', 'iplug2:/tmp/t017-probe.html'))
 pump(5)
+# the scheme serves only the folders the plug-in loaded pages from: /tmp here, not /etc
+a.sendall(frame('Evaluate', 0, "for (const u of ['iplug2:/tmp/mod.js', 'iplug2:/etc/hostname', 'iplug2:/tmp/../etc/hostname'])"
+                "fetch(u).then(r => IPlugSendMsg({url: u, status: r.status})).catch(e => IPlugSendMsg({url: u, error: '' + e}))"))
+pump(3)
 a.close()
 time.sleep(1.5)
 gone = os.waitpid(pid, os.WNOHANG)

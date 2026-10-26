@@ -125,5 +125,13 @@
 - Review round 1: CHANGES REQUESTED (R1-1 major: the REAPER extension's web view at UI scale 2; minors R1-2..R1-6,
   nits). All fixed or answered in `notes/39-review-T-017.md`. Cross-platform finding X-1 (low): mac's custom scheme
   handler (`IPlugWKWebViewScriptMessageHandler.mm:74-118`) serves any absolute path to the page.
-- Next: review round 2.
+- Review round 2: APPROVED, with R2-1 (minor, security): a sandboxed iframe of remote content (origin "null") could
+  read any local file through the custom scheme. Fixed (coordinator's choice, option 1): the scheme serves only files
+  under the folders of the pages the plug-in loaded with it, else 403. CORS probe now fails in the iframe too; Svelte,
+  IPlugWebUI CLAP and APP pass again (`notes/39`).
+- Remaining mac behaviour (X-1, cross-platform, low; not changed): mac's custom scheme handler
+  (`IPlugWKWebViewScriptMessageHandler.mm:74-118`) serves any absolute path to the page that asks. It sends no
+  Access-Control-Allow-Origin header, so other origins cannot read the responses, but the scheme's own pages can read
+  any file.
+- Next: review round 3 (R2-1 fix).
 

@@ -315,3 +315,6 @@ package with a web view (§7).
 - **Transparent web views** (`opaque = false`) draw on the helper's own window, which X11 does not blend with the
   IGraphics UI beneath: the area behind the page is not the plug-in's UI.
 - **Links** that open a new window (`target="_blank"`) open in the default browser.
+- **The custom URL scheme** serves only files in the folders of the pages the plug-in loads with it
+  (`LoadFile()`, `LoadURL("<scheme>:/…")`) and below them; anything else gets 403, so content in the page (a remote
+  iframe) cannot read other files.

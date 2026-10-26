@@ -53,6 +53,7 @@ typedef struct
   gint64 nextId;
   GHashTable* pendingDecisions; /* id -> WebKitPolicyDecision */
   GHashTable* pendingDownloads; /* id -> WebKitDownload */
+  GPtrArray* schemeRoots; /* the folders the plug-in loaded pages from with the custom scheme, resolved */
   gboolean loadFailed;
 } Helper;
 
@@ -144,6 +145,55 @@ static gpointer Forget(GHashTable* pTable, gint64 id)
 
 static void OnEvaluated(GObject* source, GAsyncResult* result, gpointer data);
 
+/** @return the file path a <scheme>:<path> URL names, resolved (no "..", no symlinks); NULL if it does not exist */
+static char* ResolveSchemePath(const char* escapedPath)
+{
+  char* path = escapedPath ? g_uri_unescape_string(escapedPath, NULL) : NULL;
+  char* resolved = path && path[0] == '/' ? realpath(path, NULL) : NULL;
+  g_free(path);
+  return resolved;
+}
+
+/* The custom scheme serves only the folders of the pages the plug-in itself loads with it (LoadFile, LoadURL), and
+ * what is below them. Page content cannot add one: a page that is not the plug-in's, e.g. a sandboxed iframe of
+ * remote content (its origin is "null", as the scheme's own pages'), must not read the user's files. */
+static void AllowSchemeFolderOf(const char* url)
+{
+  const char* scheme = sHelper.options.scheme;
+  const size_t schemeLength = scheme ? strlen(scheme) : 0;
+  if (!schemeLength || strncmp(url, scheme, schemeLength) != 0 || url[schemeLength] != ':')
+    return;
+  char* escapedPath = g_strdup(url + schemeLength + 1);
+  escapedPath[strcspn(escapedPath, "?#")] = '\0';
+  char* folder = g_path_get_dirname(escapedPath);
+  char* resolved = ResolveSchemePath(folder);
+  g_free(folder);
+  g_free(escapedPath);
+  if (!resolved)
+    return;
+  for (guint i = 0; i < sHelper.schemeRoots->len; i++)
+  {
+    if (!strcmp(g_ptr_array_index(sHelper.schemeRoots, i), resolved))
+    {
+      free(resolved);
+      return;
+    }
+  }
+  g_ptr_array_add(sHelper.schemeRoots, resolved);
+}
+
+static gboolean IsInSchemeFolder(const char* path)
+{
+  for (guint i = 0; i < sHelper.schemeRoots->len; i++)
+  {
+    const char* root = g_ptr_array_index(sHelper.schemeRoots, i);
+    const size_t length = strlen(root);
+    if (!strncmp(path, root, length) && (path[length] == '/' || (length == 1 && root[0] == '/')))
+      return TRUE;
+  }
+  return FALSE;
+}
+
 static void HandleMessage(uint32_t type, IPlugWVReader* r)
 {
   Helper* h = &sHelper;
@@ -161,7 +211,10 @@ static void HandleMessage(uint32_t type, IPlugWVReader* r)
     {
       char* url = IPlugWVReadString(r);
       if (url)
+      {
+        AllowSchemeFolderOf(url);
         webkit_web_view_load_uri(h->view, url);
+      }
       free(url);
       break;
     }
@@ -476,22 +529,37 @@ static const char* MimeTypeForPath(const char* path)
   return "application/octet-stream";
 }
 
-/* <scheme>:<absolute path> serves that file, as mac's WKURLSchemeHandler does: LoadFile() names the page that way,
- * and relative URLs in it resolve to the files beside it. */
+static void FinishWithStatus(WebKitURISchemeRequest* pRequest, guint status, const char* reason)
+{
+  GInputStream* pEmpty = g_memory_input_stream_new();
+  WebKitURISchemeResponse* pResponse = webkit_uri_scheme_response_new(pEmpty, 0);
+  webkit_uri_scheme_response_set_status(pResponse, status, reason);
+  webkit_uri_scheme_request_finish_with_response(pRequest, pResponse);
+  g_object_unref(pResponse);
+  g_object_unref(pEmpty);
+}
+
+/* <scheme>:<absolute path> serves that file, as mac's WKURLSchemeHandler does, if it is in one of the plug-in's web
+ * folders: LoadFile() names the page that way, and relative URLs in it resolve to the files beside it. */
 static void OnSchemeRequest(WebKitURISchemeRequest* pRequest, gpointer data)
 {
-  const char* rawPath = webkit_uri_scheme_request_get_path(pRequest);
-  char* path = rawPath ? g_uri_unescape_string(rawPath, NULL) : NULL;
+  char* path = ResolveSchemePath(webkit_uri_scheme_request_get_path(pRequest));
   char* contents = NULL;
   gsize length = 0;
   GError* pError = NULL;
+  if (path && !IsInSchemeFolder(path))
+  {
+    FinishWithStatus(pRequest, 403, "Forbidden");
+    free(path);
+    return;
+  }
   if (!path || !g_file_get_contents(path, &contents, &length, &pError))
   {
     if (!pError)
       pError = g_error_new_literal(G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "not found");
     webkit_uri_scheme_request_finish_error(pRequest, pError);
     g_error_free(pError);
-    g_free(path);
+    free(path);
     return;
   }
 
@@ -499,14 +567,15 @@ static void OnSchemeRequest(WebKitURISchemeRequest* pRequest, gpointer data)
   WebKitURISchemeResponse* pResponse = webkit_uri_scheme_response_new(pStream, (gint64) length);
   webkit_uri_scheme_response_set_content_type(pResponse, MimeTypeForPath(path));
   /* Such URLs have no host, so their origin is opaque ("null"): module scripts and fetch() count every load as
-   * cross-origin. Allowing only that origin lets the scheme's own pages read these files, not web content. */
+   * cross-origin. Only that origin may read the files; other opaque-origin documents (sandboxed iframes) share it,
+   * which is why the files are only the plug-in's own (IsInSchemeFolder). */
   SoupMessageHeaders* pHeaders = soup_message_headers_new(SOUP_MESSAGE_HEADERS_RESPONSE);
   soup_message_headers_append(pHeaders, "Access-Control-Allow-Origin", "null");
   webkit_uri_scheme_response_set_http_headers(pResponse, pHeaders);
   webkit_uri_scheme_request_finish_with_response(pRequest, pResponse);
   g_object_unref(pResponse);
   g_object_unref(pStream);
-  g_free(path);
+  free(path);
 }
 
 /* ------------------------------------------------------------------------------------------------ setup */
@@ -652,6 +721,7 @@ int main(int argc, char** argv)
 
   h->pendingDecisions = g_hash_table_new_full(g_int64_hash, g_int64_equal, g_free, g_object_unref);
   h->pendingDownloads = g_hash_table_new_full(g_int64_hash, g_int64_equal, g_free, g_object_unref);
+  h->schemeRoots = g_ptr_array_new_with_free_func(free);
   gdk_event_handler_set(OnGdkEvent, NULL, NULL);
   h->view = MakeView(&h->options);
   h->plug = gtk_plug_new((Window) h->options.parent);
@@ -673,5 +743,6 @@ int main(int argc, char** argv)
     gtk_widget_destroy(h->plug);
   g_hash_table_destroy(h->pendingDecisions);
   g_hash_table_destroy(h->pendingDownloads);
+  g_ptr_array_unref(h->schemeRoots);
   return 0;
 }
