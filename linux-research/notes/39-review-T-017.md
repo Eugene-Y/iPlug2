@@ -122,3 +122,46 @@ Range: `hvoya-linux..linux/T-017` (3e013012e … d3b625b0c, 14 commits). Reviewe
 - Note on the focus episode: one line in `Documentation/linux-development.md` §10.
 - Regression after the fixes (Docker): IPlugWebUI CLAP 20x churn PASS (fds 6 before/after), helper probe, Svelte.
 
+
+## Round 2
+
+**Verdict: APPROVED.** No major finding is left. One minor finding (R2-1, R1-4's fix is incomplete) should get a decision: fix it now or file it as a follow-up.
+
+I re-checked 146b9987d against every round-1 finding, with the fresh builds in `build/t017-rel` (built after the last source change) in my own container `t017r` (now removed). I looked at the screenshots myself.
+
+### Round-1 findings
+- **R1-1 resolved.** The extension test at `REAPER_UI_SCALE=2` passes (`evidence/t017/review-r2-ext-scale2`): the page fills the 600×600 client at zoom 2, and the resized, docked, undocked and reopened states show no black band. The `#if … && !defined OS_LINUX` leaves mac/win as they were.
+- **R1-2 resolved.**
+  - A click into the page's "Select File" dialog now leaves X focus on the dialog; a later click into the page gives the plug the focus again (`review-r2-focus`).
+  - Typing into the page still works in REAPER (`review-r2-clap/typed.png`).
+- **R1-3 resolved.** No `all` target in `build/t017-rel/build.ninja` names the helper. The WebView targets still build and bundle it.
+- **R1-4 only partly resolved.** See R2-1.
+- **R1-5 resolved.** The helper gets `MakeChildEnvironment`. Keeping the spawn separate from `LinuxBackgroundProcess` is a fair answer.
+- **R1-6 resolved.** `hidpi/app-xft192` passes, and the 2× typed field is legible.
+- **R1-7 answered.** The same GDK warning appears in earlier IGraphics runs, so it is not from T-017.
+- **R1-8, R1-9, R1-10 resolved** (read):
+  - an input-buffer failure ends the web view;
+  - the frames received with EOF are handled first, with the `alive`/`mSocket` guards kept;
+  - Xlib's queue is drained after the round trips in `OpenWebView` and `CheckFocus`.
+
+### Regression runs, all PASS
+- IPlugWebUI CLAP in REAPER, churn 10: fds 6 before and 6 after (`review-r2-clap`).
+- `IWebViewControl` with IPlugOSCEditor CLAP (`review-r2-iwvc`).
+- IPlugWebUI APP (`review-r2-app`).
+- Helper probe: module scripts over the custom scheme still load with the `null` ACAO.
+- `check-product-names.sh` is clean.
+
+### New findings
+
+**R2-1 (minor, security): a sandboxed iframe in remote content still reads any local file through the custom scheme.**
+- **Where:** `IPlug/Extras/WebView/IPlugWebViewLinuxHelper.c:479-504`.
+- **What happens:** `Access-Control-Allow-Origin: null` stops a direct `fetch()` from an http(s) page. But every sandboxed iframe, and every `data:`/`srcdoc` document, also has the opaque origin "null", so remote content only has to create one.
+- **Shown:** `evidence/t017/review-r2-cors`. An `http://127.0.0.1` page loaded with `LoadURL`:
+  - its direct `fetch('iplug2:/etc/hostname')` fails ("Load failed");
+  - its `<iframe sandbox="allow-scripts" srcdoc=…>` reads the file and posts it back (`READ:27d99e2dacad`).
+  - mac sends no ACAO header, so the same iframe is blocked there.
+- **Only matters when** a plug-in loads remote or untrusted content into a web view that has a custom scheme set.
+- **Fix, either of these:**
+  - Serve only files under the folders the plug-in itself navigated to with the scheme. The plug-in sees every navigation (`kIPlugWVNavigationRequest`), so it can pass each loaded page's folder to the helper. That keeps `LoadURL("<scheme>:/path")` working as on mac.
+  - Or document the limitation (no remote content in a web view with a custom scheme) in `Documentation/linux-development.md` §10 and record it as a known gap.
+- **Follow-up or blocker:** the coordinator or the user decides.
