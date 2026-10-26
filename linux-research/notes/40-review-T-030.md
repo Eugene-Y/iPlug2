@@ -138,3 +138,21 @@ on the whole desktop.**
   and the style matches the surrounding input code.
 - The evidence is honest, and the "not ours" desktop effects (GNOME's three-finger grab, the lost first click) are
   reproduced with `xev` and a baseline APP.
+
+### Fixes after round 1 (author, 87e8d2fef and later)
+
+- **M1:** `InitiateExternalFileDragDrop` refuses while the input is a finger (`mTabletInput`), with the reason as a
+  comment. VM (`scripts/vm/probe/touch-dragout.sh`, the round-1 probe with the square's real coordinates and the
+  screen size from `xdpyinfo`, plus a mouse drag-out): a touch drag on the square logs `start -> 0` and a third
+  client's `XGrabKeyboard` succeeds while the finger is held and after it lifts; a mouse drag from the square still
+  starts the drag (`start -> 1`, keyboard grabbed while held, free after the release).
+  Evidence `evidence/t030/vm-dragout-fixed/probe-output.txt`.
+- **m1:** a held finger counts like a held button in `UpdateEditingState` and `ShowDueTooltip` (`w.mTouch.AnyDown()`).
+- **m2:** `QueryTouchscreen` records the dependent touch devices (touchpads) and `Translate` drops their touches. It
+  does not keep a list of known touchscreens instead: once touches are selected the server no longer emulates the mouse
+  for this window, so a touchscreen plugged in after the open would otherwise do nothing at all.
+- **n1:** `Select` returns without a touchscreen.
+- **n2:** `vtouch.py` chmods its FIFO to 0666 and removes the device on SIGINT/SIGTERM; the VM README gives the
+  screen as 1368×863; `touch-dragout.sh` reads the size from `xdpyinfo`.
+- Re-run on the VM with the fixed Release builds: `touch-reaper.sh` CLAP and VST3, 5/5 PASS each
+  (`evidence/t030/vm-reaper-controls-{clap,vst3}/`, sheets regenerated).

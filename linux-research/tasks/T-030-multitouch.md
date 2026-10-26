@@ -61,6 +61,8 @@
   path without XInput touches): IPlugControls P3b CLAP/VST3 PASS, Sand CLAP/VST3 PASS, Gneiss CLAP PASS, Gneiss VST3
   FAIL (1) on the known REAPER VST3 context-menu step (`g04b-context-menu`, a synthetic click; the same failure in the
   T-009/T-032/T-038 merge smokes). Evidence `evidence/t030/docker-*`. Gneiss-linux and Sand-linux git status clean.
+- **Review round 1** (`notes/40-review-T-030.md`): changes required, 1 major (a touch could start a file drag-out
+  that kept the keyboard grabbed), 2 minor, 2 nits. All fixed in 87e8d2fef and checked on the VM (see the notes).
 
 ## Cross-platform findings
 - **Windows, unverified (read from the code, no Windows touchscreen here), medium for touchscreen users:**
