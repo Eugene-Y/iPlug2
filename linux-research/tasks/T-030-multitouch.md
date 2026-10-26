@@ -66,5 +66,5 @@
   at all, only the releases (`WM_LBUTTONUP` is not filtered). Repro: a plug-in without `EnableMultiTouch(true)` on a
   Windows touchscreen; tap a button. Linux does the opposite on purpose: without multi-touch, touches stay the emulated
   mouse.
-- `Tests/IGraphicsTest/IGraphicsTest.cpp:105` labels the page "MultiTouch (iOS/Win/Web only)"; it works on Linux now.
+- `Tests/IGraphicsTest/IGraphicsTest.cpp:102` labels the page "MultiTouch (iOS/Win/Web only)"; it works on Linux now.
   Left alone (shared test file).
