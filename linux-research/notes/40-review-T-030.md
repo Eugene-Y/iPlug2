@@ -156,3 +156,67 @@ on the whole desktop.**
   screen as 1368×863; `touch-dragout.sh` reads the size from `xdpyinfo`.
 - Re-run on the VM with the fixed Release builds: `touch-reaper.sh` CLAP and VST3, 5/5 PASS each
   (`evidence/t030/vm-reaper-controls-{clap,vst3}/`, sheets regenerated).
+
+## Round 2
+
+**Verdict: approve.** No major or minor finding left; one optional nit (r2-n1).
+
+### What I checked
+
+The fixes in 87e8d2fef, the probes and notes in 7b0ef1100, and the evidence in 1d42e5d4a (`git diff 3f4863e0f HEAD`).
+
+- **M1, fixed.** `InitiateExternalFileDragDrop` (`IGraphicsLinux.cpp:1918`) refuses while `mTabletInput`.
+  - `HandleTouch` sets the flag before it calls `OnMouseDown`/`OnMouseDrag`. A drag-out requested from a finger's drag is
+    therefore always refused.
+  - `HandleMotion` and `HandleButton` clear the flag before they dispatch. A mouse drag-out still works, even while
+    another finger is down.
+  - The comment states the WHY.
+  - Evidence (`evidence/t030/vm-dragout-fixed/probe-output.txt`):
+    - Touch: `start -> 0`. A third client's keyboard grab succeeds while the finger is held (Button1 DOWN on the
+      master), after it lifts, and after the mouse clicks.
+    - Mouse drag from the square: `start -> 1`. The grab is held while dragging and free after the release.
+  - The touch landed exactly on the square (`touch 1 phase 0 at 712.0,702.0`), because the size now comes from
+    `xdpyinfo`.
+- **m1, fixed.** `pressed = mButtonState || mTouch.AnyDown()` gates the three focus takes (`:1545`), and `ShowDueTooltip`
+  (`:2105`) checks the same. `AnyDown()` is true between a translated Begin and its End. With two fingers, the first
+  release's click flag is used up while the second finger is still down. The last release then takes the focus. That
+  is the same rule as for two mouse buttons.
+- **m2, fixed with a denylist.** Touches from dependent touch devices known at open are dropped
+  (`IGraphicsLinuxTouch.h:141`, `:151`). I accept the trade-off, and the author's argument holds:
+  - Once touches are selected, the server no longer emulates the mouse for this window.
+  - An allowlist would therefore make a touchscreen plugged in after the open completely dead.
+  - A touchpad plugged in after the open, whose driver exposes `XITouchClass`, is the rarer case. It is also the
+    milder failure (extra touches next to its pointer events).
+- **n1, fixed.** `Select` returns early without a touchscreen (`:60`). That also covers a display that `HasTouchscreen`
+  never saw (`mHasTouchscreen` false).
+- **n2, fixed.**
+  - `vtouch.py` chmods the FIFO.
+  - Its SIGINT/SIGTERM handlers raise `SystemExit`, so the `finally` removes the device. A Python handler also replaces
+    the inherited SIG_IGN of a background job.
+  - The VM README gives 1368×863.
+  - `touch-dragout.sh` and `kbgrab.c` are now in the repo.
+- The REAPER touch probe was re-run on the fixed builds: `vm-reaper-controls-{clap,vst3}/run.log`, 5/5 PASS each.
+- No shared, mac or win file changed in this round. `check-product-names.sh`: clean.
+
+### Re-run by me
+
+- Docker, `build/t030r2-ex` at 1d42e5d4a: IPlugControls CLAP, VST3 and APP build PASS. CLAP and VST3 still NEED only
+  libX11/libm/libc/ld.
+- REAPER GUI regression, container `t030r2` (removed afterwards), steps `iplugcontrols-p3b.txt`:
+  - CLAP PASS and VST3 PASS (`evidence/t030/review2-controls-{clap,vst3}/`).
+  - Draw, OnDisplayTimer and ProcessXEvents all run on tid 1.
+  - I opened `review2-controls-vst3/c01-knob-drag.png`: the editor is drawn and the knobs have moved.
+- VM: not re-run. The author's probe is my round-1 probe, which I checked line by line, and its output shows both
+  outcomes that matter (touch refused, mouse still starts the drag).
+
+### Findings
+
+**r2-n1 — nit, optional.** The touchpad list is a snapshot taken at open.
+
+- Instead, a `sourceid` not seen before could be classified on its first `TouchBegin` with one
+  `XIQueryDevice(sourceid)`, and the result cached.
+- That would handle hot-plugged devices both ways: a late touchscreen is accepted and a late touchpad is dropped.
+- It costs one round trip per new device, on the main thread. It is not needed for merge.
+
+**Probe output glitch.** `vm-dragout-fixed/probe-output.txt` starts with two stray lines (`XOK0`, `0`) left by the
+capture.
