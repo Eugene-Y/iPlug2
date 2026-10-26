@@ -55,6 +55,7 @@
 #include "IGraphicsLinuxAppearance.h"
 #include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxFontconfig.h"
+#include "IGraphicsLinuxTouch.h"
 
 using namespace iplug;
 using namespace igraphics;
@@ -482,6 +483,7 @@ struct IGraphicsLinux::Impl
   LinuxDragSource mDragSource;
   LinuxFileDrop mFileDrop;
   LinuxAppearance mAppearance;
+  LinuxTouch mTouch;
   std::chrono::steady_clock::time_point mAppearancePolledAt;
   bool mPasteKeyPending = false; // Ctrl+V of an edit, replayed once the clipboard's text is here
   IKeyPress mPasteKey { "v", 'V' };
@@ -737,6 +739,8 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     return fail("the drawing backend cannot start");
   }
   GetDelegate()->LayoutUI(this);
+  if (MultiTouchEnabled())
+    w.mTouch.Select(w.mWindow);
   GetDelegate()->OnUIOpen();
   SetAllControlsDirty();
   DeactivateGLContext();
@@ -1106,6 +1110,9 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
     case MotionNotify:
       HandleMotion(event);
       break;
+    case GenericEvent:
+      HandleTouch(event);
+      break;
     case LeaveNotify:
       HideTooltip();
       w.mTooltipIdx = -1;
@@ -1219,6 +1226,43 @@ void IGraphicsLinux::HandleMotion(const XEvent& event)
   const bool moved = info.dX != 0.f || info.dY != 0.f;
   if (*open && mCursorLock && moved)
     MoveMouseCursor(w.mHiddenCursorX, w.mHiddenCursorY);
+}
+
+// A touch is a press, drag and release of its own, without the double-clicks: those are mouse-only on Windows and iOS too.
+void IGraphicsLinux::HandleTouch(const XEvent& event)
+{
+  Impl& w = *mImpl;
+  LinuxTouch::Event touch;
+  if (!w.mTouch.Translate(event, touch))
+    return;
+
+  w.mLastEventTime = touch.time;
+  const float scale = GetTotalScale();
+  IMouseInfo info;
+  info.x = touch.x / scale;
+  info.y = touch.y / scale;
+  info.dX = touch.dX / scale;
+  info.dY = touch.dY / scale;
+  info.ms = MouseModFromState(touch.state | Button1Mask);
+  info.ms.touchID = touch.id;
+
+  switch (touch.phase)
+  {
+    case ETouchEvent::Began:
+      HideTooltip();
+      FinishFadingMenu();
+      FitMenusOnScreen();
+      OnMouseDown({ info });
+      break;
+    case ETouchEvent::Moved:
+      OnMouseDrag({ info });
+      break;
+    default:
+      w.mLastReleaseAt = std::chrono::steady_clock::now();
+      w.mClickedForFocus = true;
+      OnMouseUp({ info });
+      break;
+  }
 }
 
 void IGraphicsLinux::HandleConfigure(const XEvent& event)
@@ -1869,6 +1913,11 @@ bool IGraphicsLinux::InitiateExternalFileDragDrop(const char* path, const IRECT&
 EUIAppearance IGraphicsLinux::GetUIAppearance() const
 {
   return mImpl->mAppearance.IsDark() ? EUIAppearance::Dark : EUIAppearance::Light;
+}
+
+bool IGraphicsLinux::PlatformSupportsMultiTouch() const
+{
+  return mImpl->mDisplay && mImpl->mTouch.HasTouchscreen(mImpl->mDisplay);
 }
 
 bool IGraphicsLinux::SetFilePathInClipboard(const char* path)
