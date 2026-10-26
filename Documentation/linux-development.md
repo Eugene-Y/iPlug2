@@ -304,7 +304,8 @@ package with a web view (§7).
 **Behaviour to know:**
 - **Keyboard:** a click into the web view gives it the keyboard, as a first responder on macOS; keys typed then
   go to the page, not to the host, until the user clicks outside it. Host shortcuts work whenever the web view
-  has not been clicked.
+  has not been clicked. For a second after the click the web view asks for the keyboard again if the window
+  manager or the host moves it elsewhere within the same window (they answer the click too).
 - **Scaling:** the editor is sized in pixels like an IGraphics editor (the host's scale, else `Xft.dpi`), and the
   page is zoomed by that scale, so `Resize()` and the page's CSS pixels are the same units as on macOS. GTK dialogs
   the page opens (`<input type="file">`, `alert()`) are not scaled.

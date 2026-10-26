@@ -401,7 +401,9 @@ static void OnWebProcessTerminated(WebKitWebView* pView, WebKitWebProcessTermina
  * and the host can have taken the X focus back meanwhile; without it, typing into the page goes nowhere. */
 static void OnGdkEvent(GdkEvent* pEvent, gpointer data)
 {
-  if (pEvent->type == GDK_BUTTON_RELEASE && sHelper.plug)
+  /* Only the embedded page's: the page's own dialogs and the inspector are top-level windows of their own. */
+  if (pEvent->type == GDK_BUTTON_RELEASE && sHelper.plug && gdk_event_get_window(pEvent)
+      && gdk_window_get_toplevel(gdk_event_get_window(pEvent)) == gtk_widget_get_window(sHelper.plug))
     SendIntMessage(kIPlugWVFocusRequest, (int64_t) gdk_event_get_time(pEvent));
   gtk_main_do_event(pEvent);
 }
@@ -496,10 +498,10 @@ static void OnSchemeRequest(WebKitURISchemeRequest* pRequest, gpointer data)
   GInputStream* pStream = g_memory_input_stream_new_from_data(contents, (gssize) length, g_free);
   WebKitURISchemeResponse* pResponse = webkit_uri_scheme_response_new(pStream, (gint64) length);
   webkit_uri_scheme_response_set_content_type(pResponse, MimeTypeForPath(path));
-  /* Such URLs have no host, so their origin is opaque: module scripts and fetch() count every load as
-   * cross-origin. */
+  /* Such URLs have no host, so their origin is opaque ("null"): module scripts and fetch() count every load as
+   * cross-origin. Allowing only that origin lets the scheme's own pages read these files, not web content. */
   SoupMessageHeaders* pHeaders = soup_message_headers_new(SOUP_MESSAGE_HEADERS_RESPONSE);
-  soup_message_headers_append(pHeaders, "Access-Control-Allow-Origin", "*");
+  soup_message_headers_append(pHeaders, "Access-Control-Allow-Origin", "null");
   webkit_uri_scheme_response_set_http_headers(pResponse, pHeaders);
   webkit_uri_scheme_request_finish_with_response(pRequest, pResponse);
   g_object_unref(pResponse);

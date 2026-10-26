@@ -16,6 +16,7 @@
 #include "IPlugPaths.h"
 #include "IPlugWebViewLinuxIPC.h"
 #include "Linux/IPlugLinuxHostLoop.h"
+#include "Linux/IPlugLinuxSubprocess.h"
 
 #include <algorithm>
 #include <cerrno>
@@ -42,7 +43,6 @@
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>
 
-extern char** environ;
 
 BEGIN_IPLUG_NAMESPACE
 
@@ -327,6 +327,7 @@ void* IWebViewImpl::OpenWebView(void* pParent, float x, float y, float w, float 
     ShowFailure("The web view's helper program could not be started.");
   }
   XFlush(mDisplay);
+  ProcessXEvents();
   return reinterpret_cast<void*>(static_cast<uintptr_t>(mContainer));
 }
 
@@ -389,8 +390,12 @@ bool IWebViewImpl::StartHelper(const std::string& helperPath, const Rect& bounds
   sigfillset(&signals);
   posix_spawnattr_setsigdefault(&attributes, &signals);
 
+  WDL_TypedBuf<char*> env;
+  WDL_PtrList<WDL_String> envStorage;
+  MakeChildEnvironment(env, envStorage);
   pid_t pid = 0;
-  const int error = posix_spawn(&pid, "/bin/sh", &actions, &attributes, const_cast<char* const*>(argv), environ);
+  const int error = posix_spawn(&pid, "/bin/sh", &actions, &attributes, const_cast<char* const*>(argv), env.Get());
+  envStorage.Empty(true);
   posix_spawn_file_actions_destroy(&actions);
   posix_spawnattr_destroy(&attributes);
   close(helperEnd);
@@ -611,6 +616,7 @@ void IWebViewImpl::OnSocketReadable()
 {
   if (mSocket < 0)
     return;
+  bool ended = false;
   for (;;)
   {
     char chunk[65536];
@@ -622,12 +628,12 @@ void IWebViewImpl::OnSocketReadable()
     }
     if (count < 0 && errno == EINTR)
       continue;
-    if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
-      break;
-    // Before its first message it most likely could not load WebKitGTK at all.
-    OnHelperGone(mHelperReady ? "The web view's helper program stopped.\nClose and reopen the editor."
-                              : "The web view's helper program could not start.\n"
-                                "It needs WebKitGTK 4.1: libwebkit2gtk-4.1-0 (Debian, Ubuntu) or webkit2gtk4.1 (Fedora).");
+    ended = !(count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK));
+    break;
+  }
+  if (mIn.failed)
+  {
+    OnHelperGone("The web view ran out of memory.");
     return;
   }
 
@@ -641,6 +647,14 @@ void IWebViewImpl::OnSocketReadable()
     IPlugWVReader reader;
     const uint32_t type = IPlugWVReadFrameType(&reader, frame.data(), frame.size());
     HandleMessage(type, reader);
+  }
+  // What the helper sent before it ended is handled first, as on any socket.
+  if (ended && alive && *alive && mSocket >= 0)
+  {
+    // Before its first message it most likely could not load WebKitGTK at all.
+    OnHelperGone(mHelperReady ? "The web view's helper program stopped.\nClose and reopen the editor."
+                              : "The web view's helper program could not start.\n"
+                                "It needs WebKitGTK 4.1: libwebkit2gtk-4.1-0 (Debian, Ubuntu) or webkit2gtk4.1 (Fedora).");
   }
 }
 
@@ -896,27 +910,32 @@ void IWebViewImpl::CheckFocus()
     EndFocusEpisode();
     return;
   }
-  XErrorTrap trap(mDisplay);
-  Window focus = None;
-  int revert = 0;
-  XGetInputFocus(mDisplay, &focus, &revert);
-  if (focus == mPlug)
-    return;
-  // Another top-level window took it (alt-tab, a click elsewhere): the user moved on.
-  if (focus == None || focus == PointerRoot || TopLevelOf(focus) != TopLevelOf(mContainer))
   {
-    EndFocusEpisode();
-    LoseFocus();
-    return;
+    XErrorTrap trap(mDisplay);
+    Window focus = None;
+    int revert = 0;
+    XGetInputFocus(mDisplay, &focus, &revert);
+    if (focus != mPlug)
+    {
+      // Another top-level window took it (alt-tab, a click elsewhere): the user moved on.
+      if (focus == None || focus == PointerRoot || TopLevelOf(focus) != TopLevelOf(mContainer))
+      {
+        EndFocusEpisode();
+        LoseFocus();
+      }
+      else if (focus != mFocusWatched)
+      {
+        mFocusWatched = focus;
+        mFocusQuietSince = now;
+      }
+      else if (now - mFocusQuietSince > kFocusQuiet)
+      {
+        TakeFocus(CurrentTime);
+      }
+    }
   }
-  if (focus != mFocusWatched)
-  {
-    mFocusWatched = focus;
-    mFocusQuietSince = now;
-    return;
-  }
-  if (now - mFocusQuietSince > kFocusQuiet)
-    TakeFocus(CurrentTime);
+  // The round trips above can leave events in Xlib's queue, where no fd watch sees them.
+  ProcessXEvents();
 }
 
 void IWebViewImpl::EndFocusEpisode()

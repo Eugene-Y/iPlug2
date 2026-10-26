@@ -25,7 +25,8 @@ endif()
 if(IPLUG2_WEBKITGTK_FOUND AND NOT TARGET iplug2-webview-helper)
   # The helper is C: then it needs no C++ runtime of its own beside the one WebKitGTK loads.
   enable_language(C)
-  add_executable(iplug2-webview-helper ${IPLUG2_DIR}/IPlug/Extras/WebView/IPlugWebViewLinuxHelper.c)
+  # Built only for the targets that bundle it (add_dependencies below), not by every project's "all"
+  add_executable(iplug2-webview-helper EXCLUDE_FROM_ALL ${IPLUG2_DIR}/IPlug/Extras/WebView/IPlugWebViewLinuxHelper.c)
   target_include_directories(iplug2-webview-helper PRIVATE ${IPLUG2_DIR}/IPlug/Extras/WebView)
   target_link_libraries(iplug2-webview-helper PRIVATE PkgConfig::IPLUG2_WEBKITGTK)
   set_target_properties(iplug2-webview-helper PROPERTIES

@@ -96,3 +96,29 @@ Range: `hvoya-linux..linux/T-017` (3e013012e … d3b625b0c, 14 commits). Reviewe
 ### Notes (no change requested)
 - **Destruction order:** if a host destroyed the plug-in while the web view is open, `~WebViewEditorDelegate` → `CloseWebView` → `Unwatch` would use `IPlugAPIBase::mHostLoop` after it was destroyed. IGraphicsLinux has the same exposure, and hosts close editors first, so this is not a T-017 regression.
 - **Focus episode:** within the 1 s after a click, a focus change inside the same toplevel (an IGraphics text entry next to an `IWebViewControl`, or REAPER's FX-chain combo) is taken back after 100 ms. The design accepts this; it may deserve a line in the docs.
+
+## Round 1 — fixes (worker)
+
+- R1-1 (major): `ReaperExtBase.cpp` WM_INITDIALOG/WM_SIZE divide by the scale only off Linux (`#if defined
+  WEBVIEW_EDITOR_DELEGATE && !defined OS_LINUX`): the Linux delegate takes pixels and divides itself. Extension test at
+  `REAPER_UI_SCALE=2`: PASS, the page fills the client at zoom 2 (`evidence/t017/reaper-ext-webui-scale2`).
+- R1-2: the helper asks for the focus only for releases in the plug's own top-level window. Checked: a click into the
+  page's file dialog leaves the X focus on the dialog (`evidence/t017/focus-dialog/result.txt`).
+- R1-3: the helper target is `EXCLUDE_FROM_ALL`; the WebView targets still build it (add_dependencies).
+- R1-4: the custom scheme answers with `Access-Control-Allow-Origin: null` (only the scheme's own, opaque-origin pages),
+  not `*`. Module scripts still load (helper probe, Svelte renders). Serving only the web root would break a plain
+  `LoadURL("<scheme>:/path")`, which mac serves; kept as on mac. X-1 goes to the cross-platform findings.
+- R1-5: `MakeChildEnvironment` is now public in `IPlug/Linux/IPlugLinuxSubprocess.h` and the helper spawn uses it
+  (UTF-8 LC_CTYPE under a `LANG=C` host). The spawn itself stays separate: `LinuxBackgroundProcess` reads a status
+  line from stdout and kills a process group, the helper needs a socket on fd 3 and neither.
+- R1-6: that FAIL was the first 2x run, before the APP fix, and its quit used `xdotool windowclose` (the test now
+  closes with wmctrl or SIGTERM). The app test takes `APP_SCALE`; re-run at Xft.dpi 192: PASS, typing at 2x, Large GUI
+  2048 wide (`evidence/t017/hidpi/app-xft192`).
+- R1-7: not ours: the same GDK warning is in REAPER's stderr of IGraphics runs from earlier tasks
+  (`evidence/p2/reaper-clap-controls/reaper-stderr.txt`, `p4/dialogs-*`, `t028/...`).
+- R1-8: a failed input buffer ends the web view with "ran out of memory", like the output side.
+- R1-9: frames read together with the end of the socket are handled before the helper is reported gone.
+- R1-10: `CheckFocus()` and `OpenWebView()` drain Xlib's queue after their round trips.
+- Note on the focus episode: one line in `Documentation/linux-development.md` §10.
+- Regression after the fixes (Docker): IPlugWebUI CLAP 20x churn PASS (fds 6 before/after), helper probe, Svelte.
+

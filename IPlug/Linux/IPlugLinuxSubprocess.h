@@ -15,6 +15,8 @@
  */
 
 #include "IPlugPlatform.h"
+#include "heapbuf.h"
+#include "ptrlist.h"
 #include "wdlstring.h"
 
 BEGIN_IPLUG_NAMESPACE
@@ -75,5 +77,12 @@ private:
   int mExitCode = -1;
   WDL_String mOutput;
 };
+
+/** The host's environment for a helper program, with a UTF-8 character type if the host runs in another one (often
+ * "C"): iPlug's strings are UTF-8, and GLib programs convert arguments and output through the locale's charset, which
+ * turns every non-ASCII character into '?'. The other categories (messages, numbers) stay as they were.
+ * @param env receives the variables, nullptr-terminated, for posix_spawn's envp
+ * @param storage owns the strings env points to that are not the host's; keep it until the spawn returns */
+void MakeChildEnvironment(WDL_TypedBuf<char*>& env, WDL_PtrList<WDL_String>& storage);
 
 END_IPLUG_NAMESPACE

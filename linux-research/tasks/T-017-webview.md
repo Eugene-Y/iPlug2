@@ -122,5 +122,8 @@
     IPlugControls (iPlug2 fa9b3a63d), Gneiss (`linux-experiment` 6246fb7), Sand (`linux-experiment` 95be3b0), all built
     in Docker against `/Volumes/Storage/code/IPlug2-T-017`; IPlugEffect left as it was (T-038); IPlugWebUI removed from
     `~/.clap`, `~/.vst3`, `~/iplug-apps`. No REAPER, helper or WebKit process of ours left on the VM.
+- Review round 1: CHANGES REQUESTED (R1-1 major: the REAPER extension's web view at UI scale 2; minors R1-2..R1-6,
+  nits). All fixed or answered in `notes/39-review-T-017.md`. Cross-platform finding X-1 (low): mac's custom scheme
+  handler (`IPlugWKWebViewScriptMessageHandler.mm:74-118`) serves any absolute path to the page.
+- Next: review round 2.
 
-- Next: independent review, round 1 (`notes/39-review-T-017.md`).

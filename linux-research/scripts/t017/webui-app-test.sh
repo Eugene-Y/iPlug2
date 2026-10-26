@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # T-017: the IPlugWebUI standalone app (WebView editor in the SWELL window). Runs INSIDE the GUI container.
-# Usage: webui-app-test.sh <outdir> <app-binary>
+# Usage: webui-app-test.sh <outdir> <app-binary>   (APP_SCALE=2: the page's offsets in pixels at Xft.dpi 192)
 # Checks: render, typing into a text field (added to a copy of the page), JS -> C++ resize of the app window,
 # helper killed (the app survives and says so), the app quitting leaves no helper or WebKit process.
 set -uo pipefail
-OUT="$1"; APP="$2"
+OUT="$1"; APP="$2"; S="${APP_SCALE:-1}"
 mkdir -p "$OUT"
 FAILS=()
 fail() { echo "FAIL: $*"; FAILS+=("$*"); }
@@ -30,12 +30,12 @@ convert "$OUT/a01-open.png" -crop "${OW}x${OH}+${OX}+${OY}" +repage "$OUT/a01-vi
 SD=$(convert "$OUT/a01-view.png" -colorspace Gray -format '%[fx:standard_deviation]' info:)
 awk -v s="$SD" 'BEGIN{exit !(s < 0.02)}' && fail "editor blank (stddev $SD)" || echo "render ok (stddev $SD)"
 [ "$(helpers)" = 1 ] || fail "helpers after open: $(helpers)"
-xdotool mousemove $((OX + 437)) $((OY + 259)) click 1; sleep 0.5
+xdotool mousemove $((OX + 437 * S)) $((OY + 259 * S)) click 1; sleep 0.5
 xdotool type --delay 60 "typed in the app"; sleep 0.5
-shot a02-typed; convert "$OUT/a02-typed.png" -crop "560x60+$((OX + 20))+$((OY + 230))" +repage "$OUT/a02-typed-field.png"
-xdotool mousemove $((OX + 321)) $((OY + 147)) click 1; sleep 2
+shot a02-typed; convert "$OUT/a02-typed.png" -crop "$((560 * S))x$((60 * S))+$((OX + 20 * S))+$((OY + 230 * S))" +repage "$OUT/a02-typed-field.png"
+xdotool mousemove $((OX + 321 * S)) $((OY + 147 * S)) click 1; sleep 2
 eval "$(xdotool getwindowgeometry --shell "$W")"; echo "after Large GUI: ${WIDTH}x$HEIGHT"
-[ "$WIDTH" -ge 1024 ] || fail "Large GUI did not grow the app window (${WIDTH}x$HEIGHT)"
+[ "$WIDTH" -ge $((1024 * S)) ] || fail "Large GUI did not grow the app window (${WIDTH}x$HEIGHT)"
 shot a03-large
 pkill -9 -f '[/]iplug2-webview-helper'; sleep 2
 kill -0 "$APID" 2>/dev/null && echo "app alive after the helper was killed" || fail "app died with its helper"

@@ -42,10 +42,16 @@ bool NamesUTF8Locale(const char* locale)
   return locale && (strcasestr(locale, "UTF-8") || strcasestr(locale, "utf8"));
 }
 
-/** The host's environment, with a UTF-8 character type if the host runs in another one (often "C"): iPlug's
- * strings are UTF-8, and GLib programs convert arguments and output through the locale's charset, which turns
- * every non-ASCII character into '?'. The other categories (messages, numbers) stay as they were. */
-void MakeChildEnvironment(WDL_TypedBuf<char*>& env, WDL_PtrList<WDL_String>& storage)
+const char* FindLast(const char* haystack, const char* needle)
+{
+  const char* last = nullptr;
+  for (const char* p = haystack; (p = strstr(p, needle)); p++)
+    last = p;
+  return last;
+}
+} // namespace
+
+void iplug::MakeChildEnvironment(WDL_TypedBuf<char*>& env, WDL_PtrList<WDL_String>& storage)
 {
   const char* pAll = getenv("LC_ALL");
   const char* pCType = getenv("LC_CTYPE");
@@ -73,15 +79,6 @@ void MakeChildEnvironment(WDL_TypedBuf<char*>& env, WDL_PtrList<WDL_String>& sto
   }
   env.Add(nullptr);
 }
-
-const char* FindLast(const char* haystack, const char* needle)
-{
-  const char* last = nullptr;
-  for (const char* p = haystack; (p = strstr(p, needle)); p++)
-    last = p;
-  return last;
-}
-} // namespace
 
 bool LinuxBackgroundProcess::Start(const char* const* argv)
 {
