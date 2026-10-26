@@ -57,6 +57,10 @@
   where the finger landed on release. VM check (trace APP, `vm-app/t030-ctl3.log`, `ctl-tablet-input.png`): after a
   finger drags ISVGKnobControl the pointer stays where the finger left (239,392), and a mouse drag on IVKnobControl
   still locks and returns the pointer to its press point (494,333).
+- **Docker regression** (`scripts/coord/smoke-t030.sh`, at a4674b8da + docs; Xvfb has no touchscreen, so this is the
+  path without XInput touches): IPlugControls P3b CLAP/VST3 PASS, Sand CLAP/VST3 PASS, Gneiss CLAP PASS, Gneiss VST3
+  FAIL (1) on the known REAPER VST3 context-menu step (`g04b-context-menu`, a synthetic click; the same failure in the
+  T-009/T-032/T-038 merge smokes). Evidence `evidence/t030/docker-*`. Gneiss-linux and Sand-linux git status clean.
 
 ## Cross-platform findings
 - **Windows, unverified (read from the code, no Windows touchscreen here), medium for touchscreen users:**
