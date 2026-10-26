@@ -103,8 +103,11 @@ shot r04-small; read -r _ _ SW SH < <(view_geom 1); echo "after Small GUI: ${SW}
 [ "$SW" -le 520 ] || fail "Small GUI: editor ${SW}x$SH, expected 512 wide"
 if grep -q "Data Size 4 bytes" /tmp/reaper.log; then echo "Binary Test reached C++ (Debug log)"; fi
 
-# close / reopen: no helper or WebKit process may outlive its editor
+# close / reopen: no helper or WebKit process may outlive its editor, and REAPER keeps no fd of theirs
 : > "$OUT/churn.txt"
+rpr "local t=reaper.GetTrack(0,0); reaper.TrackFX_Show(t,0,2)" >/dev/null; wait_helpers 0 5; sleep 1
+FD0=$(ls /proc/"$RPID"/fd | wc -l)
+rpr "local t=reaper.GetTrack(0,0); reaper.TrackFX_Show(t,0,3)" >/dev/null; wait_helpers 1 5
 for i in $(seq "$CHURN"); do
   rpr "local t=reaper.GetTrack(0,0); reaper.TrackFX_Show(t,0,2)" >/dev/null
   wait_helpers 0 5 || fail "churn $i: $(helpers) helpers 5 s after close"
@@ -117,7 +120,8 @@ sleep 4; shot r06-after-churn; render_check r06-after-churn 1; alive churn
 rpr "local t=reaper.GetTrack(0,0); reaper.TrackFX_Show(t,0,2)" >/dev/null; wait_helpers 0 5
 sleep 2; W0=$(webkits); echo "after the last close: helpers $(helpers), WebKit $W0" | tee -a "$OUT/churn.txt"
 [ "$W0" = 0 ] || fail "$W0 WebKit processes left after the last close"
-ls /proc/"$RPID"/fd | wc -l > "$OUT/reaper-fds-after-churn.txt"
+FD1=$(ls /proc/"$RPID"/fd | wc -l); echo "REAPER fds with the editor closed: $FD0 before the churn, $FD1 after" | tee "$OUT/reaper-fds.txt"
+[ "$FD1" -le "$FD0" ] || fail "REAPER has $((FD1 - FD0)) more fds after the churn"
 
 # the helper killed while the editor is open
 rpr "local t=reaper.GetTrack(0,0); reaper.TrackFX_Show(t,0,3)" >/dev/null; sleep 5
