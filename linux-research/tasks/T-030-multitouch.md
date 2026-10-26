@@ -22,8 +22,10 @@
   `OpenWindow` selects `XI_TouchBegin/Update/End` on the editor window after `LayoutUI` only if `MultiTouchEnabled()`
   (as Windows registers its touch window); otherwise touches stay emulated mouse events as before. Touches get ITouchIDs
   from a counter (X touch ids are unique per device only, and 0 is the mouse); `HandleTouch` maps them to
-  `OnMouseDown/Drag/Up` with `L` set, like iOS. No `OnTouchCancelled`: without an `XI_TouchOwnership` selection the
-  server delivers a sequence to us only once we own it (XI 2.2 protocol), so none is taken away midway. Docker build
+  `OnMouseDown/Drag/Up` with `L` set, like iOS. No `OnTouchCancelled`: without an `XI_TouchOwnership` selection, XI2proto
+  ties delivery to ownership ("Clients may opt for touch events to be delivered before they become the owner"), and
+  an owner's sequence is not taken away; a `TouchEnd` for a sequence we never began (another listener accepted it) is
+  ignored. Docker build
   of IPlugControls CLAP/VST3/APP passes; no new NEEDED (libXi is dlopen'ed). Commit 108c7ccdc.
 - f097efae7: `IGRAPHICS_TRACE_LINUX_INPUT` also logs button presses, touches and the touch selection;
   `scripts/vm/probe/vtouch.py`, a uinput multi-touch screen (python3-evdev, installed on the VM with apt) driven
