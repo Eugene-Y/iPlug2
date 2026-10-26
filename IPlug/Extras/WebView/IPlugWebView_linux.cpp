@@ -39,10 +39,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>
-#include <X11/Xutil.h>
 
 extern char** environ;
 

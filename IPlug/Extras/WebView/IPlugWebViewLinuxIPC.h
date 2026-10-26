@@ -187,35 +187,25 @@ static inline int64_t IPlugWVReadInt(IPlugWVReader* pReader)
   return value;
 }
 
-/** @return a malloc'ed, terminated copy (never NULL unless out of memory); free() it */
+/** @return a malloc'ed, terminated copy, "" once the frame is malformed (NULL only without memory); free() it */
 static inline char* IPlugWVReadString(IPlugWVReader* pReader)
 {
   uint32_t length = 0;
   if (!pReader->failed && pReader->left >= sizeof(length))
-  {
     memcpy(&length, pReader->pos, sizeof(length));
-    if (pReader->left - sizeof(length) < length)
-      pReader->failed = 1;
-  }
-  else
+  if (pReader->failed || pReader->left < sizeof(length) || pReader->left - sizeof(length) < length)
   {
     pReader->failed = 1;
-  }
-  if (pReader->failed)
     length = 0;
+  }
   char* str = (char*) malloc(length + 1);
   if (!str)
     return NULL;
-  if (length)
+  if (!pReader->failed)
   {
     memcpy(str, pReader->pos + sizeof(length), length);
     pReader->pos += sizeof(length) + length;
     pReader->left -= sizeof(length) + length;
-  }
-  else if (!pReader->failed)
-  {
-    pReader->pos += sizeof(length);
-    pReader->left -= sizeof(length);
   }
   str[length] = '\0';
   return str;
