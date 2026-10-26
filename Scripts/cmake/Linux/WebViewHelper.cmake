@@ -41,6 +41,8 @@ endif()
 function(iplug_linux_bundle_webview_helper target resource_dir)
   if(TARGET iplug2-webview-helper)
     add_dependencies(${target} iplug2-webview-helper)
+    # POST_BUILD runs only when the target relinks: a rebuilt helper must relink it, or the copy stays stale.
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS "$<TARGET_FILE:iplug2-webview-helper>")
     add_custom_command(TARGET ${target} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E make_directory "${resource_dir}"
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:iplug2-webview-helper>" "${resource_dir}/iplug2-webview-helper"

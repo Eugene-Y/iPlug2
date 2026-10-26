@@ -1,6 +1,6 @@
 # T-017 — WebView on Linux (out-of-process WebKitGTK helper)
 
-- **Status:** in progress (design decided by the user 2026-10-16: notes/22 option 1)
+- **Status:** review-done (design decided by the user 2026-10-16: notes/22 option 1)
 - **Owner:** Claude worker (T-017 lock, 2026-10-26)
 - **Branch/worktree:** `linux/T-017` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-017`.
 - **Depends on:** nothing to start; the IGraphicsLinux platform-view hook (step 4) is coordinated with T-019/T-009/T-020 (same file).
@@ -133,5 +133,11 @@
   (`IPlugWKWebViewScriptMessageHandler.mm:74-118`) serves any absolute path to the page that asks. It sends no
   Access-Control-Allow-Origin header, so other origins cannot read the responses, but the scheme's own pages can read
   any file.
-- Next: review round 3 (R2-1 fix).
+- Review round 3: APPROVED (R2-1 resolved; `notes/39`, 98c5c517d). Final verdict over 3 rounds: approved, no major
+  finding left. Follow-up after it: a rebuilt helper now relinks its plug-ins (LINK_DEPENDS), so the bundled copy
+  is never stale; CLAP and APP re-run PASS.
+- Open for the user/coordinator: the VM CLAP run's last steps (helper kill, two instances) were cut by the virgl hang
+  and not repeated on the VM (they pass in Docker and in the VM's VST3 run); the 22.04-gcc13 release images need the
+  `docker/webview` layer before a project with a web view can be packaged; X-1 (mac custom scheme serves any path).
+- Status: review-done. Lock released; no containers left.
 

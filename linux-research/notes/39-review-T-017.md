@@ -212,3 +212,12 @@ I checked 78f1c56e6 with fresh builds in my own `build/t017r-rel`, in my own con
 
   §10 documents this, and it is the intended trade-off.
 - **A page loaded from `<scheme>:/index.html` at the filesystem root makes `/` a root** and so allows every file. Only the plug-in's own `LoadURL` can do that.
+
+## Round 3 — follow-up (worker)
+
+- The stale helper in the bundles (round 3's remark) was a build bug: the copy is a POST_BUILD step, which runs
+  only when the plug-in relinks. `iplug_linux_bundle_webview_helper` now adds the helper to the target's
+  `LINK_DEPENDS`, so a rebuilt helper relinks and recopies (checked: touching the helper's source relinks
+  IPlugWebUI-clap; all six bundled copies in `build/t017-rel/out` equal the built helper). IPlugWebUI CLAP (churn 5)
+  and APP re-run with the fresh copies: PASS.
+
