@@ -123,3 +123,4 @@
     in Docker against `/Volumes/Storage/code/IPlug2-T-017`; IPlugEffect left as it was (T-038); IPlugWebUI removed from
     `~/.clap`, `~/.vst3`, `~/iplug-apps`. No REAPER, helper or WebKit process of ours left on the VM.
 
+- Next: independent review, round 1 (`notes/39-review-T-017.md`).
