@@ -178,3 +178,37 @@ I re-checked 146b9987d against every round-1 finding, with the fresh builds in `
   - Helper probe: module script loads; from a scheme page in `/tmp`, `iplug2:/tmp/mod.js` 200,
     `iplug2:/etc/hostname` 403, `iplug2:/tmp/../etc/hostname` 403 (`evidence/t017/r3-helper-probe.txt`).
   - Svelte renders (hashed module assets), IPlugWebUI APP PASS, IPlugWebUI CLAP in REAPER (below).  IPlugWebUI CLAP in REAPER: PASS, 20x churn, fds 6 before/after.
+
+## Round 3
+
+**Verdict: APPROVED.** R2-1 is resolved and no new finding needs a change. The review of T-017 is complete.
+
+I checked 78f1c56e6 with fresh builds in my own `build/t017r-rel`, in my own container `t017r` (now removed). The bundles in `build/t017-rel/out/*` still carry the helper from 08:39, before the fix (`cmp` differs from `build/t017-rel/webview-helper/`). So I rebuilt IPlugSvelteUI-clap and IPlugWebUI-clap; their helper copies match the fresh helper.
+
+### R2-1 resolved
+- **Code** (read):
+  - Roots come only from the plug-in's own `LoadURL`/`LoadFile` messages, never from page navigation.
+  - Both the root and the requested path are `realpath`'d, so `..` and symlinks cannot escape a root.
+  - The prefix check needs a `/` boundary (`/tmp` does not match `/tmpx`).
+  - A file that does not exist gives a not-found error, and anything outside the roots gives 403.
+  - `free`/`g_free` are matched.
+  - With no scheme set, `AllowSchemeFolderOf` returns early, so a UI without a custom scheme is unaffected.
+- **CORS probe** (`evidence/t017/review-r3/cors.txt`): an `http://127.0.0.1` page loaded with `LoadURL` can no longer read `iplug2:/etc/hostname`, neither directly nor from a sandboxed `srcdoc` iframe ("Load failed").
+- **Helper probe** (`review-r3/probe.txt`):
+  - a module script loads from the page's folder;
+  - `iplug2:/tmp/mod.js` returns 200;
+  - `iplug2:/etc/hostname` and `iplug2:/tmp/../etc/hostname` return 403.
+
+### Regressions
+- **IPlugSvelteUI CLAP in REAPER** with the fresh helper: the logos and hashed assets load over the scheme and the page renders (`review-r3/svelte.png`); no 403 in the log.
+  - The log does show about 80 `Can't find variable: SCMFD` errors before the module script has run. These are the meter messages sent before the page is ready. This comes from the documented decision not to drop calls while the page loads (mac drops them, Windows does not); it is not from this fix.
+- **IPlugWebUI CLAP** (`webui-reaper-test.sh`, churn 5): PASS. The knob reaches the host, typing works, and REAPER's open fds are 6 before and 6 after (`review-r3/clap`).
+
+### Notes, no change requested
+- **A UI that relies on the scheme beyond its own page's folder now gets 403:**
+  - pages built with `LoadHTML` that reference `<scheme>:/abs/path` files;
+  - pages linking to `../` outside their folder;
+  - web folders that symlink outside themselves.
+
+  §10 documents this, and it is the intended trade-off.
+- **A page loaded from `<scheme>:/index.html` at the filesystem root makes `/` a root** and so allows every file. Only the plug-in's own `LoadURL` can do that.
