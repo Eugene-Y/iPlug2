@@ -60,7 +60,7 @@
 using namespace iplug;
 using namespace igraphics;
 
-// -DIGRAPHICS_TRACE_LINUX_INPUT: keys, focus and their routing on stderr, for probing hosts.
+// -DIGRAPHICS_TRACE_LINUX_INPUT: keys, focus and their routing, buttons and touches on stderr, for probing hosts.
 #ifdef IGRAPHICS_TRACE_LINUX_INPUT
   #define TRACE_INPUT(...) fprintf(stderr, "iPlug2 input: " __VA_ARGS__)
 #else
@@ -740,7 +740,10 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
   }
   GetDelegate()->LayoutUI(this);
   if (MultiTouchEnabled())
+  {
+    TRACE_INPUT("multi-touch: XInput 2.2 touches selected\n");
     w.mTouch.Select(w.mWindow);
+  }
   GetDelegate()->OnUIOpen();
   SetAllControlsDirty();
   DeactivateGLContext();
@@ -1131,6 +1134,7 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
 {
   Impl& w = *mImpl;
   const XButtonEvent& button = event.xbutton;
+  TRACE_INPUT("%s button %u at %d,%d\n", event.type == ButtonPress ? "press" : "release", button.button, button.x, button.y);
   const float scale = GetTotalScale();
   const float x = button.x / scale;
   const float y = button.y / scale;
@@ -1235,6 +1239,7 @@ void IGraphicsLinux::HandleTouch(const XEvent& event)
   LinuxTouch::Event touch;
   if (!w.mTouch.Translate(event, touch))
     return;
+  TRACE_INPUT("touch %lu phase %d at %.1f,%.1f\n", static_cast<unsigned long>(touch.id), static_cast<int>(touch.phase), touch.x, touch.y);
 
   w.mLastEventTime = touch.time;
   const float scale = GetTotalScale();
