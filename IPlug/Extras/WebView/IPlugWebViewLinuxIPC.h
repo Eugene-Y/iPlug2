@@ -57,7 +57,7 @@ enum IPlugWebViewMessage
   kIPlugWVDownloadPathRequest, /* id, suggested file name */
   kIPlugWVDownloadProgress,    /* bytes received, total bytes (0: unknown) */
   kIPlugWVDownloadFinished,    /* succeeded, path */
-  kIPlugWVFocusRequest,        /* X server time of the click */
+  kIPlugWVFocusRequest,        /* X server time of the button release */
   kIPlugWVWebProcessGone
 };
 

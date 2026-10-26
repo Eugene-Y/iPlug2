@@ -23,6 +23,7 @@
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <chrono>
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -62,6 +63,12 @@ constexpr long kXEmbedMapped = 1;
 
 // Polls the socket and the X connection for hosts whose loop cannot watch fds (CLAP without posix-fd-support).
 constexpr uint32_t kPollIntervalMs = 15;
+
+// After a click the window manager and the host move the focus to the host's window too, some with CurrentTime, so
+// they can win over our request. For this long after the click the focus is asked for again once it stays put.
+constexpr auto kFocusEpisode = std::chrono::milliseconds(1000);
+constexpr auto kFocusQuiet = std::chrono::milliseconds(100);
+constexpr uint32_t kFocusCheckMs = 30;
 
 /** Swallows X errors on one connection while in scope, and passes other connections' errors on.
  * Xlib's default handler exits the process, and our requests can fail through no fault of ours: the host may
@@ -204,7 +211,10 @@ private:
   void HandleXEvent(const XEvent& event);
   void EmbedPlug(Window plug);
   void TakeFocus(Time time);
+  void CheckFocus();
+  void EndFocusEpisode();
   void LoseFocus();
+  Window TopLevelOf(Window window) const;
   void SendXEmbed(Window target, long message, long detail = 0, long data1 = 0, long data2 = 0, Time time = CurrentTime);
   void ShowFailure(const char* text);
   void DrawFailure();
@@ -227,6 +237,10 @@ private:
   Atom mXEmbedInfo = 0;
   bool mHidden = false;
   bool mHasFocus = false;
+  int mFocusTimer = 0;
+  std::chrono::steady_clock::time_point mFocusEpisodeAt;
+  std::chrono::steady_clock::time_point mFocusQuietSince;
+  Window mFocusWatched = 0;
   float mX = 0.f, mY = 0.f, mW = 1.f, mH = 1.f, mZoom = 1.f;
   long mSentZoom = 0;
   bool mInteractionEnabled = true;
@@ -403,7 +417,7 @@ void IWebViewImpl::Unwatch()
 {
   if (!mLoop)
     return;
-  for (int* pId : { &mSocketWatch, &mWriteWatch, &mXWatch, &mPollTimer })
+  for (int* pId : { &mSocketWatch, &mWriteWatch, &mXWatch, &mPollTimer, &mFocusTimer })
   {
     if (*pId)
       mLoop->RemoveTimer(*pId);
@@ -829,6 +843,8 @@ void IWebViewImpl::SendXEmbed(Window target, long message, long detail, long dat
 
 // The keys go straight to the plug's window, where GTK reads them; the XEmbed messages tell GTK that it is
 // active and focused, which it otherwise learns only from an embedder that forwards keys (GtkSocket).
+// The helper asks on every button release, with its time: the window manager's click-to-focus carries the
+// press's, so the server ignores it if it comes later.
 void IWebViewImpl::TakeFocus(Time time)
 {
   if (!mDisplay || !mPlug || mHidden || !mInteractionEnabled)
@@ -844,10 +860,76 @@ void IWebViewImpl::TakeFocus(Time time)
   if (mEmbedder)
     SendXEmbed(mEmbedder, kXEmbedRequestFocus, 0, 0, 0, time);
   XFlush(mDisplay);
+
+  const auto now = std::chrono::steady_clock::now();
+  if (time != CurrentTime)
+    mFocusEpisodeAt = now;
+  mFocusWatched = 0;
+  mFocusQuietSince = now;
+  if (!mFocusTimer)
+    mFocusTimer = mLoop->AddTimer(kFocusCheckMs, [this]() { CheckFocus(); });
+}
+
+void IWebViewImpl::CheckFocus()
+{
+  const auto now = std::chrono::steady_clock::now();
+  if (!mDisplay || !mPlug || !mHasFocus || now - mFocusEpisodeAt > kFocusEpisode)
+  {
+    EndFocusEpisode();
+    return;
+  }
+  XErrorTrap trap(mDisplay);
+  Window focus = None;
+  int revert = 0;
+  XGetInputFocus(mDisplay, &focus, &revert);
+  if (focus == mPlug)
+    return;
+  // Another top-level window took it (alt-tab, a click elsewhere): the user moved on.
+  if (focus == None || focus == PointerRoot || TopLevelOf(focus) != TopLevelOf(mContainer))
+  {
+    EndFocusEpisode();
+    LoseFocus();
+    return;
+  }
+  if (focus != mFocusWatched)
+  {
+    mFocusWatched = focus;
+    mFocusQuietSince = now;
+    return;
+  }
+  if (now - mFocusQuietSince > kFocusQuiet)
+    TakeFocus(CurrentTime);
+}
+
+void IWebViewImpl::EndFocusEpisode()
+{
+  if (mFocusTimer)
+    mLoop->RemoveTimer(mFocusTimer);
+  mFocusTimer = 0;
+}
+
+Window IWebViewImpl::TopLevelOf(Window window) const
+{
+  const Window root = DefaultRootWindow(mDisplay);
+  for (int depth = 0; window && window != root && depth < 64; depth++)
+  {
+    Window windowRoot = 0, parent = 0;
+    Window* pChildren = nullptr;
+    unsigned int count = 0;
+    if (!XQueryTree(mDisplay, window, &windowRoot, &parent, &pChildren, &count))
+      return 0;
+    if (pChildren)
+      XFree(pChildren);
+    if (parent == root)
+      return window;
+    window = parent;
+  }
+  return window;
 }
 
 void IWebViewImpl::LoseFocus()
 {
+  EndFocusEpisode();
   if (!mHasFocus || !mDisplay || !mPlug)
     return;
   mHasFocus = false;
@@ -890,9 +972,10 @@ void IWebViewImpl::HandleXEvent(const XEvent& event)
       }
       break;
     case FocusOut:
-      // Grabs (a page's own popup) move the focus only for a moment; NotifyInferior stays inside the plug.
+      // Grabs (a page's own popup) move the focus only for a moment; NotifyInferior stays inside the plug. During
+      // a click's episode CheckFocus() decides.
       if (event.xfocus.window == mPlug && event.xfocus.mode != NotifyGrab && event.xfocus.mode != NotifyUngrab
-          && event.xfocus.detail != NotifyInferior)
+          && event.xfocus.detail != NotifyInferior && !mFocusTimer)
         LoseFocus();
       break;
     case PropertyNotify:

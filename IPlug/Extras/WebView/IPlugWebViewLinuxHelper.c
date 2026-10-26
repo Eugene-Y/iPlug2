@@ -60,6 +60,10 @@ static Helper sHelper;
 
 static void Quit(void)
 {
+  static gboolean quitting = FALSE;
+  if (quitting)
+    return;
+  quitting = TRUE;
   /* A script dialog runs a nested loop, which gtk_main_quit() would only leave. */
   if (gtk_main_level() > 1)
     _exit(0);
@@ -389,13 +393,14 @@ static void OnWebProcessTerminated(WebKitWebView* pView, WebKitWebProcessTermina
   SendIntMessage(kIPlugWVWebProcessGone, (int64_t) reason);
 }
 
-static gboolean OnButtonPress(GtkWidget* pWidget, GdkEventButton* pEvent, gpointer data)
+/* Sees every event before GTK does, so also the ones WebKit's gestures take. GtkPlug asks its embedder for the
+ * keyboard focus only when its focus widget changes, which a click into an already focused web view does not do,
+ * and the host can have taken the X focus back meanwhile; without it, typing into the page goes nowhere. */
+static void OnGdkEvent(GdkEvent* pEvent, gpointer data)
 {
-  /* GtkPlug asks its embedder for the keyboard focus only when its focus widget changes, which a click into an
-   * already focused web view does not do; without the focus, typing into the page goes nowhere. */
-  if (!gtk_window_has_toplevel_focus(GTK_WINDOW(sHelper.plug)))
-    SendIntMessage(kIPlugWVFocusRequest, (int64_t) pEvent->time);
-  return FALSE;
+  if (pEvent->type == GDK_BUTTON_RELEASE && sHelper.plug)
+    SendIntMessage(kIPlugWVFocusRequest, (int64_t) gdk_event_get_time(pEvent));
+  gtk_main_do_event(pEvent);
 }
 
 /* -------------------------------------------------------------------------------------------- downloads */
@@ -559,6 +564,9 @@ static WebKitWebView* MakeView(const Options* pOptions)
 
   WebKitSettings* pSettings = webkit_web_view_get_settings(pView);
   webkit_settings_set_enable_developer_extras(pSettings, pOptions->devTools);
+  /* With the developer tools on, the page's console also goes to the host's stdout, the only place a plug-in
+   * developer on Linux sees it without opening the inspector. */
+  webkit_settings_set_enable_write_console_messages_to_stdout(pSettings, pOptions->devTools);
   webkit_settings_set_javascript_can_access_clipboard(pSettings, TRUE);
   webkit_settings_set_allow_file_access_from_file_urls(pSettings, TRUE);
   webkit_settings_set_allow_universal_access_from_file_urls(pSettings, TRUE);
@@ -575,8 +583,6 @@ static WebKitWebView* MakeView(const Options* pOptions)
   g_signal_connect(pView, "decide-policy", G_CALLBACK(OnDecidePolicy), NULL);
   g_signal_connect(pView, "context-menu", G_CALLBACK(OnContextMenu), NULL);
   g_signal_connect(pView, "web-process-terminated", G_CALLBACK(OnWebProcessTerminated), NULL);
-  gtk_widget_add_events(GTK_WIDGET(pView), GDK_BUTTON_PRESS_MASK);
-  g_signal_connect(pView, "button-press-event", G_CALLBACK(OnButtonPress), NULL);
   return pView;
 }
 
@@ -637,6 +643,7 @@ int main(int argc, char** argv)
 
   h->pendingDecisions = g_hash_table_new_full(g_int64_hash, g_int64_equal, g_free, g_object_unref);
   h->pendingDownloads = g_hash_table_new_full(g_int64_hash, g_int64_equal, g_free, g_object_unref);
+  gdk_event_handler_set(OnGdkEvent, NULL, NULL);
   h->view = MakeView(&h->options);
   h->plug = gtk_plug_new((Window) h->options.parent);
   gtk_window_set_default_size(GTK_WINDOW(h->plug), MAX(1, h->options.width), MAX(1, h->options.height));
