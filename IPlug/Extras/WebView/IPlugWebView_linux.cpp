@@ -249,6 +249,7 @@ private:
   bool mInteractionEnabled = true;
 
   int mSocket = -1;
+  bool mHelperReady = false;
   int mSocketWatch = 0;
   int mWriteWatch = 0;
   int mXWatch = 0;
@@ -404,6 +405,7 @@ bool IWebViewImpl::StartHelper(const std::string& helperPath, const Rect& bounds
   while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
 
   mSocket = fds[0];
+  mHelperReady = false;
   fcntl(mSocket, F_SETFL, fcntl(mSocket, F_GETFL) | O_NONBLOCK);
   mSocketWatch = mLoop->AddFd(mSocket, HostLoop::kFdRead, [this](int, int) { OnSocketReadable(); });
   if (!mInteractionEnabled)
@@ -624,7 +626,10 @@ void IWebViewImpl::OnSocketReadable()
       continue;
     if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
       break;
-    OnHelperGone("The web view's helper program stopped.\nClose and reopen the editor.");
+    // Before its first message it most likely could not load WebKitGTK at all.
+    OnHelperGone(mHelperReady ? "The web view's helper program stopped.\nClose and reopen the editor."
+                              : "The web view's helper program could not start.\n"
+                                "It needs WebKitGTK 4.1: libwebkit2gtk-4.1-0 (Debian, Ubuntu) or webkit2gtk4.1 (Fedora).");
     return;
   }
 
@@ -661,6 +666,7 @@ void IWebViewImpl::HandleMessage(uint32_t type, IPlugWVReader& reader)
         OnHelperGone("The web view's helper program is from another version of the plug-in.\nReinstall the plug-in.");
         return;
       }
+      mHelperReady = true;
       EmbedPlug(plug);
       mIWebView->OnWebViewReady();
       break;
