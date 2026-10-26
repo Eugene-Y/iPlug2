@@ -340,10 +340,13 @@ static gboolean OnLoadFailed(WebKitWebView* pView, WebKitLoadEvent event, char* 
   return FALSE;
 }
 
+/* Through xdg-open, as IGraphics' OpenURL() does: GIO's own default-handler lookup falls back to any app that takes
+ * text/html (seen: a text editor) when no handler for https is registered, e.g. with a snap browser. */
 static void OpenInBrowser(const char* uri)
 {
+  const char* argv[] = { "xdg-open", uri, NULL };
   GError* pError = NULL;
-  if (!g_app_info_launch_default_for_uri(uri, NULL, &pError))
+  if (!g_spawn_async(NULL, (char**) argv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL, NULL, NULL, NULL, &pError))
   {
     fprintf(stderr, "iplug2-webview-helper: cannot open %s: %s\n", uri, pError ? pError->message : "");
     g_clear_error(&pError);

@@ -94,7 +94,8 @@ fi
 # JS -> C++: Binary Test (Debug builds print it), Large / Small GUI (OnMessage -> Resize)
 xdotool mousemove $((OX + 83)) $((OY + 96)) click 1; sleep 0.5
 xdotool mousemove $((OX + 321)) $((OY + 147)) click 1; sleep 2
-shot r03-large; read -r _ _ LW LH < <(view_geom 1); echo "after Large GUI: ${LW}x$LH"
+# a window manager may move the grown window to keep it on screen
+shot r03-large; read -r OX OY LW LH < <(view_geom 1); echo "after Large GUI: ${LW}x$LH at $OX,$OY"
 [ "$LW" -ge 1024 ] || fail "Large GUI: editor ${LW}x$LH, expected 1024 wide"
 render_check r03-large 1
 xdotool mousemove $((OX + 79)) $((OY + 147)) click 1; sleep 2
