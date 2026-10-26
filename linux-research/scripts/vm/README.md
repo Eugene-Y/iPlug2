@@ -5,7 +5,7 @@ scripts on a real desktop: GNOME Shell (Mutter 46) on **X11**, Xorg, Mesa **virg
 
 | | |
 |---|---|
-| VM | UTM on the Mac, Ubuntu 24.04.5 Desktop arm64, 4 CPUs, 8 GB, screen 1440×863, autologin on `:0`, Wayland disabled |
+| VM | UTM on the Mac, Ubuntu 24.04.5 Desktop arm64, 4 CPUs, 8 GB, screen 1368×863 (`xdpyinfo`, 2026-10-26), autologin on `:0`, Wayland disabled |
 | Access | `ssh -i ~/.ssh/claude_linux_vm gene@192.168.64.2`, passwordless sudo (override with `VM_HOST`, `VM_KEY`) |
 | Builds | in Docker on the Mac (24.04 image: same glibc as the VM), e.g. `dock.sh -- scripts/build-cmake.sh wt/x build/x` |
 

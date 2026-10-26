@@ -2,7 +2,8 @@
 """A virtual multi-touch screen (uinput, python3-evdev) for touch tests on the VM, driven by commands on a FIFO.
 
 Usage (root, for /dev/uinput):  sudo -n python3 vtouch.py <fifo> <screen-width> <screen-height> [<log>]
-The device's range is the screen's, so the X server maps its coordinates 1:1 onto screen pixels.
+The device's range is the screen's (`xdpyinfo | grep dimensions`), so the X server maps its coordinates 1:1 onto
+screen pixels. SIGINT or SIGTERM removes the device like 'quit'.
 Commands, one or more per line, separated by ';':
   down <slot> <x> <y>    finger <slot> (0-9) touches at x,y
   move <slot> <x> <y>
@@ -15,6 +16,7 @@ Commands, one or more per line, separated by ';':
   quit                   removes the device and exits
 """
 import os
+import signal
 import sys
 import time
 
@@ -27,7 +29,14 @@ def main():
     fifo, width, height = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
     log = open(sys.argv[4], "a", buffering=1) if len(sys.argv) > 4 else sys.stderr
     if not os.path.exists(fifo):
-        os.mkfifo(fifo, 0o666)
+        os.mkfifo(fifo)
+        os.chmod(fifo, 0o666)  # mkfifo's mode goes through root's umask; the user writes the commands
+
+    def leave(signum, frame):
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGINT, leave)
+    signal.signal(signal.SIGTERM, leave)
 
     def axis(maximum):
         return AbsInfo(value=0, min=0, max=maximum, fuzz=0, flat=0, resolution=10)

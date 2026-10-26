@@ -57,6 +57,8 @@ public:
    * mouse events from them for this client. */
   void Select(Window window)
   {
+    if (!mHasTouchscreen)
+      return;
     unsigned char bits[XIMaskLen(XI_LASTEVENT)] = {};
     XISetMask(bits, XI_TouchBegin);
     XISetMask(bits, XI_TouchUpdate);
@@ -79,6 +81,8 @@ public:
     XFreeEventData(mDisplay, &cookie);
     return translated;
   }
+
+  bool AnyDown() const { return !mTouches.empty(); }
 
 private:
   struct Xi
@@ -118,18 +122,23 @@ private:
     if (pXi->QueryVersion(mDisplay, &major, &minor) != Success || major < 2 || (major == 2 && minor < 2))
       return false;
 
-    // A touchpad is a dependent touch device: its fingers belong to the pointer, not to the window under them.
+    // A touchpad is a dependent touch device: its fingers belong to the pointer, which already brings them as mouse
+    // events, not to the window under them. A touchscreen plugged in later is unknown here, and still welcome.
     bool found = false;
     int nDevices = 0;
     XIDeviceInfo* pDevices = pXi->QueryDevice(mDisplay, XIAllDevices, &nDevices);
-    for (int d = 0; d < nDevices && !found; d++)
+    for (int d = 0; d < nDevices; d++)
     {
       const XIDeviceInfo& device = pDevices[d];
-      for (int c = 0; c < device.num_classes && !found; c++)
+      for (int c = 0; c < device.num_classes; c++)
       {
         const XIAnyClassInfo* pClass = device.classes[c];
-        found = device.use == XISlavePointer && pClass->type == XITouchClass
-             && reinterpret_cast<const XITouchClassInfo*>(pClass)->mode == XIDirectTouch;
+        if (device.use != XISlavePointer || pClass->type != XITouchClass)
+          continue;
+        if (reinterpret_cast<const XITouchClassInfo*>(pClass)->mode == XIDirectTouch)
+          found = true;
+        else
+          mTouchpads.push_back(device.deviceid);
       }
     }
     if (pDevices)
@@ -139,6 +148,8 @@ private:
 
   bool Translate(const XIDeviceEvent& xiEvent, Event& touch)
   {
+    if (std::find(mTouchpads.begin(), mTouchpads.end(), xiEvent.sourceid) != mTouchpads.end())
+      return false;
     // Touch ids are unique per device only; a counter also keeps 0, the mouse's id, out.
     auto isThisTouch = [&xiEvent](const Touch& t) { return t.sourceID == xiEvent.sourceid && t.detail == xiEvent.detail; };
     auto pTouch = std::find_if(mTouches.begin(), mTouches.end(), isThisTouch);
@@ -189,6 +200,7 @@ private:
   bool mSelected = false;
   int mOpcode = 0;
   ITouchID mLastID = 0;
+  std::vector<int> mTouchpads; // device ids
   std::vector<Touch> mTouches;
 };
 

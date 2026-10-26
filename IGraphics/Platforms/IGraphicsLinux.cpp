@@ -1542,11 +1542,12 @@ void IGraphicsLinux::UpdateEditingState()
     w.mFocusDeclined = false;
   }
   const Time eventTime = w.mLastEventTime;
-  if (clicked && !w.mButtonState)
+  const bool pressed = w.mButtonState || w.mTouch.AnyDown();
+  if (clicked && !pressed)
     TakeKeyboardFocus(eventTime);
-  else if (wantsKeys && !w.mHoldsFocus && !w.mFocusLost && !w.mFocusDeclined && !w.mButtonState)
+  else if (wantsKeys && !w.mHoldsFocus && !w.mFocusLost && !w.mFocusDeclined && !pressed)
     TakeKeyboardFocus(eventTime);
-  else if (wantsKeys && w.mFocusLost && !w.mFocusDeclined && !w.mButtonState)
+  else if (wantsKeys && w.mFocusLost && !w.mFocusDeclined && !pressed)
   {
     // Moving to another window commits the edit, which may close the editor
     const std::shared_ptr<bool> open = w.mOpen;
@@ -1912,7 +1913,9 @@ bool IGraphicsLinux::SetTextInClipboard(const char* str)
 bool IGraphicsLinux::InitiateExternalFileDragDrop(const char* path, const IRECT& /*iconBounds*/)
 {
   Impl& w = *mImpl;
-  if (!w.mWindowAlive)
+  // The drag lives on the implicit grab of a mouse press; a finger's touch events have none, so its release would
+  // never reach the drag, which would keep the keyboard grabbed.
+  if (!w.mWindowAlive || mTabletInput)
     return false;
   HideTooltip();
   ScopedXErrorTrap trap(w.mDisplay);
@@ -2099,7 +2102,7 @@ void IGraphicsLinux::ShowDueTooltip()
   if (!w.mTooltipDue || std::chrono::steady_clock::now() < w.mTooltipDueAt)
     return;
   w.mTooltipDue = false;
-  if (w.mButtonState || IsMenuOpen() || IsEditing() || !w.mMapped || w.mTopLevelHidden)
+  if (w.mButtonState || w.mTouch.AnyDown() || IsMenuOpen() || IsEditing() || !w.mMapped || w.mTopLevelHidden)
     return;
   ShowTooltip();
 }
