@@ -51,3 +51,75 @@
   package); the old image is tagged `iplug2-linux:24.04-pre-t017`. The main Dockerfile has the same layer for fresh
   builds. 22.04 has WebKitGTK 2.50 (`libwebkit2gtk-4.1-0` in jammy-updates), so the helper's floor (2.40) holds there.
 - First working version: helper + IPC + XEmbed; IPlugWebUI CLAP renders in REAPER (Docker).
+- Decisions (recorded here, as the task asks):
+  - **Helper lifetime: one helper per open web view** (per editor, and per `IWebViewControl`). Simplest lifecycle:
+    it starts at `OpenWebView`, ends when its socket closes (editor closed, host quit or crashed: the kernel closes
+    the host's end). A per-process helper would save only the helper itself (~150 MB RSS); WebKit runs a web
+    process per view anyway (~300 MB RSS under llvmpipe) plus a network process (~50 MB), so the per-editor cost
+    is ~0.5 GB RSS either way (`evidence/t017/reaper-*/memory-*.txt`).
+  - **Location: the module's resource folder**, `iplug2-webview-helper` beside `web/`: `<Name>.resources/` next to a
+    `.clap` or the APP, `Contents/Resources/` in a `.vst3`, `<stem>.resources/` next to a REAPER extension. Found from
+    the plug-in module via `dladdr` (`BundleResourcePath`), so it works from `~/.clap`, `~/.vst3`, `/usr/lib/...` and
+    the APP folder; each plug-in has its own copy from its own iPlug2 (protocol version checked at start).
+    `IPLUG2_WEBVIEW_HELPER` overrides it.
+  - **Helper in C** (links only WebKitGTK/GTK/GLib, no C++ runtime of its own); started detached through `/bin/sh -c
+    '"$@" &'` (as the dialog helpers), so init reaps it; socket fd 3, the host's other fds closed (`closefrom`).
+  - **No IGraphicsLinux change**: like Windows, the web view's container is a child X window of whatever window it
+    is given (the IGraphics window for `IWebViewControl`), placed by `SetWebViewBounds`; `AttachPlatformView` stays the
+    no-op base (step 4 of the plan is not needed).
+  - **Focus**: a click gives the page the keyboard (X focus on the plug, XEmbed WINDOW_ACTIVATE/FOCUS_IN), asked on
+    the button release with its time and asked again during a 1 s episode if the WM/host took it back (as
+    IGraphicsLinux text entry). Host shortcuts work while the page was not clicked.
+  - **HiDPI**: the editor delegate's size is in pixels (host scale, else Xft.dpi), the page zoomed by the scale;
+    the helper pins GTK's font DPI to 96 so WebKit does not scale text by Xft.dpi on top.
+  - `EvaluateJavaScript` results: JSON (as WebView2). No "drop while loading" guard (mac has one, win not).
+- Tests (Docker, REAPER 7.82, Release unless noted; `scripts/t017/`):
+  - `webui-reaper-test.sh`, IPlugWebUI CLAP and VST3: render; knob drag -> host parameter 0 -> 0.3; host sets 0.75 ->
+    knob moves; page buttons -> C++ -> Resize (1024x768, 512x335); typing into a text field (added to the installed
+    copy of the page) shows the text, and the typed space does not reach REAPER; with the page unfocused, space
+    starts REAPER's transport; 20x close/reopen: 0 helpers and 0 WebKit processes after each close; helper SIGKILLed
+    while open: REAPER alive, the editor shows "helper program stopped", a reopen recovers; two instances; thread
+    census (gdb): `OnSocketReadable`, `ProcessXEvents`, `HandleMessage`, `Flush`, `SendParameterValueFromUI` all on
+    tid 1. PASS both (`evidence/t017/reaper-{clap,vst3}-rel`). Debug CLAP: same PASS plus "Data Size 4 bytes" from the
+    Binary Test button (`reaper-clap-dbg`). REAPER's VST3 run loop does not take our fds, so VST3 polls them from a
+    15 ms timer (main thread).
+  - `webui-app-test.sh`: the APP renders, typing, Large GUI grows the window, helper kill survived, quit leaves no
+    process (`app-rel`). PASS.
+  - `iwebviewcontrol-test.sh`, IPlugOSCEditor CLAP (`IWebViewControl` in IGraphics): hidden at start, shown by its
+    button, the OSC log arrives via `LoadHTML`, corner-resizer rescale follows (position and zoom), hide, close (0
+    helpers), reopen. PASS (`iwebviewcontrol-clap`).
+  - Svelte (custom scheme `iplug2:`, module scripts, hashed assets) and p5.js (WebGL) render; the Svelte knob reaches the
+    host (`frameworks/`).
+  - REAPER extension WebUI (T-031 hand-off): `reaper-ext-test.sh` no longer skips its paint checks: open, resized,
+    docked, undocked, reopened all paint the web UI; PASS (`reaper-ext-webui`). The helper sits in
+    `reaper_<Name>.resources/`; `reaper-up.sh` installs it.
+  - HiDPI: REAPER `ui_scale` 2, CLAP and VST3: helper at 1200x1200, zoom 2, page laid out as at 1x, Large GUI -> 2048
+    wide; APP at Xft.dpi 192 (`hidpi/`). Found and fixed (Linux-only APP code): the APP put the editor at -299,-270
+    at 2x (GetWindowRect lags a just-resized window); now both values from SWELL's record.
+  - Helper missing: the editor shows the message with the expected path, REAPER fine (`helper-missing/`). Plug-in
+    NEEDED unchanged: libX11, libm, libc, ld-linux (`inspect-binary.txt`).
+  - Packaging: `package.sh Examples/IPlugWebUI` (24.04 image, `--glibc-max 2.39`): the helper in all three resource
+    folders, executable, symbols split, README lists WebKitGTK; IPlugEffect (22.04-gcc13) packs as before; IPlugWebUI in
+    22.04-gcc13 (no WebKitGTK there) is refused with the install hint.
+  - macOS: `xcodebuild` IPlugWebUI macOS-VST3 and CMake IPlugWebUI-clap build; no files changed.
+- VM (GNOME/X11, virgl; the user had just restarted it; WebKitGTK 2.52.6 was already installed there), Release builds,
+  short batches with the VM lock and `xdpyinfo` before/after:
+  - batch 1, CLAP (`vm-reaper-clap` first run): render, knob drag -> host, host -> knob, typing into the page's field,
+    space typed into the page not reaching REAPER, space with the page unfocused starting REAPER, Large GUI, 3x
+    churn (0 helpers/WebKit after each close), helper kill survived, two instances, thread census on the main thread.
+    One failure: the test clicked "Small GUI" at the old origin after Mutter had moved the grown window, which hit
+    "Open iPlug2 Website"; GIO (no https handler in the harness's session) opened the page in gnome-text-editor
+    (started by the test, closed again; it left no draft state). Fixed: the helper opens links through xdg-open as
+    IGraphics' OpenURL does; the test re-reads the origin.
+  - batch 2, VST3: PASS (all of the above, `vm-reaper-vst3`).
+  - batch 3: APP PASS (`vm-app`); then the CLAP rerun **hung in virgl**: output stops after the churn ("after the last
+    close: helpers 0, WebKit 0"), right before the helper-kill step; `xdpyinfo` timed out afterwards and dmesg shows
+    `kworker blocked for more than 614 seconds ... drm_atomic_helper_wait_for_fences / virtio_gpu_queue_fenced_ctrl_buffer`
+    (the known VM hang, STATUS "Environment gotchas"). Stopped there as instructed. **The VM needs Force Stop + Start
+    in UTM.** WebKitGTK composites with GL (virgl here) in every helper, so web view runs add GPU load of their own;
+    this was the 3rd batch within ~25 minutes, with ~25 editor opens in total.
+  - Afterwards (files only, no X): `~/.clap` and `~/.vst3` restored to Release builds from this branch at fa9b3a63d:
+    IPlugControls (iPlug2 fa9b3a63d), Gneiss (`linux-experiment` 6246fb7), Sand (`linux-experiment` 95be3b0), all built
+    in Docker against `/Volumes/Storage/code/IPlug2-T-017`; IPlugEffect left as it was (T-038); IPlugWebUI removed from
+    `~/.clap`, `~/.vst3`, `~/iplug-apps`. No REAPER, helper or WebKit process of ours left on the VM.
+

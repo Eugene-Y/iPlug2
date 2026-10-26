@@ -40,7 +40,8 @@ shot a03-large
 pkill -9 -f '[/]iplug2-webview-helper'; sleep 2
 kill -0 "$APID" 2>/dev/null && echo "app alive after the helper was killed" || fail "app died with its helper"
 shot a04-killed
-xdotool windowclose "$W" 2>/dev/null || kill "$APID"
+# never xdotool windowclose (XDestroyWindow on another client's window breaks GNOME's frames): a polite close
+if command -v wmctrl >/dev/null; then wmctrl -i -c "$W"; else kill "$APID"; fi
 for i in $(seq 50); do kill -0 "$APID" 2>/dev/null || break; sleep 0.1; done
 kill -0 "$APID" 2>/dev/null && { fail "app did not quit"; kill -9 "$APID"; }
 sleep 2

@@ -12,6 +12,12 @@ docker build --build-arg UBUNTU=22.04 -t iplug2-linux:22.04 linux-research/docke
 docker build -t iplug2-linux:22.04-gcc13 linux-research/docker/gcc13                # 22.04 + GCC 13 (C++20 <format>, C++23)
 ```
 
+WebKitGTK (`libwebkit2gtk-4.1-dev`, the Linux WebView helper's build dependency, T-017) is the main Dockerfile's last
+layer. The existing `iplug2-linux:24.04` got it without a rebuild (2026-10-26):
+`docker build --build-arg BASE=iplug2-linux:24.04 -t iplug2-linux:24.04 linux-research/docker/webview` (the image
+before that is tagged `iplug2-linux:24.04-pre-t017`). The 22.04 build images do not have it yet: packaging a project
+with a web view needs it there too (same command with `BASE=iplug2-linux:22.04-gcc13`, and `…-amd64`).
+
 Sand needs `<format>`, which 22.04's GCC 11 lacks: build it in `22.04-gcc13` with `DOCK_ENV="CC=gcc-13 CXX=g++-13"`.
 iPlug2 links libstdc++ statically, so the floor stays 22.04's glibc 2.35 and no GLIBCXX is needed.
 
