@@ -242,6 +242,9 @@ private:
   std::chrono::steady_clock::time_point mFocusQuietSince;
   Window mFocusWatched = 0;
   float mX = 0.f, mY = 0.f, mW = 1.f, mH = 1.f, mZoom = 1.f;
+  // Where we last put the container. A host may move it itself (the standalone app puts it below its menu bar),
+  // so bounds at the same place only resize it.
+  int mPlacedX = 0, mPlacedY = 0;
   long mSentZoom = 0;
   bool mInteractionEnabled = true;
 
@@ -300,6 +303,8 @@ void* IWebViewImpl::OpenWebView(void* pParent, float x, float y, float w, float 
   attributes.event_mask = ExposureMask | StructureNotifyMask | SubstructureNotifyMask;
   mContainer = XCreateWindow(mDisplay, mParent, bounds.x, bounds.y, bounds.w, bounds.h, 0, CopyFromParent,
                              InputOutput, CopyFromParent, CWBackPixel | CWEventMask, &attributes);
+  mPlacedX = bounds.x;
+  mPlacedY = bounds.y;
   // The container is the editor's window when the web view is the whole UI: an XEmbed host embeds it as such.
   const long xembedInfo[] = { kXEmbedVersion, kXEmbedMapped };
   XChangeProperty(mDisplay, mContainer, mXEmbedInfo, mXEmbedInfo, 32, PropModeReplace,
@@ -559,7 +564,16 @@ void IWebViewImpl::SetWebViewBounds(float x, float y, float w, float h, float sc
 
   const Rect bounds = PhysicalBounds();
   XErrorTrap trap(mDisplay);
-  XMoveResizeWindow(mDisplay, mContainer, bounds.x, bounds.y, bounds.w, bounds.h);
+  if (bounds.x == mPlacedX && bounds.y == mPlacedY)
+  {
+    XResizeWindow(mDisplay, mContainer, bounds.w, bounds.h);
+  }
+  else
+  {
+    XMoveResizeWindow(mDisplay, mContainer, bounds.x, bounds.y, bounds.w, bounds.h);
+    mPlacedX = bounds.x;
+    mPlacedY = bounds.y;
+  }
   if (mPlug)
     XResizeWindow(mDisplay, mPlug, bounds.w, bounds.h);
   XFlush(mDisplay);
