@@ -39,7 +39,9 @@ render_check() { # <shot> <track>
 wait_helpers() { # <count> <secs>
   local i; for i in $(seq $(( $2 * 10 ))); do [ "$(helpers)" = "$1" ] && return 0; sleep 0.1; done; return 1
 }
-param() { rpr "local t=reaper.GetTrack(0,0); out(string.format('%.4f', reaper.TrackFX_GetParamNormalized(t,0,0)))"; }
+# The Gain parameter's REAPER index: VST3 lists the plug-in's bypass parameter first
+GAIN_LUA="local gi=0; for i=0,reaper.TrackFX_GetNumParams(t,0)-1 do local _,n=reaper.TrackFX_GetParamName(t,0,i,''); if n=='Gain' then gi=i break end end"
+param() { rpr "local t=reaper.GetTrack(0,0); $GAIN_LUA; out(string.format('%.4f', reaper.TrackFX_GetParamNormalized(t,0,gi)))"; }
 
 PAGE=""
 case "$PLUG" in
@@ -69,7 +71,7 @@ P1=$(param); echo "knob drag: param $P0 -> $P1"
 [ "$P0" != "$P1" ] || fail "knob drag did not change the host parameter ($P0)"
 # host -> UI (C++ -> JS)
 crop r01-open $((OX + 30)) $((OY + 410)) 140 170 knob-before
-rpr "local t=reaper.GetTrack(0,0); reaper.TrackFX_SetParamNormalized(t,0,0,0.75)" >/dev/null; sleep 1
+rpr "local t=reaper.GetTrack(0,0); $GAIN_LUA; reaper.TrackFX_SetParamNormalized(t,0,gi,0.75)" >/dev/null; sleep 1
 shot r02-param; crop r02-param $((OX + 30)) $((OY + 410)) 140 170 knob-after
 cmp -s "$OUT/knob-before.png" "$OUT/knob-after.png" && fail "knob did not move when the host set the parameter"
 # Typing into the page's text field (Release: the field added above)
@@ -132,7 +134,7 @@ sleep 6; shot r09-two; render_check r09-two 2; alive "two instances"
 ps -o rss=,args= -C iplug2-webview-helper,WebKitWebProcess,WebKitNetworkProcess > "$OUT/memory-two-editors.txt" 2>/dev/null
 read -r QX QY _ _ < <(view_geom 2)
 ( sleep 4; xdotool mousemove $((QX + 104)) $((QY + 504)) mousedown 1; for i in $(seq 8); do xdotool mousemove_relative 0 -4; sleep 0.1; done; xdotool mouseup 1
-  sleep 0.5; "$HERE/scripts/rpr.sh" "local t=reaper.GetTrack(0,1); reaper.TrackFX_SetParamNormalized(t,0,0,0.3)" >/dev/null
+  sleep 0.5; "$HERE/scripts/rpr.sh" "local t=reaper.GetTrack(0,1); $GAIN_LUA; reaper.TrackFX_SetParamNormalized(t,0,gi,0.3)" >/dev/null
   xdotool mousemove $((QX + 321)) $((QY + 147)) click 1 ) &
 "$HERE/scripts/gdb-count.sh" "$RPID" 10 'iplug::IWebViewImpl::OnSocketReadable' 'iplug::IWebViewImpl::ProcessXEvents' \
   'iplug::IWebViewImpl::HandleMessage' 'iplug::IWebViewImpl::Flush' 'iplug::IPlugAPIBase::SendParameterValueFromUI' \
