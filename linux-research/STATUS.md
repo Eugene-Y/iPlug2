@@ -31,6 +31,7 @@ Update it at every merge or user decision.
 - **Qtractor CLAP timer bug:** report ready in `notes/35-qtractor-clap-timer-report.md` (reviewed, with a minimal CLAP reproducer); the user may send it.
 - **T-018 (Skia, merged 2026-10-23):** host prebuilt Linux Skia libraries (~52 MB per arch) or keep `Dependencies/IGraphics/build-skia-linux.sh` (~7 GB of Skia source per developer)?
 - **T-038 follow-up idea (merged 2026-10-23):** run iPlug's timers on the host's GLib main loop when the host has GLib loaded (REAPER, Ardour, Qt hosts), so `OnIdle` stays on the UI thread with the editor closed; needs its own host matrix. Say if wanted.
+- **T-017 (WebView, merged 2026-10-26):** new dependency WebKitGTK 4.1 (≥ 2.40) for web-view UIs only; `iplug2-linux:24.04` extended (old tag `-pre-t017`); the 22.04-gcc13 release images need the `docker/webview` layer before a web-view project can be packaged — add it now or when a product needs it?
 - **T-011 left:** port `duplicate.py` to `hvoya`? Is VS Code on one out-of-tree duplicate + gdb for the others enough for its first acceptance box?
 - **Decisions:** `RestorePreset` question (T-023 merged), T-029 (S-1 text entry, (a) and/or (b); typing check on mac).
 - **More decisions (2026-10-19 evening):** IME via IBus/Fcitx (deviation or task); reword the pre-port "morph rig" comment in `IPlugCLAP.cpp` on `hvoya`; T-033's CI workflow change.

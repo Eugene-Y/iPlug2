@@ -1,6 +1,6 @@
 # T-017 — WebView on Linux (out-of-process WebKitGTK helper)
 
-- **Status:** review-done (design decided by the user 2026-10-16: notes/22 option 1)
+- **Status:** merged 06e31f877 (review approved in round 3, `notes/39-review-T-017.md`)
 - **Owner:** Claude worker (T-017 lock, 2026-10-26)
 - **Branch/worktree:** `linux/T-017` from `hvoya-linux`, in `/Volumes/Storage/code/IPlug2-T-017`.
 - **Depends on:** nothing to start; the IGraphicsLinux platform-view hook (step 4) is coordinated with T-019/T-009/T-020 (same file).
