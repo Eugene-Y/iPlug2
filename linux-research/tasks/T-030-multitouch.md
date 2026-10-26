@@ -1,6 +1,6 @@
 # T-030 — Multi-touch on Linux (XInput2), split out of T-020 item 5
 
-- **Status:** review-done (independent review approved in round 2, `notes/40-review-T-030.md`)
+- **Status:** merged 381e38fbd (review approved in round 2, `notes/40-review-T-030.md`)
 - **Owner:** T-030 worker (Claude), 2026-10-26
 - **Branch/worktree:** `linux/T-030` from `hvoya-linux`.
 - **Depends on:** a touch device to test with (none in Docker's Xvfb or on the VM): a `uinput` virtual touchscreen on the VM (python-evdev, sudo is passwordless), or a real touchscreen PC.
