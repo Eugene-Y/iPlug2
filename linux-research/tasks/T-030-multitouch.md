@@ -51,3 +51,9 @@
     select touches (`t030-igt-b.log`, started before the device existed, so touches came as emulated mouse events):
     Mutter/XTEST, not the editor. The probes click once on the background first.
   - The uinput device was removed afterwards (`xinput list` has no `t030` entry).
+- a4674b8da: a touch neither locks nor warps the pointer, as on mac and Windows (`SetTabletInput(true)` on touches,
+  `false` on mouse buttons and motion; `HideMouseCursor` locks only `!mTabletInput`, `MoveMouseCursor` returns early
+  for it, like `IGraphicsWin`/`IGraphicsMac`). Before, a knob that hides and locks the cursor warped the pointer back to
+  where the finger landed on release. VM check (trace APP, `vm-app/t030-ctl3.log`, `ctl-tablet-input.png`): after a
+  finger drags ISVGKnobControl the pointer stays where the finger left (239,392), and a mouse drag on IVKnobControl
+  still locks and returns the pointer to its press point (494,333).
