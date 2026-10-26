@@ -1,6 +1,6 @@
 # T-030 — Multi-touch on Linux (XInput2), split out of T-020 item 5
 
-- **Status:** in progress
+- **Status:** review-done (independent review approved in round 2, `notes/40-review-T-030.md`)
 - **Owner:** T-030 worker (Claude), 2026-10-26
 - **Branch/worktree:** `linux/T-030` from `hvoya-linux`.
 - **Depends on:** a touch device to test with (none in Docker's Xvfb or on the VM): a `uinput` virtual touchscreen on the VM (python-evdev, sudo is passwordless), or a real touchscreen PC.
@@ -63,6 +63,12 @@
   T-009/T-032/T-038 merge smokes). Evidence `evidence/t030/docker-*`. Gneiss-linux and Sand-linux git status clean.
 - **Review round 1** (`notes/40-review-T-030.md`): changes required, 1 major (a touch could start a file drag-out
   that kept the keyboard grabbed), 2 minor, 2 nits. All fixed in 87e8d2fef and checked on the VM (see the notes).
+- **Review round 2: approve**, no major or minor finding left (4773140ce). Open, optional: classify a touch device
+  the first time it sends a touch instead of at open (r2-n1).
+- **Hand-over.** Code: 108c7ccdc, f097efae7, a4674b8da, 87e8d2fef (the rest are evidence, docs and review). VM state:
+  `~/.clap` and `~/.vst3` hold Release builds of Gneiss, Sand and IPlugControls from `linux/T-030` (code as at
+  87e8d2fef; built at 1d42e5d4a); `~/iplug-apps` untouched; python3-evdev installed with apt; no uinput device, no
+  process or `/tmp` file of this task left; staging dirs `~/iplug-builds/t030*` removed. No containers left.
 
 ## Cross-platform findings
 - **Windows, unverified (read from the code, no Windows touchscreen here), medium for touchscreen users:**
