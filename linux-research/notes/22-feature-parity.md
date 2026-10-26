@@ -23,7 +23,7 @@ Method: every `override` in `IGraphicsMac.h`/`IGraphicsWin.h` diffed against `IG
 | `OpenURL`, `RevealPathInExplorerOrFinder` | ✓ | ✓ | ✅ xdg-open (`IGraphics/Platforms/IGraphicsLinux.cpp:2270` `OpenURL`, `:2275` reveal) | P3 |
 | Dark/light appearance (`GetUIAppearance`) | ✓ | — | ✅ xdg-desktop-portal (`IGraphics/Platforms/IGraphicsLinux.cpp:1742`, `IGraphicsLinuxAppearance.h`) | T-020 |
 | Platform child views (`AttachPlatformView`…) | ✓ | — | ❌ | T-017 |
-| Multi-touch (`PlatformSupportsMultiTouch`) | — | ✓ | ❌ | T-030 |
+| Multi-touch (`PlatformSupportsMultiTouch`) | — | ✓ | ✅ XInput 2.2 touches when the layout enables multi-touch and a touchscreen is present (`IGraphics/Platforms/IGraphicsLinuxTouch.h`) | T-030 |
 | Typing through a system input method (IBus/Fcitx: CJK, emoji picker) | ✓ | ✓ | ❌ the text entry handles compose and dead keys (Xlib's built-in IM) but not IBus/Fcitx: `XMODIFIERS` is the host's, deliberately untouched (`IGraphics/Platforms/IGraphicsLinux.cpp` input-context setup) | user decision (deviation or task) |
 | `MeasureText` override | pass-through | — | not needed (same base implementation) | — |
 | Bundle ID / App Group ID, `Get/SetWinModuleHandle` | ✓ | ✓ | n/a (mac/win concepts) | — |

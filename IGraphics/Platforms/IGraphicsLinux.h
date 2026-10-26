@@ -64,6 +64,8 @@ public:
   bool SetFilePathInClipboard(const char* path) override;
   bool InitiateExternalFileDragDrop(const char* path, const IRECT& iconBounds) override;
   EUIAppearance GetUIAppearance() const override;
+  /** Known once the window is open, when the layout function runs */
+  bool PlatformSupportsMultiTouch() const override;
 
 protected:
   IPopupMenu* CreatePlatformPopupMenu(IPopupMenu& menu, const IRECT bounds, bool& isAsync) override;
@@ -86,6 +88,7 @@ private:
   void HandleXEvent(const _XEvent& event);
   void HandleButton(const _XEvent& event);
   void HandleMotion(const _XEvent& event);
+  void HandleTouch(const _XEvent& event);
   void HandleConfigure(const _XEvent& event);
   void HandleKey(const _XEvent& event);
   void HandleFocusOut(const _XEvent& event);

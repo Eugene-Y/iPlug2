@@ -55,11 +55,12 @@
 #include "IGraphicsLinuxAppearance.h"
 #include "IGraphicsLinuxDrop.h"
 #include "IGraphicsLinuxFontconfig.h"
+#include "IGraphicsLinuxTouch.h"
 
 using namespace iplug;
 using namespace igraphics;
 
-// -DIGRAPHICS_TRACE_LINUX_INPUT: keys, focus and their routing on stderr, for probing hosts.
+// -DIGRAPHICS_TRACE_LINUX_INPUT: keys, focus and their routing, buttons and touches on stderr, for probing hosts.
 #ifdef IGRAPHICS_TRACE_LINUX_INPUT
   #define TRACE_INPUT(...) fprintf(stderr, "iPlug2 input: " __VA_ARGS__)
 #else
@@ -482,6 +483,7 @@ struct IGraphicsLinux::Impl
   LinuxDragSource mDragSource;
   LinuxFileDrop mFileDrop;
   LinuxAppearance mAppearance;
+  LinuxTouch mTouch;
   std::chrono::steady_clock::time_point mAppearancePolledAt;
   bool mPasteKeyPending = false; // Ctrl+V of an edit, replayed once the clipboard's text is here
   IKeyPress mPasteKey { "v", 'V' };
@@ -737,6 +739,11 @@ void* IGraphicsLinux::OpenWindow(void* pParent)
     return fail("the drawing backend cannot start");
   }
   GetDelegate()->LayoutUI(this);
+  if (MultiTouchEnabled())
+  {
+    TRACE_INPUT("multi-touch: XInput 2.2 touches selected\n");
+    w.mTouch.Select(w.mWindow);
+  }
   GetDelegate()->OnUIOpen();
   SetAllControlsDirty();
   DeactivateGLContext();
@@ -1106,6 +1113,9 @@ void IGraphicsLinux::HandleXEvent(const XEvent& event)
     case MotionNotify:
       HandleMotion(event);
       break;
+    case GenericEvent:
+      HandleTouch(event);
+      break;
     case LeaveNotify:
       HideTooltip();
       w.mTooltipIdx = -1;
@@ -1124,6 +1134,8 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
 {
   Impl& w = *mImpl;
   const XButtonEvent& button = event.xbutton;
+  TRACE_INPUT("%s button %u at %d,%d\n", event.type == ButtonPress ? "press" : "release", button.button, button.x, button.y);
+  SetTabletInput(false);
   const float scale = GetTotalScale();
   const float x = button.x / scale;
   const float y = button.y / scale;
@@ -1182,6 +1194,7 @@ void IGraphicsLinux::HandleButton(const XEvent& event)
 void IGraphicsLinux::HandleMotion(const XEvent& event)
 {
   Impl& w = *mImpl;
+  SetTabletInput(false);
   XEvent latest = event;
   // Coalesce only motion that is next in the queue, so that motion never overtakes a button release.
   while (XEventsQueued(w.mDisplay, QueuedAlready) > 0)
@@ -1219,6 +1232,46 @@ void IGraphicsLinux::HandleMotion(const XEvent& event)
   const bool moved = info.dX != 0.f || info.dY != 0.f;
   if (*open && mCursorLock && moved)
     MoveMouseCursor(w.mHiddenCursorX, w.mHiddenCursorY);
+}
+
+// A touch is a press, drag and release of its own, without the double-clicks: those are mouse-only on Windows and iOS too.
+void IGraphicsLinux::HandleTouch(const XEvent& event)
+{
+  Impl& w = *mImpl;
+  LinuxTouch::Event touch;
+  if (!w.mTouch.Translate(event, touch))
+    return;
+  TRACE_INPUT("touch %lu phase %d at %.1f,%.1f\n", static_cast<unsigned long>(touch.id), static_cast<int>(touch.phase), touch.x, touch.y);
+
+  w.mLastEventTime = touch.time;
+  // As on mac and Windows, a finger neither locks the pointer nor moves it: the X server moves it with the first finger.
+  SetTabletInput(true);
+  const float scale = GetTotalScale();
+  IMouseInfo info;
+  info.x = touch.x / scale;
+  info.y = touch.y / scale;
+  info.dX = touch.dX / scale;
+  info.dY = touch.dY / scale;
+  info.ms = MouseModFromState(touch.state | Button1Mask);
+  info.ms.touchID = touch.id;
+
+  switch (touch.phase)
+  {
+    case ETouchEvent::Began:
+      HideTooltip();
+      FinishFadingMenu();
+      FitMenusOnScreen();
+      OnMouseDown({ info });
+      break;
+    case ETouchEvent::Moved:
+      OnMouseDrag({ info });
+      break;
+    default:
+      w.mLastReleaseAt = std::chrono::steady_clock::now();
+      w.mClickedForFocus = true;
+      OnMouseUp({ info });
+      break;
+  }
 }
 
 void IGraphicsLinux::HandleConfigure(const XEvent& event)
@@ -1489,11 +1542,12 @@ void IGraphicsLinux::UpdateEditingState()
     w.mFocusDeclined = false;
   }
   const Time eventTime = w.mLastEventTime;
-  if (clicked && !w.mButtonState)
+  const bool pressed = w.mButtonState || w.mTouch.AnyDown();
+  if (clicked && !pressed)
     TakeKeyboardFocus(eventTime);
-  else if (wantsKeys && !w.mHoldsFocus && !w.mFocusLost && !w.mFocusDeclined && !w.mButtonState)
+  else if (wantsKeys && !w.mHoldsFocus && !w.mFocusLost && !w.mFocusDeclined && !pressed)
     TakeKeyboardFocus(eventTime);
-  else if (wantsKeys && w.mFocusLost && !w.mFocusDeclined && !w.mButtonState)
+  else if (wantsKeys && w.mFocusLost && !w.mFocusDeclined && !pressed)
   {
     // Moving to another window commits the edit, which may close the editor
     const std::shared_ptr<bool> open = w.mOpen;
@@ -1803,7 +1857,7 @@ void IGraphicsLinux::HideMouseCursor(bool hide, bool lock)
     w.mHiddenCursorX = w.mCursorX;
     w.mHiddenCursorY = w.mCursorY;
     mCursorHidden = true;
-    mCursorLock = lock;
+    mCursorLock = lock && !mTabletInput;
   }
   else
   {
@@ -1823,7 +1877,7 @@ void IGraphicsLinux::HideMouseCursor(bool hide, bool lock)
 void IGraphicsLinux::MoveMouseCursor(float x, float y)
 {
   Impl& w = *mImpl;
-  if (!w.mWindowAlive)
+  if (!w.mWindowAlive || mTabletInput)
     return;
   const float scale = GetTotalScale();
   ScopedXErrorTrap trap(w.mDisplay);
@@ -1859,7 +1913,9 @@ bool IGraphicsLinux::SetTextInClipboard(const char* str)
 bool IGraphicsLinux::InitiateExternalFileDragDrop(const char* path, const IRECT& /*iconBounds*/)
 {
   Impl& w = *mImpl;
-  if (!w.mWindowAlive)
+  // The drag lives on the implicit grab of a mouse press; a finger's touch events have none, so its release would
+  // never reach the drag, which would keep the keyboard grabbed.
+  if (!w.mWindowAlive || mTabletInput)
     return false;
   HideTooltip();
   ScopedXErrorTrap trap(w.mDisplay);
@@ -1869,6 +1925,11 @@ bool IGraphicsLinux::InitiateExternalFileDragDrop(const char* path, const IRECT&
 EUIAppearance IGraphicsLinux::GetUIAppearance() const
 {
   return mImpl->mAppearance.IsDark() ? EUIAppearance::Dark : EUIAppearance::Light;
+}
+
+bool IGraphicsLinux::PlatformSupportsMultiTouch() const
+{
+  return mImpl->mDisplay && mImpl->mTouch.HasTouchscreen(mImpl->mDisplay);
 }
 
 bool IGraphicsLinux::SetFilePathInClipboard(const char* path)
@@ -2041,7 +2102,7 @@ void IGraphicsLinux::ShowDueTooltip()
   if (!w.mTooltipDue || std::chrono::steady_clock::now() < w.mTooltipDueAt)
     return;
   w.mTooltipDue = false;
-  if (w.mButtonState || IsMenuOpen() || IsEditing() || !w.mMapped || w.mTopLevelHidden)
+  if (w.mButtonState || w.mTouch.AnyDown() || IsMenuOpen() || IsEditing() || !w.mMapped || w.mTopLevelHidden)
     return;
   ShowTooltip();
 }

@@ -1,0 +1,17 @@
+T-030 review, VM 2026-10-26 14:56, IPlugControls APP built with -DIGRAPHICS_TRACE_LINUX_INPUT -DIPLUG_TEST_DRAGOUT
+(build/t030r-drag), vtouch.py device, probe.sh through vm-x.sh. kbgrab.c = XQueryPointer mask + a third client's
+XGrabKeyboard on the root window. Probe stdout:
+
+== 14:56:46.266106793 finger down on the drag square, dragged, held
+core pointer at 691,502 mask 0x100 (Button1 DOWN)
+keyboard grab by a third client: AlreadyGrabbed
+== 14:56:49.407467351 finger up
+core pointer at 691,502 mask 0x0 (Button1 up)
+keyboard grab by a third client: AlreadyGrabbed
+== 14:56:50.278182767 mouse click on IVKnobControl   (first click after a touch: lost on this desktop)
+core pointer at 651,521 mask 0x0 (Button1 up)
+keyboard grab by a third client: AlreadyGrabbed
+   (second mouse click; its ButtonRelease reaches the drag source, which drops and ungrabs)
+core pointer at 651,521 mask 0x0 (Button1 up)
+keyboard grab by a third client: free (GrabSuccess)
+== 14:56:52.460644726 end
