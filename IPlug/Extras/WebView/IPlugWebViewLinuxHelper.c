@@ -641,6 +641,10 @@ int main(int argc, char** argv)
     return 3;
   }
 
+  /* The plug-in scales the page with the zoom level; WebKit would scale its text by the desktop's font DPI
+   * (Xft.dpi) on top of that. */
+  g_object_set(gtk_settings_get_default(), "gtk-xft-dpi", 96 * 1024, NULL);
+
   h->pendingDecisions = g_hash_table_new_full(g_int64_hash, g_int64_equal, g_free, g_object_unref);
   h->pendingDownloads = g_hash_table_new_full(g_int64_hash, g_int64_equal, g_free, g_object_unref);
   gdk_event_handler_set(OnGdkEvent, NULL, NULL);
