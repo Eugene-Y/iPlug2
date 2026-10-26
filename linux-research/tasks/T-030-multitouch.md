@@ -57,3 +57,14 @@
   where the finger landed on release. VM check (trace APP, `vm-app/t030-ctl3.log`, `ctl-tablet-input.png`): after a
   finger drags ISVGKnobControl the pointer stays where the finger left (239,392), and a mouse drag on IVKnobControl
   still locks and returns the pointer to its press point (494,333).
+
+## Cross-platform findings
+- **Windows, unverified (read from the code, no Windows touchscreen here), medium for touchscreen users:**
+  `IGraphicsWin.cpp:286`/`:309`/`:384` drop every mouse message the system synthesises from a touch
+  (`IsTouchEvent()`: WM_LBUTTONDOWN, WM_MOUSEMOVE, double clicks), but the window registers for WM_TOUCH only when the
+  plug-in enabled multi-touch (`:1077`). A plug-in that does not (most) then gets no presses or drags from a touchscreen
+  at all, only the releases (`WM_LBUTTONUP` is not filtered). Repro: a plug-in without `EnableMultiTouch(true)` on a
+  Windows touchscreen; tap a button. Linux does the opposite on purpose: without multi-touch, touches stay the emulated
+  mouse.
+- `Tests/IGraphicsTest/IGraphicsTest.cpp:105` labels the page "MultiTouch (iOS/Win/Web only)"; it works on Linux now.
+  Left alone (shared test file).
